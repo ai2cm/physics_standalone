@@ -33,6 +33,18 @@ hvar=min{0.2,max[0.01, Docean (Ar/10^10)^0.25]}
 
 Where Ar is cell area, Dland and Docean are base values for sub-grid variability over land and ocean (larger sub-grid variability appears in larger area). Horizontal sub-grid variability is used in cloud fraction, relative humidity calculation, evaporation and condensation processes. Scale-awareness is achieved by this horizontal subgrid variability and a 2nd order FV-type vertical reconstruction (Lin et al. (1994) [100]).
 
+[27] J.-H Chen and S.-J Lin. The remarkable predictability of inter-annual variability of atlantic hurricanes during the past decade. Geophysical Research Letters, 38(L11804):6, 2011.
+
+[28] J-H. Chen and S-J. Lin. Seasonal predictions of tropical cyclones using a 25-km-resolution general circulation model. J. Climate, 26(2):380–398, 2013.
+
+[95] S.K. Krueger, Q. Fu, K. N. Liou, and H-N. S. Chin. Improvement of an ice-phase microphysics parameterization for use in numerical simulations of tropical convection. Journal of Applied Meteorology, 34:281–287, January 1995.
+
+[99] Y.-L. Lin, R. D. Farley, and H. D. Orville. Bulk parameterization of the snow field in a cloud model. J. Climate Appl. Meteor., 22:1065–1092, 1983.
+
+[100] S-J. Lin, W. C. Chao, Y. C. Sud, and G. K. Walker. A class of the van leer-type transport schemes and its application to the moisture transport in a general circulation model. Monthly Weather Review, 122:1575–1593, 1994.
+
+[106] S.J. Lord, H.E. Willoughby, and J.M. Piotrowicz. Role of a parameterized ice-phase microphysics in an axisymmetric, nonhydrostatic tropical cyclone model. J. Atmos. Sci., 41(19):2836–2848, October 1984.
+
 ## GFDL Cloud Driver General Algorithm
 
 - Prevent excessive build-up of cloud ice from external sources.
