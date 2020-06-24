@@ -6,8 +6,8 @@ This repo contains standalone versions of a selection of the FV3GFS physical par
 
 You need the following things installed if you want to run directly on the host you are currently logged on to or if you are working directly on your laptop.
 - serialbox installation (branch `savepoint_as_string` from https://github.com/VulcanClimateModeling/serialbox2/)
-- gfortran
-- wget
+- `gfortran`
+- `wget`
 
 ## Running
 
