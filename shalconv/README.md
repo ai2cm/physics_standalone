@@ -1,3 +1,5 @@
+# GFS Scale-Aware Mass-Flux Shallow Convection Scheme Module
+
 ## Description
 
 GFS Scale-Aware Mass-Flux Shallow Convection Scheme Module is an updated version of the previous mass-flux shallow convection scheme with scale and aerosol awareness and parameterizes the effect of shallow convection on the environment. GFS Scale-Aware Mass-Flux Shallow Convection Scheme Module is similar to GFS Scale-Aware Mass-Flux Deep Convection Scheme Module but with a few key differences. First, no quasi-equilibrium assumption is used for any grid size and the shallow cloud base mass flux is parameterized using a mean updraft velocity. Further, there are no convective downdrafts, the entrainment rate is greater than for deep convection, and the shallow convection is limited to not extend over the level where p=0.7psfc. The paramerization of scale and aerosol awareness follows that of the SAMF deep convection scheme, although it can be interpreted as only having the "static" and "feedback" control portions, since the "dynamic" control is not necessary to find the cloud base mass flux.
