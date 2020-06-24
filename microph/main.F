@@ -125,6 +125,6 @@ program test
 
     call cdstop()
 
-    write(*,*) 'VALIDATION SUCCESSFULL!'
+    write(*,*) 'VALIDATION COMPLETE!'
 
 end program test
