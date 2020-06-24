@@ -1,3 +1,5 @@
+# GFDL Cloud Microphysics Module
+
 ## Description
 
 GFDL cloud microphysics (MP) scheme is a six-category MP scheme to replace Zhao-Carr MP scheme, and moves the GFS from a total cloud water variable to five predicted hydrometeors (cloud water, cloud ice, rain, snow and graupel). This scheme utilizes the "bulk water" microphysical parameterization technique in Lin et al. (1983) [99] and has been significantly improved over years at GFDL (Lord et al. (1984) [106], Krueger et al. (1995) [95], Chen and Lin (2011) [27], Chen and Lin (2013) [28]). Physics processes of GFDL cloud MP are described in Figure 1 (also see warm_rain() and icloud()) and are feature with time-split between warm-rain (faster) and ice-phase (slower) processes (see 'conversion time scale' in gfdl_cloud_microphys.F90 for default values).
