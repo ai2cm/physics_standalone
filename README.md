@@ -23,3 +23,7 @@ Note: You may have to adapt the `Makefile` to point to your serialbox installati
 ## Docker environment
 
 If you prefer to work in a Docker environment, simply type `./build.sh` to build a Docker image that contains everything you need and `./enter` to enter the image with the correct mounted directories to work on the standalone codes.
+
+## Code coverage
+
+In order to inspect the code coverage that FV3GFS actually has (and the data used to run the parameterizations as well) take a look at the code [coverage report](https://htmlpreview.github.io/?https://github.com/VulcanClimateModeling/physics_standalone/blob/master/coverage/index.html).
