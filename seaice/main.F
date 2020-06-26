@@ -1,6 +1,7 @@
 program test
     use m_countdown, only : cdstart, cdshow, cdstop
     use machine, only : kind_phys
+    use funcphys, only : gfuncphys
     use module_sfc_sice, only : sfc_sice
     implicit none
 
@@ -27,6 +28,9 @@ program test
 
     ser_count_max = 10
     num_tiles = 6
+
+    ! initialize
+    call gfuncphys()
 
     call cdstart(num_tiles * ser_count_max * 2)
 

@@ -1,6 +1,7 @@
 program test
     use m_countdown, only : cdstart, cdshow, cdstop
     use machine, only : kind_phys
+    use funcphys, only : gfuncphys
     use m_satmedmfvdif, only : satmedmfvdif
     implicit none
 
@@ -26,6 +27,9 @@ program test
     nunit = 42
     ser_count_max = 10
     num_tiles = 6
+
+    ! initialize
+    call gfuncphys()
 
     call cdstart(num_tiles * ser_count_max)
 
