@@ -8,7 +8,7 @@ program test
     integer :: ix, im, km, ntrac, ntcw, ntiw, ntke
     integer, dimension(:), allocatable :: kpbl, kinver, kpbl_ref
 
-    real (kind=kind_phys) :: delt, xkzm_m, xkzm_h, xkzm_s, xkzm_m_ref, xkzm_h_ref
+    real (kind=kind_phys) :: delt, xkzm_m, xkzm_h, xkzm_s
     real (kind=kind_phys), dimension(:), allocatable :: xmu, garea, &
         psk, rbsoil, zorl, tsea, u10m, v10m, fm, fh, evap, heat, &
         stress, spd1, dusfc, dvsfc, dtsfc, dqsfc, hpbl, &
@@ -86,7 +86,7 @@ program test
         ! inout
         !$ser data dv=dv_ref du=du_ref tdt=tdt_ref rtg=rtg_ref kpbl=kpbl_ref
         !$ser data dusfc=dusfc_ref dvsfc=dvsfc_ref dtsfc=dtsfc_ref dqsfc=dqsfc_ref
-        !$ser data xkzm_m=xkzm_m_ref xkzm_h=xkzm_h_ref hpbl=hpbl_ref
+        !$ser data hpbl=hpbl_ref
 
         if (any(dv /= dv_ref)) write(*,*) 'ERROR: dv does not validate', tile, ser_count
         if (any(du /= du_ref)) write(*,*) 'ERROR: du does not validate', tile, ser_count
@@ -97,8 +97,6 @@ program test
         if (any(dvsfc /= dvsfc_ref)) write(*,*) 'ERROR: dvsfc does not validate', tile, ser_count
         if (any(dtsfc /= dtsfc_ref)) write(*,*) 'ERROR: dtsfc does not validate', tile, ser_count
         if (any(dqsfc /= dqsfc_ref)) write(*,*) 'ERROR: dqsfc does not validate', tile, ser_count
-        if ((xkzm_m /= xkzm_m_ref)) write(*,*) 'ERROR: xkzm_m does not validate', tile, ser_count
-        if ((xkzm_h /= xkzm_h_ref)) write(*,*) 'ERROR: xkzm_h does not validate', tile, ser_count
         if (any(hpbl /= hpbl_ref)) write(*,*) 'ERROR: hpbl does not validate', tile, ser_count
 
         deallocate(kpbl, kinver, xmu, garea, psk, &
