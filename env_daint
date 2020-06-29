@@ -1,0 +1,7 @@
+module load daint-gpu
+module switch PrgEnv-cray PrgEnv-gnu
+module load cray-netcdf
+module load cray-python
+module load CMake
+export SERIALBOX_DIR=/users/olifu/HPC4WC/serialbox/install
+export NETCDF_LIB=${NETCDF_DIR}/lib
