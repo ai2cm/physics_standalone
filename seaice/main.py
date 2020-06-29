@@ -46,7 +46,7 @@ for tile in range(6):
             if isready:
                 raise Exception("out-of-order data enountered: " + sp.name)
             
-            print("> running ", sp)
+            print("> running ", f"tile-{tile}", sp)
 
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
@@ -61,7 +61,7 @@ for tile in range(6):
             if not isready:
                 raise Exception("out-of-order data encountered: " + sp.name)
 
-            print("> validating ", sp)
+            print("> validating ", f"tile-{tile}", sp)
 
             # read serialized output data
             out_vars = ["hice"]
