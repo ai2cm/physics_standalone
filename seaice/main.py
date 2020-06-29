@@ -5,7 +5,8 @@ import sys
 import numpy as np
 import sea_ice as si
 
-sys.path.append(os.getenv("SERIALBOX_DIR") + "/python")
+SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
