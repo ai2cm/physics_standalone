@@ -42,7 +42,7 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	/bin/rm -rf $(TARGET) data data.tar.gz
+	/bin/rm -rf $(TARGET) data data.tar.gz __pycache__
 
 $(TARGET):
 	$(LD) $(OBJ) $(LDFLAGS) -o $(TARGET)
