@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# pylint: disable=W0511
+# pylint: disable=C0326
+# pylint: disable=C0103
+
 import numpy as np
 
 OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc", "tice", \
@@ -7,17 +11,32 @@ OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc", "tice", \
     "hice", "cmm"]
 
 def run(in_dict):
+    """run function"""
 
     # TODO - implement sea-ice model
-    hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx = sfc_sice(in_dict['im'], in_dict['km'], in_dict['ps'], in_dict['t1'], in_dict['q1'], in_dict['delt'], in_dict['sfcemis'], in_dict['dlwflx'], in_dict['sfcnsw'], in_dict['sfcdsw'], in_dict['srflag'], in_dict['cm'], in_dict['ch'], in_dict['prsl1'], in_dict['prslki'], in_dict['islimks'], in_dict['wind'], in_dict['flat_iter'], in_dict['lprnt'], in_dict['ipr'], in_dict['cimin'], in_dict['hice'], in_dict['fice'], in_dict['tice'], in_dict['weasd'], in_dict['tskin'], in_dict['tprcp'], in_dict['stc'], in_dict['ep'])
-    
-    d = dict(((k, eval(k)) for k in (hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx)))
+    hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, \
+    gflux, cmm, chh, evap, hflx = sfc_sice(
+        in_dict['im'], in_dict['km'], in_dict['ps'],
+        in_dict['t1'], in_dict['q1'], in_dict['delt'],
+        in_dict['sfcemis'], in_dict['dlwflx'], in_dict['sfcnsw'],
+        in_dict['sfcdsw'], in_dict['srflag'], in_dict['cm'],
+        in_dict['ch'], in_dict['prsl1'], in_dict['prslki'],
+        in_dict['islimks'], in_dict['wind'], in_dict['flat_iter'],
+        in_dict['lprnt'], in_dict['ipr'], in_dict['cimin'],
+        in_dict['hice'], in_dict['fice'], in_dict['tice'],
+        in_dict['weasd'], in_dict['tskin'], in_dict['tprcp'],
+        in_dict['stc'], in_dict['ep'])
+
+    d = dict(((k, eval(k)) for k in (hice, fice, tice, weasd, tskin, tprcp,
+                                     stc, ep, snwdph, qsurf, snowmt, gflux,
+                                     cmm, chh, evap, hflx)))
     in_dict.update(d)
     return {key: in_dict.get(key, None) for key in OUT_VARS}
 
 def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
-        cm, ch, prsl1, prslki, islimks, wind, flat_iter, lprnt, ipr, cimin,
-        hice, fice, tice, weasd, tskin, tprcp, stc, ep):
+             cm, ch, prsl1, prslki, islimks, wind, flat_iter, lprnt, ipr, cimin,
+             hice, fice, tice, weasd, tskin, tprcp, stc, ep):
+    """run function"""
 
     # constant definition
     # TODO - this should be moved into a shared physics constants / physics functions module
@@ -45,26 +64,26 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     timin  = 173.        # minimum temperature allowed for snow/ice
     albfw  = 0.          # albedo for lead
     dsi    = one/0.33
-    
+
     # arrays
-    ffw = np.zeros(im)
-    evapi = np.zeros(im)
-    evapw = np.zeros(im)
-    sneti = np.zeros(im)
-    snetw = np.zeros(im)
-    hfd = np.zeros(im)
-    hfi = np.zeros(im)
-    focn = np.zeros(im)
-    snof = np.zeros(im)
-    rch = np.zeros(im)
-    rho = np.zeros(im)
-    snowd = np.zeros(im)
+    ffw    = np.zeros(im)
+    evapi  = np.zeros(im)
+    evapw  = np.zeros(im)
+    sneti  = np.zeros(im)
+    snetw  = np.zeros(im)
+    hfd    = np.zeros(im)
+    hfi    = np.zeros(im)
+    focn   = np.zeros(im)
+    snof   = np.zeros(im)
+    rch    = np.zeros(im)
+    rho    = np.zeros(im)
+    snowd  = np.zeros(im)
     theta1 = np.zeros(im)
-    flag = np.zeros(im)    
+    flag   = np.zeros(im)
+    q0     = np.zeros(im)
 
     stsice = np.zeros(im, kmi)
 
-    return hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx
 #  --- ...  set flag for sea-ice
 
     flag = (islimsk == 2) and flag_iter
@@ -72,9 +91,12 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     fice[flag_iter and (islimsk < 2)] = zero
 
 # TODO: save mask "flag and srflag > zero" as logical array?
-    ep[flag and srflag > zero]    = ep[flag and srflag > zero]*(one-srflag[flag and srflag > zero])
-    weasd[flag and srflag > zero] = weasd[flag and srflag > zero] + 1.e3*tprcp[flag and srflag > zero]*srflag[flag and srflag > zero]
-    tprcp[flag and srflag > zero] = tprcp[flag and srflag > zero]*(one-srflag[flag and srflag > zero])
+    ep[flag and srflag > zero]    = ep[flag and srflag > zero]* \
+            (one-srflag[flag and srflag > zero])
+    weasd[flag and srflag > zero] = weasd[flag and srflag > zero] + \
+            1.e3*tprcp[flag and srflag > zero]*srflag[flag and srflag > zero]
+    tprcp[flag and srflag > zero] = tprcp[flag and srflag > zero]* \
+            (one-srflag[flag and srflag > zero])
 #  --- ...  update sea ice temperature
 
     stsice[flag, :] = stci[flag, :]
@@ -88,22 +110,22 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 #         dlwflx has been given a negative sign for downward longwave
 #         sfcnsw is the net shortwave flux (direction: dn-up)
 
-    q0[flag]  = np.max(q1[flag], 1.0e-8)
+    q0[flag]     = np.max(q1[flag], 1.0e-8)
     theta1[flag] = t1[flag] * prslki[flag]
     rho[flag]    = prsl1[flag] / (rd*t1[flag]*(one+rvrdm1*q0))
-    qs1       = fpvs(t1[flag])
-    qs1       = np.max(eps*qs1 / (prsl1[flag] + epsm1*qs1), 1.e-8)
-    q0        = min(qs1, q0)
-  
+    qs1 = fpvs(t1[flag])
+    qs1 = np.max(eps*qs1 / (prsl1[flag] + epsm1*qs1), 1.e-8)
+    q0  = min(qs1, q0)
+
     if any(fice[flag] < cimin):
         print("warning: ice fraction is low:", fice[flag][fice[flag] < cimin])
         fice[flag][fice[flag] < cimin] = cimin
         tice[flag][fice[flag] < cimin] = tgice
         tskin[flag][fice[flag] < cimin]= tgice
         print('fix ice fraction: reset it to:', fice[flag][fice[flag] < cimin])
-  
+
     ffw[flag]    = 1.0 - fice[flag]
-  
+
     qssi = fpvs(tice[flag])
     qssi = eps*qssi / (ps[flag] + epsm1*qssi)
     qssw = fpvs(tgice)
@@ -138,8 +160,10 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 
 #  --- ...  hfi = net non-solar and upir heat flux @ ice surface
 
-    hfi[flag] = -dlwflx[flag] + sfcemis[flag]*sbc*t14 + evapi[flag] + rch[flag]*(tice[flag] - theta1[flag])
-    hfd[flag] = 4.*sfcemis[flag]*sbc*tice[flag]*t12 + (one + elocp*eps*hvap*qs1/(rd*t12)) * rch[flag]
+    hfi[flag] = -dlwflx[flag] + sfcemis[flag]*sbc*t14 + evapi[flag] + \
+            rch[flag]*(tice[flag] - theta1[flag])
+    hfd[flag] = 4.*sfcemis[flag]*sbc*tice[flag]*t12 + \
+            (one + elocp*eps*hvap*qs1/(rd*t12)) * rch[flag]
 
 
     t12 = tgice * tgice
@@ -149,19 +173,24 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 
     focn[flag] = 2.   # heat flux from ocean - should be from ocn model
     snof[flag] = zero    # snowfall rate - snow accumulates in gbphys
-  
+
     hice[flag] = np.max( np.min( hice[flag], himax ), himin )
     snowd[flag] = np.min( snowd[flag], hsmax )
 
 # TODO: write more efficiently, save mask as new variable?
     if any(snowd[flag] > (2.*hice[flag])):
-        print('warning: too much snow :', snowd[flag][snowd[flag] > (2.*hice[flag])])
-        snowd[flag][snowd[flag] > (2.*hice[flag])] = hice[flag][snowd[flag] > (2.*hice[flag])] + hice[flag][snowd[flag] > (2.*hice[flag])]
-        print('fix: decrease snow depth to:',snowd[flag][snowd[flag] > (2.*hice[flag])])
+        print('warning: too much snow :',
+              snowd[flag][snowd[flag] > (2.*hice[flag])])
+        snowd[flag][snowd[flag] > (2.*hice[flag])] = \
+                hice[flag][snowd[flag] > (2.*hice[flag])] + \
+                hice[flag][snowd[flag] > (2.*hice[flag])]
+        print('fix: decrease snow depth to:',
+              snowd[flag][snowd[flag] > (2.*hice[flag])])
 
 # call function ice3lay
-    snowd, hice, stsice, tice, snof, snowmt, gflux = ice3lay(                                                      
-           im, kmi, fice, flag, hfi, hfd, sneti, focn, delt, lprnt, ipr)
+    snowd, hice, stsice, tice, snof, snowmt, gflux = \
+            ice3lay(im, kmi, fice, flag, hfi, hfd,
+                    sneti, focn, delt, lprnt, ipr)
 
     if any(tice[flag] < timin):
         # TODO: print indices (i) of temp-warnings
@@ -191,7 +220,7 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     hflxw      = rch[flag] * (tgice      - theta1[flag])
     hflx[flag] = fice[flag]* hflxi       + ffw[flag]*hflxw
     evap[flag] = fice[flag]* evapi[flag] + ffw[flag]*evapw[flag]
-#  
+
 #  --- ...  the rest of the output
 
     qsurf[flag] = q1[flag] + evap[flag] / (elocp*rch[flag])
@@ -205,12 +234,13 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     hflx[flag] = hflx[flag] * tem * cpinv
     evap[flag] = evap[flag] * tem * hvapi
 
-    return hice, fice, tice, weasd, tskin, tprcp, ep, snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx
-
+    return hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, \
+           snowmt, gflux, cmm, chh, evap, hflx
 
 def fpvs(t):
-    # Compute saturation vapor pressure over liquid
-    # t: temperature in Kelvin
+    """Compute saturation vapor pressure over liquid
+    t: temperature in Kelvin
+    """
 
     # constant definition
     # TODO - this should be moved into a shared physics constants / physics functions module
