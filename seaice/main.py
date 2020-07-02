@@ -67,7 +67,6 @@ for tile in range(6):
 
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
-            print(in_data)
 
             # run Python version
             out_data = si.run(in_data)
