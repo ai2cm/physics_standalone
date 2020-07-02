@@ -307,9 +307,9 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     hdi[flag] = (dsdw*snowd[flag] + didw * hice[flag])
     
     snowd[flag][hice[flag] < hdi[flag]] = snowd[flag][hice[flag]  < hdi[flag]] + \
-        hice[flag][hice[flag] < hdi[flag]] - hdi[flag]
+        hice[flag][hice[flag] < hdi[flag]] - hdi[flag][hice[flag] < hdi[flag]]
     hice[flag][hice[flag]  < hdi[flag]]  = hice[flag][hice[flag] < hdi[flag]] + \
-            (hdi[flag] -  hice[flag][hice[flag]  < hdi[flag]]) * dsdi   
+            (hdi[flag][hice[flag] < hdi[flag]] -  hice[flag][hice[flag]  < hdi[flag]]) * dsdi   
     
     snof[flag] = snof[flag] * dwds
     tice[flag] = tice[flag] - t0c
@@ -359,18 +359,18 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
             k32[flag][tice[flag]>tsf[flag]]* \
             (dt4*k32[flag][tice[flag]>tsf[flag]] + \
             dici*hice[flag][tice[flag]>tsf[flag]])*one / \
-            (dt6*k32[flag] + dici*hice[flag][tice[flag]>tsf[flag]]) \
+            (dt6*k32[flag][tice[flag]>tsf[flag]] + dici*hice[flag][tice[flag]>tsf[flag]]) \
             + k12[flag][tice[flag]>tsf[flag]]
     b1[flag][tice[flag]>tsf[flag]] = -di * \
             hice[flag][tice[flag]>tsf[flag]] * \
             (ci*stsice[flag,0][tice[flag]>tsf[flag]] + li*tfi \
-            / stsice[flag,0][tice[flag]>tsf[flag]])* dt2i - ip[flag] \
+            / stsice[flag,0][tice[flag]>tsf[flag]])* dt2i - ip[flag][tice[flag]>tsf[flag]] \
             - k32[flag][tice[flag]>tsf[flag]] * \
             (dt4*k32[flag][tice[flag]>tsf[flag]]*tfw + dici * \
             hice[flag][tice[flag]>tsf[flag]] * \
             stsice[flag,1][tice[flag]>tsf[flag]]) * one / \
-            (dt6*k32[flag][tice[flag]>tsf[flag]] + dici \
-            *hice[flag][tice[flag]>tsf[flag]]) - \
+            (dt6*k32[flag][tice[flag]>tsf[flag]] + dici* \
+            hice[flag][tice[flag]>tsf[flag]]) - \
             k12[flag][tice[flag]>tsf[flag]] * \
             tsf[flag][tice[flag]>tsf[flag]]
     stsice[flag,0][tice[flag]>tsf[flag]] = \
@@ -424,11 +424,11 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     h1[flag][tmelt[flag]>snowd[flag]*dsli] = \
             h1[flag][tmelt[flag]>snowd[flag]*dsli] - \
             (tmelt[flag][tmelt[flag]>snowd[flag]*dsli] - \
-            snowd[tmelt[flag]>snowd[flag]*dsli]*dsli) / \
+            snowd[flag][tmelt[flag]>snowd[flag]*dsli]*dsli) / \
             (di * (ci - li/ \
             stsice[flag,0][tmelt[flag]>snowd[flag]*dsli]) *\
             (tfi - stsice[flag,0][tmelt[flag]>snowd[flag]*dsli]))
-    snowd[tmelt[flag]>snowd[flag]*dsli] = zero
+    snowd[flag][tmelt[flag]>snowd[flag]*dsli] = zero
         
 
 #  --- ...  and bottom
@@ -473,17 +473,16 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
 
     # begin if_stsice_block
 
-    hice[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]]\
-            [stsice[flag,1]>tfi]=hice[flag][hice[flag]>zero]\
-            [h1[flag]>0.5*hice[flag]][stsice[flag,1]>tfi]\
-            -h2[flag][hice[flag]>zero][h1[flag]>0.5*\
-            hice[flag]][stsice[flag,1]>tfi]*ci*(stsice[flag,1]\
-            [hice[flag]>zero][h1[flag]>0.5*hice[flag]]\
-            [stsice[flag,1]>tfi] - tfi)/(li*delt\
-            [h1[flag]>0.5*hice[flag]][stsice[flag,1]>tfi])
+    hice[flag][(hice[flag] > zero) & (h1[flag] > 0.5*hice[flag]) & \
+            (stsice[flag,1]>tfi)] = hice[flag][(hice[flag] > zero) & \
+            (h1[flag] > 0.5*hice[flag]) & (stsice[flag,1] > tfi)] - \
+            h2[flag][(hice[flag] > zero) & (h1[flag] > 0.5* \
+            hice[flag]) & (stsice[flag,1]>tfi)]*ci*(stsice[flag,1]\
+            [(hice[flag]>zero) & (h1[flag]>0.5*hice[flag]) & \
+            (stsice[flag,1]>tfi)] - tfi)/(li*delt)
 
-    stsice[flag,1][hice[flag]>zero][h1[flag]>0.5*hice[flag]]\
-            [stsice[flag,1]>tfi] = tfi
+    stsice[flag,1][(hice[flag]>zero) & (h1[flag]>0.5*hice[flag]) & \
+            (stsice[flag,1]>tfi)] = tfi
               
     # end if_stsice_block
 
@@ -492,7 +491,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     # hice[flag] > zero
     # h1[flag] <= 0.5*hice[flag]
 
-    f1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]>0.5*hice[flag][hice[flag]>zero]] = \
+    f1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]] = \
             (h1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]]+\
             h1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]]) / \
             hice[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]]
