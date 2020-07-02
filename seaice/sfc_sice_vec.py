@@ -104,58 +104,45 @@
     snowd, hice, stsice, tice, snof, snowmt, gflux = ice3lay(                                                      
            im, kmi, fice, flag, hfi, hfd, sneti, focn, delt, lprnt, ipr)
 
-      do i = 1, im
-        if (flag(i)) then
-          if any(tice[flag] < timin):
-            print('warning: snow/ice temperature is too low:',
-                  tice[flag][tice[flag] < timin], ' i=', i)
-            tice[flag] = timin
-            print *,'fix snow/ice temperature: reset it to:',tice[flag]
-          endif
+    if any(tice[flag] < timin):
+        # TODO: print indices (i) of temp-warnings
+        print('warning: snow/ice temperature is too low:',
+              tice[flag][tice[flag] < timin]) # , ' i=', i)
+        tice[flag] = timin
+        print('fix snow/ice temperature: reset it to:', tice[flag])
 
-          if (stsice(i,1) < timin) then
-            print *,'warning: layer 1 ice temp is too low:',stsice(i,1) &
-     &,             ' i=',i
-            stsice(i,1) = timin
-            print *,'fix layer 1 ice temp: reset it to:',stsice(i,1)
-          endif
+    if any(stsice[flag,0] < timin):
+        print('warning: layer 1 ice temp is too low:',stsice[flag,0])
+# TODO: print indices (i) of temp-warning             ' i=',i
+        stsice[flag,0] = timin
+        print('fix layer 1 ice temp: reset it to:', stsice[flag,0])
 
-          if (stsice(i,2) < timin) then
-            print *,'warning: layer 2 ice temp is too low:',stsice(i,2)
-            stsice(i,2) = timin
-            print *,'fix layer 2 ice temp: reset it to:',stsice(i,2)
-          endif
+    if any(stsice[flag,1] < timin) then
+        print('warning: layer 2 ice temp is too low:',stsice[flag,1])
+        stsice[flag,1] = timin
+        print('fix layer 2 ice temp: reset it to:',stsice[flag,1])
 
-          tskin[flag] = tice[flag]*fice[flag] + tgice*ffw[flag]
-        endif
-      enddo
-
-
-# edited until here
+    tskin[flag] = tice[flag]*fice[flag] + tgice*ffw[flag]
 
     stc[flag,:] = np.min(stsice[flag,k], t0c)
 
-      do i = 1, im
-        if (flag(i)) then
 #  --- ...  calculate sensible heat flux (& evap over sea ice)
 
-          hflxi    = rch(i) * (tice(i) - theta1(i))
-          hflxw    = rch(i) * (tgice - theta1(i))
-          hflx(i)  = fice(i)*hflxi    + ffw(i)*hflxw
-          evap(i)  = fice(i)*evapi(i) + ffw(i)*evapw(i)
-#
+    hflxi      = rch[flag] * (tice[flag] - theta1[flag])
+    hflxw      = rch[flag] * (tgice      - theta1[flag])
+    hflx[flag] = fice[flag]* hflxi       + ffw[flag]*hflxw
+    evap[flag] = fice[flag]* evapi[flag] + ffw[flag]*evapw[flag]
+#  
 #  --- ...  the rest of the output
 
-          qsurf(i) = q1(i) + evap(i) / (elocp*rch(i))
+    qsurf[flag] = q1[flag] + evap[flag] / (elocp*rch[flag])
 
 #  --- ...  convert snow depth back to mm of water equivalent
 
-          weasd(i)  = snowd(i) * 1000.0
-          snwdph(i) = weasd(i) * dsi             # snow depth in mm
+    weasd[flag]  = snowd[flag] * 1000.0
+    snwdph[flag] = weasd[flag] * dsi             # snow depth in mm
 
-          tem     = 1.0 / rho(i)
-          hflx(i) = hflx(i) * tem * cpinv
-          evap(i) = evap(i) * tem * hvapi
-        endif
-      enddo
+    tem     = 1.0 / rho[flag]
+    hflx[flag] = hflx[flag] * tem * cpinv
+    evap[flag] = evap[flag] * tem * hvapi
 #
