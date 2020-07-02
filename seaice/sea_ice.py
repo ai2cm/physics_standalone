@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+# -*- coding: utf-8 -*-
 # pylint: disable=W0511
 # pylint: disable=C0326
 # pylint: disable=C0103
@@ -27,10 +27,11 @@ def run(in_dict):
         in_dict['weasd'], in_dict['tskin'], in_dict['tprcp'],
         in_dict['stc'], in_dict['ep'], in_dict['snwdph'], in_dict['qsurf'], in_dict['cmm'],
         in_dict['chh'], in_dict['evap'], in_dict['hflx'], )
-
-    d = dict(((k, eval(k)) for k in (hice, fice, tice, weasd, tskin, tprcp,
-                                     stc, ep, snwdph, qsurf, snowmt, gflux,
-                                     cmm, chh, evap, hflx)))
+    
+    d = dict(((k, eval(k)) for k in ('hice', 'fice', 'tice', 'weasd', 'tskin', 'tprcp',
+                                     'stc', 'ep', 'snwdph', 'qsurf', 'snowmt', 'gflux',
+                                     'cmm', 'chh', 'evap', 'hflx')))
+    print(d)
     in_dict.update(d)
     return {key: in_dict.get(key, None) for key in OUT_VARS}
 
