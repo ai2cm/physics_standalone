@@ -39,7 +39,6 @@ def compare_data(exp_data, ref_data):
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
 
-
 for tile in range(6):
 
     if SELECT_SP is not None:
@@ -70,7 +69,6 @@ for tile in range(6):
 
             # run Python version
             out_data = si.run(in_data)
-
             isready = True
 
         if sp.name.startswith("sfc_sice-out"):
@@ -83,6 +81,10 @@ for tile in range(6):
             # read serialized output data
             ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
 
+            diff = (out_data['hice']!=ref_data['hice'])
+            print(out_data['tice'][diff])
+            print(ref_data['tice'][diff])
+            print(np.isclose(out_data['tice'][diff], ref_data['tice'][diff], rtol=1e-3))
             # check result
             compare_data(out_data, ref_data)
 

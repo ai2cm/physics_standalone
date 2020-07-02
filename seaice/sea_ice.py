@@ -349,7 +349,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
 
     c1[flag]   = dili * tfi * dt2i * hice[flag]
 
-    stsice[flag,0] = -(np.sqrt(b1[flag]*b1[flag] - 4.0e0*a1[flag] * \
+    stsice[flag,0] = -(np.sqrt(b1[flag]*b1[flag] - 4.0*a1[flag] * \
             c1[flag]) + b1[flag])/(a1[flag]+a1[flag])
     tice[flag] = (k12[flag]*stsice[flag,0] - ai[flag]) / (k12[flag] + \
             hfd[flag])
@@ -530,7 +530,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
             h2[flag][hice[flag]<=zero]*(ci*\
             (stsice[flag,1][hice[flag]<=zero] - tfi) - li)) / li
 
-    hice[flag][hice[flag]<=zero] = max(zero, \
+    hice[flag][hice[flag]<=zero] = np.maximum(zero, \
             snowd[flag][hice[flag]<=zero]*dsdi)
 
     snowd[flag][hice[flag]<=zero] = zero
