@@ -75,6 +75,8 @@ program test
         !$ser data snwdph=snwdph qsurf=qsurf snowmt=snowmt
         !$ser data gflux=gflux cmm=cmm chh=chh evap=evap hflx=hflx
 
+        write(*,*) tile, ser_count, iter, maxval(hice)
+
         call sfc_sice                                                  &
             !  ---  inputs:
             ( im, km, ps, t1, q1, delt,                                &
@@ -84,7 +86,7 @@ program test
             !  ---  input/outputs:
             hice, fice, tice, weasd, tskin, tprcp, stc, ep,            &
             snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx )
-                
+
         !$ser mode read
         !$ser verbatim if (iter == 1) then
         !$ser savepoint "sfc_sice-out-iter1-"//trim(ser_count_str)
@@ -97,23 +99,23 @@ program test
         !$ser data snwdph=snwdph_ref qsurf=qsurf_ref snowmt=snowmt_ref
         !$ser data gflux=gflux_ref cmm=cmm_ref chh=chh_ref evap=evap_ref hflx=hflx_ref
 
-        if (any(hice /= hice_ref)) write(*,*) 'ERROR: hice does not validate', tile, ser_count, iter
-        if (any(fice /= fice_ref)) write(*,*) 'ERROR: fice does not validate', tile, ser_count, iter
-        if (any(tice /= tice_ref)) write(*,*) 'ERROR: tice does not validate', tile, ser_count, iter
-        if (any(weasd /= weasd_ref)) write(*,*) 'ERROR: weasd does not validate', tile, ser_count, iter
-        if (any(tskin /= tskin_ref)) write(*,*) 'ERROR: tskin does not validate', tile, ser_count, iter
-        if (any(tprcp /= tprcp_ref)) write(*,*) 'ERROR: tprcp does not validate', tile, ser_count, iter
-        if (any(stc /= stc_ref)) write(*,*) 'ERROR: stc does not validate', tile, ser_count, iter
-        if (any(ep /= ep_ref)) write(*,*) 'ERROR: ep does not validate', tile, ser_count, iter
-        if (any(snwdph /= snwdph_ref)) write(*,*) 'ERROR: snwdph does not validate', tile, ser_count, iter
-        if (any(qsurf /= qsurf_ref)) write(*,*) 'ERROR: qsurf does not validate', tile, ser_count, iter
-        if (any(snowmt /= snowmt_ref)) write(*,*) 'ERROR: snowmt does not validate', tile, ser_count, iter
-        if (any(gflux /= gflux_ref)) write(*,*) 'ERROR: gflux does not validate', tile, ser_count, iter
-        if (any(cmm /= cmm_ref)) write(*,*) 'ERROR: cmm does not validate', tile, ser_count, iter
-        if (any(chh /= chh_ref)) write(*,*) 'ERROR: chh does not validate', tile, ser_count, iter
-        if (any(evap /= evap_ref)) write(*,*) 'ERROR: evap does not validate', tile, ser_count, iter
-        if (any(hflx /= hflx_ref)) write(*,*) 'ERROR: hflx does not validate', tile, ser_count, iter
-        
+        call check_r_1d(hice, hice_ref, "hice")
+        call check_r_1d(fice, fice_ref, "fice")
+        call check_r_1d(tice, tice_ref, "tice")
+        call check_r_1d(weasd, weasd_ref, "weasd")
+        call check_r_1d(tskin, tskin_ref, "tskin")
+        call check_r_1d(tprcp, tprcp_ref, "tprcp")
+        call check_r_2d(stc, stc_ref, "stc")
+        call check_r_1d(ep, ep_ref, "ep")
+        call check_r_1d(snwdph, snwdph_ref, "snwdph")
+        call check_r_1d(qsurf, qsurf_ref, "qsurf")
+        call check_r_1d(snowmt, snowmt_ref, "snowmt")
+        call check_r_1d(gflux, gflux_ref, "gflux")
+        call check_r_1d(cmm, cmm_ref, "cmm")
+        call check_r_1d(chh, chh_ref, "chh")
+        call check_r_1d(evap, evap_ref, "evap")
+        call check_r_1d(hflx, hflx_ref, "hflx")
+
         deallocate(ps, t1, q1, sfcemis, dlwflx, sfcnsw, &
             sfcdsw, srflag, cm, ch, prsl1, prslki, &
             wind, hice, fice, tice, weasd, tskin, &
@@ -128,12 +130,83 @@ program test
     end do
     end do
 
-    !ser cleanup
+    !$ser cleanup
 
     end do
 
     call cdstop()
 
     write(*,*) 'FINISHED!'
+
+    contains
+
+    subroutine check_r_2d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:,:), b(:,:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_2d
+
+    subroutine check_r_1d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:), b(:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_1d
+
+    elemental logical function isclose_r(a, b, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a, b
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        real (kind=kind_phys) :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 1.0d-30
+        end if
+        if (present(rtol)) then
+            rtol_local = rtol
+        else
+            rtol_local = 1.0d-12
+        end if
+
+        isclose_r = abs(a - b) <= (atol_local + rtol_local * abs(b))
+
+    end function isclose_r
+
+    elemental logical function isclose_i(a, b, atol)
+        implicit none
+        integer, intent(in) :: a, b
+        integer, intent(in), optional :: atol
+
+        integer :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 0
+        end if
+
+        isclose_i = abs(a - b) <= atol_local
+
+    end function isclose_i
 
 end program test

@@ -28,23 +28,20 @@ LDFLAGS = $(SERIALBOX_DIR)/lib/libSerialboxFortran.a $(SERIALBOX_DIR)/lib/libSer
   -lpthread -lstdc++ -lstdc++fs
 
 .PHONY: all
-all: pre-process compile $(TARGET)
+all: pre-process $(TARGET)
 
 .PHONY: pre-process
 pre-process: $(PP)
 
-.PHONY: build
-compile: $(OBJ)
-
 .PHONY: clean
 clean:
-	/bin/rm -f *.mod *.o $(PP)
+	/bin/rm -rf *.mod *.o $(PP) data.tar.gz __pycache__ $(TARGET)
 
 .PHONY: distclean
 distclean: clean
-	/bin/rm -rf $(TARGET) data data.tar.gz __pycache__
+	/bin/rm -rf data
 
-$(TARGET):
+$(TARGET): $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) -o $(TARGET)
 
 %.F90: %.F
