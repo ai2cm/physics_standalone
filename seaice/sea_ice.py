@@ -106,8 +106,7 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
             (one-srflag[flag & (srflag > zero)])
 #  --- ...  update sea ice temperature
     #TODO: shape error! 
-    # stsice[flag, :] = stc[flag, :]
-    stsice[flag, :] = stc[flag, 0:2]
+    stsice[flag, 0:kmi] = stc[flag, 0:kmi]
     
 #  --- ...  initialize variables. all units are supposedly m.k.s. unless specified
 #           psurf is in pascals, wind is wind speed, theta1 is adiabatic surface
@@ -221,8 +220,7 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     tskin[flag] = tice[flag]*fice[flag] + tgice*ffw[flag]
 
     # TODO: dimension mismatch
-    # stc[flag,:] = np.minimum(stsice[flag,:], t0c)
-    stc[flag,0:2] = np.minimum(stsice[flag,:], t0c)
+    stc[flag,0:kmi] = np.minimum(stsice[flag,0:kmi], t0c)
 
 #  --- ...  calculate sensible heat flux (& evap over sea ice)
 
