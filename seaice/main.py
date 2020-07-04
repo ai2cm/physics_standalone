@@ -5,8 +5,8 @@ import sys
 import numpy as np
 import sea_ice as si
 
-SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
-#SERIALBOX_DIR = "/usr/local/serialbox/"
+#SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
@@ -21,12 +21,16 @@ OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
             "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
             "evap", "hflx"]
 
+#SELECT_SP = None
+SELECT_SP = {"tile": 5, "savepoint": "sfc_sice-in-iter1-000001"}
+
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
     d = {}
     for var in var_list:
         d[var] = serializer.read(var, savepoint)
     return d
+
 
 def compare_data(exp_data, ref_data):
     assert set(exp_data.keys()) == set(ref_data.keys()), \
@@ -35,7 +39,12 @@ def compare_data(exp_data, ref_data):
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
 
+
 for tile in range(6):
+
+    if SELECT_SP is not None:
+        if tile != SELECT_SP["tile"]:
+            continue
 
     serializer = ser.Serializer(ser.OpenModeKind.Read, "./data", "Generator_rank" + str(tile))
 
@@ -43,6 +52,11 @@ for tile in range(6):
 
     isready = False
     for sp in savepoints:
+
+        if SELECT_SP is not None:
+            if sp.name != SELECT_SP["savepoint"] and \
+               sp.name != SELECT_SP["savepoint"].replace("-in-", "-out-"):
+                continue
 
         if sp.name.startswith("sfc_sice-in"):
 
@@ -70,6 +84,6 @@ for tile in range(6):
             ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
 
             # check result
-            compare_data(out_data, ref_data)
+            #compare_data(out_data, ref_data)
 
             isready = False
