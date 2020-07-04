@@ -75,8 +75,6 @@ program test
         !$ser data snwdph=snwdph qsurf=qsurf snowmt=snowmt
         !$ser data gflux=gflux cmm=cmm chh=chh evap=evap hflx=hflx
 
-        write(*,*) tile, ser_count, iter, maxval(hice)
-
         call sfc_sice                                                  &
             !  ---  inputs:
             ( im, km, ps, t1, q1, delt,                                &
