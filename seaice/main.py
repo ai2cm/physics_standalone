@@ -5,8 +5,8 @@ import sys
 import numpy as np
 import sea_ice as si
 
-SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
-#SERIALBOX_DIR = "/usr/local/serialbox/"
+#SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
@@ -67,6 +67,13 @@ for tile in range(6):
 
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
+
+            # TODO: remove once we validate
+            # attach meta-info for debugging purposes
+            ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./data", "Serialized_rank" + str(tile))
+            sp_inside = ser_inside.savepoint[sp.name.replace("-in-", "-inside-")]
+            in_data["serializer"] = ser_inside
+            in_data["savepoint"] = sp_inside
 
             # run Python version
             out_data = si.run(in_data)

@@ -8,5 +8,9 @@ OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc", "tice", \
 
 def run(in_dict):
 
+    ser = in_dict["serializer"]
+    sp = in_dict["savepoint"]
+    stsice = ser.read("stsice", sp)
+
     # TODO - implement sea-ice model
     return {key: in_dict.get(key, None) for key in OUT_VARS}
