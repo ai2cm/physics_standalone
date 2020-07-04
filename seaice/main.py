@@ -84,6 +84,6 @@ for tile in range(6):
             ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
 
             # check result
-            #compare_data(out_data, ref_data)
+            compare_data(out_data, ref_data)
 
             isready = False
