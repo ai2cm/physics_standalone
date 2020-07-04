@@ -26,7 +26,7 @@ program test
     integer :: ser_count, ser_count_max
     character(len=6) :: ser_count_str
 
-    ser_count_max = 10
+    ser_count_max = 19
     num_tiles = 6
 
     ! initialize

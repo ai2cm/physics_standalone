@@ -58,7 +58,6 @@ for tile in range(6):
             out_data = si.run(in_data)
 
             isready = True
-            del ref_data
 
         if sp.name.startswith("sfc_sice-out"):
 
@@ -74,4 +73,3 @@ for tile in range(6):
             compare_data(out_data, ref_data)
 
             isready = False
-            del in_data, out_data, ref_data
