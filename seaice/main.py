@@ -5,8 +5,8 @@ import sys
 import numpy as np
 import sea_ice as si
 
-SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
-#SERIALBOX_DIR = "/usr/local/serialbox/"
+#SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
