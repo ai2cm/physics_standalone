@@ -301,7 +301,7 @@
       enddo
 
       !$ser data fice=fice flag=flag hfi=hfi hfd=hfd sneti=sneti
-      !focn=focn delt=delt lprnt=lprnt ipr=ipr
+      !$ser data focn=focn delt=delt lprnt=lprnt ipr=ipr
 
       call ice3lay                                                      &
 !  ---  inputs:                                                         !
@@ -310,8 +310,8 @@
 !  ---  outputs:                                                        !
      &       snowd, hice, stsice, tice, snof, snowmt, gflux )           !
     
-      !$ser data snowd?snowd hice=hice stsice=stsice tice=tice snof=snof
-      !snowmt=snowmt gflux=gflux
+      !$ser data snowd=snowd hice=hice stsice=stsice tice=tice snof=snof
+      !$ser data snowmt=snowmt gflux=gflux
 
       do i = 1, im
         if (flag(i)) then

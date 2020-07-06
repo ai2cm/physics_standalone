@@ -15,7 +15,6 @@ def run(in_dict):
 
     ser = in_dict['serializer']
     sp = in_dict['savepoint']
-    stsice = ser.read("stsice", sp)
 
     # TODO - implement sea-ice model
     hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, \
@@ -30,7 +29,9 @@ def run(in_dict):
         in_dict['hice'], in_dict['fice'], in_dict['tice'],
         in_dict['weasd'], in_dict['tskin'], in_dict['tprcp'],
         in_dict['stc'], in_dict['ep'], in_dict['snwdph'], in_dict['qsurf'], in_dict['cmm'],
-        in_dict['chh'], in_dict['evap'], in_dict['hflx'], )
+        in_dict['chh'], in_dict['evap'], in_dict['hflx'], 
+        ser, sp)
+
     #d = dict([(k, locals()[k]) for k in ('hice', 'fice', 'tice', 'weasd', 'tskin', 'tprcp',
     #                                 'stc', 'ep', 'snwdph', 'qsurf', 'snowmt', 'gflux',
     #                                 'cmm', 'chh', 'evap', 'hflx')])
@@ -45,7 +46,8 @@ def run(in_dict):
 def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
              cm, ch, prsl1, prslki, islimsk, wind, flag_iter, lprnt, ipr, cimin,
              hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, cmm, chh, 
-             evap, hflx):
+             evap, hflx,
+             ser, sp):
     """run function"""
 
     # constant definition
@@ -196,6 +198,17 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
                 hice[flag][snowd[flag] > (2.*hice[flag])]
         print('fix: decrease snow depth to:',
               snowd[flag][snowd[flag] > (2.*hice[flag])])
+
+    ser_fice = ser.read("fice", sp)
+    assert np.allclose(ser_fice, fice, equal_nan=True)
+    ser_flag = ser.read("flag", sp)
+    assert np.allclose(ser_flag, flag, equal_nan=True)
+    ser_hfi = ser.read("hfi", sp)
+    assert np.allclose(ser_hfi, hfi, equal_nan=True)
+    ser_hfd = ser.read("hfd", sp)
+    assert np.allclose(ser_hfd, hfd, equal_nan=True)
+    ser_sneti = ser.read("sneti", sp)
+    assert np.allclose(ser_sneti, sneti, equal_nan=True)
 
 # call function ice3lay
     snowd, hice, stsice, tice, snof, snowmt, gflux = \
