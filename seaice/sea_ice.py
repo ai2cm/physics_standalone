@@ -13,6 +13,10 @@ OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc", "tice", \
 def run(in_dict):
     """run function"""
 
+    ser = in_dict['serializer']
+    sp = in_dict['savepoint']
+    stsice = ser.read("stsice", sp)
+
     # TODO - implement sea-ice model
     hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, \
     gflux, cmm, chh, evap, hflx = sfc_sice(
