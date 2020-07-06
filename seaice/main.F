@@ -75,7 +75,14 @@ program test
         !$ser data snwdph=snwdph qsurf=qsurf snowmt=snowmt
         !$ser data gflux=gflux cmm=cmm chh=chh evap=evap hflx=hflx
 
-        write(*,*) tile, ser_count, iter, maxval(hice)
+        ! write(*,*) tile, ser_count, iter, maxval(hice)
+
+        !$ser mode write
+        !$ser verbatim if (iter == 1) then
+        !$ser savepoint "sfc_sice-inside-iter1-"//trim(ser_count_str)
+        !$ser verbatim else
+        !$ser savepoint "sfc_sice-inside-iter2-"//trim(ser_count_str)
+        !$ser verbatim end if        
 
         call sfc_sice                                                  &
             !  ---  inputs:
