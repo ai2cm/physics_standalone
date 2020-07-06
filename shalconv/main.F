@@ -19,7 +19,7 @@ program test
     character(len=100) :: nml_file
     character(len=6) :: ser_count_str
 
-    ser_count_max = 10
+    ser_count_max = 19
     num_tiles = 6
 
     ! initialization
@@ -69,19 +69,19 @@ program test
         !$ser data u1=u1_ref v1=v1_ref rn=rn_ref cnvw=cnvw_ref cnvc=cnvc_ref ud_mf=ud_mf_ref
         !$ser data dt_mf=dt_mf_ref
 
-        if (any(kcnv /= kcnv_ref)) write(*,*) 'ERROR: kcnv does not validate', tile, ser_count
-        if (any(kbot /= kbot_ref)) write(*,*) 'ERROR: kbot does not validate', tile, ser_count
-        if (any(ktop /= ktop_ref)) write(*,*) 'ERROR: XXktopX does not validate', tile, ser_count
-        if (any(qtr /= qtr_ref)) write(*,*) 'ERROR: qtr does not validate', tile, ser_count
-        if (any(q1 /= q1_ref)) write(*,*) 'ERROR: q1 does not validate', tile, ser_count
-        if (any(t1 /= t1_ref)) write(*,*) 'ERROR: t1 does not validate', tile, ser_count
-        if (any(u1 /= u1_ref)) write(*,*) 'ERROR: u1 does not validate', tile, ser_count
-        if (any(v1 /= v1_ref)) write(*,*) 'ERROR: v1 does not validate', tile, ser_count
-        if (any(rn /= rn_ref)) write(*,*) 'ERROR: rn does not validate', tile, ser_count
-        if (any(cnvw /= cnvw_ref)) write(*,*) 'ERROR: cnvw does not validate', tile, ser_count
-        if (any(cnvc /= cnvc_ref)) write(*,*) 'ERROR: cnvc does not validate', tile, ser_count
-        if (any(ud_mf /= ud_mf_ref)) write(*,*) 'ERROR: ud_mf does not validate', tile, ser_count
-        if (any(dt_mf /= dt_mf_ref)) write(*,*) 'ERROR: dt_mf does not validate', tile, ser_count
+        call check_i_1d(kcnv, kcnv_ref, "kcnv")
+        call check_i_1d(kbot, kbot_ref, "kbot")
+        call check_i_1d(ktop, ktop_ref, "ktop")
+        call check_r_3d(qtr, qtr_ref, "qtr")
+        call check_r_2d(q1, q1_ref, "q1")
+        call check_r_2d(t1, t1_ref, "t1")
+        call check_r_2d(u1, u1_ref, "u1")
+        call check_r_2d(v1, v1_ref, "v1")
+        call check_r_1d(rn, rn_ref, "rn")
+        call check_r_2d(cnvw, cnvw_ref, "cnvw")
+        call check_r_2d(cnvc, cnvc_ref, "cnvc")
+        call check_r_2d(ud_mf, ud_mf_ref, "ud_mf")
+        call check_r_2d(dt_mf, dt_mf_ref, "dt_mf")
 
         deallocate(psp, delp, prslp, garea, hpbl, dot, &
         phil, fscav, islimsk, kcnv, kbot, ktop, qtr, &
@@ -92,12 +92,113 @@ program test
 
     end do
 
-    !ser cleanup
+    !$ser cleanup
 
     end do
 
     call cdstop()
 
     write(*,*) 'FINISHED!'
+
+contains
+
+subroutine check_r_3d(a, b, name, atol, rtol)
+    implicit none
+    real (kind=kind_phys), intent(in) :: a(:,:,:), b(:,:,:)
+    character(len=*), intent(in) :: name
+    real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+    logical :: close
+
+    close = all(isclose_r(a, b, atol, rtol))
+    if (.not. close) then
+        write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+    end if
+
+end subroutine check_r_3d
+
+subroutine check_r_2d(a, b, name, atol, rtol)
+    implicit none
+    real (kind=kind_phys), intent(in) :: a(:,:), b(:,:)
+    character(len=*), intent(in) :: name
+    real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+    logical :: close
+
+    close = all(isclose_r(a, b, atol, rtol))
+    if (.not. close) then
+        write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+    end if
+
+end subroutine check_r_2d
+
+subroutine check_r_1d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:), b(:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_1d
+
+    subroutine check_i_1d(a, b, name, atol)
+        implicit none
+        integer, intent(in) :: a(:), b(:)
+        character(len=*), intent(in) :: name
+        integer, intent(in), optional :: atol
+
+        logical :: close
+
+        close = all(isclose_i(a, b, atol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_i_1d
+
+    elemental logical function isclose_r(a, b, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a, b
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        real (kind=kind_phys) :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 1.0d-30
+        end if
+        if (present(rtol)) then
+            rtol_local = rtol
+        else
+            rtol_local = 1.0d-12
+        end if
+
+        isclose_r = abs(a - b) <= (atol_local + rtol_local * abs(b))
+
+    end function isclose_r
+
+    elemental logical function isclose_i(a, b, atol)
+        implicit none
+        integer, intent(in) :: a, b
+        integer, intent(in), optional :: atol
+
+        integer :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 0
+        end if
+
+        isclose_i = abs(a - b) <= atol_local
+
+    end function isclose_i
 
 end program test
