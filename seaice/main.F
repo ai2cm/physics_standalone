@@ -183,7 +183,7 @@ program test
         if (present(rtol)) then
             rtol_local = rtol
         else
-            rtol_local = 1.0d-12
+            rtol_local = 1.0d-11
         end if
 
         isclose_r = abs(a - b) <= (atol_local + rtol_local * abs(b))
