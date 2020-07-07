@@ -595,17 +595,7 @@
             h2(i) = h2(i) - bmelt(i) / (dili + dici*(tfi - stsice(i,2)))
           endif
 
-        endif
-      enddo
-
-      !$ser data stsice2=stsice tice2=tice snowmt2=snowmt gflux2=gflux
-      !$ser data hice2=hice a1=a1 b1=b1 c1=c1 k32=k32 k12=k12 tsf=tsf ip=ip
-      !$ser data ai=ai bi=bi
-
-      do i = 1, im
-        if (flag(i)) then
-
-!  --- ...  if ice remai(i)ns, even up 2 layers, else, pass negative energy back in snow
+!  --- ...  if ice remains, even up 2 layers, else, pass negative energy back in snow
 
           hice(i) = h1(i) + h2(i)
 
@@ -641,6 +631,12 @@
             gflux(i)    = zero
           endif   ! end if_hice_block
 
+        endif
+      enddo
+
+      do i = 1, im
+        if (flag(i)) then
+
           gflux(i)    = fice(i) * gflux(i)
           snowmt(i)   = snowmt(i) * dsdw
           snowd(i)    = snowd(i) * dsdw
@@ -649,6 +645,11 @@
           stsice(i,2) = stsice(i,2) + t0c
         endif   ! end if_flag_block
       enddo   ! end do_i_loop
+
+      !$ser data stsice2=stsice tice2=tice snowmt2=snowmt gflux2=gflux
+      !$ser data hice2=hice a1=a1 b1=b1 c1=c1 k32=k32 k12=k12 tsf=tsf ip=ip
+      !$ser data ai=ai bi=bi snowd2=snowd tmelt=tmelt f1=f1
+      !$ser data h1=h1 h2=h2
 
 
       return

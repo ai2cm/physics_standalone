@@ -379,6 +379,67 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     tice[i] = np.minimum(tice[i], tsf[i])
 
     # compute ice temperature
+<<<<<<< Updated upstream:seaice/sea_ice_debug_ice3lay.py
+=======
+    bi[flag] = hfd[flag]
+    ai[flag] = hfi[flag] - sneti[flag] + ip[flag] - tice[flag]*hfd[flag]
+  # +v sol input here
+    k12[flag] = ki4*ks / (ks*hice[flag] + ki4*snowd[flag])
+    k32[flag] = (ki+ki) / hice[flag]
+
+    wrk[flag] = one / (dt6*k32[flag] + dici*hice[flag])
+    a10[flag] = dici*hice[flag]*dt2i + k32[flag]*(dt4*k32[flag] + dici*hice[flag])*wrk[flag]
+
+    b10[flag] = -di*hice[flag] * (ci*stsice[flag,0] + li*tfi/ \
+            stsice[flag,0]) * dt2i - ip[flag] - k32[flag]*\
+            (dt4*k32[flag]*tfw + dici*hice[flag]*stsice[flag,1]) \
+            * wrk[flag]
+  
+    wrk1[flag] = k12[flag] / (k12[flag] + bi[flag])  
+    
+    a1[flag] = a10[flag] + bi[flag] * wrk1[flag]
+    b1[flag] = b10[flag] + ai[flag] * wrk1[flag]
+    c1[flag]   = dili * tfi * dt2i * hice[flag]
+
+    stsice[flag,0] = -(np.sqrt(b1[flag]*b1[flag] - 4.0*a1[flag] * \
+            c1[flag]) + b1[flag])/(a1[flag]+a1[flag])
+    tice[flag] = (k12[flag]*stsice[flag,0] - ai[flag]) / (k12[flag] + \
+            hfd[flag])
+
+    a1[flag & (tice > tsf)] = a10[flag & (tice > tsf)] + k12[flag & (tice > tsf)]
+    b1[flag & (tice > tsf)] = b10[flag & (tice > tsf)] - k12[flag & (tice > tsf)]*tsf[flag & (tice > tsf)]
+    stsice[flag & (tice > tsf), 0] = \
+            -(np.sqrt(b1[flag & (tice > tsf)] * \
+            b1[flag & (tice > tsf)] -\
+            4.0*a1[flag & (tice > tsf)] *\
+            c1[flag & (tice > tsf)]) + \
+            b1[flag & (tice > tsf)])/ \
+            (a1[flag & (tice > tsf)] + \
+            a1[flag & (tice > tsf)])
+    tice[flag & (tice > tsf)] = tsf[flag & (tice > tsf)]
+# TODO: Why has there to be a ">=" such that the code validates?!
+    tmelt[flag & (tice >= tsf)] = \
+            (k12[flag & (tice >= tsf)] * \
+            (stsice[flag & (tice >= tsf), 0] - \
+            tsf[flag & (tice >= tsf)]) - \
+            (ai[flag & (tice >= tsf)] + \
+            bi[flag & (tice >= tsf)] *\
+            tsf[flag & (tice >= tsf)])) * \
+            delt
+              
+    tmelt[flag & (tice < tsf)] = zero
+    snowd[flag & (tice <= tsf)] = \
+            snowd[flag & (tice <= tsf)] + \
+            snof[flag & (tice <= tsf)] * \
+            delt
+
+    stsice[flag,1] = (dt2*k32[flag]*(stsice[flag,0] + tfw + tfw) \
+            +  dici*hice[flag]*stsice[flag,1]) * one / \
+            (dt6*k32[flag] + dici*hice[flag])
+
+    bmelt[flag] = (focn[flag] + \
+            ki4*(stsice[flag,1] - tfw)/hice[flag]) * delt
+>>>>>>> Stashed changes:seaice/sea_ice_ice3lay_val.py
 
     bi[i] = hfd[i]
     ai[i] = hfi[i] - sneti[i] + ip[i] - tice[i] * bi[i] # +v sol input here
@@ -420,6 +481,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
 
 #  --- ...  resize the ice ...
 
+<<<<<<< Updated upstream:seaice/sea_ice_debug_ice3lay.py
     h1[i] = 0.5 * hice[i]
     h2[i] = 0.5 * hice[i]
 
@@ -433,6 +495,22 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     h1[i] = h1[i] - (tmelt[i] - snowd[i] * dsli) / \
             (di * (ci - li / stsice[i, 0]) * (tfi - stsice[i, 0]))
     snowd[i] = 0.
+=======
+#  --- ...  top ...
+                      
+    snowmt[flag & (tmelt <= snowd*dsli)] = \
+            tmelt[flag & (tmelt <= snowd*dsli)] / dsli
+    snowmt[flag & (tmelt > snowd*dsli)] = \
+             snowd[flag & (tmelt > snowd*dsli)]
+    h1[flag & (tmelt > snowd*dsli)] = \
+            h1[flag & (tmelt > snowd*dsli)] - \
+            (tmelt[flag & (tmelt > snowd*dsli)] - \
+            snowd[flag & (tmelt > snowd*dsli)]*dsli) / \
+            (di * (ci - li/stsice[flag & (tmelt > snowd*dsli), 0]) *\
+            (tfi - stsice[flag & (tmelt > snowd*dsli),0]))
+    snowd = (snowd - snowmt)*(flag & (tmelt <= snowd*dsli)) + \
+            zero*(flag & (tmelt > snowd*dsli)) 
+>>>>>>> Stashed changes:seaice/sea_ice_ice3lay_val.py
 
 #  --- ...  and bottom
 
@@ -441,6 +519,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     stsice[i, 1] = (h2[i] * stsice[i, 1] + dh[i] * tfw) / (h2[i] + dh[i])
     h2[i] = h2[i] + dh[i]
 
+<<<<<<< Updated upstream:seaice/sea_ice_debug_ice3lay.py
     i = flag & ~i
     h2[i] = h2[i] - bmelt[i] / (dili + dici * (tfi - stsice[i, 1]))
 
@@ -472,14 +551,36 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     assert np.allclose(ser_b1, b1, equal_nan=True)
     ser_stsice = ser.read("stsice2", sp)
     assert np.allclose(ser_stsice, stsice, equal_nan=True)
+=======
+    dh[flag & (bmelt < zero)] = -bmelt[flag][bmelt[flag] < zero] \
+            / (dili + dici*(tfi - tfw))
+    stsice[flag & (bmelt < zero), 1]=(h2[flag][bmelt[flag] < zero]\
+            *stsice[flag,1][bmelt[flag] < zero] + \
+            dh[flag][bmelt[flag] < zero]*tfw) / \
+            (h2[flag][bmelt[flag] < zero] + \
+            dh[flag][bmelt[flag] < zero])
+    h2[flag & (bmelt < zero)] = h2[flag & (bmelt < zero)] + \
+            dh[flag & (bmelt < zero)]
+    
+    h2[flag & (bmelt >= zero)] = h2[flag][bmelt[flag] >= zero] - \
+            bmelt[flag][bmelt[flag] >= zero] / \
+            (dili + dici*(tfi - stsice[flag,1][bmelt[flag] >= zero]))
+          
+# validated until here
+>>>>>>> Stashed changes:seaice/sea_ice_ice3lay_val.py
 
 #  --- ...  if ice remains, even up 2 layers, else, pass negative energy back in snow
 
     hice[flag] = h1[flag] + h2[flag]
 
+<<<<<<< Updated upstream:seaice/sea_ice_debug_ice3lay.py
 
+=======
+>>>>>>> Stashed changes:seaice/sea_ice_ice3lay_val.py
     # begin if_hice_block
+    hice_flag = flag & (hice > zero)
     # begin if_h1_block
+<<<<<<< Updated upstream:seaice/sea_ice_debug_ice3lay.py
 
     f1[flag & (hice > 0.) & (h1 > 0.5*hice)] = 1.-\
             (h2[flag][hice[flag]>0.][h1[flag]>0.5*hice[flag]]+\
@@ -561,6 +662,54 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
 
     gflux[flag & (hice <= 0.)] = 0.
 
+=======
+    hice_h1_flag = hice_flag & (h1 > 0.5*hice)
+    hice_n_h1_flag = hice_flag & (h1 <= 0.5*hice)
+    f1[hice_h1_flag] = one - 2*h2[hice_h1_flag]/hice[hice_h1_flag]
+    stsice[hice_h1_flag, 1] = f1[hice_h1_flag] * \
+            (stsice[hice_h1_flag, 0] + li*tfi/ \
+            (ci*stsice[hice_h1_flag,0])) \
+            + (one - f1[hice_h1_flag])*stsice[hice_h1_flag,1]
+
+    # begin if_stsice_block
+
+    hice[hice_h1_flag & (stsice[:,1] > tfi)] \
+            = hice[hice_h1_flag & (stsice[:,1] > tfi)] - \
+            h2[hice_h1_flag & (stsice[:,1] > tfi)]* \
+            ci*(stsice[hice_h1_flag & \
+            (stsice[:,1]> tfi), 1] - tfi)/(li*delt)
+    stsice[hice_h1_flag & (stsice[:,1] > tfi), 1] = tfi
+    # end if_stsice_block
+
+    # else if_h1_block
+    f1[hice_n_h1_flag] = 2*h1[hice_n_h1_flag]/hice[hice_n_h1_flag]
+    stsice[hice_n_h1_flag, 0] = \
+            f1[hice_n_h1_flag]*(stsice[hice_n_h1_flag,0]\
+            + li*tfi/(ci*stsice[hice_n_h1_flag,0])) + (one - \
+            f1[hice_n_h1_flag])*stsice[hice_n_h1_flag,1]
+    stsice[hice_n_h1_flag,0]= (\
+            stsice[hice_n_h1_flag,0] - np.sqrt(stsice[hice_n_h1_flag,0]\
+            *stsice[hice_n_h1_flag,0] - 4.0*tfi*li/ci)) * 0.5
+    # end if_h1_block
+
+    k12[hice_flag] = ki4*ks / (ks*hice[hice_flag] + ki4*snowd[hice_flag])
+    gflux[hice_flag] = k12[hice_flag]*(stsice[hice_flag,0] - tice[hice_flag])
+    
+    # else if_hice_block
+    n_hice_flag = flag & (hice <= zero)
+
+    snowd[n_hice_flag] = snowd[n_hice_flag] + (h1[n_hice_flag]*(ci*\
+            (stsice[n_hice_flag, 0] - tfi) - li*(one - tfi/ \
+            stsice[n_hice_flag, 0])) +\
+            h2[n_hice_flag]*(ci*\
+            (stsice[n_hice_flag, 1] - tfi) - li)) / li
+    hice[n_hice_flag] = np.maximum(zero, snowd[n_hice_flag]*dsdi)
+    snowd[n_hice_flag] = zero
+    stsice[n_hice_flag, 0] = tfw
+    stsice[n_hice_flag, 1] = tfw
+    gflux[n_hice_flag] = zero
+    
+>>>>>>> Stashed changes:seaice/sea_ice_ice3lay_val.py
     # end if_hice_block
 
     gflux[flag] = fice[flag] * gflux[flag]
@@ -572,6 +721,47 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
 
     # end if_flag_block
 
+    ser_h1 = ser.read("h1", sp)
+    assert np.allclose(ser_h1, h1, equal_nan=True)
+    ser_h2 = ser.read("h2", sp)
+    assert np.allclose(ser_h2, h2, equal_nan=True)
+    ser_tsf = ser.read("tsf", sp)
+    assert np.allclose(ser_tsf, tsf, equal_nan=True)
+    ser_k32 = ser.read("k32", sp)
+    assert np.allclose(ser_k32, k32, equal_nan=True)
+    ser_a1 = ser.read("a1", sp)
+    assert np.allclose(ser_a1, a1, equal_nan=True)
+    ser_f1 = ser.read("f1", sp)
+    assert np.allclose(ser_f1, f1, equal_nan=True)
+    ser_ai = ser.read("ai", sp)
+    assert np.allclose(ser_ai, ai, equal_nan=True)
+    ser_bi = ser.read("bi", sp)
+    assert np.allclose(ser_bi, bi, equal_nan=True)
+    ser_c1 = ser.read("c1", sp)
+    assert np.allclose(ser_c1, c1, equal_nan=True)
+    ser_ip = ser.read("ip", sp)
+    assert np.allclose(ser_ip, ip, equal_nan=True)
+    ser_tsf = ser.read("tsf", sp)
+    assert np.allclose(ser_tsf, tsf, equal_nan=True)
+    ser_snowd = ser.read("snowd2", sp)
+    assert np.allclose(ser_snowd, snowd, equal_nan=True)
+    ser_tice = ser.read("tice2", sp)
+    assert np.allclose(ser_tice, tice, equal_nan=True)
+    ser_b1 = ser.read("b1", sp)
+    assert np.allclose(ser_b1, b1, equal_nan=True)
+    ser_tmelt = ser.read("tmelt", sp)
+    assert np.allclose(ser_tmelt, tmelt, equal_nan=True)
+    ser_snowmt = ser.read("snowmt2", sp)
+    assert np.allclose(ser_snowmt, snowmt, equal_nan=True)
+    ser_hice = ser.read("hice2", sp)
+    assert np.allclose(ser_hice, hice, equal_nan=True)
+    ser_k12 = ser.read("k12", sp)
+    assert np.allclose(ser_k12, k12, equal_nan=True)
+    ser_stsice = ser.read("stsice2", sp)
+    assert np.allclose(ser_stsice, stsice, equal_nan=True)
+    ser_gflux = ser.read("gflux2", sp)
+#     print('fortran\n', ser_gflux[~np.isclose(gflux,ser_gflux, equal_nan=True)], '\n python \n', gflux[~np.isclose(gflux,ser_gflux, equal_nan=True)])
+    assert np.allclose(ser_gflux, gflux, equal_nan=True)
 
     return snowd, hice, stsice, tice, snof, snowmt, gflux
 
