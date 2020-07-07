@@ -31,6 +31,7 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
     d = {}
     for var in var_list:
         data = serializer.read(var, savepoint)
+        # convert single element numpy arrays to scalars
         if data.size == 1:
             data = data.item()
         d[var] = data
