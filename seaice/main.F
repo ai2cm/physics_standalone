@@ -230,7 +230,7 @@ program test
         implicit none
         real(8) :: t1, t2
         call cpu_time(t2)
-        write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' mu s'
+        write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
     end subroutine toc
 
 end program test
