@@ -43,6 +43,14 @@ def run(in_dict):
     in_dict.update(d)
     return {key: in_dict.get(key, None) for key in OUT_VARS}
 
+def init_array(shape, mode):
+    arr = np.empty(shape)
+    if mode == "zero":
+        arr[:] = 0.
+    if mode == "nan":
+        arr[:] = np.nan
+    return arr
+
 def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
              cm, ch, prsl1, prslki, islimsk, wind, flag_iter, lprnt, ipr, cimin,
              hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, cmm, chh, 
@@ -53,67 +61,66 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     # constant definition
     # TODO - this should be moved into a shared physics constants / physics functions module
     cp     = 1.0046e+3
-    hvap   = 2.5000e+6
+    hvap   = 2.5e+6
     sbc    = 5.6704e-8
-    tgice  = 2.7120e+2
-    rv     = 4.6150e+2
+    tgice  = 2.712e+2
+    rv     = 4.615e+2
     rd     = 2.8705e+2
-    eps    = rd/rv
-    epsm1  = rd/rv - 1.
-    rvrdm1 = rv/rd - 1.
+    eps    = rd / rv
+    epsm1  = rd / rv - 1.
+    rvrdm1 = rv / rd - 1.
     t0c    = 2.7315e+2
 
     # constant parameterts
     kmi    = 2
-    zero   = 0.
-    one    = 1.
-    cpinv  = one/cp
-    hvapi  = one/hvap
-    elocp  = hvap/cp
+    cpinv  = 1. / cp
+    hvapi  = 1. / hvap
+    elocp  = hvap / cp
     himax  = 8.          # maximum ice thickness allowed
-    himin  = 0.          # minimum ice thickness required
+    himin  = 0.1         # minimum ice thickness required
     hsmax  = 2.          # maximum snow depth allowed
     timin  = 173.        # minimum temperature allowed for snow/ice
-    albfw  = 0.          # albedo for lead
-    dsi    = one/0.33
+    albfw  = 0.06        # albedo for lead
+    dsi    = 1. / 0.33
 
     # arrays
-    ffw    = np.zeros(im)
-    evapi  = np.zeros(im)
-    evapw  = np.zeros(im)
-    sneti  = np.zeros(im)
-    snetw  = np.zeros(im)
-    hfd    = np.zeros(im)
-    hfi    = np.zeros(im)
-    focn   = np.zeros(im)
-    snof   = np.zeros(im)
-    rch    = np.zeros(im)
-    rho    = np.zeros(im)
-    snowd  = np.zeros(im)
-    theta1 = np.zeros(im)
-    flag   = np.zeros(im)
-    q0     = np.zeros(im)
-    qs1     = np.zeros(im)
-    stsice = np.zeros([im[0], kmi])
+    mode = "nan"
+    ffw    = init_array([im], mode)
+    evapi  = init_array([im], mode)
+    evapw  = init_array([im], mode)
+    sneti  = init_array([im], mode)
+    snetw  = init_array([im], mode)
+    hfd    = init_array([im], mode)
+    hfi    = init_array([im], mode)
+    focn   = init_array([im], mode)
+    snof   = init_array([im], mode)
+    rch    = init_array([im], mode)
+    rho    = init_array([im], mode)
+    snowd  = init_array([im], mode)
+    theta1 = init_array([im], mode)
+    flag   = init_array([im], mode)
+    q0     = init_array([im], mode)
+    qs1    = init_array([im], mode)
+    stsice = init_array([im, kmi], mode)
+    snowmt = init_array([im], "zero")
+    gflux  = init_array([im], "zero")
 
 #  --- ...  set flag for sea-ice
 
     flag = (islimsk == 2) & flag_iter
-    hice[flag_iter & (islimsk < 2)] = zero
-    fice[flag_iter & (islimsk < 2)] = zero
+    i = flag_iter & (islimsk < 2)
+    hice[i] = 0.
+    fice[i] = 0.
 
-    # TODO: if flag.any():
-# TODO: save mask "flag & srflag > zero" as logical array?
-    ep[flag & ((srflag > zero))]    = ep[flag & ((srflag > zero))]* \
-            (one-srflag[flag & ((srflag > zero))])
-    weasd[flag & (srflag > zero)] = weasd[flag & (srflag > zero)] + \
-            1.e3*tprcp[flag & (srflag > zero)]*srflag[flag & (srflag > zero)]
-    tprcp[flag & (srflag > zero)] = tprcp[flag & (srflag > zero)]* \
-            (one-srflag[flag & (srflag > zero)])
+    i = flag & (srflag > 0.)
+    ep[i] = ep[i] * (1. - srflag[i])
+    weasd[i] = weasd[i] + 1.e3 * tprcp[i] * srflag[i]
+    tprcp[i] = tprcp[i] * (1. - srflag[i])
+
 #  --- ...  update sea ice temperature
-    #TODO: shape error! 
-    stsice[flag, 0:kmi] = stc[flag, 0:kmi]
-    
+    i = flag
+    stsice[i, :] = stc[i, 0:kmi]
+
 #  --- ...  initialize variables. all units are supposedly m.k.s. unless specified
 #           psurf is in pascals, wind is wind speed, theta1 is adiabatic surface
 #           temp from level 1, rho is density, qs1 is sat. hum. at level1 and qss
@@ -122,30 +129,32 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 
 #         dlwflx has been given a negative sign for downward longwave
 #         sfcnsw is the net shortwave flux (direction: dn-up)
-    q0[flag]     = np.maximum(q1[flag], 1.0e-8)
-    theta1[flag] = t1[flag] * prslki[flag]
-    rho[flag]    = prsl1[flag] / (rd*t1[flag]*(one+rvrdm1*q0[flag]))
-    qs1[flag] = fpvs(t1[flag])
-    qs1[flag] = np.maximum(eps*qs1[flag] / (prsl1[flag] + epsm1*qs1[flag]), 1.e-8)
-    q0[flag]  = np.minimum(qs1[flag], q0[flag])
+    q0[i]     = np.maximum(q1[i], 1.0e-8)
+    theta1[i] = t1[i] * prslki[i]
+    rho[i]    = prsl1[i] / (rd * t1[i] * (1. + rvrdm1 * q0[i]))
+    qs1[i]    = fpvs(t1[i])
+    qs1[i]    = np.maximum(eps * qs1[i] / (prsl1[i] + epsm1 * qs1[i]), 1.e-8)
+    q0[i]     = np.minimum(qs1[i], q0[i])
 
-    if any(fice[flag] < cimin):
-        print("warning: ice fraction is low:", fice[flag][fice[flag] < cimin])
-        fice[flag][fice[flag] < cimin] = cimin
-        tice[flag][fice[flag] < cimin] = tgice
-        tskin[flag][fice[flag] < cimin]= tgice
-        print('fix ice fraction: reset it to:', fice[flag][fice[flag] < cimin])
+    i = flag & (fice < cimin)
+    if any(i):
+        print("warning: ice fraction is low:", fice[i])
+        fice[i] = cimin
+        tice[i] = tgice
+        tskin[i]= tgice
+        print('fix ice fraction: reset it to:', fice[i])
 
-    ffw[flag]    = 1.0 - fice[flag]
+    i = flag
+    ffw[i]    = 1.0 - fice[i]
 
-    qssi = fpvs(tice[flag])
-    qssi = eps*qssi / (ps[flag] + epsm1*qssi)
+    qssi = fpvs(tice[i])
+    qssi = eps * qssi / (ps[i] + epsm1 * qssi)
     qssw = fpvs(tgice)
-    qssw = eps*qssw / (ps[flag] + epsm1*qssw)
+    qssw = eps * qssw / (ps[i] + epsm1 * qssw)
 
 #  --- ...  snow depth in water equivalent is converted from mm to m unit
 
-    snowd[flag] = weasd[flag] * 0.001
+    snowd[i] = weasd[i] * 0.001
 
 #  --- ...  when snow depth is less than 1 mm, a patchy snow is assumed and
 #           soil is allowed to interact with the atmosphere.
@@ -154,67 +163,89 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 
 #  --- ...  rcp = rho cp ch v
 
-    cmm[flag] = cm[flag]  * wind[flag]
-    chh[flag] = rho[flag] * ch[flag] * wind[flag]
-    rch[flag] = chh[flag] * cp
+    cmm[i] = cm[i] * wind[i]
+    chh[i] = rho[i] * ch[i] * wind[i]
+    rch[i] = chh[i] * cp
 
 #  --- ...  sensible and latent heat flux over open water & sea ice
 
-    evapi[flag] = elocp * rch[flag] * (qssi - q0[flag])
-    evapw[flag] = elocp * rch[flag] * (qssw - q0[flag])
+    evapi[i] = elocp * rch[i] * (qssi - q0[i])
+    evapw[i] = elocp * rch[i] * (qssw - q0[i])
 
-    snetw[flag] = sfcdsw[flag] * (one - albfw)
-    snetw[flag] = np.minimum(3.*sfcnsw[flag]/(one+2.*ffw[flag]), snetw[flag])
-    sneti[flag] = (sfcnsw[flag] - ffw[flag]*snetw[flag]) / fice[flag]
+    snetw[i] = sfcdsw[i] * (1. - albfw)
+    snetw[i] = np.minimum(3. * sfcnsw[i] / (1. + 2. * ffw[i]), snetw[i])
+    sneti[i] = (sfcnsw[i] - ffw[i] * snetw[i]) / fice[i]
 
-    t12 = tice[flag] * tice[flag]
+    t12 = tice[i] * tice[i]
     t14 = t12 * t12
 
 #  --- ...  hfi = net non-solar and upir heat flux @ ice surface
 
-    hfi[flag] = -dlwflx[flag] + sfcemis[flag]*sbc*t14 + evapi[flag] + \
-            rch[flag]*(tice[flag] - theta1[flag])
-    hfd[flag] = 4.*sfcemis[flag]*sbc*tice[flag]*t12 + \
-            (one + elocp*eps*hvap*qs1[flag]/(rd*t12)) * rch[flag]
-
+    hfi[i] = -dlwflx[i] + sfcemis[i] * sbc * t14 + evapi[i] + \
+            rch[i] * (tice[i] - theta1[i])
+    hfd[i] = 4. * sfcemis[i] * sbc * tice[i] * t12 + \
+            (1. + elocp * eps * hvap * qs1[i] / (rd * t12)) * rch[i]
 
     t12 = tgice * tgice
     t14 = t12 * t12
 
 #  --- ...  hfw = net heat flux @ water surface (within ice)
 
-    focn[flag] = 2.   # heat flux from ocean - should be from ocn model
-    snof[flag] = zero    # snowfall rate - snow accumulates in gbphys
+    focn[i] = 2.   # heat flux from ocean - should be from ocn model
+    snof[i] = 0.    # snowfall rate - snow accumulates in gbphys
 
-    hice[flag] = np.maximum( np.minimum( hice[flag], himax ), himin )
-    snowd[flag] = np.minimum( snowd[flag], hsmax )
+    hice[i] = np.maximum(np.minimum(hice[i], himax), himin)
+    snowd[i] = np.minimum(snowd[i], hsmax)
 
 # TODO: write more efficiently, save mask as new variable?
-    if any(snowd[flag] > (2.*hice[flag])):
-        print('warning: too much snow :',
-              snowd[flag][snowd[flag] > (2.*hice[flag])])
-        snowd[flag][snowd[flag] > (2.*hice[flag])] = \
-                hice[flag][snowd[flag] > (2.*hice[flag])] + \
-                hice[flag][snowd[flag] > (2.*hice[flag])]
-        print('fix: decrease snow depth to:',
-              snowd[flag][snowd[flag] > (2.*hice[flag])])
+    i = flag & (snowd > 2. * hice)
+    if any(i):
+        print('warning: too much snow :', snowd[i])
+        snowd[i] = hice[i] + hice[i]
+        print('fix: decrease snow depth to:', snowd[i])
 
-    ser_fice = ser.read("fice", sp)
-    assert np.allclose(ser_fice, fice, equal_nan=True)
-    ser_flag = ser.read("flag", sp)
-    assert np.allclose(ser_flag, flag, equal_nan=True)
-    ser_hfi = ser.read("hfi", sp)
-    assert np.allclose(ser_hfi, hfi, equal_nan=True)
-    ser_hfd = ser.read("hfd", sp)
-    assert np.allclose(ser_hfd, hfd, equal_nan=True)
-    ser_sneti = ser.read("sneti", sp)
-    assert np.allclose(ser_sneti, sneti, equal_nan=True)
+    fice_ref = ser.read("fice", sp)
+    assert np.allclose(fice, fice_ref, equal_nan=True)
+    hfi_ref = ser.read("hfi", sp)
+    assert np.allclose(hfi, hfi_ref, equal_nan=True)
+    hfd_ref = ser.read("hfd", sp)
+    assert np.allclose(hfd, hfd_ref, equal_nan=True)
+    sneti_ref = ser.read("sneti", sp)
+    assert np.allclose(sneti, sneti_ref, equal_nan=True)
+    focn_ref = ser.read("focn", sp)
+    assert np.allclose(focn, focn_ref, equal_nan=True)
+    delt_ref = ser.read("delt", sp)
+    assert np.allclose(delt, delt_ref, equal_nan=True)
+    lprnt_ref = ser.read("lprnt", sp)
+    assert np.allclose(lprnt, lprnt_ref, equal_nan=True)
+    ipr_ref = ser.read("ipr", sp)
+    assert np.allclose(ipr, ipr_ref, equal_nan=True)
+    snowd_ref = ser.read("snowd", sp)
+    assert np.allclose(snowd, snowd_ref, equal_nan=True)
+    hice_ref = ser.read("hice", sp)
+    assert np.allclose(hice, hice_ref, equal_nan=True)
+    stsice_ref = ser.read("stsice", sp)
+    assert np.allclose(stsice, stsice_ref, equal_nan=True)
+    tice_ref = ser.read("tice", sp)
+    assert np.allclose(tice, tice_ref, equal_nan=True)
+    snof_ref = ser.read("snof", sp)
+    assert np.allclose(snof, snof_ref, equal_nan=True)
+    snowmt_ref = ser.read("snowmt", sp)
+    assert np.allclose(snowmt, snowmt_ref, equal_nan=True)
+    gflux_ref = ser.read("gflux", sp)
+    assert np.allclose(gflux, gflux_ref, equal_nan=True)
 
 # call function ice3lay
     snowd, hice, stsice, tice, snof, snowmt, gflux = \
-            ice3lay(im, kmi, fice, flag, hfi, hfd,
-                    sneti, focn, delt, lprnt, ipr,
-		    snowd, hice, stsice, tice, snof)
+        ice3lay(im, kmi, fice, flag, hfi, hfd, sneti, focn, delt, lprnt, ipr, 
+                snowd, hice, stsice, tice, snof, snowmt, gflux, ser, sp)
+
+    # ser_snowd = ser.read("snowd", sp)
+    # assert np.allclose(ser_snowd, snowd, equal_nan=True)
+    # ser_hice = ser.read("hice", sp)
+    # assert np.allclose(ser_hice, hice, equal_nan=True)
+    # ser_snof = ser.read("snof", sp)
+    # assert np.allclose(ser_snof, snof, equal_nan=True)
 
     if any(tice[flag] < timin):
         # TODO: print indices (i) of temp-warnings
@@ -264,307 +295,281 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 
 
 def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
-            snowd, hice, stsice, tice, snof):
+            snowd, hice, stsice, tice, snof, snowmt, gflux,
+            ser, sp):
     """function ice3lay"""
     # constant parameters
     ds   = 330.0    # snow (ov sea ice) density (kg/m^3)
-    dw   =1000.0   # fresh water density  (kg/m^3)
-    dsdw = ds/dw
-    dwds = dw/ds
-    ks   = 0.31    # conductivity of snow   (w/mk)
+    dw   = 1000.0   # fresh water density  (kg/m^3)
+    dsdw = ds / dw
+    dwds = dw / ds
+    ks   = 0.31     # conductivity of snow   (w/mk)
     i0   = 0.3      # ice surface penetrating solar fraction
-    ki   = 2.03    # conductivity of ice  (w/mk)
-    di   = 917.0   # density of ice   (kg/m^3)
-    didw = di/dw
-    dsdi = ds/di
-    ci   = 2054.0  # heat capacity of fresh ice (j/kg/k)
-    li   = 3.34e5     # latent heat of fusion (j/kg-ice)
+    ki   = 2.03     # conductivity of ice  (w/mk)
+    di   = 917.0    # density of ice   (kg/m^3)
+    didw = di / dw
+    dsdi = ds / di
+    ci   = 2054.0   # heat capacity of fresh ice (j/kg/k)
+    li   = 3.34e5   # latent heat of fusion (j/kg-ice)
     si   = 1.0      # salinity of sea ice
-    mu   = 0.054   # relates freezing temp to salinity
-    tfi  = -mu*si     # sea ice freezing temp = -mu*salinity
+    mu   = 0.054    # relates freezing temp to salinity
+    tfi  = -mu * si # sea ice freezing temp = -mu*salinity
     tfw  = -1.8     # tfw - seawater freezing temp (c)
-    tfi0 = tfi-0.0001
-    dici = di*ci
-    dili = di*li
-    dsli = ds*li
-    ki4  = ki*4.0
-    zero = 0.0
-    one  = 1.0
+    tfi0 = tfi - 0.0001
+    dici = di * ci
+    dili = di * li
+    dsli = ds * li
+    ki4  = ki * 4.0
     # TODO: move variable definition to separate file 
     t0c    = 2.7315e+2
     
     # vecotorize constants
-    ip = np.zeros(im)
-    tsf = np.zeros(im)
-    ai = np.zeros(im)
-    k12 = np.zeros(im)
-    k32 = np.zeros(im)
-    a1 = np.zeros(im)
-    b1 = np.zeros(im)
-    c1 = np.zeros(im)
-    tmelt = np.zeros(im)
-    h1 = np.zeros(im)
-    h2 = np.zeros(im)
-    bmelt = np.zeros(im)
-    dh = np.zeros(im)
-    f1 = np.zeros(im)
-    hdi = np.zeros(im)
-    snowmt = np.zeros(im)
-    gflux = np.zeros(im)
-    #tfi = np.zeros(im)
+    mode = "nan"
+    ip = init_array([im], mode)
+    tsf = init_array([im], mode)
+    ai = init_array([im], mode)
+    k12 = init_array([im], mode)
+    k32 = init_array([im], mode)
+    a1 = init_array([im], mode)
+    b1 = init_array([im], mode)
+    c1 = init_array([im], mode)
+    tmelt = init_array([im], mode)
+    h1 = init_array([im], mode)
+    h2 = init_array([im], mode)
+    bmelt = init_array([im], mode)
+    dh = init_array([im], mode)
+    f1 = init_array([im], mode)
+    hdi = init_array([im], mode)
+    wrk = init_array([im], mode)
+    wrk1 = init_array([im], mode)
+    bi = init_array([im], mode)
+    a10 = init_array([im], mode)
+    b10 = init_array([im], mode)
 
     dt2  = 2. * delt
     dt4  = 4. * delt
     dt6  = 6. * delt
-    dt2i = one / dt2
+    dt2i = 1. / dt2
 
-    snowd[flag] = snowd[flag]  * dwds
-    hdi[flag] = (dsdw*snowd[flag] + didw * hice[flag])
-    
-    snowd[flag][hice[flag] < hdi[flag]] = snowd[flag][hice[flag]  < hdi[flag]] + \
-        hice[flag][hice[flag] < hdi[flag]] - hdi[flag][hice[flag] < hdi[flag]]
-    hice[flag][hice[flag]  < hdi[flag]]  = hice[flag][hice[flag] < hdi[flag]] + \
-            (hdi[flag][hice[flag] < hdi[flag]] -  hice[flag][hice[flag]  < hdi[flag]]) * dsdi   
-    
-    snof[flag] = snof[flag] * dwds
-    tice[flag] = tice[flag] - t0c
-    stsice[flag,0] = np.minimum(stsice[flag,0] - t0c, tfi0)     # degc
-    stsice[flag,1] = np.minimum(stsice[flag,1] - t0c, tfi0)     # degc
-    
-    ip[flag] = i0 * sneti[flag] # ip +v here (in winton ip=-i0*sneti)
+    i = flag
+    snowd[i] = snowd[i]  * dwds
+    hdi[i] = (dsdw * snowd[i] + didw * hice[i])
 
+    i = flag & (hice < hdi)
+    snowd[i] = snowd[i] + hice[i] - hdi[i]
+    hice[i]  = hice[i] + (hdi[i] - hice[i]) * dsdi
 
-    tsf[flag][snowd[flag] > zero] = zero
-    ip[flag][snowd[flag] > zero]  = zero
+    i = flag
+    snof[i] = snof[i] * dwds
+    tice[i] = tice[i] - t0c
+    stsice[i, 0] = np.minimum(stsice[i, 0] - t0c, tfi0)     # degc
+    stsice[i, 1] = np.minimum(stsice[i, 1] - t0c, tfi0)     # degc
 
-    tsf[flag][snowd[flag] <= zero] = tfi
-    ip[flag][snowd[flag] <= zero] = i0 * sneti[flag][snowd[flag] <= \
-            zero]  # ip +v here (in winton ip=-i0*sneti)
- 
+    ip[i] = i0 * sneti[i] # ip +v here (in winton ip=-i0*sneti)
 
-    tice[flag] = np.minimum(tice[flag], tsf[flag])    
-    
+    i = flag & (snowd > 0.)
+    tsf[i] = 0.
+    ip[i]  = 0.
+
+    i = flag & ~i
+    tsf[i] = tfi
+    ip[i] = i0 * sneti[i]  # ip +v here (in winton ip=-i0*sneti)
+
+    i = flag
+    tice[i] = np.minimum(tice[i], tsf[i])
+
     # compute ice temperature
 
-    ai[flag]   = hfi[flag] - sneti[flag] + ip[flag] - tice[flag]*hfd[flag]
-  # +v sol input here
-    k12[flag]  = ki4*ks / (ks*hice[flag] + ki4*snowd[flag])
-    k32[flag]  = (ki+ki) / hice[flag]
+    bi[i] = hfd[i]
+    ai[i] = hfi[i] - sneti[i] + ip[i] - tice[i] * bi[i] # +v sol input here
+    k12[i] = ki4 * ks / (ks * hice[i] + ki4 * snowd[i])
+    k32[i] = (ki + ki) / hice[i]
 
-    
-    a1[flag]    = dici*hice[flag]*dt2i + k32[flag]*(dt4*k32[flag] + \
-            dici*hice[flag])*one / (dt6*k32[flag] + dici*hice[flag])\
-            + hfd[flag] * k12[flag] / (k12[flag] + hfd[flag])
+    wrk[i] = 1. / (dt6 * k32[i] + dici * hice[i])
+    a10[i] = dici * hice[i] * dt2i + \
+        k32[i] * (dt4 * k32[i] + dici * hice[i]) * wrk[i]
+    b10[i] = -di * hice[i] * (ci * stsice[i, 0] + li * tfi / \
+            stsice[i, 0]) * dt2i - ip[i] - k32[i] * \
+            (dt4 * k32[i] * tfw + dici * hice[i] * stsice[i,1]) * wrk[i]
 
-    b1[flag]    = -di*hice[flag] * (ci*stsice[flag,0] + li* \
-            tfi/stsice[flag,0]) * dt2i - ip[flag] - k32[flag]* \
-            (dt4*k32[flag]*tfw + dici * hice[flag]*stsice[flag,1])* \
-            one / (dt6*k32[flag] + dici * hice[flag]) + ai[flag] * \
-            k12[flag] / (k12[flag] + hfd[flag])
+    wrk1[i] = k12[i] / (k12[i] + bi[i])
+    a1[i] = a10[i] + bi[i] * wrk1[i]
+    b1[i] = b10[i] + ai[i] * wrk1[i]
+    c1[i]   = dili * tfi * dt2i * hice[i]
 
-    c1[flag]   = dili * tfi * dt2i * hice[flag]
+    stsice[i, 0] = -(np.sqrt(b1[i] * b1[i] - 4. * a1[i] * c1[i]) + b1[i]) / \
+        (a1[i] + a1[i])
+    tice[i] = (k12[i] * stsice[i, 0] - ai[i]) / (k12[i] + bi[i])
 
-    stsice[flag,0] = -(np.sqrt(b1[flag]*b1[flag] - 4.0*a1[flag] * \
-            c1[flag]) + b1[flag])/(a1[flag]+a1[flag])
-    tice[flag] = (k12[flag]*stsice[flag,0] - ai[flag]) / (k12[flag] + \
-            hfd[flag])
+    i = flag & (tice > tsf)
+    a1[i] = a10[i] + k12[i]
+    b1[i] = b10[i] - k12[i] * tsf[i]
+    stsice[i, 0] = -(np.sqrt(b1[i] * b1[i] - 4. * a1[i] * c1[i]) + b1[i]) / \
+        (a1[i] + a1[i])
+    tice[i] = tsf[i]
+    tmelt[i] = (k12[i] * (stsice[i, 0] - tsf[i]) - (ai[i] + bi[i] * tsf[i])) * delt
 
-    a1[flag][tice[flag]>tsf[flag]] = dici * \
-            hice[flag][tice[flag]>tsf[flag]]*dt2i + \
-            k32[flag][tice[flag]>tsf[flag]]* \
-            (dt4*k32[flag][tice[flag]>tsf[flag]] + \
-            dici*hice[flag][tice[flag]>tsf[flag]])*one / \
-            (dt6*k32[flag][tice[flag]>tsf[flag]] + dici*hice[flag][tice[flag]>tsf[flag]]) \
-            + k12[flag][tice[flag]>tsf[flag]]
-    b1[flag][tice[flag]>tsf[flag]] = -di * \
-            hice[flag][tice[flag]>tsf[flag]] * \
-            (ci*stsice[flag,0][tice[flag]>tsf[flag]] + li*tfi \
-            / stsice[flag,0][tice[flag]>tsf[flag]])* dt2i - ip[flag][tice[flag]>tsf[flag]] \
-            - k32[flag][tice[flag]>tsf[flag]] * \
-            (dt4*k32[flag][tice[flag]>tsf[flag]]*tfw + dici * \
-            hice[flag][tice[flag]>tsf[flag]] * \
-            stsice[flag,1][tice[flag]>tsf[flag]]) * one / \
-            (dt6*k32[flag][tice[flag]>tsf[flag]] + dici* \
-            hice[flag][tice[flag]>tsf[flag]]) - \
-            k12[flag][tice[flag]>tsf[flag]] * \
-            tsf[flag][tice[flag]>tsf[flag]]
-    stsice[flag,0][tice[flag]>tsf[flag]] = \
-            -(np.sqrt(b1[flag][tice[flag]>tsf[flag]] * \
-            b1[flag][tice[flag]>tsf[flag]] -\
-            4.0*a1[flag][tice[flag]>tsf[flag]] *\
-            c1[flag][tice[flag]>tsf[flag]]) + \
-            b1[flag][tice[flag]>tsf[flag]])/ \
-            (a1[flag][tice[flag]>tsf[flag]] + \
-            a1[flag][tice[flag]>tsf[flag]])
-    tice[flag][tice[flag]>tsf[flag]] = tsf[flag][tice[flag]>tsf[flag]]
-    tmelt[flag][tice[flag]>tsf[flag]] = \
-            (k12[flag][tice[flag]>tsf[flag]] * \
-            (stsice[flag,0][tice[flag]>tsf[flag]] - \
-            tsf[flag][tice[flag]>tsf[flag]]) - \
-            (ai[flag][tice[flag]>tsf[flag]] + \
-            hfd[flag][tice[flag]>tsf[flag]] *\
-            tsf[flag][tice[flag]>tsf[flag]])) * \
-            delt
-              
-    tmelt[flag][tice[flag]<=tsf[flag]] = zero
-    snowd[flag][tice[flag]<=tsf[flag]] = \
-            snowd[flag][tice[flag]<=tsf[flag]] + \
-            snof[flag][tice[flag]<=tsf[flag]] * \
-            delt
+    i = flag & ~i
+    tmelt[i] = 0.
+    snowd[i] = snowd[i] + snof[i] * delt
 
-    stsice[flag,1] = (dt2*k32[flag]*(stsice[flag,0] + tfw + tfw) \
-            +  dici*hice[flag]*stsice[flag,1]) * one / \
-            (dt6*k32[flag] + dici*hice[flag])
-
-
-    bmelt[flag] = (focn[flag] + \
-            ki4*(stsice[flag,1] - tfw)/hice[flag]) * delt
+    i = flag
+    stsice[i, 1] = (dt2 * k32[i] * (stsice[i, 0] + tfw + tfw) + \
+        dici * hice[i] * stsice[i, 1]) * wrk[i]
+    bmelt[i] = (focn[i] + ki4 * (stsice[i, 1] - tfw) / hice[i]) * delt
 
 #  --- ...  resize the ice ...
 
-    h1[flag] = 0.5 * hice[flag]
-    h2[flag] = 0.5 * hice[flag]
-
+    h1[i] = 0.5 * hice[i]
+    h2[i] = 0.5 * hice[i]
 
 #  --- ...  top ...
-                      
-    snowmt[flag][tmelt[flag]<=snowd[flag]*dsli] = \
-            tmelt[flag][tmelt[flag]<=snowd[flag]*dsli]  / dsli
-    snowd[flag][tmelt[flag]<=snowd[flag]*dsli] = \
-            snowd[flag][tmelt[flag]<=snowd[flag]*dsli] -\
-            snowmt[flag][tmelt[flag]<=snowd[flag]*dsli]
-          
-    snowmt[flag][tmelt[flag]>snowd[flag]*dsli] = \
-             snowd[flag][tmelt[flag]>snowd[flag]*dsli]
-    h1[flag][tmelt[flag]>snowd[flag]*dsli] = \
-            h1[flag][tmelt[flag]>snowd[flag]*dsli] - \
-            (tmelt[flag][tmelt[flag]>snowd[flag]*dsli] - \
-            snowd[flag][tmelt[flag]>snowd[flag]*dsli]*dsli) / \
-            (di * (ci - li/ \
-            stsice[flag,0][tmelt[flag]>snowd[flag]*dsli]) *\
-            (tfi - stsice[flag,0][tmelt[flag]>snowd[flag]*dsli]))
-    snowd[flag][tmelt[flag]>snowd[flag]*dsli] = zero
-        
+    i = flag & (tmelt <= snowd * dsli)
+    snowmt[i] = tmelt[i] / dsli
+    snowd[i] = snowd[i] - snowmt[i]
+
+    i = flag & ~i
+    snowmt[i] = snowd[i]
+    h1[i] = h1[i] - (tmelt[i] - snowd[i] * dsli) / \
+            (di * (ci - li / stsice[i, 0]) * (tfi - stsice[i, 0]))
+    snowd[i] = 0.
 
 #  --- ...  and bottom
 
+    i = flag & (bmelt < 0.)
+    dh[i] = -bmelt[i] / (dili + dici * (tfi - tfw))
+    stsice[i, 1] = (h2[i] * stsice[i, 1] + dh[i] * tfw) / (h2[i] + dh[i])
+    h2[i] = h2[i] + dh[i]
 
-    dh[flag][bmelt[flag] < zero] = -bmelt[flag][bmelt[flag] < zero] \
-            / (dili + dici*(tfi - tfw))
-    stsice[flag,1][bmelt[flag] < zero]=(h2[flag][bmelt[flag] < zero]\
-            *stsice[flag,1][bmelt[flag] < zero] + \
-            dh[flag][bmelt[flag] < zero]*tfw) / \
-            (h2[flag][bmelt[flag] < zero] + \
-            dh[flag][bmelt[flag] < zero])
-    h2[flag][bmelt[flag] < zero] = h2[flag][bmelt[flag] < zero] + \
-            dh[flag][bmelt[flag] < zero]
-    
-    h2[flag][bmelt[flag] <= zero] = h2[flag][bmelt[flag] <= zero] - \
-            bmelt[flag][bmelt[flag] <= zero] / \
-            (dili + dici*(tfi - stsice[flag,1][bmelt[flag] <= zero]))
-          
+    i = flag & ~i
+    h2[i] = h2[i] - bmelt[i] / (dili + dici * (tfi - stsice[i, 1]))
+
+    ser_hice = ser.read("hice2", sp)
+    assert np.allclose(ser_hice, hice, equal_nan=True)
+    ser_snowmt = ser.read("snowmt2", sp)
+    assert np.allclose(ser_snowmt, snowmt, equal_nan=True)
+    ser_gflux = ser.read("gflux2", sp)
+    assert np.allclose(ser_gflux, gflux, equal_nan=True)
+    ser_k32 = ser.read("k32", sp)
+    assert np.allclose(ser_k32, k32, equal_nan=True)
+    ser_a1 = ser.read("a1", sp)
+    assert np.allclose(ser_a1, a1, equal_nan=True)
+    ser_ai = ser.read("ai", sp)
+    assert np.allclose(ser_ai, ai, equal_nan=True)
+    ser_bi = ser.read("bi", sp)
+    assert np.allclose(ser_bi, bi, equal_nan=True)
+    ser_c1 = ser.read("c1", sp)
+    assert np.allclose(ser_c1, c1, equal_nan=True)
+    ser_ip = ser.read("ip", sp)
+    assert np.allclose(ser_ip, ip, equal_nan=True)
+    ser_k12 = ser.read("k12", sp)
+    assert np.allclose(ser_k12, k12, equal_nan=True)
+    ser_tsf = ser.read("tsf", sp)
+    assert np.allclose(ser_tsf, tsf, equal_nan=True)
+    ser_tice = ser.read("tice2", sp)
+    assert np.allclose(ser_tice, tice, equal_nan=True)
+    ser_b1 = ser.read("b1", sp)
+    assert np.allclose(ser_b1, b1, equal_nan=True)
+    ser_stsice = ser.read("stsice2", sp)
+    assert np.allclose(ser_stsice, stsice, equal_nan=True)
 
 #  --- ...  if ice remains, even up 2 layers, else, pass negative energy back in snow
 
     hice[flag] = h1[flag] + h2[flag]
 
-          
+
     # begin if_hice_block
     # begin if_h1_block
 
-    f1[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]]=one-\
-            (h2[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]]+\
-            h2[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]])\
-            / hice[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]]
-    stsice[flag,1][hice[flag]>zero][h1[flag]>0.5*hice[flag]] = \
-            f1[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]] * \
-            (stsice[flag,0][hice[flag]>zero][h1[flag]>0.5*hice[flag]]\
+    f1[flag & (hice > 0.) & (h1 > 0.5*hice)] = 1.-\
+            (h2[flag][hice[flag]>0.][h1[flag]>0.5*hice[flag]]+\
+            h2[flag][hice[flag]>0.][h1[flag]>0.5*hice[flag]])\
+            / hice[flag][hice[flag]>0.][h1[flag]>0.5*hice[flag]]
+    stsice[flag & (hice > 0.) & (h1 > 0.5*hice), 1] = \
+            f1[flag][hice[flag]>0.][h1[flag]>0.5*hice[flag]] * \
+            (stsice[flag,0][hice[flag]>0.][h1[flag]>0.5*hice[flag]]\
             + li*tfi/ \
             (ci* \
-            stsice[flag,0][hice[flag]>zero][h1[flag]>0.5*hice[flag]]))\
-            + (one - \
-            f1[flag][hice[flag]>zero][h1[flag]>0.5*hice[flag]]) * \
-            stsice[flag,1][hice[flag]>zero][h1[flag]>0.5*hice[flag]]
+            stsice[flag,0][hice[flag]>0.][h1[flag]>0.5*hice[flag]]))\
+            + (1. - \
+            f1[flag][hice[flag]>0.][h1[flag]>0.5*hice[flag]]) * \
+            stsice[flag,1][hice[flag]>0.][h1[flag]>0.5*hice[flag]]
 
     # begin if_stsice_block
 
-    hice[flag][(hice[flag] > zero) & (h1[flag] > 0.5*hice[flag]) & \
-            (stsice[flag,1]>tfi)] = hice[flag][(hice[flag] > zero) & \
-            (h1[flag] > 0.5*hice[flag]) & (stsice[flag,1] > tfi)] - \
-            h2[flag][(hice[flag] > zero) & (h1[flag] > 0.5* \
-            hice[flag]) & (stsice[flag,1]>tfi)]*ci*(stsice[flag,1]\
-            [(hice[flag]>zero) & (h1[flag]>0.5*hice[flag]) & \
-            (stsice[flag,1]>tfi)] - tfi)/(li*delt)
+    hice[flag & (hice > 0.) & (h1 > 0.5*hice) & (stsice[:,1] > tfi)] \
+            = hice[flag & (hice > 0.) & (h1 > 0.5*hice) & (stsice[:,1] > tfi)] - \
+            h2[flag & (hice > 0.) & (h1 > 0.5*hice) & (stsice[:,1] > tfi)]* \
+            ci*(stsice[flag & (hice > 0.) & (h1 > 0.5*hice) & \
+            (stsice[:,1]> tfi), 1] - tfi)/(li*delt)
 
-    stsice[flag,1][(hice[flag]>zero) & (h1[flag]>0.5*hice[flag]) & \
-            (stsice[flag,1]>tfi)] = tfi
-              
+    stsice[flag & (hice > 0.) & (h1 > 0.5*hice) & (stsice[:,1] > tfi), 1] = tfi
+
     # end if_stsice_block
 
     # else if_h1_block
-    
-    # hice[flag] > zero
+
+    # hice[flag] > 0.
     # h1[flag] <= 0.5*hice[flag]
 
-    f1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]] = \
-            (h1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]]+\
-            h1[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]]) / \
-            hice[flag][hice[flag]>zero][h1[flag][hice[flag]>zero]<=0.5*hice[flag][hice[flag]>zero]]
+    f1[flag & (hice > 0.) & (h1 <= 0.5*hice)] = \
+            (h1[flag][hice[flag]>0.][h1[flag][hice[flag]>0.]<=0.5*hice[flag][hice[flag]>0.]]+\
+            h1[flag][hice[flag]>0.][h1[flag][hice[flag]>0.]<=0.5*hice[flag][hice[flag]>0.]]) / \
+            hice[flag][hice[flag]>0.][h1[flag][hice[flag]>0.]<=0.5*hice[flag][hice[flag]>0.]]
 
-    stsice[flag,0][hice[flag]>zero][h1[flag]<=0.5*hice[flag]] = \
-            f1[flag][hice[flag]>zero][h1[flag]<=0.5*hice[flag]]*(\
-            stsice[flag,0][hice[flag]>zero][h1[flag]<=0.5*hice[flag]]\
-            + li*tfi/(ci*stsice[flag,0][hice[flag]>zero]\
-            [h1[flag]<=0.5*hice[flag]]))+(one - \
-            f1[flag][hice[flag]>zero][h1[flag]<=0.5*hice[flag]])\
-            *stsice[flag,1][hice[flag]>zero][h1[flag]<=0.5*hice[flag]]
+    stsice[flag & (hice > 0.) & (h1 <= 0.5*hice), 0] = \
+            f1[flag][hice[flag]>0.][h1[flag]<=0.5*hice[flag]]*(\
+            stsice[flag,0][hice[flag]>0.][h1[flag]<=0.5*hice[flag]]\
+            + li*tfi/(ci*stsice[flag,0][hice[flag]>0.]\
+            [h1[flag]<=0.5*hice[flag]]))+(1. - \
+            f1[flag][hice[flag]>0.][h1[flag]<=0.5*hice[flag]])\
+            *stsice[flag,1][hice[flag]>0.][h1[flag]<=0.5*hice[flag]]
 
-    stsice[flag,0][hice[flag]>zero][h1[flag]<=0.5*hice[flag]]= (\
-            stsice[flag,0][hice[flag]>zero][h1[flag]<=0.5*hice[flag]]\
-            - np.sqrt(stsice[flag,0][hice[flag]>zero]\
+    stsice[flag & (hice > 0.),0][h1[flag]<=0.5*hice[flag]]= (\
+            stsice[flag,0][hice[flag]>0.][h1[flag]<=0.5*hice[flag]]\
+            - np.sqrt(stsice[flag,0][hice[flag]>0.]\
             [h1[flag]<=0.5*hice[flag]]*stsice[flag,0]\
-            [hice[flag]>zero][h1[flag]<=0.5*hice[flag]] \
+            [hice[flag]>0.][h1[flag]<=0.5*hice[flag]] \
             - 4.0*tfi*li/ci)) * 0.5
 
     # end if_h1_block
 
-    k12[flag][hice[flag]>zero] = ki4*ks / (ks* \
-            hice[flag][hice[flag]>zero] + ki4* \
-            snowd[flag][hice[flag]>zero])
+    k12[flag & (hice > 0.)] = ki4*ks / (ks* \
+            hice[flag][hice[flag]>0.] + ki4* \
+            snowd[flag & (hice > 0.)])
 
-    gflux[flag][hice[flag]>zero] = k12[flag][hice[flag]>zero] * \
-            (stsice[flag,0][hice[flag]>zero] -\
-            tice[flag][hice[flag]>zero])
-    
+    gflux[flag & (hice > 0.)] = k12[flag & (hice > 0.)] * \
+            (stsice[flag & (hice > 0.),0] -\
+            tice[flag & (hice > 0.)])
+
     # else if_hice_block
 
-    snowd[flag][hice[flag]<=zero] = snowd[flag][hice[flag]<=zero] + \
-            (h1[flag][hice[flag]<=zero]*(ci*\
-            (stsice[flag,0][hice[flag]<=zero] - tfi)- li*(one - tfi/ \
-            stsice[flag,0][hice[flag]<=zero])) +\
-            h2[flag][hice[flag]<=zero]*(ci*\
-            (stsice[flag,1][hice[flag]<=zero] - tfi) - li)) / li
+    snowd[flag & (hice <= 0.)] = snowd[flag & (hice <=0.)] + \
+            (h1[flag & (hice <= 0.)]*(ci*\
+            (stsice[flag & (hice <= 0.), 0] - tfi)- li*(1. - tfi/ \
+            stsice[flag & (hice <= 0.), 0])) +\
+            h2[flag & (hice <= 0.)]*(ci*\
+            (stsice[flag & (hice <= 0.), 1] - tfi) - li)) / li
 
-    hice[flag][hice[flag]<=zero] = np.maximum(zero, \
-            snowd[flag][hice[flag]<=zero]*dsdi)
+    hice[flag & (hice <= 0.)] = np.maximum(0., \
+            snowd[flag & (hice <= 0.)]*dsdi)
 
-    snowd[flag][hice[flag]<=zero] = zero
+    snowd[flag & (hice <= 0.)] = 0.
 
-    stsice[flag,0][hice[flag]<=zero] = tfw
+    stsice[flag & (hice <= 0.), 0] = tfw
+    stsice[flag & (hice <= 0.), 1] = tfw
 
-    stsice[flag,1][hice[flag]<=zero] = tfw
+    gflux[flag & (hice <= 0.)] = 0.
 
-    gflux[flag][hice[flag]<=zero]    = zero
-    
     # end if_hice_block
 
     gflux[flag] = fice[flag] * gflux[flag]
     snowmt[flag] = snowmt[flag] * dsdw
     snowd[flag] = snowd[flag] * dsdw
-    tice[flag]  = tice[flag]     + t0c
+    tice[flag] = tice[flag]     + t0c
     stsice[flag,0] = stsice[flag,0] + t0c
     stsice[flag,1] = stsice[flag,1] + t0c
-    
+
     # end if_flag_block
 
 
@@ -572,24 +577,56 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
 
 
 
+# TODO - this hsould be moved into a shared physics functions module
 def fpvs(t):
-    """Compute saturation vapor pressure over liquid
-    t: temperature in Kelvin
+    """Compute saturation vapor pressure
+       t: Temperature [K]
+    fpvs: Vapor pressure [Pa]
     """
 
-    # constant definition
-    # TODO - this should be moved into a shared physics constants / physics functions module
-    psat     = 6.1078e+2
-    rv       = 4.6150e+2
-    ttp      = 2.7316e+2
-    cvap     = 1.8460e+3
-    csol     = 2.1060e+3
-    hvap     = 2.5000e+6
-    hfus     = 3.3358e+5
-    dldt     = cvap-csol
-    heat     = hvap+hfus
-    xpona    = -dldt/rv
-    xponb    = -dldt/rv+heat/(rv*ttp)
-    tr       = ttp/t
+    # constants
+    # TODO - this should be moved into a shared physics constants module
+    con_psat = 6.1078e+2
+    con_ttp  = 2.7316e+2
+    con_cvap = 1.8460e+3
+    con_cliq = 4.1855e+3
+    con_hvap = 2.5000e+6
+    con_rv   = 4.6150e+2
+    con_csol = 2.1060e+3
+    con_hfus = 3.3358e+5
 
-    return psat*(tr**xpona)*np.exp(xponb*(1.-tr))
+    tliq = con_ttp
+    tice = con_ttp - 20.0
+    dldtl = con_cvap - con_cliq
+    heatl = con_hvap
+    xponal = -dldtl / con_rv
+    xponbl = -dldtl / con_rv + heatl / (con_rv * con_ttp)
+    dldti = con_cvap - con_csol
+    heati = con_hvap + con_hfus
+    xponai = -dldti / con_rv
+    xponbi = -dldti / con_rv + heati / (con_rv * con_ttp)
+
+    convert_to_scalar = False
+    if np.isscalar(t):
+        t = np.array(t)
+        convert_to_scalar = True
+
+    fpvs = np.empty_like(t)
+    tr = con_ttp / t
+
+    ind1 = t >= tliq
+    fpvs[ind1] = con_psat * (tr[ind1]**xponal) * np.exp(xponbl*(1. - tr[ind1]))
+
+    ind2 = t < tice
+    fpvs[ind2] = con_psat * (tr[ind2]**xponai) * np.exp(xponbi*(1. - tr[ind2]))
+
+    ind3 = ~np.logical_or(ind1, ind2)
+    w = (t[ind3] - tice) / (tliq - tice)
+    pvl = con_psat * (tr[ind3]**xponal) * np.exp(xponbl*(1. - tr[ind3]))
+    pvi = con_psat * (tr[ind3]**xponai) * np.exp(xponbi*(1. - tr[ind3]))
+    fpvs[ind3] = w * pvl + (1. - w) * pvi
+
+    if convert_to_scalar:
+        fpvs = fpvs.item()
+
+    return fpvs

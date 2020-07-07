@@ -29,7 +29,10 @@ SELECT_SP = None
 def data_dict_from_var_list(var_list, serializer, savepoint):
     d = {}
     for var in var_list:
-        d[var] = serializer.read(var, savepoint)
+        data = serializer.read(var, savepoint)
+        if data.size == 1:
+            data = data.item()
+        d[var] = data
     return d
 
 
@@ -67,10 +70,10 @@ for tile in range(6):
 
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
-            
+
             # TODO: remove once we validate
             # attach meta-info for debugging purposes
-            ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./data", "Serialized_rank" + str(tile))
+            ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
             sp_inside = ser_inside.savepoint[sp.name.replace("-in-", "-inside-")]
             in_data["serializer"] = ser_inside
             in_data["savepoint"] = sp_inside
