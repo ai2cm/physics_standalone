@@ -26,6 +26,8 @@ program test
     integer :: ser_count, ser_count_max
     character(len=6) :: ser_count_str
 
+    real(8) :: time1, time2
+
     ser_count_max = 19
     num_tiles = 6
 
@@ -81,6 +83,9 @@ program test
         !$ser verbatim else
         !$ser savepoint "sfc_sice-inside-iter2-"//trim(ser_count_str)
         !$ser verbatim end if        
+
+        call tic(time1, time2)
+
         call sfc_sice                                                  &
             !  ---  inputs:
             ( im, km, ps, t1, q1, delt,                                &
@@ -90,6 +95,8 @@ program test
             !  ---  input/outputs:
             hice, fice, tice, weasd, tskin, tprcp, stc, ep,            &
             snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx )
+
+        call toc(time1, time2)
 
         !$ser mode read
         !$ser verbatim if (iter == 1) then
@@ -212,5 +219,18 @@ program test
         isclose_i = abs(a - b) <= atol_local
 
     end function isclose_i
+
+    subroutine tic(t1, t2)
+        implicit none
+        real(8) :: t1, t2
+        call cpu_time(t1)
+    end subroutine tic
+
+    subroutine toc(t1, t2)
+        implicit none
+        real(8) :: t1, t2
+        call cpu_time(t2)
+        write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
+    end subroutine toc
 
 end program test

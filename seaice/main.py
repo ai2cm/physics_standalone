@@ -17,8 +17,6 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
            "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
            "evap", "hflx"]
 
-# TODO - make sure the final list of variables is here in the end
-#OUT_VARS = ['fice', 'tprcp', 'ep', 'cmm', 'chh']
 OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
             "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
             "evap", "hflx"]
