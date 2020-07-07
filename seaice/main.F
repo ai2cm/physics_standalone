@@ -36,7 +36,7 @@ program test
 
     do tile = 0, num_tiles - 1
 
-    !$ser init directory='./data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
+    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
 
     do ser_count = 0, ser_count_max
     do iter = 1, 2
@@ -192,7 +192,7 @@ program test
         if (present(rtol)) then
             rtol_local = rtol
         else
-            rtol_local = 1.0d-12
+            rtol_local = 1.0d-11
         end if
 
         isclose_r = abs(a - b) <= (atol_local + rtol_local * abs(b))

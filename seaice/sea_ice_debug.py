@@ -586,25 +586,56 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     return snowd, hice, stsice, tice, snof, snowmt, gflux
 
 
-
+# TODO - this hsould be moved into a shared physics functions module
 def fpvs(t):
-    """Compute saturation vapor pressure over liquid
-    t: temperature in Kelvin
+    """Compute saturation vapor pressure
+       t: Temperature [K]
+    fpvs: Vapor pressure [Pa]
     """
 
-    # constant definition
-    # TODO - this should be moved into a shared physics constants / physics functions module
-    psat     = 6.1078e+2
-    rv       = 4.6150e+2
-    ttp      = 2.7316e+2
-    cvap     = 1.8460e+3
-    csol     = 2.1060e+3
-    hvap     = 2.5000e+6
-    hfus     = 3.3358e+5
-    dldt     = cvap-csol
-    heat     = hvap+hfus
-    xpona    = -dldt/rv
-    xponb    = -dldt/rv+heat/(rv*ttp)
-    tr       = ttp/t
+    # constants
+    # TODO - this should be moved into a shared physics constants module
+    con_psat = 6.1078e+2
+    con_ttp  = 2.7316e+2
+    con_cvap = 1.8460e+3
+    con_cliq = 4.1855e+3
+    con_hvap = 2.5000e+6
+    con_rv   = 4.6150e+2
+    con_csol = 2.1060e+3
+    con_hfus = 3.3358e+5
 
-    return psat*(tr**xpona)*np.exp(xponb*(1.-tr))
+    tliq = con_ttp
+    tice = con_ttp - 20.0
+    dldtl = con_cvap - con_cliq
+    heatl = con_hvap
+    xponal = -dldtl / con_rv
+    xponbl = -dldtl / con_rv + heatl / (con_rv * con_ttp)
+    dldti = con_cvap - con_csol
+    heati = con_hvap + con_hfus
+    xponai = -dldti / con_rv
+    xponbi = -dldti / con_rv + heati / (con_rv * con_ttp)
+
+    convert_to_scalar = False
+    if np.isscalar(t):
+        t = np.array(t)
+        convert_to_scalar = True
+
+    fpvs = np.empty_like(t)
+    tr = con_ttp / t
+
+    ind1 = t >= tliq
+    fpvs[ind1] = con_psat * (tr[ind1]**xponal) * np.exp(xponbl*(1. - tr[ind1]))
+
+    ind2 = t < tice
+    fpvs[ind2] = con_psat * (tr[ind2]**xponai) * np.exp(xponbi*(1. - tr[ind2]))
+
+    ind3 = ~np.logical_or(ind1, ind2)
+    w = (t[ind3] - tice) / (tliq - tice)
+    pvl = con_psat * (tr[ind3]**xponal) * np.exp(xponbl*(1. - tr[ind3]))
+    pvi = con_psat * (tr[ind3]**xponai) * np.exp(xponbi*(1. - tr[ind3]))
+    fpvs[ind3] = w * pvl + (1. - w) * pvi
+
+    if convert_to_scalar:
+        fpvs = np.asscalar(fpvs)
+
+    return fpvs

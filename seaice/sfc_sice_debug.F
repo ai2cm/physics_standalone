@@ -19,7 +19,7 @@
 !!  @{
       module module_sfc_sice
       use machine , only : kind_phys
-      use funcphys, only : fpvs, fpvslx
+      use funcphys, only : fpvs => fpvsx
       use physcons, only :    sbc => con_sbc,  hvap => con_hvap,        &
      &                      tgice => con_tice,   cp => con_cp,          &
      &                        eps => con_eps, epsm1 => con_epsm1,       &
@@ -306,9 +306,9 @@
 
       ! get fields for validation
       !$ser data q0=q0 flag=flag rho=rho fice=fice tice=tice qs1=qs1 q1=q1
-      !$ser data prslki=prslki t1=t1 theta1=theta1 rch=rch ffw=ffw 
+      !$ser data prslki=prslki t1=t1 theta1=theta1 rch=rch ffw=ffw
       !$ser data snowd=snowd cmm=cmm chh=chh evapi=evapi evapw=evapw
-      !$ser data qssi=qssi qssw=qssw  prsl1=prsl1
+      !$ser data qssi=qssi qssw=qssw prsl1=prsl1
 
       call ice3lay                                                      &
 !  ---  inputs:                                                         !
