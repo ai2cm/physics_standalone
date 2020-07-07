@@ -300,18 +300,12 @@
         endif
       enddo
 
-      !$ser data fice=fice flag=flag hfi=hfi hfd=hfd sneti=sneti
-      !$ser data focn=focn delt=delt lprnt=lprnt ipr=ipr
-
       call ice3lay                                                      &
 !  ---  inputs:                                                         !
      &     ( im, kmi, fice, flag, hfi, hfd, sneti, focn, delt,          &
      &       lprnt, ipr,                                                &
 !  ---  outputs:                                                        !
      &       snowd, hice, stsice, tice, snof, snowmt, gflux )           !
-    
-      !$ser data snowd=snowd hice=hice stsice=stsice tice=tice snof=snof
-      !$ser data snowmt=snowmt gflux=gflux
 
       do i = 1, im
         if (flag(i)) then
