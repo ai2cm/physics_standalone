@@ -17,13 +17,14 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
            "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
            "evap", "hflx"]
 
-OUT_VARS = ['fice', 'tprcp', 'ep', 'cmm', 'chh']
-# OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
-#             "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
-#             "evap", "hflx"]
+# TODO - make sure the final list of variables is here in the end
+#OUT_VARS = ['fice', 'tprcp', 'ep', 'cmm', 'chh']
+OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
+            "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
+            "evap", "hflx"]
 
 SELECT_SP = None
-#SELECT_SP = {"tile": 5, "savepoint": "sfc_sice-in-iter1-000001"}
+#SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -37,9 +38,14 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
 
 
 def compare_data(exp_data, ref_data):
+    # TODO - insert this again once everything validates
 #     assert set(exp_data.keys()) == set(ref_data.keys()), \
 #         "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
+        ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
+        if ind.size > 0:
+            i = tuple(ind[:, 0])
+            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i])
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
 
@@ -71,8 +77,8 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-            # TODO: remove once we validate
-            # attach meta-info for debugging purposes
+            # TODO - remove once we validate
+            #      - attach meta-info for debugging purposes
             ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
             sp_inside = ser_inside.savepoint[sp.name.replace("-in-", "-inside-")]
             in_data["serializer"] = ser_inside

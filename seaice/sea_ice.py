@@ -13,12 +13,16 @@ OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc", "tice", \
 def run(in_dict):
     """run function"""
 
+    # TODO - remove once everything is validating
     ser = in_dict['serializer']
     sp = in_dict['savepoint']
 
-    # TODO - implement sea-ice model
-    hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, snowmt, \
-    gflux, cmm, chh, evap, hflx = sfc_sice(
+    # setup output
+    out_dict = {}
+    for key in OUT_VARS:
+        out_dict[key] = in_dict[key].copy()
+
+    sfc_sice(
         in_dict['im'], in_dict['km'], in_dict['ps'],
         in_dict['t1'], in_dict['q1'], in_dict['delt'],
         in_dict['sfcemis'], in_dict['dlwflx'], in_dict['sfcnsw'],
@@ -26,35 +30,21 @@ def run(in_dict):
         in_dict['ch'], in_dict['prsl1'], in_dict['prslki'],
         in_dict['islimsk'], in_dict['wind'], in_dict['flag_iter'],
         in_dict['lprnt'], in_dict['ipr'], in_dict['cimin'],
-        in_dict['hice'], in_dict['fice'], in_dict['tice'],
-        in_dict['weasd'], in_dict['tskin'], in_dict['tprcp'],
-        in_dict['stc'], in_dict['ep'], in_dict['snwdph'], in_dict['qsurf'], in_dict['cmm'],
-        in_dict['chh'], in_dict['evap'], in_dict['hflx'], 
+        out_dict['hice'], out_dict['fice'], out_dict['tice'],
+        out_dict['weasd'], out_dict['tskin'], out_dict['tprcp'],
+        out_dict['stc'], out_dict['ep'], out_dict['snwdph'],
+        out_dict['qsurf'], out_dict['cmm'], out_dict['chh'],
+        out_dict['evap'], out_dict['hflx'], out_dict['gflux'],
+        out_dict['snowmt'],
         ser, sp)
 
-    #d = dict([(k, locals()[k]) for k in ('hice', 'fice', 'tice', 'weasd', 'tskin', 'tprcp',
-    #                                 'stc', 'ep', 'snwdph', 'qsurf', 'snowmt', 'gflux',
-    #                                 'cmm', 'chh', 'evap', 'hflx')])
-    d = {}
-    for i in ('hice', 'fice', 'tice', 'weasd', 'stc', 'ep', 'snwdph', 'qsurf', 'snowmt',
-            'gflux', 'cmm', 'chh', 'evap', 'hflx'):
-        d[i] = locals()[i]
-    #print(d)
-    in_dict.update(d)
-    return {key: in_dict.get(key, None) for key in OUT_VARS}
+    return out_dict
 
-def init_array(shape, mode):
-    arr = np.empty(shape)
-    if mode == "zero":
-        arr[:] = 0.
-    if mode == "nan":
-        arr[:] = np.nan
-    return arr
 
 def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
              cm, ch, prsl1, prslki, islimsk, wind, flag_iter, lprnt, ipr, cimin,
              hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, cmm, chh, 
-             evap, hflx,
+             evap, hflx, gflux, snowmt, 
              ser, sp):
     """run function"""
 
@@ -102,8 +92,6 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     q0     = init_array([im], mode)
     qs1    = init_array([im], mode)
     stsice = init_array([im, kmi], mode)
-    snowmt = init_array([im], "zero")
-    gflux  = init_array([im], "zero")
 
 #  --- ...  set flag for sea-ice
 
@@ -197,13 +185,13 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     hice[i] = np.maximum(np.minimum(hice[i], himax), himin)
     snowd[i] = np.minimum(snowd[i], hsmax)
 
-# TODO: write more efficiently, save mask as new variable?
     i = flag & (snowd > 2. * hice)
     if any(i):
         print('warning: too much snow :', snowd[i])
         snowd[i] = hice[i] + hice[i]
         print('fix: decrease snow depth to:', snowd[i])
 
+    # TODO - remove once everything validates up to here
     fice_ref = ser.read("fice", sp)
     assert np.allclose(fice, fice_ref, equal_nan=True)
     hfi_ref = ser.read("hfi", sp)
@@ -235,10 +223,9 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     gflux_ref = ser.read("gflux", sp)
     assert np.allclose(gflux, gflux_ref, equal_nan=True)
 
-# call function ice3lay
-    snowd, hice, stsice, tice, snof, snowmt, gflux = \
-        ice3lay(im, kmi, fice, flag, hfi, hfd, sneti, focn, delt, lprnt, ipr, 
-                snowd, hice, stsice, tice, snof, snowmt, gflux, ser, sp)
+    # run the 3-layer ice model
+    ice3lay(im, kmi, fice, flag, hfi, hfd, sneti, focn, delt, lprnt, ipr,
+            snowd, hice, stsice, tice, snof, snowmt, gflux, ser, sp)
 
     # ser_snowd = ser.read("snowd", sp)
     # assert np.allclose(ser_snowd, snowd, equal_nan=True)
@@ -247,71 +234,71 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
     # ser_snof = ser.read("snof", sp)
     # assert np.allclose(ser_snof, snof, equal_nan=True)
 
-    if any(tice[flag] < timin):
+    i = flag & (tice < timin)
+    if np.any(i):
         # TODO: print indices (i) of temp-warnings
-        print('warning: snow/ice temperature is too low:',
-              tice[flag][tice[flag] < timin]) # , ' i=', i)
-        tice[flag] = timin
-        print('fix snow/ice temperature: reset it to:', tice[flag])
+        print('warning: snow/ice temperature is too low:', tice[i], ' i=', i)
+        tice[i] = timin
+        print('fix snow/ice temperature: reset it to:', timin)
 
-    if any(stsice[flag,0] < timin):
-        print('warning: layer 1 ice temp is too low:',stsice[flag,0])
-# TODO: print indices (i) of temp-warning             ' i=',i
-        stsice[flag,0] = timin
-        print('fix layer 1 ice temp: reset it to:', stsice[flag,0])
+    i = flag & (stsice[:, 0] < timin)
+    if any(i):
+        print('warning: layer 1 ice temp is too low:', stsice[i, 0], ' i=', i)
+        stsice[i, 0] = timin
+        print('fix layer 1 ice temp: reset it to:', timin)
 
-    if any(stsice[flag,1] < timin):
-        print('warning: layer 2 ice temp is too low:',stsice[flag,1])
-        stsice[flag,1] = timin
-        print('fix layer 2 ice temp: reset it to:',stsice[flag,1])
+    i = flag & (stsice[:, 1] < timin)
+    if any(i):
+        print('warning: layer 2 ice temp is too low:', stsice[i, 1], 'i=', i)
+        stsice[i, 1] = timin
+        print('fix layer 2 ice temp: reset it to:', timin)
 
-    tskin[flag] = tice[flag]*fice[flag] + tgice*ffw[flag]
+    i = flag
+    tskin[i] = tice[i] * fice[i] + tgice * ffw[i]
 
     # TODO: dimension mismatch
-    stc[flag,0:kmi] = np.minimum(stsice[flag,0:kmi], t0c)
+    stc[i, 0:kmi] = np.minimum(stsice[i, 0:kmi], t0c)
 
 #  --- ...  calculate sensible heat flux (& evap over sea ice)
 
-    hflxi      = rch[flag] * (tice[flag] - theta1[flag])
-    hflxw      = rch[flag] * (tgice      - theta1[flag])
-    hflx[flag] = fice[flag]* hflxi       + ffw[flag]*hflxw
-    evap[flag] = fice[flag]* evapi[flag] + ffw[flag]*evapw[flag]
+    hflxi = rch[i] * (tice[i] - theta1[i])
+    hflxw = rch[i] * (tgice - theta1[i])
+    hflx[i] = fice[i] * hflxi + ffw[i] * hflxw
+    evap[i] = fice[i] * evapi[i] + ffw[i] * evapw[i]
 
 #  --- ...  the rest of the output
 
-    qsurf[flag] = q1[flag] + evap[flag] / (elocp*rch[flag])
+    qsurf[i] = q1[i] + evap[i] / (elocp * rch[i])
 
 #  --- ...  convert snow depth back to mm of water equivalent
 
-    weasd[flag]  = snowd[flag] * 1000.0
-    snwdph[flag] = weasd[flag] * dsi             # snow depth in mm
+    weasd[i] = snowd[i] * 1000.
+    snwdph[i] = weasd[i] * dsi             # snow depth in mm
 
-    tem     = 1.0 / rho[flag]
-    hflx[flag] = hflx[flag] * tem * cpinv
-    evap[flag] = evap[flag] * tem * hvapi
-
-    return hice, fice, tice, weasd, tskin, tprcp, stc, ep, snwdph, qsurf, \
-           snowmt, gflux, cmm, chh, evap, hflx
+    tem = 1. / rho[i]
+    hflx[i] = hflx[i] * tem * cpinv
+    evap[i] = evap[i] * tem * hvapi
 
 
 def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
             snowd, hice, stsice, tice, snof, snowmt, gflux,
             ser, sp):
     """function ice3lay"""
+
     # constant parameters
-    ds   = 330.0    # snow (ov sea ice) density (kg/m^3)
-    dw   = 1000.0   # fresh water density  (kg/m^3)
+    ds   = 330.     # snow (ov sea ice) density (kg/m^3)
+    dw   = 1000.    # fresh water density  (kg/m^3)
     dsdw = ds / dw
     dwds = dw / ds
     ks   = 0.31     # conductivity of snow   (w/mk)
     i0   = 0.3      # ice surface penetrating solar fraction
     ki   = 2.03     # conductivity of ice  (w/mk)
-    di   = 917.0    # density of ice   (kg/m^3)
+    di   = 917.     # density of ice   (kg/m^3)
     didw = di / dw
     dsdi = ds / di
-    ci   = 2054.0   # heat capacity of fresh ice (j/kg/k)
+    ci   = 2054.    # heat capacity of fresh ice (j/kg/k)
     li   = 3.34e5   # latent heat of fusion (j/kg-ice)
-    si   = 1.0      # salinity of sea ice
+    si   = 1.       # salinity of sea ice
     mu   = 0.054    # relates freezing temp to salinity
     tfi  = -mu * si # sea ice freezing temp = -mu*salinity
     tfw  = -1.8     # tfw - seawater freezing temp (c)
@@ -319,7 +306,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     dici = di * ci
     dili = di * li
     dsli = ds * li
-    ki4  = ki * 4.0
+    ki4  = ki * 4.
     # TODO: move variable definition to separate file 
     t0c    = 2.7315e+2
     
@@ -473,10 +460,11 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     ser_stsice = ser.read("stsice2", sp)
     assert np.allclose(ser_stsice, stsice, equal_nan=True)
 
+    # TODO - refactor reset of this routine to also use i-index (see above)
+
 #  --- ...  if ice remains, even up 2 layers, else, pass negative energy back in snow
 
     hice[flag] = h1[flag] + h2[flag]
-
 
     # begin if_hice_block
     # begin if_h1_block
@@ -573,10 +561,6 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     # end if_flag_block
 
 
-    return snowd, hice, stsice, tice, snof, snowmt, gflux
-
-
-
 # TODO - this hsould be moved into a shared physics functions module
 def fpvs(t):
     """Compute saturation vapor pressure
@@ -630,3 +614,14 @@ def fpvs(t):
         fpvs = fpvs.item()
 
     return fpvs
+
+
+def init_array(shape, mode):
+    arr = np.empty(shape)
+    if mode == "none":
+        pass
+    if mode == "zero":
+        arr[:] = 0.
+    elif mode == "nan":
+        arr[:] = np.nan
+    return arr
