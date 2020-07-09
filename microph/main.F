@@ -127,4 +127,88 @@ program test
 
     write(*,*) 'FINISHED!'
 
+contains
+
+    subroutine check_r_2d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:,:), b(:,:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_2d
+
+    subroutine check_r_1d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:), b(:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_1d
+
+    elemental logical function isclose_r(a, b, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a, b
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        real (kind=kind_phys) :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 1.0d-30
+        end if
+        if (present(rtol)) then
+            rtol_local = rtol
+        else
+            rtol_local = 1.0d-11
+        end if
+
+        isclose_r = abs(a - b) <= (atol_local + rtol_local * abs(b))
+
+    end function isclose_r
+
+    elemental logical function isclose_i(a, b, atol)
+        implicit none
+        integer, intent(in) :: a, b
+        integer, intent(in), optional :: atol
+
+        integer :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 0
+        end if
+
+        isclose_i = abs(a - b) <= atol_local
+
+    end function isclose_i
+
+    subroutine tic(t1, t2)
+        implicit none
+        real(8) :: t1, t2
+        call cpu_time(t1)
+    end subroutine tic
+
+    subroutine toc(t1, t2)
+        implicit none
+        real(8) :: t1, t2
+        call cpu_time(t2)
+        write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
+    end subroutine toc
+
 end program test
