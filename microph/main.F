@@ -90,25 +90,26 @@ program test
         !$ser data rain=rain_ref snow=snow_ref ice=ice_ref graupel=graupel_ref
         !$ser data refl_10cm=refl_10cm_ref
 
-        if (any(qi /= qi_ref)) write(*,*) 'ERROR: qi does not validate', tile, ser_count
-        if (any(qs /= qs_ref)) write(*,*) 'ERROR: qs does not validate', tile, ser_count
-        if (any(qv_dt /= qv_dt_ref)) write(*,*) 'ERROR: qv_dt does not validate', tile, ser_count
-        if (any(ql_dt /= ql_dt_ref)) write(*,*) 'ERROR: ql_dt does not validate', tile, ser_count
-        if (any(qr_dt /= qr_dt_ref)) write(*,*) 'ERROR: qr_dt does not validate', tile, ser_count
-        if (any(qi_dt /= qi_dt_ref)) write(*,*) 'ERROR: qi_dt does not validate', tile, ser_count
-        if (any(qs_dt /= qs_dt_ref)) write(*,*) 'ERROR: qs_dt does not validate', tile, ser_count
-        if (any(qg_dt /= qg_dt_ref)) write(*,*) 'ERROR: qg_dt does not validate', tile, ser_count
-        if (any(qa_dt /= qa_dt_ref)) write(*,*) 'ERROR: qa_dt does not validate', tile, ser_count
-        if (any(pt_dt /= pt_dt_ref)) write(*,*) 'ERROR: pt_dt does not validate', tile, ser_count
-        if (any(w /= w_ref)) write(*,*) 'ERROR: w does not validate', tile, ser_count
-        if (any(udt /= udt_ref)) write(*,*) 'ERROR: udt does not validate', tile, ser_count
-        if (any(vdt /= vdt_ref)) write(*,*) 'ERROR: vdt does not validate', tile, ser_count
-        if (any(rain /= rain_ref)) write(*,*) 'ERROR: rain does not validate', tile, ser_count
-        if (any(snow /= snow_ref)) write(*,*) 'ERROR: snow does not validate', tile, ser_count
-        if (any(ice /= ice_ref)) write(*,*) 'ERROR: ice does not validate', tile, ser_count
-        if (any(graupel /= graupel_ref)) write(*,*) 'ERROR: graupel does not validate', tile, ser_count
-        if (any(refl_10cm /= refl_10cm_ref)) write(*,*) 'ERROR: refl_10cm does not validate', tile, ser_count
-
+        call check_r_3d(qi, qi_ref, "qi")
+        call check_r_3d(qs, qs_ref, "qs")
+        call check_r_3d(qv_dt, qv_dt_ref, "qv_dt")
+        call check_r_3d(ql_dt, ql_dt_ref, "ql_dt")
+        call check_r_3d(qr_dt, qr_dt_ref, "qr_dt")
+        call check_r_3d(qi_dt, qi_dt_ref, "qi_dt")
+        call check_r_3d(qs_dt, qs_dt_ref, "qs_dt")
+        call check_r_3d(qg_dt, qg_dt_ref, "qg_dt")
+        call check_r_3d(qg_dt, qg_dt_ref, "qg_dt")
+        call check_r_3d(qa_dt, qa_dt_ref, "qa_dt")
+        call check_r_3d(pt_dt, pt_dt_ref, "pt_dt")
+        call check_r_3d(w, w_ref, "w")
+        call check_r_3d(udt, udt_ref, "udt")
+        call check_r_3d(vdt, vdt_ref, "vdt")
+        call check_r_2d(rain, rain_ref, "rain")
+        call check_r_2d(snow, snow_ref, "snow")
+        call check_r_2d(ice, ice_ref, "ice")
+        call check_r_2d(graupel, graupel_ref, "graupel")
+        call check_r_3d(refl_10cm, refl_10cm_ref, "refl_10cm")
+        
         deallocate(area, land, rain, snow, ice, graupel, delp, dz, uin, vin, &
             p, pt, qv, ql, qr, qg, qa, qn, qi, qs, pt_dt, qa_dt, udt, vdt, w, &
             qv_dt, ql_dt, qr_dt, qi_dt, qs_dt, qg_dt, refl_10cm, qi_ref, &
@@ -128,6 +129,21 @@ program test
     write(*,*) 'FINISHED!'
 
 contains
+
+    subroutine check_r_3d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:,:,:), b(:,:,:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_3d
 
     subroutine check_r_2d(a, b, name, atol, rtol)
         implicit none
@@ -169,7 +185,7 @@ contains
         if (present(atol)) then
             atol_local = atol
         else
-            atol_local = 1.0d-30
+            atol_local = 1.0d-13
         end if
         if (present(rtol)) then
             rtol_local = rtol

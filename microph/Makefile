@@ -14,7 +14,13 @@ OBJ = $(SRC:.F=.o)
 PP = $(SRC:.F=.F90)
 
 F90 = gfortran
-FFLAGS = -fdec -fdefault-real-8 -fno-fast-math -ffree-form -ffree-line-length-none -fno-backslash -fimplicit-none -frange-check -pedantic -Waliasing -Wampersand -Wline-truncation -Wsurprising -Wtabs -Wunderflow -O0 -g -fbacktrace -fdump-core -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -finit-integer=9999999 -finit-logical=true -finit-character=35 -DSERIALIZE -I$(SERBOX)/include
+FFLAGS = -fdec -fdefault-real-8 -fno-fast-math -ffree-form -ffree-line-length-none \
+  -fno-backslash -fimplicit-none -frange-check -pedantic -Waliasing -Wampersand \
+  -Wline-truncation -Wsurprising -Wtabs -Wunderflow -O0 -g -fbacktrace \
+  -fdump-core -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan \
+  -finit-integer=9999999 -finit-logical=true -finit-character=35 \
+  -DSERIALIZE -I$(SERIALBOX_DIR)/include
+
 LD = gfortran
 LDFLAGS = $(SERIALBOX_DIR)/lib/libSerialboxFortran.a $(SERIALBOX_DIR)/lib/libSerialboxC.a \
   $(SERIALBOX_DIR)/lib/libSerialboxCore.a -L$(NETCDF_LIB) -lnetcdff -lnetcdf \
