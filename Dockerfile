@@ -35,6 +35,9 @@ ENV TZ=US/Pacific
 RUN echo $TZ > /etc/timezone && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
+# install some python packages
+RUN pip install numpy
+
 # install serialbox from source
 COPY serialbox /serialbox
 RUN cd /serialbox && \

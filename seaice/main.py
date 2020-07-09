@@ -37,9 +37,8 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
 
 
 def compare_data(exp_data, ref_data):
-    # TODO - insert this again once everything validates
-#     assert set(exp_data.keys()) == set(ref_data.keys()), \
-#         "Entries of exp and ref dictionaries don't match"
+    assert set(exp_data.keys()) == set(ref_data.keys()), \
+             "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
         ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
         if ind.size > 0:
@@ -76,12 +75,12 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-            # TODO - remove once we validate
-            #      - attach meta-info for debugging purposes
-            ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
-            sp_inside = ser_inside.savepoint[sp.name.replace("-in-", "-inside-")]
-            in_data["serializer"] = ser_inside
-            in_data["savepoint"] = sp_inside
+#            # TODO - remove once we validate
+#            #      - attach meta-info for debugging purposes
+#            ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
+#            sp_inside = ser_inside.savepoint[sp.name.replace("-in-", "-inside-")]
+#            in_data["serializer"] = ser_inside
+#            in_data["savepoint"] = sp_inside
 
             # run Python version
             out_data = si.run(in_data)

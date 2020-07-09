@@ -42,7 +42,7 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
              evap, hflx, gflux, snowmt):
     """run function"""
 
-    # constant definition
+    # constant definition
     # TODO - this should be moved into a shared physics constants / physics functions module
     cp     = 1.0046e+3
     hvap   = 2.5e+6
@@ -192,7 +192,6 @@ def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,
 
     i = flag & (tice < timin)
     if np.any(i):
-        # TODO: print indices (i) of temp-warnings
         print('warning: snow/ice temperature is too low:', tice[i], ' i=', i)
         tice[i] = timin
         print('fix snow/ice temperature: reset it to:', timin)
@@ -261,6 +260,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     dili = di * li
     dsli = ds * li
     ki4  = ki * 4.
+
     # TODO: move variable definition to separate file 
     t0c    = 2.7315e+2
     
@@ -435,6 +435,7 @@ def ice3lay(im,kmi,fice,flag,hfi,hfd, sneti, focn, delt, lprnt, ipr, \
     tice[i] = tice[i]     + t0c
     stsice[i,0] = stsice[i,0] + t0c
     stsice[i,1] = stsice[i,1] + t0c
+
 
 # TODO - this hsould be moved into a shared physics functions module
 def fpvs(t):
