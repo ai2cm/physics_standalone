@@ -149,7 +149,7 @@ program test
 
     write(*,*) 'FINISHED!'
 
-    contains
+contains
 
     subroutine check_r_2d(a, b, name, atol, rtol)
         implicit none

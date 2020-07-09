@@ -40,7 +40,7 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	/bin/rm -rf data
+	/bin/rm -rf data dump
 
 $(TARGET): $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) -o $(TARGET)
