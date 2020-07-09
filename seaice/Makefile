@@ -35,7 +35,7 @@ pre-process: $(PP)
 
 .PHONY: clean
 clean:
-	/bin/rm -rf *.mod *.o $(PP) data.tar.gz __pycache__ $(TARGET)
+	/bin/rm -rf *.mod *.o $(PP) data.tar.gz __pycache__ $(TARGET) dump/*
 
 .PHONY: distclean
 distclean: clean

@@ -119,7 +119,7 @@ program test
 
     end do
 
-    !ser cleanup
+    !$ser cleanup
 
     end do
 
