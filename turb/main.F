@@ -25,7 +25,7 @@ program test
     character(len=6) :: ser_count_str
 
     nunit = 42
-    ser_count_max = 10
+    ser_count_max = 19
     num_tiles = 6
 
     ! initialize
@@ -35,7 +35,7 @@ program test
 
     do tile = 0, num_tiles - 1
     
-    !$ser init directory='./data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
+    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
 
     do ser_count = 0, ser_count_max
 
@@ -88,17 +88,16 @@ program test
         !$ser data dusfc=dusfc_ref dvsfc=dvsfc_ref dtsfc=dtsfc_ref dqsfc=dqsfc_ref
         !$ser data hpbl=hpbl_ref
 
-        if (any(dv /= dv_ref)) write(*,*) 'ERROR: dv does not validate', tile, ser_count
-        if (any(du /= du_ref)) write(*,*) 'ERROR: du does not validate', tile, ser_count
-        if (any(tdt /= tdt_ref)) write(*,*) 'ERROR: tdt does not validate', tile, ser_count
-        if (any(rtg /= rtg_ref)) write(*,*) 'ERROR: rtg does not validate', tile, ser_count
-        if (any(kpbl /= kpbl_ref)) write(*,*) 'ERROR: kpbl does not validate', tile, ser_count
-        if (any(dusfc /= dusfc_ref)) write(*,*) 'ERROR: dusfc does not validate', tile, ser_count
-        if (any(dvsfc /= dvsfc_ref)) write(*,*) 'ERROR: dvsfc does not validate', tile, ser_count
-        if (any(dtsfc /= dtsfc_ref)) write(*,*) 'ERROR: dtsfc does not validate', tile, ser_count
-        if (any(dqsfc /= dqsfc_ref)) write(*,*) 'ERROR: dqsfc does not validate', tile, ser_count
-        if (any(hpbl /= hpbl_ref)) write(*,*) 'ERROR: hpbl does not validate', tile, ser_count
-
+        call check_r_2d(dv, dv_ref, "dv")
+        call check_r_2d(du, du_ref, "du")
+        call check_r_2d(tdt, tdt_ref, "tdt")
+        call check_r_3d(rtg, rtg_ref, "rtg")
+        call check_i_1d(kpbl, kpbl_ref, "kpbl")
+        call check_r_1d(dusfc, dusfc_ref, "dusfc")
+        call check_r_1d(dvsfc, dvsfc_ref, "dvsfc")
+        call check_r_1d(dtsfc, dtsfc_ref, "dtsfc")
+        call check_r_1d(dqsfc, dqsfc_ref, "dqsfc")
+        
         deallocate(kpbl, kinver, xmu, garea, psk, &
             rbsoil, zorl, tsea, u10m, v10m, fm, &
             fh, evap, heat, stress, spd1, dusfc, &
@@ -120,5 +119,106 @@ program test
     call cdstop()
 
     write(*,*) 'FINISHED!'
+
+contains
+
+    subroutine check_r_3d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:,:,:), b(:,:,:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_3d
+
+    subroutine check_r_2d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:,:), b(:,:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_2d
+
+    subroutine check_r_1d(a, b, name, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a(:), b(:)
+        character(len=*), intent(in) :: name
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        logical :: close
+
+        close = all(isclose_r(a, b, atol, rtol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_r_1d
+
+    subroutine check_i_1d(a, b, name, atol)
+        implicit none
+        integer, intent(in) :: a(:), b(:)
+        character(len=*), intent(in) :: name
+        integer, intent(in), optional :: atol
+
+        logical :: close
+
+        close = all(isclose_i(a, b, atol))
+        if (.not. close) then
+            write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        end if
+
+    end subroutine check_i_1d
+
+    elemental logical function isclose_r(a, b, atol, rtol)
+        implicit none
+        real (kind=kind_phys), intent(in) :: a, b
+        real (kind=kind_phys), intent(in), optional :: atol, rtol
+
+        real (kind=kind_phys) :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 1.0d-30
+        end if
+        if (present(rtol)) then
+            rtol_local = rtol
+        else
+            rtol_local = 1.0d-6
+        end if
+
+        isclose_r = abs(a - b) <= (atol_local + rtol_local * abs(b))
+
+    end function isclose_r
+
+    elemental logical function isclose_i(a, b, atol)
+        implicit none
+        integer, intent(in) :: a, b
+        integer, intent(in), optional :: atol
+
+        integer :: atol_local, rtol_local
+
+        if (present(atol)) then
+            atol_local = atol
+        else
+            atol_local = 0
+        end if
+
+        isclose_i = abs(a - b) <= atol_local
+
+    end function isclose_i
 
 end program test
