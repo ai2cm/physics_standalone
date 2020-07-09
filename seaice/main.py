@@ -84,6 +84,7 @@ for tile in range(6):
 
             # run Python version
             out_data = si.run(in_data)
+            
             isready = True
 
         if sp.name.startswith("sfc_sice-out"):
