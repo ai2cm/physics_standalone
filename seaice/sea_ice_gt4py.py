@@ -252,8 +252,10 @@ def ice3lay(
     
         snof = snof * dwds
         tice = tice - t0c
-        stsice0 = (stsice0 - t0c > tfi0)*tfi0 + (stsice0 - t0c < tfi0)*(stsice0 - t0c)     # degc
-        stsice1 = (stsice1 - t0c > tfi0)*tfi0 + (stsice1 - t0c < tfi0)*(stsice1 - t0c)     # degc
+        # min(stsice0-tc0, tfi0)
+        stsice0 = (stsice0 - t0c >= tfi0)*tfi0 + (stsice0 - t0c < tfi0)*(stsice0 - t0c)     # degc
+        # min(stsice1-tc0, tfi0)
+        stsice1 = (stsice1 - t0c >= tfi0)*tfi0 + (stsice1 - t0c < tfi0)*(stsice1 - t0c)     # degc
     
         ip = i0 * sneti # ip +v here (in winton ip=-i0*sneti)
     
@@ -264,7 +266,8 @@ def ice3lay(
             tsf = tfi
             ip  = i0 * sneti  # ip +v here (in winton ip=-i0*sneti)
     
-        tice = (tice > tsf)*tsf + (tice < tsf)*tice
+        # min(tice, tsf)
+        tice = (tice >= tsf)*tsf + (tice < tsf)*tice
     
         # compute ice temperature
     
@@ -354,7 +357,8 @@ def ice3lay(
             snowd = snowd + (h1*(ci*(stsice0 - tfi)\
                     - li*(1. - tfi/stsice0)) + h2*(ci*\
                     (stsice1 - tfi) - li)) / li
-            hice = (0. > snowd*dsdi)*0. + (0. < snowd*dsdi)*snowd*dsdi
+            # max(0,m snowd*dsdi)
+            hice = (0. >= snowd*dsdi)*0. + (0. < snowd*dsdi)*snowd*dsdi
             snowd = 0.
             stsice0 = tfw
             stsice1 = tfw
@@ -494,19 +498,19 @@ def sfc_sice(
 
     #         dlwflx has been given a negative sign for downward longwave
     #         sfcnsw is the net shortwave flux (direction: dn-up)
-
-            q0     = (q1 > 1.0e-8)*q1 + (q1 < 1.0e-8)*1.0e-8  # max(q1, 1.0e-8)
+            # max(q1, 1.0e-8)
+            q0     = (q1 >= 1.0e-8)*q1 + (q1 < 1.0e-8)*1.0e-8
             theta1 = t1 * prslki
             rho    = prsl1 / (rd * t1 * (1. + rvrdm1 * q0))
-            # TODO: function call fpvs does not work!
 
+        # TODO: function call fpvs needs to be outside the if-statement. Ok?
         qs1 = fpvs(t=t1)
         if flag:
             # qs1    = max(eps * qs1 / (prsl1 + epsm1 * qs1), 1.e-8)
-            qs1 = (eps * qs1 / (prsl1 + epsm1 * qs1) > 1.e-8)*(eps * qs1 / (prsl1 + epsm1 * qs1)) \
+            qs1 = (eps * qs1 / (prsl1 + epsm1 * qs1) >= 1.e-8)*(eps * qs1 / (prsl1 + epsm1 * qs1)) \
                   + (eps * qs1 / (prsl1 + epsm1 * qs1) < 1.e-8)*1.e-8
             # q0     = min(qs1, q0)
-            q0 = (qs1 < q0)*qs1 + (qs1 > q0)*q0
+            q0 = (qs1 < q0)*qs1 + (qs1 >= q0)*q0
 
             if fice < cimin:
         #         # TODO: print statement possible?
@@ -550,7 +554,7 @@ def sfc_sice(
             snetw = sfcdsw * (1. - albfw)
             # snetw = np.minimum(3. * sfcnsw / (1. + 2. * ffw), snetw)
             snetw = (3. * sfcnsw / (1. + 2. * ffw) < snetw) * (3. * sfcnsw / (1. + 2. * ffw)) \
-                    + (3. * sfcnsw / (1. + 2. * ffw) > snetw)*snetw
+                    + (3. * sfcnsw / (1. + 2. * ffw) >= snetw)*snetw
             sneti = (sfcnsw - ffw * snetw) / fice
 
             t12 = tice * tice
@@ -572,9 +576,8 @@ def sfc_sice(
             snof = 0.   # snowfall rate - snow accumulates in gbphys
 
             # hice = np.maximum(np.minimum(hice, himax), himin)
-            # TODO: check all min/max for <= > or < >=
-            hice = (((hice < himax)*hice + (hice > himax)*himax) > himin)*((hice < himax)*hice + (hice > himax)*himax) + \
-                   (((hice < himax)*hice + (hice > himax)*himax) < himin)*himin
+            hice = (((hice < himax)*hice + (hice >= himax)*himax) >= himin)*((hice < himax)*hice + (hice > himax)*himax) + \
+                   (((hice < himax)*hice + (hice >= himax)*himax) < himin)*himin
             # snowd = np.minimum(snowd, hsmax)
             snowd = (snowd >= hsmax)*hsmax + (snowd < hsmax)*snowd
 
