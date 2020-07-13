@@ -88,7 +88,7 @@ HIMIN  = 0.1         # minimum ice thickness required
 HSMAX  = 2.          # maximum snow depth allowed
 TIMIN  = 173.        # minimum temperature allowed for snow/ice
 ALBFW  = 0.06        # albedo for lead
-dsi    = 1. / 0.33
+DSI    = 1. / 0.33
 
 # other constants
 INIT_VALUE = 0.  # TODO - this should be float("NaN")
@@ -151,10 +151,10 @@ def fpvs_fn(t):
     tr = TTP / t
 
     # over liquid
-    pvl = PSAT * (tr ** FPVS_XPONAL) * exp_fn(FPVS_XPONBL * (1.0 - tr))
+    pvl = PSAT * (tr ** FPVS_XPONAL) * exp_fn(FPVS_XPONBL * (1. - tr))
 
     # over ice
-    pvi = PSAT * (tr ** FPVS_XPONAI) * exp_fn(FPVS_XPONBI * (1.0 - tr))
+    pvi = PSAT * (tr ** FPVS_XPONAI) * exp_fn(FPVS_XPONBI * (1. - tr))
 
     # determine regime weight
     w = (t - TTP + 20.) / 20.
@@ -165,7 +165,7 @@ def fpvs_fn(t):
     elif w < 0.0:
         fpvs = pvi
     else:
-        fpvs = w * pvl + (1.0 - w) * pvi
+        fpvs = w * pvl + (1. - w) * pvi
 
     return fpvs
 
@@ -197,11 +197,6 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
     dh = INIT_VALUE
     f1 = INIT_VALUE
 
-    dt2  = 2. * delt
-    dt4  = 4. * delt
-    dt6  = 6. * delt
-    dt2i = 1. / dt2
-
     if flag:
         snowd = snowd  * DWDS
         hdi = (DSDW * snowd + DIDW * hice)
@@ -216,13 +211,11 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
         stc1 = TFI0 if TFI0 < stc1 - T0C else stc1 - T0C     # degc
     
         ip = I0 * sneti # ip +v here (in winton ip=-I0*sneti)
-    
         if snowd > 0.:
             tsf = 0.
             ip  = 0.
         else:
             tsf = TFI
-            ip  = I0 * sneti  # ip +v here (in winton ip=-I0*sneti)
     
         tice = tsf if tsf < tice else tice
     
@@ -233,17 +226,17 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
         k12 = KI4 * KS / (KS * hice + KI4 * snowd)
         k32 = (KI + KI) / hice
     
-        wrk = 1. / (dt6 * k32 + DICI * hice)
-        a10 = DICI * hice * dt2i + \
-            k32 * (dt4 * k32 + DICI * hice) * wrk
+        wrk = 1. / (6. * delt * k32 + DICI * hice)
+        a10 = DICI * hice * (0.5 / delt) + \
+            k32 * (4. * delt * k32 + DICI * hice) * wrk
         b10 = -DI * hice * (CI * stc0 + LI * TFI / \
-                stc0) * dt2i - ip - k32 * \
-                (dt4 * k32 * TFW + DICI * hice * stc1) * wrk
+                stc0) * (0.5 / delt) - ip - k32 * \
+                (4. * delt * k32 * TFW + DICI * hice * stc1) * wrk
     
         wrk1 = k12 / (k12 + bi)
         a1 = a10 + bi * wrk1
         b1 = b10 + ai * wrk1
-        c1   = DILI * TFI * dt2i * hice
+        c1   = DILI * TFI * (0.5 / delt) * hice
     
         stc0 = -((b1 * b1 - 4. * a1 * c1)**0.5 + b1) / (a1 + a1)
         tice = (k12 * stc0 - ai) / (k12 + bi)
@@ -258,7 +251,7 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
             tmelt = 0.
             snowd = snowd + snof * delt
     
-        stc1 = (dt2 * k32 * (stc0 + TFW + TFW) + \
+        stc1 = (2. * delt * k32 * (stc0 + TFW + TFW) + \
             DICI * hice * stc1) * wrk
         bmelt = (focn + KI4 * (stc1 - TFW) / hice) * delt
     
@@ -393,7 +386,6 @@ def sfc_sice_defs(
         snof    = INIT_VALUE
         hflxi   = INIT_VALUE
         hflxw   = INIT_VALUE
-        tem     = INIT_VALUE
     
     #  --- ...  set flag for sea-ice
     
@@ -419,11 +411,13 @@ def sfc_sice_defs(
 
     #         dlwflx has been given a negative sign for downward longwave
     #         sfcnsw is the net shortwave flux (direction: dn-up)
+
             q0     = q1 if q1 > 1.0e-8 else 1.0e-8
             theta1 = t1 * prslki
             rho    = prsl1 / (RD * t1 * (1. + RVRDM1 * q0))
 
-            qs1 = EPS * qs1 / (prsl1 + EPSM1 * qs1) if EPS * qs1 / (prsl1 + EPSM1 * qs1) > 1.e-8 else 1.e-8
+            qs1 = EPS * qs1 / (prsl1 + EPSM1 * qs1)
+            qs1 = qs1 if qs1 > 1.e-8 else 1.e-8
             q0 = qs1 if qs1 < q0 else q0
 
             if fice < cimin:
@@ -438,7 +432,7 @@ def sfc_sice_defs(
         qssi = fpvs_fn(tice)
         qssw = fpvs_fn(TGICE)
         if flag:
-            ffw  = 1.0 - fice
+            ffw  = 1. - fice
             qssi = EPS * qssi / (ps + EPSM1 * qssi)
             qssw = EPS * qssw / (ps + EPSM1 * qssw)
 
@@ -463,7 +457,8 @@ def sfc_sice_defs(
             evapw = ELOCP * rch * (qssw - q0)
 
             snetw = sfcdsw * (1. - ALBFW)
-            snetw = 3. * sfcnsw / (1. + 2. * ffw) if 3. * sfcnsw / (1. + 2. * ffw) < snetw else snetw
+            t12 = 3. * sfcnsw / (1. + 2. * ffw)
+            snetw =  t12 if t12 < snetw else snetw
             sneti = (sfcnsw - ffw * snetw) / fice
 
             t12 = tice * tice
@@ -533,7 +528,7 @@ def sfc_sice_defs(
         #  --- ...  convert snow depth back to mm of water equivalent
 
             weasd = snowd * 1000.
-            snwdph = weasd * dsi             # snow depth in mm
+            snwdph = weasd * DSI             # snow depth in mm
 
             hflx = hflx / rho * CPINV
             evap = evap / rho * HVAPI
