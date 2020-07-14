@@ -43,7 +43,7 @@ def run(in_dict):
     toc = timeit.default_timer()
     elapsed_time = toc -tic
     print("elapsed time:", elapsed_time,"s")
-    return out_dict
+    return out_dict, elapsed_time
 
 
 def sfc_sice(im, km, ps, t1, q1, delt, sfcemis, dlwflx, sfcnsw, sfcdsw, srflag,

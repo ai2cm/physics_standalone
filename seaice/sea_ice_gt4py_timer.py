@@ -144,7 +144,7 @@ def run(in_dict, backend=BACKEND):
     stc[:, 1] = out_dict.pop("stc1")[:]
     out_dict["stc"] = stc
 
-    return out_dict
+    return out_dict, elapsed_time
 
 
 @gtscript.function
