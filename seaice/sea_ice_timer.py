@@ -42,7 +42,7 @@ def run(in_dict):
 
     toc = timeit.default_timer()
     elapsed_time = toc -tic
-    print("elapsed time:", elapsed_time,"s")
+    # print("elapsed time:", elapsed_time,"s")
     return out_dict, elapsed_time
 
 

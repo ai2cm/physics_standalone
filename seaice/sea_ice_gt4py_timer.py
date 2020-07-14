@@ -134,7 +134,7 @@ def run(in_dict, backend=BACKEND):
 
     # calculate and print elapsed time
     elapsed_time = toc - tic
-    print("elapsed time:", elapsed_time,"s")
+    # print("elapsed time:", elapsed_time,"s")
 
     # convert back to numpy for validation
     out_dict = {k: gt4py_to_numpy_storage(out_dict[k], k) for k in OUT_VARS}

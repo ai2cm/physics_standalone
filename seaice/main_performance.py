@@ -27,6 +27,7 @@ SCALAR_VARS = ["delt", "cimin", 'im', 'km']
 TWOD_VARS = ['stc']
 BOOL_VARS = ['flag_iter']
 INT_VARS = ['islimsk']
+ITER = 10
 
 GP = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
 FP = [0., 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1]
@@ -79,12 +80,14 @@ for implement in BACKEND:
         time[float(frac)] = {}
         for grid_points in GP:
             print('Running ', grid_points, 'gridpoints with ', 100*frac, '% sea_ice.', end = '')
-            in_dict = init_dict(grid_points, frac)
-            if implement == 'python':
-                out_data, elapsed_time = si_py.run(in_dict)
-            else:
-                out_data, elapsed_time = si_gt4py.run(in_dict, backend=implement)
-            time[frac][float(grid_points)] = elapsed_time
+            elapsed_time = np.empty(ITER)
+            for i in range(ITER):
+                in_dict = init_dict(grid_points, frac)
+                if implement == 'python':
+                    out_data, elapsed_time[i] = si_py.run(in_dict)
+                else:
+                    out_data, elapsed_time[i] = si_gt4py.run(in_dict, backend=implement)
+            time[frac][float(grid_points)] = np.median(elapsed_time)
 
 
     sorted_time = sorted(time.items(), reverse=True)
