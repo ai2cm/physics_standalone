@@ -4,6 +4,10 @@ import pickle
 import numpy as np
 import sea_ice_timer as si_py
 import sea_ice_gt4py_timer as si_gt4py
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 BACKEND = ['python', 'numpy', 'gtx86', 'gtcuda']
 
@@ -81,6 +85,20 @@ for implement in BACKEND:
             else:
                 out_data, elapsed_time = si_gt4py.run(in_dict, backend=implement)
             time[frac][float(grid_points)] = elapsed_time
-    
-    print(time)
 
+
+    sorted_time = sorted(time.items(), reverse=True)
+    plt.figure(figsize=(12,8))
+    for key in sorted_time:
+        lists = sorted(key[1].items())
+        x, y = zip(*lists)
+        plt.scatter(x, y, label=str(key[0]))
+
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('number of grid points')
+    plt.ylabel('elapsed time [s]')
+    plt.ylim(5e-4, 2e-1)
+    plt.grid()
+    plt.legend()
+    plt.savefig("perf_" + implement + ".png")
