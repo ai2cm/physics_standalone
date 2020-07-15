@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# pylint: disable=W0511
-# pylint: disable=C0326
-# pylint: disable=C0103
 
 import numpy as np
 import gt4py as gt
@@ -27,36 +24,36 @@ OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc0", "stc1", "tice", \
 # mathematical constants
 EULER = 2.7182818284590452353602874713527
 
+# TODO: All these constants should be moved into separate const file
 # physical constants
-HVAP = 2.5e6
-RV = 4.615e2
-PSAT = 6.1078e2
-TTP = 2.7316e2
-CVAP = 1.846e3
-CLIQ = 4.1855e3
-CSOL = 2.106e3
-HFUS = 3.3358e5
+HVAP = 2.5e6       # lat heat H2O cond (J/kg)
+RV = 4.615e2       # gas constant H2O (J/kg/K)
+PSAT = 6.1078e2    # pres at H2O 3pt (Pa)
+TTP = 2.7316e2     # temp at H2O 3pt (K)
+CVAP = 1.846e3     # spec heat H2O gas (J/kg/K)
+CLIQ = 4.1855e3    # spec heat H2O liq (J/kg/K)
+CSOL = 2.106e3     # spec heat H2O ice (J/kg/K)
+HFUS = 3.3358e5    # lat heat H2O fusion (J/kg)
 
 # constant parameters
-DS  = 330.     # snow (ov sea ice) density (kg/m^3)
-DW  = 1000.    # fresh water density  (kg/m^3)
-KS  = 0.31     # conductivity of snow   (w/mk)
-I0  = 0.3      # ice surface penetrating solar fraction
-KI  = 2.03     # conductivity of ice  (w/mk)
-DI  = 917.     # density of ice   (kg/m^3)
-CI  = 2054.    # heat capacity of fresh ice (j/kg/k)
-LI  = 3.34e5   # latent heat of fusion (j/kg-ice)
-SI  = 1.       # salinity of sea ice
-MU  = 0.054    # relates freezing temp to salinity
-TFW = -1.8     # TFW - seawater freezing temp (c)
-T0C = 2.7315e+2
+DS  = 330.      # snow (ov sea ice) density (kg/m^3)
+DW  = 1000.     # fresh water density  (kg/m^3)
+KS  = 0.31      # conductivity of snow   (w/mk)
+I0  = 0.3       # ice surface penetrating solar fraction
+KI  = 2.03      # conductivity of ice  (w/mk)
+DI  = 917.      # density of ice   (kg/m^3)
+CI  = 2054.     # heat capacity of fresh ice (j/kg/k)
+LI  = 3.34e5    # latent heat of fusion (j/kg-ice)
+SI  = 1.        # salinity of sea ice
+MU  = 0.054     # relates freezing temp to salinity
+TFW = -1.8      # TFW - seawater freezing temp (c)
+T0C = 2.7315e+2 # temp (K) of 0C
 
 # constants definition
-CP    = 1.0046e+3
-SBC   = 5.6704e-8
+CP    = 1.0046e+3  # spec heat air at p (J/kg/K)
+SBC   = 5.6704e-8  # stefan-boltzmann (W/m^2/K^4)
 TGICE = 2.712e+2
-RV    = 4.615e+2
-RD    = 2.8705e+2
+RD    = 2.8705e+2  # gas constant air (J/kg/K)
 
 # fvps constants
 FPVS_XPONAL = -(CVAP - CLIQ) / RV
@@ -80,8 +77,6 @@ KI4  = KI * 4.
 EPS    = RD / RV
 EPSM1  = RD / RV - 1.
 RVRDM1 = RV / RD - 1.
-CPINV  = 1. / CP
-HVAPI  = 1. / HVAP
 ELOCP  = HVAP / CP
 HIMAX  = 8.          # maximum ice thickness allowed
 HIMIN  = 0.1         # minimum ice thickness required
@@ -91,23 +86,30 @@ ALBFW  = 0.06        # albedo for lead
 DSI    = 1. / 0.33
 
 # other constants
-INIT_VALUE = 0.  # TODO - this should be float("NaN")
+INIT_VALUE = 0.  # TODO - this should be float("NaN") but not possible 07/20
 
 
-def numpy_to_gt4py_storage(arr, name, backend="numpy"):
+def numpy_to_gt4py_storage(arr, backend="numpy"):
+    """convert numpy storage to gt4py storage"""
     data = np.reshape(arr, (arr.shape[0], 1, 1))
     if data.dtype == "bool":
         data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
 
-def gt4py_to_numpy_storage(arr, name):
+def gt4py_to_numpy_storage(arr):
+    """convert gt4py storage to numpy storage"""
     data = arr.view(np.ndarray)
     return np.reshape(data, (data.shape[0]))
 
 
 def run(in_dict, backend=BACKEND):
-    """run function"""
+    """Run function for GFS thermodynamics surface ice model 
+
+    With this function, the GFS thermodynamics surface ice model can be run
+    as a standalone parameterization.
+    """
+
 
     # special handling of stc
     stc = in_dict.pop("stc")
@@ -116,8 +118,8 @@ def run(in_dict, backend=BACKEND):
 
     # setup storages
     scalar_dict = {k: in_dict[k] for k in SCALAR_VARS}
-    out_dict = {k: numpy_to_gt4py_storage(in_dict[k].copy(), k, backend=backend) for k in OUT_VARS}
-    in_dict = {k: numpy_to_gt4py_storage(in_dict[k], k) for k in IN_VARS}
+    out_dict = {k: numpy_to_gt4py_storage(in_dict[k].copy(), backend=backend) for k in OUT_VARS}
+    in_dict = {k: numpy_to_gt4py_storage(in_dict[k]) for k in IN_VARS}
 
     # compile stencil
     sfc_sice = gtscript.stencil(definition=sfc_sice_defs, backend=backend, externals={})
@@ -126,7 +128,7 @@ def run(in_dict, backend=BACKEND):
     sfc_sice(**scalar_dict, **in_dict, **out_dict)
 
     # convert back to numpy for validation
-    out_dict = {k: gt4py_to_numpy_storage(out_dict[k], k) for k in OUT_VARS}
+    out_dict = {k: gt4py_to_numpy_storage(out_dict[k]) for k in OUT_VARS}
 
     # special handling of stc
     stc[:, 0] = out_dict.pop("stc0")[:]
@@ -138,13 +140,14 @@ def run(in_dict, backend=BACKEND):
 
 @gtscript.function
 def exp_fn(a):
+    """Compute exponential function"""
     return EULER ** a
 
 
 @gtscript.function
 def fpvs_fn(t):
     """Compute saturation vapor pressure
-       t: Temperature 
+       t: Temperature
     fpvs: Vapor pressure [Pa]
     """
 
@@ -173,7 +176,55 @@ def fpvs_fn(t):
 @gtscript.function
 def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
             stc0, stc1, tice, snof, snowmt, gflux):
-    """TODO - write a nice docstring here"""
+    """three-layer sea ice vertical thermodynamics
+                                                                           *
+    based on:  m. winton, "a reformulated three-layer sea ice model",      *
+    journal of atmospheric and oceanic technology, 2000                    *
+                                                                           *
+                                                                           *
+          -> +---------+ <- tice - diagnostic surface temperature ( <= 0c )*
+         /   |         |                                                   *
+     snowd   |  snow   | <- 0-heat capacity snow layer                     *
+         \   |         |                                                   *
+          => +---------+                                                   *
+         /   |         |                                                   *
+        /    |         | <- t1 - upper 1/2 ice temperature; this layer has *
+       /     |         |         a variable (t/s dependent) heat capacity  *
+     hice    |...ice...|                                                   *
+       \     |         |                                                   *
+        \    |         | <- t2 - lower 1/2 ice temp. (fixed heat capacity) *
+         \   |         |                                                   *
+          -> +---------+ <- base of ice fixed at seawater freezing temp.   *
+                                                                           *
+    =====================  definition of variables  =====================  *
+                                                                           *
+    inputs:                                                         size   *
+       fice     - real, sea-ice concentration                         im   *
+       flag     - logical, ice mask flag                              1    *
+       hfi      - real, net non-solar and heat flux @ surface(w/m^2)  im   *
+       hfd      - real, heat flux derivatice @ sfc (w/m^2/deg-c)      im   *
+       sneti    - real, net solar incoming at top  (w/m^2)            im   *
+       focn     - real, heat flux from ocean    (w/m^2)               im   *
+       delt     - real, timestep                (sec)                 1    *
+                                                                           *
+    input/outputs:                                                         *
+       snowd    - real, surface pressure                              im   *
+       hice     - real, sea-ice thickness                             im   *
+       stc0     - real, temp @ midpt of ice levels (deg c), 1st layer im   *     
+       stc1     - real, temp @ midpt of ice levels (deg c), 2nd layer im   *     
+       tice     - real, surface temperature     (deg c)               im   *
+       snof     - real, snowfall rate           (m/sec)               im   *
+                                                                           *
+    outputs:                                                               *
+       snowmt   - real, snow melt during delt   (m)                   im   *
+       gflux    - real, conductive heat flux    (w/m^2)               im   *
+                                                                           *
+    locals:                                                                *
+       hdi      - real, ice-water interface     (m)                        *
+       hsni     - real, snow-ice                (m)                        *
+                                                                           *
+    ====================================================================== *
+    """
 
     # TODO - only initialize the arrays which are defined in an if-statement
     hdi = INIT_VALUE
@@ -200,47 +251,47 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
     if flag:
         snowd = snowd  * DWDS
         hdi = (DSDW * snowd + DIDW * hice)
-    
+
         if hice < hdi:
             snowd = snowd + hice - hdi
             hice  = hice + (hdi - hice) * DSDI
-    
+
         snof = snof * DWDS
         tice = tice - T0C
         stc0 = stc0 - T0C if stc0 - T0C < TFI0 else TFI0
         stc1 = TFI0 if TFI0 < stc1 - T0C else stc1 - T0C     # degc
-    
+
         ip = I0 * sneti # ip +v here (in winton ip=-I0*sneti)
         if snowd > 0.:
             tsf = 0.
             ip  = 0.
         else:
             tsf = TFI
-    
+
         tice = tsf if tsf < tice else tice
-    
+
         # compute ice temperature
-    
+
         bi = hfd
         ai = hfi - sneti + ip - tice * bi # +v sol input here
         k12 = KI4 * KS / (KS * hice + KI4 * snowd)
         k32 = (KI + KI) / hice
-    
+
         wrk = 1. / (6. * delt * k32 + DICI * hice)
         a10 = DICI * hice * (0.5 / delt) + \
             k32 * (4. * delt * k32 + DICI * hice) * wrk
         b10 = -DI * hice * (CI * stc0 + LI * TFI / \
                 stc0) * (0.5 / delt) - ip - k32 * \
                 (4. * delt * k32 * TFW + DICI * hice * stc1) * wrk
-    
+
         wrk1 = k12 / (k12 + bi)
         a1 = a10 + bi * wrk1
         b1 = b10 + ai * wrk1
         c1   = DILI * TFI * (0.5 / delt) * hice
-    
+
         stc0 = -((b1 * b1 - 4. * a1 * c1)**0.5 + b1) / (a1 + a1)
         tice = (k12 * stc0 - ai) / (k12 + bi)
-    
+
         if tice > tsf:
             a1 = a10 + k12
             b1 = b10 - k12 * tsf
@@ -250,16 +301,16 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
         else:
             tmelt = 0.
             snowd = snowd + snof * delt
-    
+
         stc1 = (2. * delt * k32 * (stc0 + TFW + TFW) + \
             DICI * hice * stc1) * wrk
         bmelt = (focn + KI4 * (stc1 - TFW) / hice) * delt
-    
+
     #  --- ...  resize the ice ...
-    
+
         h1 = 0.5 * hice
         h2 = 0.5 * hice
-    
+
     #  --- ...  top ...
         if tmelt <= snowd * DSLI:
             snowmt = tmelt / DSLI
@@ -269,50 +320,50 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
             h1 = h1 - (tmelt - snowd * DSLI) / \
                     (DI * (CI - LI / stc0) * (TFI - stc0))
             snowd = 0.
-    
+
     #  --- ...  and bottom
-    
+
         if bmelt < 0.:
             dh = -bmelt / (DILI + DICI * (TFI - TFW))
             stc1 = (h2 * stc1 + dh * TFW) / (h2 + dh)
             h2 = h2 + dh
         else:
             h2 = h2 - bmelt / (DILI + DICI * (TFI - stc1))
-    
+
     #  --- ...  if ice remains, even up 2 layers, else, pass negative energy back in snow
-    
+
         hice = h1 + h2
-    
+
         # begin if_hice_block
         if hice > 0.:
             if h1 > 0.5 * hice:
                 f1 = 1. - 2. * h2 / hice
                 stc1 = f1 * (stc0 + LI*TFI/ \
                         (CI*stc0)) + (1. - f1)*stc1
-        
+
                 if stc1 > TFI:
                     hice = hice - h2 * CI*(stc1 - TFI)/(LI*delt)
                     stc1 = TFI
-        
+
             else:
                 f1 = 2*h1/hice
                 stc0 = f1*(stc0 + LI*TFI/ \
                         (CI*stc0)) + (1. - f1)*stc1
                 stc0= (stc0 - (stc0 * stc0 - 4.0*TFI*LI/CI)**0.5) * 0.5
-    
+
             k12 = KI4*KS / (KS*hice + KI4*snowd)
             gflux = k12*(stc0 - tice)
-        
+
         else:
             snowd = snowd + (h1*(CI*(stc0 - TFI)\
                     - LI*(1. - TFI/stc0)) + h2*(CI*\
                     (stc1 - TFI) - LI)) / LI
-            hice = 0. if 0. > snowd*DSDI else snowd*DSDI
+            hice = snowd*DSDI if snowd*DSDI < 0. else 0.
             snowd = 0.
             stc0 = TFW
             stc1 = TFW
             gflux = 0.
-    
+
         gflux = fice * gflux
         snowmt = snowmt * DSDW
         snowd = snowd * DSDW
@@ -324,43 +375,113 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
 
 
 def sfc_sice_defs(
-    ps: DT_F,
-    t1: DT_F,
-    q1: DT_F,
-    sfcemis: DT_F,
-    dlwflx: DT_F,
-    sfcnsw: DT_F,
-    sfcdsw: DT_F,
-    srflag: DT_F,
-    cm: DT_F,
-    ch: DT_F,
-    prsl1: DT_F,
-    prslki: DT_F,
-    islimsk: DT_I,
-    wind: DT_F,
-    flag_iter: DT_I,
-    hice: DT_F,
-    fice: DT_F,
-    tice: DT_F,
-    weasd: DT_F,
-    tskin: DT_F,
-    tprcp: DT_F,
-    stc0: DT_F,
-    stc1: DT_F,
-    ep: DT_F,
-    snwdph: DT_F,
-    qsurf: DT_F,
-    cmm: DT_F,
-    chh: DT_F,
-    evap: DT_F,
-    hflx: DT_F,
-    gflux: DT_F,
-    snowmt: DT_F,
-    *,
-    delt: float,
-    cimin: float
-):
-    """TODO: write docstring for this function!"""
+        ps: DT_F,
+        t1: DT_F,
+        q1: DT_F,
+        sfcemis: DT_F,
+        dlwflx: DT_F,
+        sfcnsw: DT_F,
+        sfcdsw: DT_F,
+        srflag: DT_F,
+        cm: DT_F,
+        ch: DT_F,
+        prsl1: DT_F,
+        prslki: DT_F,
+        islimsk: DT_I,
+        wind: DT_F,
+        flag_iter: DT_I,
+        hice: DT_F,
+        fice: DT_F,
+        tice: DT_F,
+        weasd: DT_F,
+        tskin: DT_F,
+        tprcp: DT_F,
+        stc0: DT_F,
+        stc1: DT_F,
+        ep: DT_F,
+        snwdph: DT_F,
+        qsurf: DT_F,
+        cmm: DT_F,
+        chh: DT_F,
+        evap: DT_F,
+        hflx: DT_F,
+        gflux: DT_F,
+        snowmt: DT_F,
+        *,
+        delt: float,
+        cimin: float
+         ):
+    """This file contains the GFS thermodynamics surface ice model.
+   
+    =====================================================================
+    description:                                                        
+   
+    usage:                                                              
+   
+   
+    program history log:                                                
+           2005  --  xingren wu created  from original progtm and added 
+                       two-layer ice model                              
+           200x  -- sarah lu    added flag_iter                         
+      oct  2006  -- h. wei      added cmm and chh to output             
+           2007  -- x. wu modified for mom4 coupling (i.e. cpldice)     
+                                      (not used anymore)                
+           2007  -- s. moorthi micellaneous changes                     
+      may  2009  -- y.-t. hou   modified to include surface emissivity  
+                       effect on lw radiation. replaced the confusing   
+                       slrad with sfc net sw sfcnsw (dn-up). reformatted
+                       the code and add program documentation block.    
+      sep  2009 -- s. moorthi removed rcl, changed pressure units and   
+                       further optimized                                
+      jan  2015 -- x. wu change "cimin = 0.15" for both                 
+                       uncoupled and coupled case                       
+      jul  2020 -- ETH-students port to gt4py
+   
+   
+    ====================  definition of variables  ==================== 
+   
+    inputs:                                                       size  
+       ps       - real, surface pressure                            im
+       t1       - real, surface layer mean temperature ( k )        im
+       q1       - real, surface layer mean specific humidity        im
+       sfcemis  - real, sfc lw emissivity ( fraction )              im
+       dlwflx   - real, total sky sfc downward lw flux ( w/m**2 )   im
+       sfcnsw   - real, total sky sfc netsw flx into ground(w/m**2) im
+       sfcdsw   - real, total sky sfc downward sw flux ( w/m**2 )   im
+       srflag   - real, snow/rain fraction for precipitation        im
+       cm       - real, surface exchange coeff for momentum (m/s)   im
+       ch       - real, surface exchange coeff heat & moisture(m/s) im
+       prsl1    - real, surface layer mean pressure                 im
+       prslki   - real,                                             im
+       islimsk  - integer, sea/land/ice mask (=0/1/2)               im
+       wind     - real,                                             im
+       flag_iter- logical,                                          im
+       delt     - real, time interval (second)                      1
+       cimin    - real, minimum ice fraction                        1
+
+    input/outputs:
+       hice     - real, sea-ice thickness                           im
+       fice     - real, sea-ice concentration                       im
+       tice     - real, sea-ice surface temperature                 im
+       weasd    - real, water equivalent accumulated snow depth (mm)im
+       tskin    - real, ground surface skin temperature ( k )       im
+       tprcp    - real, total precipitation                         im
+       stc0     - real, soil temp (k), 1. layer                     im
+       stc1     - real, soil temp (k), 2nd layer                    im
+       ep       - real, potential evaporation                       im
+
+    outputs:
+       snwdph   - real, water equivalent snow depth (mm)            im
+       qsurf    - real, specific humidity at sfc                    im
+       snowmt   - real, snow melt (m)                               im
+       gflux    - real, soil heat flux (w/m**2)                     im
+       cmm      - real, surface exchange coeff for momentum(m/s)    im
+       chh      - real, surface exchange coeff heat&moisture (m/s)  im  
+       evap     - real, evaperation from latent heat flux           im  
+       hflx     - real, sensible heat flux                          im  
+                                                                        
+    =====================================================================
+    """
 
     from __gtscript__ import PARALLEL, computation, interval
 
@@ -386,10 +507,9 @@ def sfc_sice_defs(
         snof    = INIT_VALUE
         hflxi   = INIT_VALUE
         hflxw   = INIT_VALUE
-    
+
     #  --- ...  set flag for sea-ice
-    
-        # TODO - gt4py supports only the "and" statement and not the "&"
+
         flag = (islimsk == 2) and flag_iter
 
         if flag_iter and (islimsk < 2):
@@ -491,8 +611,8 @@ def sfc_sice_defs(
 
         # run the 3-layer ice model
         snowd, hice, stc0, stc1, tice, snof, snowmt, gflux = ice3lay(
-                fice, flag, hfi, hfd, sneti, focn, delt,
-                snowd, hice, stc0, stc1, tice, snof, snowmt, gflux)
+            fice, flag, hfi, hfd, sneti, focn, delt,
+            snowd, hice, stc0, stc1, tice, snof, snowmt, gflux)
 
         if flag:
             if tice < TIMIN:
@@ -530,6 +650,5 @@ def sfc_sice_defs(
             weasd = snowd * 1000.
             snwdph = weasd * DSI             # snow depth in mm
 
-            hflx = hflx / rho * CPINV
-            evap = evap / rho * HVAPI
-
+            hflx = hflx / rho * 1. / CP
+            evap = evap / rho * 1. / HVAP
