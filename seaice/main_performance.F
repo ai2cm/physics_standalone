@@ -184,7 +184,7 @@ program test
                 call toc(time1(l), time2(l))
                
                 ! write in file   
-                write(3,'(I5,I5,F10.2,F10.3)') l,im, sea_ice_perc(j), 1000*real(time2(l)-time1(l))
+                write(3,'(I5,I6,F10.2,F10.3)') l,im, sea_ice_perc(j), 1000*real(time2(l)-time1(l))
 
                
             enddo
