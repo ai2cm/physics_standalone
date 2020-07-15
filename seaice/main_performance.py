@@ -8,7 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
+import matplotlib.cm as cm
 BACKEND = ['python', 'numpy', 'gtx86', 'gtcuda']
 
 IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
@@ -79,7 +79,7 @@ for implement in BACKEND:
     for frac in FP:
         time[float(frac)] = {}
         for grid_points in GP:
-            print('Running ', grid_points, 'gridpoints with ', 100*frac, '% sea_ice.', end = '')
+            print('Running ', grid_points, 'gridpoints with ', 100*frac, '% sea_ice')
             elapsed_time = np.empty(ITER)
             for i in range(ITER):
                 in_dict = init_dict(grid_points, frac)
@@ -91,17 +91,23 @@ for implement in BACKEND:
 
 
     sorted_time = sorted(time.items(), reverse=True)
-    plt.figure(figsize=(12,8))
+    ys = []
+    plt.figure(figsize=(8,6))
     for key in sorted_time:
         lists = sorted(key[1].items())
         x, y = zip(*lists)
-        plt.scatter(x, y, label=str(key[0]))
-
+        ys.append(y)
+    colors = cm.rainbow(np.linspace(0,1, len(ys)))
+    for y,c,k in zip(ys, colors, sorted_time):
+        plt.scatter(x, y, label=str(k[0]), s=8, color=c)
+     
+    plt.title('Performance Overview for ' + implement)
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel('number of grid points')
     plt.ylabel('elapsed time [s]')
     plt.ylim(5e-4, 2e-1)
     plt.grid()
-    plt.legend()
+    plt.legend(title='fraction of sea ice points', ncol=3, loc=2)
     plt.savefig("perf_" + implement + ".png")
+
