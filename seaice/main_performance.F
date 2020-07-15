@@ -93,7 +93,7 @@ program test
          ! loop percentage
          do j = 1,11
 
-            number_ice_grids =int(im *0.5)
+            number_ice_grids =int(im *sea_ice_perc(j))
 
             ps(1:number_ice_grids) = ps_i  
             ps(number_ice_grids+1:im) = ps_l
@@ -157,10 +157,7 @@ program test
             islimsk(number_ice_grids+1:im) = islimsk_l
             flag_iter(1:number_ice_grids) = flag_iter_i
             flag_iter(number_ice_grids+1:im) = flag_iter_l
-        
-            do i = 1, im
-                flag(i) = (islimsk(i) == 2) .and. flag_iter(i)
-            enddo
+            
 
             ! iteration loop
             do l = 1,iterations
