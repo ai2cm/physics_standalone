@@ -119,7 +119,7 @@ def run(in_dict, backend=BACKEND):
     # setup storages
     scalar_dict = {k: in_dict[k] for k in SCALAR_VARS}
     out_dict = {k: numpy_to_gt4py_storage(in_dict[k].copy(), backend=backend) for k in OUT_VARS}
-    in_dict = {k: numpy_to_gt4py_storage(in_dict[k]) for k in IN_VARS}
+    in_dict = {k: numpy_to_gt4py_storage(in_dict[k], backend=backend) for k in IN_VARS}
 
     # compile stencil
     sfc_sice = gtscript.stencil(definition=sfc_sice_defs, backend=backend, externals={})
