@@ -90,7 +90,7 @@ for implement in BACKEND:
             time[frac][float(grid_points)] = np.median(elapsed_time)
 
 
-    sorted_time = sorted(time.items(), reverse=True)
+    sorted_time = sorted(time.items())
     ys = []
     plt.figure(figsize=(8,6))
     for key in sorted_time:
@@ -101,12 +101,12 @@ for implement in BACKEND:
     for y,c,k in zip(ys, colors, sorted_time):
         plt.scatter(x, y, label=str(k[0]), s=8, color=c)
      
-    plt.title('Performance Overview for ' + implement)
+    plt.title('Performance Overview for ' + implement.capitalize())
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel('number of grid points')
     plt.ylabel('elapsed time [s]')
-    plt.ylim(5e-4, 2e-1)
+    plt.ylim(5e-6, 2e-1)
     plt.grid()
     plt.legend(title='fraction of sea ice points', ncol=3, loc=2)
     plt.savefig("perf_" + implement + ".png")
