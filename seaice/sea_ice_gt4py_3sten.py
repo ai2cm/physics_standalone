@@ -97,8 +97,10 @@ def numpy_to_gt4py_storage(arr, backend="numpy"):
     return gt.storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
 
-def gt4py_to_numpy_storage(arr):
+def gt4py_to_numpy_storage(arr, backend="numpy"):
     """convert gt4py storage to numpy storage"""
+    if backend=="gtcuda":
+        arr.synchronize()
     data = arr.view(np.ndarray)
     return np.reshape(data, (data.shape[0]))
 
@@ -188,7 +190,7 @@ def run(in_dict, backend=BACKEND):
         rho=rho)
 
     # convert back to numpy for validation
-    out_dict = {k: gt4py_to_numpy_storage(out_dict[k]) for k in OUT_VARS}
+    out_dict = {k: gt4py_to_numpy_storage(out_dict[k], backend=backend) for k in OUT_VARS}
 
     # special handling of stc
     stc[:, 0] = out_dict.pop("stc0")[:]
