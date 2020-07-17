@@ -3,6 +3,7 @@
 
 import numpy as np
 import gt4py as gt
+import timeit
 from gt4py import gtscript
 
 BACKEND = "gtcuda"
@@ -142,6 +143,9 @@ def run(in_dict, backend=BACKEND):
     ice3lay  = gtscript.stencil(definition=ice3lay_defs, backend=backend, externals={})
     sfc_sice_p2 = gtscript.stencil(definition=sfc_sice_p2_defs, backend=backend, externals={})
 
+    # set timer
+    tic = timeit.default_timer()
+
     # call sea-ice parametrization
     sfc_sice(**scalar_dict, **in_dict, **out_dict, hfi=hfi, hfd=hfd, sneti=sneti, focn=focn, snof=snof,
 # new variables:
@@ -189,6 +193,12 @@ def run(in_dict, backend=BACKEND):
         evapw=evapw,
         rho=rho)
 
+    # set timer
+    toc = timeit.default_timer()
+
+    # calculate elapsed time
+    elapsed_time = toc - tic
+
     # convert back to numpy for validation
     out_dict = {k: gt4py_to_numpy_storage(out_dict[k], backend=backend) for k in OUT_VARS}
 
@@ -197,7 +207,7 @@ def run(in_dict, backend=BACKEND):
     stc[:, 1] = out_dict.pop("stc1")[:]
     out_dict["stc"] = stc
 
-    return out_dict
+    return out_dict, elapsed_time
 
 
 @gtscript.function

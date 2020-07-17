@@ -3,7 +3,7 @@
 import pickle
 import numpy as np
 import sea_ice_timer as si_py
-import sea_ice_gt4py_timer as si_gt4py
+import sea_ice_gt4py_3sten as si_gt4py
 import matplotlib
 
 matplotlib.use("Agg")
@@ -29,7 +29,7 @@ BOOL_VARS = ['flag_iter']
 INT_VARS = ['islimsk']
 ITER = 10
 
-GP = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
+GP = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 32768*2, 32768*4]
 FP = [0., 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1]
 
 def save_obj(obj, name ):
