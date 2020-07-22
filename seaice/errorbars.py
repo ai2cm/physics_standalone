@@ -5,11 +5,12 @@ import numpy as np
 import sea_ice_timer as si_py
 import sea_ice_gt4py_3sten as si_gt4py
 import matplotlib
+import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-BACKEND = ['python', 'numpy', 'gtx86', 'gtcuda']
+BACKEND = ['python', 'numpy'] #'gtx86', 'gtcuda']
 
 IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
            "sfcnsw", "sfcdsw", "srflag", "cm", "ch", "prsl1", "prslki", \
@@ -71,10 +72,12 @@ def init_dict(num_gridp, frac_gridp):
     d['im'] = num_gridp
 
     return d
+
 # define dataframe
 index = np.arange(0,np.size(BACKEND) * np.size(FP) * np.size(GP) - 1)  
-data_errorbar = pd.Dataframe(columns = ['BACKEND', 'ice fraction', 'gridpoints', 'time median', 'time stdev'], index = index)
+data_errorbar = pd.DataFrame(columns = ['BACKEND', 'Ice Fraction', 'Gridpoints', 'Median', 'Sigma'], index = index)
 
+# set counter
 counter = 0        
 
 for implement in BACKEND:
@@ -93,13 +96,18 @@ for implement in BACKEND:
                 else:
                     out_data, elapsed_time[i] = si_gt4py.run(in_dict, backend=implement)
             time[frac][float(grid_points)] = np.median(elapsed_time)
+            # calculate standarddeviation 
             sigma = np.std(elapsed_time)
-            counter = counter + 1
+
+            # read data into dataframe
             data_errorbar.loc[counter,'BACKEND'] = implement
             data_errorbar.loc[counter,'Gridpoints'] = grid_points
-            data_errorbar.loc[counter,'ice fraction'] = frac
-            data_errorbar.loc[counter,'time median'] = np.median(elapsed_time) 
-            data_errorbar.loc[counter,'time stdev'] = np.std(elapsed_time)
+            data_errorbar.loc[counter,'Ice Rraction'] = frac
+            data_errorbar.loc[counter,'Median'] = np.median(elapsed_time) 
+            data_errorbar.loc[counter,'Sigma'] = np.std(elapsed_time)
+           
+            # set counter
+            counter = counter + 1
 
     print(data_errorbar)
     sorted_time = sorted(time.items())
@@ -112,7 +120,7 @@ for implement in BACKEND:
     colors = cm.rainbow(np.linspace(0,1, len(ys)))
     for y,c,k in zip(ys, colors, sorted_time):
         plt.scatter(x, y, label=str(k[0]), s=8, color=c)
-     
+    plt.scatter(data_errorbar.Median, data_errorbar.Gridpoints)
     plt.title('Performance Overview for ' + implement.capitalize())
     plt.xscale('log')
     plt.yscale('log')
