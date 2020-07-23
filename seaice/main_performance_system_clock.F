@@ -6,10 +6,10 @@ program test
      implicit none
 
      integer:: i,j,k,l,im, number_ice_grids, ipr, km, iterations! count_rate, count_max
-     integer, dimension(11):: grid_init
+     integer, dimension(16):: grid_init
      integer, dimension(:), allocatable :: islimsk, ones!, count1,count2
-     integer(8):: count_rate, count_max
-     integer(8),dimension(:),allocatable:: count1,count2
+     integer(16):: count_rate, count_max
+     integer(16),dimension(:),allocatable:: count1,count2
 
      real, dimension(11):: sea_ice_perc
      real (kind=kind_phys) :: delt, cimin, ps_l, t1_l, q1_l, delt_l, sfcemis_l,           &
@@ -41,7 +41,7 @@ program test
      iterations = 10
 
      ! initialise arrays for loop   
-     grid_init = (/32,64,128,256,512,1024,2048,4096,8192,16384,32768/)      
+     grid_init = (/32,64,128,256,512,1024,2048,4096,8192,16384,32768, 65536, 131072, 262144, 524288, 1048576/)      
      sea_ice_perc =(/0., 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99,1./)  
 
      ! allocate time arrays
@@ -79,7 +79,7 @@ program test
      
      ! loop over gridpoint numbers
      open(3,file = 'results.dat', status = 'replace')
-     do k = 1,11
+     do k = 1,16
      
          im = grid_init(k)
      
@@ -185,14 +185,14 @@ program test
                 !write(*,'(F10.3)'), 1000*real(count2(l)-count1(l))/rate
                 
                 !write gridpoint, percentage, iteration
-                write(*,'(I5)', advance="no")  im 
+                write(*,'(I9)', advance="no")  im 
                 write(*,'(F10.2)', advance="no")  sea_ice_perc(j)
                 write(*,'(I5)', advance="no")  l
                 !write(*,*) count2(l)-count1(l)
                 
                 !write(*,'(F10.3)'), 1000*real(count2(l)-count1(l))/rate
                 ! write in file   
-                write(3,'(I5,I6,F10.2,F10.5)') l,im, sea_ice_perc(j),1000*real(count2(l)-count1(l))/rate
+                write(3,'(I5,I9,F10.2,F15.7)') l,im, sea_ice_perc(j),1000*real(count2(l)-count1(l))/rate
                 
                
             enddo
@@ -215,13 +215,13 @@ contains
 
     subroutine tic(c1)
         implicit none
-        integer(8) :: c1
+        integer(16) :: c1
         call system_clock(c1)
     end subroutine tic
 
     subroutine toc(c1, c2, rate)
         implicit none
-        integer(8) :: c1, c2
+        integer(16) :: c1, c2
         real:: rate
         call system_clock(c2)
         write(*,'(a,f10.3,a)') "    Time Taken --> ", 1000*real(c2-c1)/rate, ' ms'
