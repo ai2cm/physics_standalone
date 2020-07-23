@@ -29,7 +29,7 @@ BOOL_VARS = ['flag_iter']
 INT_VARS = ['islimsk']
 ITER = 10
 
-GP = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 32768*2, 32768*4]
+GP = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 32768*2, 32768*4, 2**18, 2**19, 2**20]
 FP = [0., 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1]
 
 def save_obj(obj, name ):
@@ -106,8 +106,7 @@ for implement in BACKEND:
     plt.yscale('log')
     plt.xlabel('number of grid points')
     plt.ylabel('elapsed time [s]')
-    plt.ylim(5e-6, 2e-1)
+    plt.ylim(5e-7, 5.)
     plt.grid()
     plt.legend(title='fraction of sea ice points', ncol=3, loc=2)
     plt.savefig("perf_" + implement + ".png")
-
