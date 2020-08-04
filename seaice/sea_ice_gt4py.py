@@ -5,6 +5,8 @@ import numpy as np
 import gt4py as gt
 from gt4py import gtscript
 
+import timeit
+
 # BACKEND = "gtcuda"
 # BACKEND = "gtx86"
 BACKEND = "numpy"
@@ -110,7 +112,6 @@ def run(in_dict, backend=BACKEND):
     as a standalone parameterization.
     """
 
-
     # special handling of stc
     stc = in_dict.pop("stc")
     in_dict["stc0"] = stc[:, 0]
@@ -124,8 +125,17 @@ def run(in_dict, backend=BACKEND):
     # compile stencil
     sfc_sice = gtscript.stencil(definition=sfc_sice_defs, backend=backend, externals={})
 
+    # set timer
+    tic = timeit.default_timer()
+
     # call sea-ice parametrization
     sfc_sice(**scalar_dict, **in_dict, **out_dict)
+
+    # set timer
+    toc = timeit.default_timer()
+
+    # calculateelapsed time
+    elapsed_time = toc - tic
 
     # convert back to numpy for validation
     out_dict = {k: gt4py_to_numpy_storage(out_dict[k]) for k in OUT_VARS}
@@ -135,7 +145,7 @@ def run(in_dict, backend=BACKEND):
     stc[:, 1] = out_dict.pop("stc1")[:]
     out_dict["stc"] = stc
 
-    return out_dict
+    return out_dict, elapsed_time
 
 
 @gtscript.function
