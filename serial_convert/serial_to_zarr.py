@@ -9,11 +9,11 @@ sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 
-def _filter_savepoints(savepoints: Iterable[ser.Savepoint], filter: str):
+def _filter_savepoints(savepoints: Iterable[ser.Savepoint], filter_key: str):
     new_savepoints = [
         savepoint 
         for savepoint in savepoints 
-        if filter in str(savepoint)
+        if filter_key in str(savepoint)
     ]
 
     return new_savepoints
@@ -37,20 +37,34 @@ class SerializedPhysicsConverter():
             self.savepoints = _filter_savepoints(self.savepoints, savepoint_filter)
 
         self.var_names = init_serializer.fields_at_savepoint(self.savepoints[0])
-        self.var_attrs = var_attrs
+        self.var_attrs = {} if var_attrs is None else var_attrs
         self.num_savepoints = len(self.savepoints)
 
-        self.var_info = self._read_var_info(init_serializer)
+        self.var_info = self._process_var_metadata(init_serializer)
 
-    def _read_var_info(self, init_serializer: ser.Serializer) -> dict:
+    def _process_var_metadata(self, init_serializer: ser.Serializer) -> dict:
         var_info = {}
         for var in self.var_names:
             data = init_serializer.read(var, self.savepoints[0])
+
+            # TODO: Should store constants in single element array
             var_info[var] = {
-                "shape": (self.num_savepoints, self.RANKS, *data.shape),
-                "chunk": (1, 1, *data.shape),
-                "dtype": data.dtype,
+                "dataset_kwargs": {
+                    "shape": (self.num_savepoints, self.RANKS, *data.shape),
+                    "chunk": (1, 1, *data.shape),
+                    "dtype": data.dtype,
+                },
+                "is_constant": bool(data.shape)
             }
+
+            if var in self.var_attrs:
+                attrs = self.var_attrs[var]
+                dims = attrs.pop("dimensions")
+                
+                # Switch to expected attr name for xarray if not a constant
+                if dims:
+                    dims = ["savepoint", "rank"] + dims
+                    attrs["_ARRAY_DIMENSIONS"] = dims
             
         
         return var_info
@@ -73,7 +87,8 @@ class SerializedPhysicsConverter():
 
         for var in self.var_names:
             info = self.var_info[var]
-            out.create_dataset(var, **info)
+            out.create_dataset(var, **info["dataset_kwargs"])
+            out.attrs
 
         return out
 
@@ -86,8 +101,8 @@ class SerializedPhysicsConverter():
 
 if __name__ == "__main__":
 
-    prefix = "./data"
-    metadata = yaml.safe_load("./parameter_metadata.yaml")
+    prefix = "./turb/data"
+    metadata = yaml.safe_load("./turb/parameter_metadata.yaml")
     save = SerializedPhysicsConverter(prefix, savepoint_filter="-in-", var_attrs=metadata)
     save.save_zarr("/home/user/turb_in.zarr")
 
