@@ -5,11 +5,9 @@ program test
      use module_sfc_sice, only : sfc_sice
      implicit none
 
-     integer:: i,j,k,l,im, number_ice_grids, ipr, km, iterations! count_rate, count_max
-     integer, dimension(16):: grid_init
-     integer, dimension(:), allocatable :: islimsk, ones!, count1,count2
-     integer(16):: count_rate, count_max
-     integer(16),dimension(:),allocatable:: count1,count2
+     integer:: i,j,k,l,im, number_ice_grids, ipr, km, iterations
+     integer, dimension(11):: grid_init
+     integer, dimension(:), allocatable :: islimsk, ones
 
      real, dimension(11):: sea_ice_perc
      real (kind=kind_phys) :: delt, cimin, ps_l, t1_l, q1_l, delt_l, sfcemis_l,           &
@@ -30,10 +28,9 @@ program test
      real (kind=kind_phys), dimension(:), allocatable :: ps, t1, q1, &
          sfcemis, dlwflx, sfcnsw, sfcdsw, srflag, cm, ch, prsl1, prslki, &
          wind, hice, fice, tice, weasd, tskin, tprcp, ep, snwdph, &
-         qsurf, snowmt, gflux, cmm, chh, evap, hflx 
-     real:: rate
-     real(8), dimension(:),allocatable ::  timediff !time1, time2,
-     
+         qsurf, snowmt, gflux, cmm, chh, evap, hflx
+     real(8), dimension(:),allocatable :: time1, time2, timediff
+    
      logical, dimension(:), allocatable :: flag_iter, flag
      logical:: flag_iter_l, flag_iter_i,lprnt
 
@@ -41,11 +38,11 @@ program test
      iterations = 10
 
      ! initialise arrays for loop   
-     grid_init = (/32,64,128,256,512,1024,2048,4096,8192,16384,32768, 65536, 131072, 262144, 524288, 1048576/)      
+     grid_init = (/32,64,128,256,512,1024,2048,4096,8192,16384,32768/)      
      sea_ice_perc =(/0., 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99,1./)  
 
      ! allocate time arrays
-     allocate(count1(iterations),count2(iterations)) 
+     allocate(time1(iterations),time2(iterations)) 
  
      ! initialize
      call gfuncphys()
@@ -78,8 +75,8 @@ program test
      km = 4
      
      ! loop over gridpoint numbers
-     open(3,file = 'results.dat', status = 'replace')
-     do k = 1,16
+     open(3,file = 'results_cpu_time.dat', status = 'replace')
+     do k = 1,11
      
          im = grid_init(k)
      
@@ -161,14 +158,10 @@ program test
             flag_iter(1:number_ice_grids) = flag_iter_i
             flag_iter(number_ice_grids+1:im) = flag_iter_l
             
-            ! initalize clock
-            CALL system_clock(count_rate=count_rate)
-            CALL system_clock(count_max=count_max)
-            rate = REAL(count_rate)
 
             ! iteration loop
             do l = 1,iterations
-                call tic(count1(l))
+                call tic(time1(l), time2(l))
 
                 call sfc_sice                                              &
                 !  ---  inputs:
@@ -181,19 +174,16 @@ program test
                 snwdph, qsurf, snowmt, gflux, cmm, chh, evap, hflx )
 
 
-                call toc(count1(l), count2(l),rate)
+                call toc(time1(l), time2(l))
                 
-                
-                !write gridpoint, percentage, iteration
-                write(*,'(I9)', advance="no")  im 
+                ! write gridpoint, percentage, iteration
+                write(*,'(I5)', advance="no")  im 
                 write(*,'(F10.2)', advance="no")  sea_ice_perc(j)
                 write(*,'(I5)', advance="no")  l
-                
-                
-                
+
                 ! write in file   
-                write(3,'(I5,I9,F10.2,F15.7)') l,im, sea_ice_perc(j),1000*real(count2(l)-count1(l))/rate
-                
+                write(3,'(I5,I6,F10.2,F10.3)') l,im, sea_ice_perc(j), 1000*real(time2(l)-time1(l))
+
                
             enddo
             
@@ -209,22 +199,21 @@ program test
  
      close(3)
 
-     deallocate(count1,count2) 
+     deallocate(time1,time2) 
 
 contains 
 
-    subroutine tic(c1)
+    subroutine tic(t1, t2)
         implicit none
-        integer(16) :: c1
-        call system_clock(c1)
+        real(8) :: t1, t2
+        call cpu_time(t1)
     end subroutine tic
 
-    subroutine toc(c1, c2, rate)
+    subroutine toc(t1, t2)
         implicit none
-        integer(16) :: c1, c2
-        real:: rate
-        call system_clock(c2)
-        write(*,'(a,f10.3,a)') "    Time Taken --> ", 1000*real(c2-c1)/rate, ' ms'
+        real(8) :: t1, t2
+        call cpu_time(t2)
+        write(*,'(a,f10.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
     end subroutine toc
 
 
