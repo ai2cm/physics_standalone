@@ -5,5 +5,5 @@ docker run -i -t --rm \
 	--mount type=bind,source=`pwd`/seaice,target=/work/seaice \
 	--mount type=bind,source=`pwd`/microph,target=/work/microph \
 	--mount type=bind,source=`pwd`/shalconv,target=/work/shalconv \
-	--mount type=bind,source=`pwd`/serial_convert,target=/work \
+	--mount type=bind,source=`pwd`/serial_convert,target=/work/serial_convert \
 	--name=phys_standalone phys_standalone
