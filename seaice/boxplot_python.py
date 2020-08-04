@@ -77,7 +77,7 @@ def init_dict(num_gridp, frac_gridp):
 
 # define dataframe
 index = np.arange(0,np.size(BACKEND) * np.size(FP) * np.size(GP) * ITER - 1)  
-data_errorbar = pd.DataFrame(columns = ['BACKEND', 'Ice Fraction', 'Gridpoints', 'Median', 'Sigma', 'Iteration', 'Time'], index = index)
+data = pd.DataFrame(columns = ['BACKEND', 'Ice Fraction', 'Gridpoints', 'Median', 'Sigma', 'Iteration', 'Time'], index = index)
 
 # set counter
 counter = 0  
@@ -99,30 +99,31 @@ for implement in BACKEND:
                 else:
                     out_data, elapsed_time[i] = si_gt4py.run(in_dict, backend=implement)
                     
-                data_errorbar.loc[counter,'BACKEND'] = implement
-                data_errorbar.loc[counter,'Gridpoints'] = grid_points
-                data_errorbar.loc[counter,'Ice Fraction'] = frac
-                data_errorbar.loc[counter,'Iteration'] = i
-                data_errorbar.loc[counter,'Ice Fraction'] = frac
-                data_errorbar.loc[counter,'Time'] = elapsed_time[i]
+                data.loc[counter,'BACKEND'] = implement
+                data.loc[counter,'Gridpoints'] = grid_points
+                data.loc[counter,'Ice Fraction'] = frac
+                data.loc[counter,'Iteration'] = i
+                data.loc[counter,'Ice Fraction'] = frac
+                data.loc[counter,'Time'] = elapsed_time[i]
                
                 counter = counter + 1
 
                    
     
     # select backend
-    data_errorbar = data_errorbar[data_errorbar.BACKEND == implement]
+    data = data[data.BACKEND == implement]
     # select 0.25 ice fraction 
-    data_errorbar = data_errorbar[data_errorbar['Ice Fraction'] == 0.25] 
+    data = data[data['Ice Fraction'] == 0.25] 
     
     # define position
     pos = np.array((32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576))
     # define width
     width =  pos * 0.3
-
+    
+    # boxplot
     fig, ax = plt.subplots(figsize=(8,6))
-    data_errorbar.boxplot(ax=ax, by =['Gridpoints'],positions=pos,widths=width,column = ['Time'])
-    plt.title('25% Sea Ice Fraction Error for ' + implement.capitalize())
+    data.boxplot(ax=ax, by =['Gridpoints'],positions=pos,widths=width,column = ['Time'])
+    plt.title('Boxplot for 25% Sea Ice Fraction with ' + implement.capitalize())
     plt.suptitle("") 
     ax.set_xscale('log')
     ax.set_yscale('log')
