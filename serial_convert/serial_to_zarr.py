@@ -3,6 +3,8 @@ import sys
 import yaml
 import dask
 import dask.array as da
+import netCDF4 as ncf
+import numpy as np
 from typing import Iterable, Mapping
 from numpy import ndarray
 from dask.diagnostics import ProgressBar
@@ -10,6 +12,9 @@ from dask.diagnostics import ProgressBar
 SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
+
+DEFAULT_FILLVALS = {np.dtype(key): val for key, val in ncf.default_fillvals.items()}
+DEFAULT_FILLVALS[np.dtype("bool")] = DEFAULT_FILLVALS[np.dtype("int64")]
 
 
 def _filter_savepoints(savepoints: Iterable[ser.Savepoint], filter_key: str):
@@ -57,6 +62,7 @@ class SerializedPhysicsConverter():
                     "chunks": (1, 1, *data.shape),
                     "dtype": str(data.dtype),
                 },
+                "_FillValue": DEFAULT_FILLVALS[data.dtype]
             }
 
             if var in self.var_attrs:
@@ -138,4 +144,6 @@ if __name__ == "__main__":
         metadata = yaml.safe_load(f)
     save = SerializedPhysicsConverter(prefix, savepoint_filter="-in-", var_attrs=metadata)
     save.save_zarr("/home/user/turb_in.zarr")
+    save = SerializedPhysicsConverter(prefix, savepoint_filter="-out-", var_attrs=metadata)
+    save.save_zarr("/home/user/turb_out.zarr")
 

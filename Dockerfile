@@ -36,7 +36,7 @@ RUN echo $TZ > /etc/timezone && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
 # install some python packages
-RUN pip install numpy zarr xarray ipython pyyaml dask
+RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4
 
 # install serialbox from source
 COPY serialbox /serialbox
