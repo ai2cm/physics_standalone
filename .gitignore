@@ -1,3 +1,4 @@
 serialbox
 __pycache__
 .vscode
+*.zarr
