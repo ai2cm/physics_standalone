@@ -53,8 +53,6 @@ These are the plotting scripts to generate the plots shown in the report.
 
 ----------------------------------------
 
-m_countdown.F
-
 main_performance_cpu_time.F
 Runs performance tests of the fortran implementation of the sea ice parameterisation using the cpu_time command.
 
@@ -65,4 +63,4 @@ Runs performance tests of the fortran implementation of the sea ice parameterisa
 
 results_non_optimized.dat
 results_optimized.dat
-These are the data from the Fortran runs with optimized compiler options and no compiler options. 
+These are the performance data from the Fortran runs with optimized compiler options and no compiler options. 
