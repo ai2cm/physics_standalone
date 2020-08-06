@@ -6,7 +6,7 @@ program test
     implicit none
 
     integer :: im, km, ipr
-    integer, dimension(:), allocatable :: islimsk
+    integer, dimension(:), allocatable :: islimsk, ones
 
     real (kind=kind_phys) :: delt, cimin
     real (kind=kind_phys), dimension(:), allocatable :: ps, t1, q1, &
@@ -19,9 +19,9 @@ program test
     real (kind=kind_phys), dimension(:, :), allocatable :: stc, stc_ref
 
     logical :: lprnt
-    logical, dimension(:), allocatable :: flag_iter
+    logical, dimension(:), allocatable :: flag_iter, flag
 
-    integer :: iter
+    integer :: iter, i
     integer :: tile, num_tiles
     integer :: ser_count, ser_count_max
     character(len=6) :: ser_count_str
@@ -64,7 +64,9 @@ program test
             hice_ref(im), fice_ref(im), tice_ref(im), weasd_ref(im), tskin_ref(im), &
             tprcp_ref(im), stc_ref(im, km), ep_ref(im), snwdph_ref(im), &
             qsurf_ref(im), snowmt_ref(im), gflux_ref(im), cmm_ref(im), &
-            chh_ref(im), evap_ref(im), hflx_ref(im))
+            chh_ref(im), evap_ref(im), hflx_ref(im), &
+            ones(im), flag(im))
+        ones(:) = 1
 
         ! input
         !$ser data ps=ps t1=t1 q1=q1 delt=delt sfcemis=sfcemis dlwflx=dlwflx
@@ -84,6 +86,10 @@ program test
         !$ser savepoint "sfc_sice-inside-iter2-"//trim(ser_count_str)
         !$ser verbatim end if        
 
+        do i = 1, im
+            flag(i) = (islimsk(i) == 2) .and. flag_iter(i)
+        enddo
+        write(*,'(I5)', advance="no") sum(ones, flag)
         call tic(time1, time2)
 
         call sfc_sice                                                  &
@@ -136,7 +142,7 @@ program test
             hice_ref, fice_ref, tice_ref, weasd_ref, tskin_ref, &
             tprcp_ref, stc_ref, ep_ref, snwdph_ref, &
             qsurf_ref, snowmt_ref, gflux_ref, cmm_ref, &
-            chh_ref, evap_ref, hflx_ref)
+            chh_ref, evap_ref, hflx_ref, ones, flag)
 
     end do
     end do
