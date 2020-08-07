@@ -2,6 +2,8 @@ import zarr
 import sys
 import yaml
 import dask
+import argparse
+import os
 import dask.array as da
 import netCDF4 as ncf
 import numpy as np
@@ -138,12 +140,19 @@ def _array_to_dask_array(source_array: ndarray, name: str) -> da.Array:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("serial_data_dir")
+    parser.add_argument("metadata_file")
+    parser.add_argument("outdir")
 
-    prefix = "./turb/data"
-    with open("./serial_convert/turb_parameter_metadata.yaml", "r") as f:
+    args = parser.parse_args()
+    prefix = args.serial_data_dir
+    with open(args.metadata_file, "r") as f:
         metadata = yaml.safe_load(f)
+
+    outdir = args.outdir
     save = SerializedPhysicsConverter(prefix, savepoint_filter="-in-", var_attrs=metadata)
-    save.save_zarr("/home/user/turb_in.zarr")
+    save.save_zarr(os.path.join(outdir, "phys_in.zarr"))
     save = SerializedPhysicsConverter(prefix, savepoint_filter="-out-", var_attrs=metadata)
-    save.save_zarr("/home/user/turb_out.zarr")
+    save.save_zarr(os.path.join(outdir, "phys_out.zarr"))
 

@@ -35,9 +35,6 @@ ENV TZ=US/Pacific
 RUN echo $TZ > /etc/timezone && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
-# install some python packages
-RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4
-
 # install serialbox from source
 COPY serialbox /serialbox
 RUN cd /serialbox && \
@@ -50,6 +47,18 @@ RUN cd /serialbox && \
     make test && \
     make install && \
     /bin/rm -rf /serialbox
+
+# Install Google Cloud
+RUN apt-get update && apt-get install -y  apt-transport-https ca-certificates gnupg curl gettext
+
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list &&\
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+
+
+RUN apt-get update && apt-get install -y google-cloud-sdk jq python3-dev python3-pip kubectl gfortran
+
+# Zarr conversion
+COPY serial_convert /serial_convert
 
 # add default user
 ARG USER=user
@@ -64,6 +73,10 @@ ARG WORKDIR=/work
 ENV WORKDIR ${WORKDIR}
 RUN mkdir ${WORKDIR}
 RUN chown -R ${USER}:${USER} ${WORKDIR}
+
+# install some python packages
+RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4 rechunker && \
+    pip install dask[array] --upgrade
 
 WORKDIR ${WORKDIR}
 USER ${USER}
