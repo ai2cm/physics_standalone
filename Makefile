@@ -11,7 +11,7 @@ build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -t $(IMAGE) .
 
 push:
-	docker push $(IMATE)
+	docker push $(IMAGE)
 
 test:
 	docker run -v serial_convert:/serial_convert -w=/ -it $(IMAGE) /tests/test_to_zarr.sh
