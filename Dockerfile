@@ -59,6 +59,7 @@ RUN apt-get update && apt-get install -y google-cloud-sdk jq python3-dev python3
 
 # Zarr conversion
 COPY serial_convert /serial_convert
+COPY tests /tests
 
 # add default user
 ARG USER=user
@@ -75,7 +76,7 @@ RUN mkdir ${WORKDIR}
 RUN chown -R ${USER}:${USER} ${WORKDIR}
 
 # install some python packages
-RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4 rechunker && \
+RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4 rechunker pytest && \
     pip install dask[array] --upgrade
 
 WORKDIR ${WORKDIR}
