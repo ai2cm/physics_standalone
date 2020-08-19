@@ -3,3 +3,4 @@ __pycache__
 .vscode
 *.zarr
 tests/test_data
+**.gt_cache/
