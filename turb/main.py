@@ -3,7 +3,6 @@
 import os
 import sys
 import numpy as np
-import xarray as xr
 
 SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
@@ -33,16 +32,6 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
     return d
 
 
-def compare_data(savepoint_data, xr_dataset):
-
-    for var, data in savepoint_data.items():
-        np.testing.assert_allclose(data, xr_dataset[var].values)
-
-
-converted_in = xr.open_zarr("/home/user/turb_in.zarr", mask_and_scale=False)
-converted_out = xr.open_zarr("/home/user/turb_out.zarr", mask_and_scale=False)
-
-
 for tile in range(6):
 
     if SELECT_SP is not None:
@@ -53,9 +42,7 @@ for tile in range(6):
 
     savepoints = serializer.savepoint_list()
 
-    for i, sp in enumerate(savepoints):
-
-        spt_idx = i // 2
+    for sp in savepoints:
 
         if SELECT_SP is not None:
             if sp.name != SELECT_SP["savepoint"]:
@@ -68,11 +55,9 @@ for tile in range(6):
             # read serialized input data
             sp_in = sp
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp_in)
-            compare_data(in_data, converted_in.isel(savepoint=spt_idx, rank=tile))
 
             # read serialized output data
             sp_out = serializer.savepoint[sp.name.replace("-in-", "-out-")]
             out_data = data_dict_from_var_list(OUT_VARS, serializer, sp_out)
-            compare_data(out_data, converted_out.isel(savepoint=spt_idx, rank=tile))
 
 
