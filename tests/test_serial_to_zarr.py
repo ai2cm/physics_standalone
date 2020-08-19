@@ -53,7 +53,11 @@ def compare_data(savepoint_data, xr_dataset):
 converted_in = xr.open_zarr(os.path.join(args.zarr_data, "phys_in.zarr"), mask_and_scale=False)
 converted_out = xr.open_zarr(os.path.join(args.zarr_data, "phys_out.zarr"), mask_and_scale=False)
 
-
+print(
+    "Beginning data comparison of converted files:"
+    f"\n\tzarr: {args.zarr_data}"
+    f"\n\tserialized: {args.serial_data}"
+)
 for tile in range(6):
 
     if SELECT_SP is not None:
