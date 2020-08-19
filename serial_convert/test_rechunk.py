@@ -7,6 +7,7 @@ from rechunk import get_target_chunk, rechunk_dataset
 # create ndarray with 1024 * 1024 base (1 MB)
 # test
 
+
 @pytest.fixture
 def data(scope="module"):
     # defined to be 1 MB per last two dims
@@ -29,6 +30,7 @@ def test_get_target_chunk_partial_dim(data):
     chunks = get_target_chunk(data, 2)
     assert chunks == [1, 2, 1024, 128]
 
+
 def test_get_target_chunk_empty():
     dat = np.array([]).astype(np.float)
     assert get_target_chunk(dat, 1) == [0]
@@ -44,6 +46,7 @@ def zarr_path(tmpdir, data):
     ds.to_zarr(zarr_path)
     return zarr_path
 
+
 def test_rechunk_zarr_dataset(tmpdir, zarr_path):
     rechunked = str(tmpdir.join("rechunked.zarr"))
     rechunk_dataset(zarr_path, rechunked, 5)
@@ -51,4 +54,3 @@ def test_rechunk_zarr_dataset(tmpdir, zarr_path):
     orig = xr.open_zarr(zarr_path)
     new = xr.open_zarr(rechunked)
     xr.testing.assert_allclose(orig, new)
-

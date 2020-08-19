@@ -13,7 +13,8 @@ MAX_MEM = "256MB"
 
 
 def _in_mb(nbytes_per_item, size):
-    return size * nbytes_per_item // 1024**2
+    return size * nbytes_per_item // 1024 ** 2
+
 
 def get_target_chunk(data, target_size_mb):
 
@@ -24,7 +25,7 @@ def get_target_chunk(data, target_size_mb):
 
     curr_size = 1
     for dim_size in shape[::-1]:
-        
+
         if get_mb(curr_size) >= target_size_mb:
             chunks.insert(0, 1)
         else:
@@ -52,21 +53,19 @@ def rechunk_dataset(input_path, output_path, chunksize_mb):
         with ProgressBar():
             plan.execute()
 
+
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "input_dir",
-        help="Directory containing zarr files to rechunk."
-    )
+    parser.add_argument("input_dir", help="Directory containing zarr files to rechunk.")
     parser.add_argument(
         "output_dir",
         help=(
             "Directory to place rechunked files. Note: should be different "
             "than input to prevent file conflicts."
-        )
+        ),
     )
     parser.add_argument("--chunksize_mb", required=False, default=5, type=int)
 
@@ -77,5 +76,3 @@ if __name__ == "__main__":
         in_zarr = Path(path)
         out_zarr = Path(args.output_dir, in_zarr.name)
         rechunk_dataset(in_zarr.as_posix(), out_zarr.as_posix(), args.chunksize_mb)
-
-

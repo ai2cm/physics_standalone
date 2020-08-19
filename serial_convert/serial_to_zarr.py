@@ -20,29 +20,25 @@ DEFAULT_FILLVALS[np.dtype("bool")] = DEFAULT_FILLVALS[np.dtype("int64")]
 
 
 def _filter_savepoints(
-    savepoints: Iterable[ser.Savepoint],
-    filter_key: str
+    savepoints: Iterable[ser.Savepoint], filter_key: str
 ) -> Iterable[ser.Savepoint]:
     new_savepoints = [
-        savepoint 
-        for savepoint in savepoints 
-        if filter_key in str(savepoint)
+        savepoint for savepoint in savepoints if filter_key in str(savepoint)
     ]
 
     return new_savepoints
 
 
 def _xarray_compatible_dims(
-    attrs: MutableMapping, 
-    prepend_dims: Sequence[str] = ("savepoint", "rank")
+    attrs: MutableMapping, prepend_dims: Sequence[str] = ("savepoint", "rank")
 ) -> Mapping:
     dims = attrs.pop("dimensions", [])
-    
+
     # length 1 dimension (scalars) aren't specified in CCPP, add here
     if not dims:
         dims = ["scalar"]
     dims = list(prepend_dims) + dims
-    
+
     # attribute necessary for xarray compatibility
     attrs["_ARRAY_DIMENSIONS"] = dims
 
@@ -59,27 +55,28 @@ def _array_to_dask_array(source_array: ndarray, name: str) -> da.Array:
 
     return da.from_array(source_array, chunks=chunks, name=name)
 
+
 def _lazy_serialized_read(
     varname: str,
     output: np.ndarray,
     savepoints: Iterable[ser.Savepoint],
-    serializers: Iterable[ser.Serializer]
+    serializers: Iterable[ser.Serializer],
 ) -> da.Array:
     """Compile a dask array from savepoint read operations using delayed objects"""
 
     tmp_dask_out = _array_to_dask_array(output, varname)
     by_savepoint = []
-    
+
     for i, savepoint in enumerate(savepoints):
-        
+
         by_rank = []
-        
+
         for rank, serializer in enumerate(serializers):
             source = dask.delayed(serializer.read)(varname, savepoint)
             dest = tmp_dask_out[i, rank]
             delayed_da = da.from_delayed(source, dest.shape, dtype=dest.dtype)
             by_rank.append(delayed_da)
-        
+
         by_rank = da.stack(by_rank, axis=0)
         by_savepoint.append(by_rank)
 
@@ -88,7 +85,7 @@ def _lazy_serialized_read(
     return full_var_output
 
 
-class SerializedPhysicsConverter():
+class SerializedPhysicsConverter:
 
     """
     Load serialized data and convert to another format.
@@ -96,26 +93,27 @@ class SerializedPhysicsConverter():
 
     RANKS = 6
     TEMPLATE = "Generator_rank{:d}"
-    
+
     def __init__(
         self,
         prefix: str,
         savepoint_filter: Optional[str] = None,
-        var_attrs: Optional[Mapping[str, Mapping]] = None
+        var_attrs: Optional[Mapping[str, Mapping]] = None,
     ):
         """
         Args:
             prefix: path to SerialBox savepoint data
-            savepoint_filter: filter to savepoints whose string representation includes this key
-            var_attrs:  mapping of variable names to their metadata.  Stored as attributes in the
-                        new format
+            savepoint_filter: filter to savepoints whose string representation 
+                includes this key
+            var_attrs:  mapping of variable names to their metadata.  Stored 
+                as attributes in the new format
         """
 
         self.serializers = [
-            ser.Serializer(ser.OpenModeKind.Read, prefix, self.TEMPLATE.format(i)) 
+            ser.Serializer(ser.OpenModeKind.Read, prefix, self.TEMPLATE.format(i))
             for i in range(self.RANKS)
         ]
-        
+
         init_serializer = self.serializers[0]
         self.savepoints = init_serializer.savepoint_list()
         if savepoint_filter is not None:
@@ -141,14 +139,13 @@ class SerializedPhysicsConverter():
                     "chunks": (1, 1, *data.shape),
                     "dtype": str(data.dtype),
                 },
-                "_FillValue": DEFAULT_FILLVALS[data.dtype]
+                "_FillValue": DEFAULT_FILLVALS[data.dtype],
             }
 
             if var in self.var_attrs:
                 attrs = _xarray_compatible_dims(dict(self.var_attrs[var]))
                 var_info[var].update(attrs)
-            
-        
+
         return var_info
 
     def _ser_to_backend(self, backend: Mapping[str, ndarray]):
@@ -156,7 +153,7 @@ class SerializedPhysicsConverter():
 
         da_by_var = []
         for var in self.var_names:
-            
+
             output = backend[var]
             var_to_store = _lazy_serialized_read(
                 var, output, self.savepoints, self.serializers
@@ -207,8 +204,11 @@ if __name__ == "__main__":
         metadata = yaml.safe_load(f)
 
     outdir = args.outdir
-    save = SerializedPhysicsConverter(prefix, savepoint_filter="-in-", var_attrs=metadata)
+    save = SerializedPhysicsConverter(
+        prefix, savepoint_filter="-in-", var_attrs=metadata
+    )
     save.save_zarr(os.path.join(outdir, "phys_in.zarr"))
-    save = SerializedPhysicsConverter(prefix, savepoint_filter="-out-", var_attrs=metadata)
+    save = SerializedPhysicsConverter(
+        prefix, savepoint_filter="-out-", var_attrs=metadata
+    )
     save.save_zarr(os.path.join(outdir, "phys_out.zarr"))
-
