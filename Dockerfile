@@ -57,6 +57,10 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
 
 RUN apt-get update && apt-get install -y google-cloud-sdk jq python3-dev python3-pip kubectl gfortran
 
+# install some python packages
+RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4 rechunker pytest && \
+    pip install dask[array] --upgrade
+
 # Zarr conversion
 COPY serial_convert /serial_convert
 COPY tests /tests
@@ -74,10 +78,6 @@ ARG WORKDIR=/work
 ENV WORKDIR ${WORKDIR}
 RUN mkdir ${WORKDIR}
 RUN chown -R ${USER}:${USER} ${WORKDIR}
-
-# install some python packages
-RUN pip install numpy zarr xarray ipython pyyaml dask netCDF4 rechunker pytest && \
-    pip install dask[array] --upgrade
 
 WORKDIR ${WORKDIR}
 USER ${USER}

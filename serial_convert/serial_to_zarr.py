@@ -63,7 +63,7 @@ def _lazy_serialized_read(
     varname: str,
     output: np.ndarray,
     savepoints: Iterable[ser.Savepoint],
-    serializers: Iterable[ser.Serialzer]
+    serializers: Iterable[ser.Serializer]
 ) -> da.Array:
     """Compile a dask array from savepoint read operations using delayed objects"""
 
