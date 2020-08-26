@@ -27,3 +27,18 @@ If you prefer to work in a Docker environment, simply type `./build.sh` to build
 ## Code coverage
 
 In order to inspect the code coverage that FV3GFS actually has (and the data used to run the parameterizations as well) take a look at the code [coverage report](https://htmlpreview.github.io/?https://github.com/VulcanClimateModeling/physics_standalone/blob/master/coverage/index.html).
+
+## Generating serialized data
+
+```
+git clone fv3gfs-fortran
+cd fv3gfs-fortran
+git pull
+git checkout serialize_physics
+./phys_build.sh
+[take any rundir and copy it here]
+./phys_run.sh
+cd /rundir
+export SER_ENV=TURB
+./submit_job.sh
+```
