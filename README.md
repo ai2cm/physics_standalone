@@ -12,6 +12,7 @@ You need the following things installed if you want to run directly on the host 
 ## Running
 
 ```bash
+[./enter.sh if you are running using the Docker environment]
 cd XXX
 ./get_data.sh
 make
