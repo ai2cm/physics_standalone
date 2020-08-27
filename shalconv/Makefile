@@ -41,7 +41,7 @@ $(TARGET): $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) -o $(TARGET)
 
 %.F90: %.F
-	$(SERBOX)/python/pp_ser/pp_ser.py --no-prefix -v --output=$@ $<
+	$(SERBOX)/python/pp_ser/pp_ser.py --sp-as-var --no-prefix -v --output=$@ $<
 
 %.o: %.F90
 	$(F90) $(FFLAGS) -c $< -o $@
