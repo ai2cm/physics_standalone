@@ -1,5 +1,5 @@
 if [ ! -d serialbox ]; then
-  git clone --single-branch --branch savepoint_as_string https://github.com/VulcanClimateModeling/serialbox2.git serialbox
+  git clone -b v2.6.0 --depth 1 https://github.com/GridTools/serialbox.git
 fi
 
 docker build -t phys_standalone .
