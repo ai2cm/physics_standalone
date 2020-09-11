@@ -2,14 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import timeit
 import gt4py as gt
 from gt4py import gtscript
 
 import timeit
-
-# BACKEND = "gtcuda"
-# BACKEND = "gtx86"
-BACKEND = "numpy"
 
 DT_F = gtscript.Field[np.float64]
 DT_I = gtscript.Field[np.int32]
@@ -91,7 +88,7 @@ DSI    = 1. / 0.33
 INIT_VALUE = 0.  # TODO - this should be float("NaN") but not possible 07/20
 
 
-def numpy_to_gt4py_storage(arr, backend="numpy"):
+def numpy_to_gt4py_storage(arr, backend):
     """convert numpy storage to gt4py storage"""
     data = np.reshape(arr, (arr.shape[0], 1, 1))
     if data.dtype == "bool":
@@ -99,13 +96,15 @@ def numpy_to_gt4py_storage(arr, backend="numpy"):
     return gt.storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
 
-def gt4py_to_numpy_storage(arr):
+def gt4py_to_numpy_storage(arr, backend):
     """convert gt4py storage to numpy storage"""
+    if backend == "gtcuda":
+        arr.synchronize()
     data = arr.view(np.ndarray)
     return np.reshape(data, (data.shape[0]))
 
 
-def run(in_dict, backend=BACKEND):
+def run(in_dict, backend):
     """Run function for GFS thermodynamics surface ice model 
 
     With this function, the GFS thermodynamics surface ice model can be run
@@ -129,16 +128,16 @@ def run(in_dict, backend=BACKEND):
     tic = timeit.default_timer()
 
     # call sea-ice parametrization
-    sfc_sice(**scalar_dict, **in_dict, **out_dict)
+    sfc_sice(**in_dict, **out_dict, **scalar_dict)
 
     # set timer
     toc = timeit.default_timer()
 
-    # calculateelapsed time
+    # calculate elapsed time
     elapsed_time = toc - tic
 
     # convert back to numpy for validation
-    out_dict = {k: gt4py_to_numpy_storage(out_dict[k]) for k in OUT_VARS}
+    out_dict = {k: gt4py_to_numpy_storage(out_dict[k], backend=backend) for k in OUT_VARS}
 
     # special handling of stc
     stc[:, 0] = out_dict.pop("stc0")[:]
@@ -356,7 +355,7 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
                     stc1 = TFI
 
             else:
-                f1 = 2*h1/hice
+                f1 = 2.*h1/hice
                 stc0 = f1*(stc0 + LI*TFI/ \
                         (CI*stc0)) + (1. - f1)*stc1
                 stc0= (stc0 - (stc0 * stc0 - 4.0*TFI*LI/CI)**0.5) * 0.5

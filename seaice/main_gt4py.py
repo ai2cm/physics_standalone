@@ -3,7 +3,7 @@
 import os
 import sys
 import numpy as np
-import sea_ice_gt4py_3sten as si
+import sea_ice_gt4py as si
 
 SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
 #SERIALBOX_DIR = "/usr/local/serialbox/"
@@ -23,6 +23,8 @@ OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
 
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
+
+BACKEND = "gtx86"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -83,8 +85,8 @@ for tile in range(6):
 #            in_data["savepoint"] = sp_inside
 
             # run Python version
-            out_data = si.run(in_data)
-            
+            out_data, elapsed_time = si.run(in_data, backend=BACKEND)
+
             isready = True
 
         if sp.name.startswith("sfc_sice-out"):

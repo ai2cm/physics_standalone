@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import gt4py as gt
 import timeit
+import gt4py as gt
 from gt4py import gtscript
 
 BACKEND = "gtcuda"
@@ -112,7 +112,6 @@ def run(in_dict, backend=BACKEND):
     With this function, the GFS thermodynamics surface ice model can be run
     as a standalone parameterization.
     """
-
 
     # special handling of stc
     stc = in_dict.pop("stc")

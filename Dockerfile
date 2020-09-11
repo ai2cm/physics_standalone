@@ -51,6 +51,10 @@ RUN cd /serialbox && \
     make install && \
     /bin/rm -rf /serialbox
 
+# install gt4py
+RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@develop && \
+    python -m gt4py.gt_src_manager install
+
 # add default user
 ARG USER=user
 ENV USER ${USER}
