@@ -148,12 +148,6 @@ def run(in_dict, backend):
 
 
 @gtscript.function
-def exp_fn(a):
-    """Compute exponential function"""
-    return EULER ** a
-
-
-@gtscript.function
 def fpvs_fn(t):
     """Compute saturation vapor pressure
        t: Temperature
@@ -163,10 +157,10 @@ def fpvs_fn(t):
     tr = TTP / t
 
     # over liquid
-    pvl = PSAT * (tr ** FPVS_XPONAL) * exp_fn(FPVS_XPONBL * (1. - tr))
+    pvl = PSAT * (tr ** FPVS_XPONAL) * exp(FPVS_XPONBL * (1. - tr))
 
     # over ice
-    pvi = PSAT * (tr ** FPVS_XPONAI) * exp_fn(FPVS_XPONBI * (1. - tr))
+    pvi = PSAT * (tr ** FPVS_XPONAI) * exp(FPVS_XPONBI * (1. - tr))
 
     # determine regime weight
     w = (t - TTP + 20.) / 20.

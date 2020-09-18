@@ -1,0 +1,18 @@
+#!/bin/bash -l
+#SBATCH --job-name="group01"
+#SBATCH --time=00:30:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-core=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --partition=debug
+#SBATCH --constraint=gpu
+#SBATCH --hint=nomultithread
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+source ../env_daint
+source ./venv/bin/activate
+
+srun -u ./main.x
+

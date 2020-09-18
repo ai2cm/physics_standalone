@@ -10,29 +10,25 @@ SRC = \
   physcons.F \
   funcphys.F \
   sfc_sice.F \
-  main.F
+  main_performance.F
 
 OBJ = $(SRC:.F=.o)
 PP = $(SRC:.F=.F90)
 
 F90 = gfortran
-
-# non-optimized compiler options
 FFLAGS = -fdec -fdefault-real-8 -fno-fast-math -ffree-form -ffree-line-length-none \
   -fno-backslash -fimplicit-none -frange-check -pedantic -Waliasing -Wampersand \
   -Wline-truncation -Wsurprising -Wtabs -Wunderflow -O0 -g -fbacktrace \
   -fdump-core -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan \
   -finit-integer=9999999 -finit-logical=true -finit-character=35 \
   -DSERIALIZE -I$(SERIALBOX_DIR)/include
-  
-# optimzed compiler options
-#FFLAGS = -fdec -fdefault-real-8 -fno-fast-math -ffree-form -ffree-line-length-none \
+FFLAGS = -fdec -fdefault-real-8 -fno-fast-math -ffree-form -ffree-line-length-none \
   -fno-backslash -fimplicit-none -pedantic -Waliasing -Wampersand \
   -Wline-truncation -Wsurprising -Wtabs -Wunderflow -O3 -ftree-vectorize -funroll-loops \
   -DSERIALIZE -I$(SERIALBOX_DIR)/include
-  
+
 LD = gfortran
-LDFLAGS = $(SERIALBOX_DIR)/lib/libSerialboxFortran.a $(SERIALBOX_DIR)/lib/libSerialboxC.a \
+LDFLAGS = -O3 -ftree-vectorize -funroll-loops $(SERIALBOX_DIR)/lib/libSerialboxFortran.a $(SERIALBOX_DIR)/lib/libSerialboxC.a \
   $(SERIALBOX_DIR)/lib/libSerialboxCore.a -L$(NETCDF_LIB) -lnetcdff -lnetcdf \
   -lpthread -lstdc++ -lstdc++fs
 
