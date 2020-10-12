@@ -20,10 +20,8 @@ OUT_VARS = ["tskin", "tprcp", "fice", "gflux", "ep", "stc0", "stc1", "tice", \
     "snowmt", "evap", "snwdph", "chh", "weasd", "hflx", "qsurf", \
     "hice", "cmm"]
 
-# mathematical constants
-EULER = 2.7182818284590452353602874713527
-
 # TODO: All these constants should be moved into separate const file
+
 # physical constants
 HVAP = 2.5e6       # lat heat H2O cond (J/kg)
 RV = 4.615e2       # gas constant H2O (J/kg/K)
@@ -54,38 +52,8 @@ SBC   = 5.6704e-8  # stefan-boltzmann (W/m^2/K^4)
 TGICE = 2.712e+2
 RD    = 2.8705e+2  # gas constant air (J/kg/K)
 
-# fvps constants
-FPVS_XPONAL = -(CVAP - CLIQ) / RV
-FPVS_XPONBL = -(CVAP - CLIQ) / RV + HVAP / (RV * TTP)
-FPVS_XPONAI = -(CVAP - CSOL) / RV
-FPVS_XPONBI = -(CVAP - CSOL) / RV + (HVAP + HFUS) / (RV * TTP)
-
-# ice3lay constants
-DSDW = DS / DW
-DWDS = DW / DS
-DIDW = DI / DW
-DSDI = DS / DI
-TFI  = -MU * SI # sea ice freezing temp = -MU*salinity
-TFI0 = TFI - 0.0001
-DICI = DI * CI
-DILI = DI * LI
-DSLI = DS * LI
-KI4  = KI * 4.
-
-# sfc_sice constants
-EPS    = RD / RV
-EPSM1  = RD / RV - 1.
-RVRDM1 = RV / RD - 1.
-ELOCP  = HVAP / CP
-HIMAX  = 8.          # maximum ice thickness allowed
-HIMIN  = 0.1         # minimum ice thickness required
-HSMAX  = 2.          # maximum snow depth allowed
-TIMIN  = 173.        # minimum temperature allowed for snow/ice
-ALBFW  = 0.06        # albedo for lead
-DSI    = 1. / 0.33
-
-# other constants
-INIT_VALUE = 0.  # TODO - this should be float("NaN") but not possible 07/20
+# TODO - remove this entirely
+#INIT_VALUE = 0.  # TODO - this should be float("NaN") but not possible 07/20
 
 
 def numpy_to_gt4py_storage(arr, backend):
@@ -111,6 +79,7 @@ def run(in_dict, backend):
     as a standalone parameterization.
     """
 
+    # TODO - remove this one we have high-dimensional fields
     # special handling of stc
     stc = in_dict.pop("stc")
     in_dict["stc0"] = stc[:, 0]
@@ -139,6 +108,7 @@ def run(in_dict, backend):
     # convert back to numpy for validation
     out_dict = {k: gt4py_to_numpy_storage(out_dict[k], backend=backend) for k in OUT_VARS}
 
+    # TODO - remove this one we have high-dimensional fields
     # special handling of stc
     stc[:, 0] = out_dict.pop("stc0")[:]
     stc[:, 1] = out_dict.pop("stc1")[:]
@@ -148,32 +118,57 @@ def run(in_dict, backend):
 
 
 @gtscript.function
+def fpvs_generic_fn(tr, A, B):
+    """Compute saturation vapor pressure using generic formula
+       t: Temperature scaled by triple point
+    """
+    return PSAT * (tr ** A) * exp(B * (1. - tr))
+
+
+@gtscript.function
+def fpvsl_fn(tr):
+    """Compute saturation vapor pressure over liquid
+       t: Temperature scaled by triple point
+    """
+    # constants
+    A = -(CVAP - CLIQ) / RV
+    B = -(CVAP - CLIQ) / RV + HVAP / (RV * TTP)
+
+    return fpvs_generic_fn(tr, A, B)
+
+
+@gtscript.function
+def fpvsi_fn(tr):
+    """Compute saturation vapor pressure over ice
+       t: Temperature scaled by triple point
+    """
+    # constants
+    A = -(CVAP - CSOL) / RV
+    B = -(CVAP - CSOL) / RV + (HVAP + HFUS) / (RV * TTP)
+
+    return fpvs_generic_fn(tr, A, B)
+
+
+@gtscript.function
 def fpvs_fn(t):
-    """Compute saturation vapor pressure
+    """Compute saturation vapor pressure (over liquid and ice)
        t: Temperature
     fpvs: Vapor pressure [Pa]
     """
 
+    # scale temperature with triple point
     tr = TTP / t
-
-    # over liquid
-    pvl = PSAT * (tr ** FPVS_XPONAL) * exp(FPVS_XPONBL * (1. - tr))
-
-    # over ice
-    pvi = PSAT * (tr ** FPVS_XPONAI) * exp(FPVS_XPONBI * (1. - tr))
 
     # determine regime weight
     w = (t - TTP + 20.) / 20.
 
-    fpvs = INIT_VALUE
+    # computed weighted value of saturation vapor pressure
     if w >= 1.0:
-        fpvs = pvl
+        return fpvsl_fn(tr)
     elif w < 0.0:
-        fpvs = pvi
+        return fpvsi_fn(tr)
     else:
-        fpvs = w * pvl + (1. - w) * pvi
-
-    return fpvs
+        return w * fpvsl_fn(tr) + (1. - w) * fpvsi_fn(tr)
 
 
 @gtscript.function
@@ -229,27 +224,39 @@ def ice3lay(fice, flag, hfi, hfd, sneti, focn, delt, snowd, hice,
     ====================================================================== *
     """
 
-    # TODO - only initialize the arrays which are defined in an if-statement
-    hdi = INIT_VALUE
-    ip  = INIT_VALUE
-    tsf = INIT_VALUE
-    ai  = INIT_VALUE
-    bi  = INIT_VALUE
-    k12 = INIT_VALUE
-    k32 = INIT_VALUE
-    wrk = INIT_VALUE
-    wrk1 = INIT_VALUE
-    a10 = INIT_VALUE
-    b10 = INIT_VALUE
-    a1  = INIT_VALUE
-    b1  = INIT_VALUE
-    c1  = INIT_VALUE
-    tmelt = INIT_VALUE
-    bmelt = INIT_VALUE
-    h1 = INIT_VALUE
-    h2 = INIT_VALUE
-    dh = INIT_VALUE
-    f1 = INIT_VALUE
+    # constants
+    DSDW = DS / DW
+    DWDS = DW / DS
+    DIDW = DI / DW
+    DSDI = DS / DI
+    TFI  = -MU * SI # sea ice freezing temp = -MU*salinity
+    TFI0 = TFI - 0.0001
+    DICI = DI * CI
+    DILI = DI * LI
+    DSLI = DS * LI
+    KI4  = KI * 4.
+
+#    # TODO - remove this entirely
+#    hdi = INIT_VALUE
+#    ip  = INIT_VALUE
+#    tsf = INIT_VALUE
+#    ai  = INIT_VALUE
+#    bi  = INIT_VALUE
+#    k12 = INIT_VALUE
+#    k32 = INIT_VALUE
+#    wrk = INIT_VALUE
+#    wrk1 = INIT_VALUE
+#    a10 = INIT_VALUE
+#    b10 = INIT_VALUE
+#    a1  = INIT_VALUE
+#    b1  = INIT_VALUE
+#    c1  = INIT_VALUE
+#    tmelt = INIT_VALUE
+#    bmelt = INIT_VALUE
+#    h1 = INIT_VALUE
+#    h2 = INIT_VALUE
+#    dh = INIT_VALUE
+#    f1 = INIT_VALUE
 
     if flag:
         snowd = snowd  * DWDS
@@ -490,26 +497,43 @@ def sfc_sice_defs(
 
     with computation(PARALLEL), interval(...):
 
-        # arrays
-        # TODO - only initialize the arrays which are defined in an if-statement
-        q0      = INIT_VALUE
-        theta1  = INIT_VALUE
-        rho     = INIT_VALUE
-        ffw     = INIT_VALUE
-        snowd   = INIT_VALUE
-        rch     = INIT_VALUE
-        evapi   = INIT_VALUE
-        evapw   = INIT_VALUE
-        sneti   = INIT_VALUE
-        snetw   = INIT_VALUE
-        t12     = INIT_VALUE
-        t14     = INIT_VALUE
-        hfi     = INIT_VALUE
-        hfd     = INIT_VALUE
-        focn    = INIT_VALUE
-        snof    = INIT_VALUE
-        hflxi   = INIT_VALUE
-        hflxw   = INIT_VALUE
+        FLOAT_EPS = 1.e-8
+ 
+        # sfc_sice constants
+        EPS    = RD / RV
+        EPSM1  = RD / RV - 1.
+        RVRDM1 = RV / RD - 1.
+        ELOCP  = HVAP / CP
+        HIMAX  = 8.          # maximum ice thickness allowed
+        HIMIN  = 0.1         # minimum ice thickness required
+        HSMAX  = 2.          # maximum snow depth allowed
+        TIMIN  = 173.        # minimum temperature allowed for snow/ice
+        ALBFW  = 0.06        # albedo for lead
+        DSI    = 1. / 0.33
+
+#        # arrays
+#        # TODO - remove this entirely
+#        q0      = INIT_VALUE
+#        theta1  = INIT_VALUE
+#        rho     = INIT_VALUE
+#        ffw     = INIT_VALUE
+#        snowd   = INIT_VALUE
+#        rch     = INIT_VALUE
+#        evapi   = INIT_VALUE
+#        evapw   = INIT_VALUE
+#        sneti   = INIT_VALUE
+#        snetw   = INIT_VALUE
+#        t12     = INIT_VALUE
+#        t14     = INIT_VALUE
+#        hfi     = INIT_VALUE
+#        hfd     = INIT_VALUE
+#        focn    = INIT_VALUE
+#        snof    = INIT_VALUE
+#        hflxi   = INIT_VALUE
+#        hflxw   = INIT_VALUE
+#        qs1     = INIT_VALUE
+#        qssw    = INIT_VALUE
+#        qssi    = INIT_VALUE
 
     #  --- ...  set flag for sea-ice
 
@@ -519,7 +543,6 @@ def sfc_sice_defs(
             hice = 0.
             fice = 0.
 
-        qs1 = fpvs_fn(t1)
         if flag:
             if srflag > 0.:
                 ep = ep * (1. - srflag)
@@ -535,13 +558,12 @@ def sfc_sice_defs(
     #         dlwflx has been given a negative sign for downward longwave
     #         sfcnsw is the net shortwave flux (direction: dn-up)
 
-            q0     = q1 if q1 > 1.0e-8 else 1.0e-8
+            q0     = max(q1, FLOAT_EPS)
             theta1 = t1 * prslki
             rho    = prsl1 / (RD * t1 * (1. + RVRDM1 * q0))
-
-            qs1 = EPS * qs1 / (prsl1 + EPSM1 * qs1)
-            qs1 = qs1 if qs1 > 1.e-8 else 1.e-8
-            q0 = qs1 if qs1 < q0 else q0
+            qs1 = fpvs_fn(t1)
+            qs1 = max(EPS * qs1 / (prsl1 + EPSM1 * qs1), FLOAT_EPS)
+            q0 = min(qs1, q0)
 
             if fice < cimin:
                 # print("warning: ice fraction is low:", fice)
@@ -550,12 +572,12 @@ def sfc_sice_defs(
                 tskin= TGICE
                 # print('fix ice fraction: reset it to:', fice)
 
-            fice = fice if fice > cimin else cimin
+            fice = max(fice, cimin)
 
-        qssi = fpvs_fn(tice)
-        qssw = fpvs_fn(TGICE)
         if flag:
             ffw  = 1. - fice
+            qssi = fpvs_fn(tice)
+            qssw = fpvs_fn(TGICE)
             qssi = EPS * qssi / (ps + EPSM1 * qssi)
             qssw = EPS * qssw / (ps + EPSM1 * qssw)
 
@@ -580,8 +602,7 @@ def sfc_sice_defs(
             evapw = ELOCP * rch * (qssw - q0)
 
             snetw = sfcdsw * (1. - ALBFW)
-            t12 = 3. * sfcnsw / (1. + 2. * ffw)
-            snetw =  t12 if t12 < snetw else snetw
+            snetw =  min(3. * sfcnsw / (1. + 2. * ffw), snetw)
             sneti = (sfcnsw - ffw * snetw) / fice
 
             t12 = tice * tice
@@ -602,10 +623,8 @@ def sfc_sice_defs(
             focn = 2.   # heat flux from ocean - should be from ocn model
             snof = 0.   # snowfall rate - snow accumulates in gbphys
 
-            # hice = np.maximum(np.minimum(hice, HIMAX), HIMIN)
-            hice = HIMAX if HIMAX < hice else hice
-            hice = HIMIN if HIMIN > hice else hice
-            snowd = HSMAX if HSMAX < snowd else snowd
+            hice = max(min(hice, HIMAX), HIMIN)
+            snowd = min(snowd, HSMAX)
 
             if snowd > 2. * hice:
                 # print('warning: too much snow :', snowd[i])
@@ -634,8 +653,8 @@ def sfc_sice_defs(
                 # print('fix layer 2 ice temp: reset it to:', TIMIN)
 
             tskin = tice * fice + TGICE * ffw
-            stc0 = T0C if T0C < stc0 else stc0
-            stc1 = T0C if T0C < stc1 else stc1
+            stc0 = min(stc0, T0C)
+            stc1 = min(stc1, T0C)
 
         #  --- ...  calculate sensible heat flux (& evap over sea ice)
 
@@ -653,5 +672,5 @@ def sfc_sice_defs(
             weasd = snowd * 1000.
             snwdph = weasd * DSI             # snow depth in mm
 
-            hflx = hflx / rho * 1. / CP
-            evap = evap / rho * 1. / HVAP
+            hflx = hflx / rho / CP
+            evap = evap / rho / HVAP

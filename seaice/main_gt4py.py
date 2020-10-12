@@ -25,7 +25,7 @@ OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
 
-BACKEND = "gtcuda"
+BACKEND = "debug"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
