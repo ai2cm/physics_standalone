@@ -578,7 +578,6 @@ def sfc_sice_defs(
 
             snetw = sfcdsw * (1.0 - ALBFW)
             snetw = min(3.0 * sfcnsw / (1.0 + 2.0 * ffw), snetw)
-            t12 = 3.0 * sfcnsw / (1.0 + 2.0 * ffw)  # check here
             sneti = (sfcnsw - ffw * snetw) / fice
 
             t12 = tice * tice
