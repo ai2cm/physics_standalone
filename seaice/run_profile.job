@@ -14,5 +14,20 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 source ../env_daint
 source ./venv/bin/activate
 
+srun -u nvidia-smi
+srun -u nvcc --version
+
+# make sure everythin is sane
+cat > test.py <<EOF
+#!/usr/bin/env python3
+
+import cupy as cp
+a = cp.ones(1024, dtype=cp.float64)
+b = cp.sin(a)
+EOF
+srun -u nvprof --print-gpu-trace python3 test.py
+
+# run actual profiling task
 srun -u nvprof --print-gpu-trace python3 main_profile.py
 
+# done

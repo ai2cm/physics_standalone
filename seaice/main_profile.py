@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-import cupy as cp
-a = cp.ones(1024, dtype=cp.float64)
-b = cp.sin(a)
-print(b)
-cp.cuda.profiler.stop()
 import os
 import pickle
 import numpy as np
@@ -29,9 +24,9 @@ BOOL_VARS = ['flag_iter']
 INT_VARS = ['islimsk']
 ITER = 10
 
-backend = 'gtcuda'
+backend = 'gtx86'
 grid_points = 32768*32
-frac = 0.0
+frac = 0.5
 
 def save_obj(obj, name ):
     with open('obj/'+ name + '.pkl', 'wb') as f:
