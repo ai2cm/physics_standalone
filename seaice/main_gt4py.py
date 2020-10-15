@@ -2,30 +2,80 @@
 
 import os
 import sys
+
 import numpy as np
-np.seterr(divide='ignore', invalid='ignore')
+
+np.seterr(divide="ignore", invalid="ignore")
 import sea_ice_gt4py as si
 
 SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
-#SERIALBOX_DIR = "/usr/local/serialbox/"
+# SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
-           "sfcnsw", "sfcdsw", "srflag", "cm", "ch", "prsl1", "prslki", \
-           "islimsk", "wind", "flag_iter", "lprnt", "ipr", "cimin", \
-           "hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
-           "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
-           "evap", "hflx"]
+IN_VARS = [
+    "im",
+    "km",
+    "ps",
+    "t1",
+    "q1",
+    "delt",
+    "sfcemis",
+    "dlwflx",
+    "sfcnsw",
+    "sfcdsw",
+    "srflag",
+    "cm",
+    "ch",
+    "prsl1",
+    "prslki",
+    "islimsk",
+    "wind",
+    "flag_iter",
+    "lprnt",
+    "ipr",
+    "cimin",
+    "hice",
+    "fice",
+    "tice",
+    "weasd",
+    "tskin",
+    "tprcp",
+    "stc",
+    "ep",
+    "snwdph",
+    "qsurf",
+    "snowmt",
+    "gflux",
+    "cmm",
+    "chh",
+    "evap",
+    "hflx",
+]
 
-OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
-            "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
-            "evap", "hflx"]
+OUT_VARS = [
+    "hice",
+    "fice",
+    "tice",
+    "weasd",
+    "tskin",
+    "tprcp",
+    "stc",
+    "ep",
+    "snwdph",
+    "qsurf",
+    "snowmt",
+    "gflux",
+    "cmm",
+    "chh",
+    "evap",
+    "hflx",
+]
 
 SELECT_SP = None
-#SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
+# SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
 
-BACKEND = "gtcuda"
+BACKEND = "gtx86"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -40,15 +90,18 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
 
 
 def compare_data(exp_data, ref_data):
-    assert set(exp_data.keys()) == set(ref_data.keys()), \
-             "Entries of exp and ref dictionaries don't match"
+    assert set(exp_data.keys()) == set(
+        ref_data.keys()
+    ), "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
         ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
         if ind.size > 0:
             i = tuple(ind[:, 0])
             print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i])
-        assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
+        assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), (
             "Data does not match for field " + key
+        )
+
 
 for tile in range(6):
 
@@ -64,8 +117,9 @@ for tile in range(6):
     for sp in savepoints:
 
         if SELECT_SP is not None:
-            if sp.name != SELECT_SP["savepoint"] and \
-               sp.name != SELECT_SP["savepoint"].replace("-in-", "-out-"):
+            if sp.name != SELECT_SP["savepoint"] and sp.name != SELECT_SP["savepoint"].replace(
+                "-in-", "-out-"
+            ):
                 continue
 
         if sp.name.startswith("sfc_sice-in"):
@@ -77,13 +131,6 @@ for tile in range(6):
 
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
-
-#            # TODO - remove once we validate
-#            #      - attach meta-info for debugging purposes
-#            ser_inside = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
-#            sp_inside = ser_inside.savepoint[sp.name.replace("-in-", "-inside-")]
-#            in_data["serializer"] = ser_inside
-#            in_data["savepoint"] = sp_inside
 
             # run Python version
             out_data, elapsed_time = si.run(in_data, backend=BACKEND)
