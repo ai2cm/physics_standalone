@@ -3,26 +3,30 @@
 import os
 import sys
 import numpy as np
-import sea_ice as si
+import noah_lsm
 
-SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
-#SERIALBOX_DIR = "/usr/local/serialbox/"
+#SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-IN_VARS = ["im", "km", "ps", "t1", "q1", "delt", "sfcemis", "dlwflx", \
-           "sfcnsw", "sfcdsw", "srflag", "cm", "ch", "prsl1", "prslki", \
-           "islimsk", "wind", "flag_iter", "lprnt", "ipr", "cimin", \
-           "hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
-           "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
-           "evap", "hflx"]
+IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
+           "sfcemis", "dlwflx", "dswsfc", "snet", "delt", "tg3", "cm", \
+           "ch", "prsl1", "prslki", "zf", "land", "wind", \
+           "slopetyp", "shdmin", "shdmax", "snoalb", "sfalb", "flag_iter", "flag_guess", \
+           "lheatstrg", "isot", "ivegsrc", "bexppert", "xlaipert", "vegfpert", "pertvegf", \
+           "weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
+           "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
+           "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
+           "smcwlt2", "smcref2", "wet1"]
 
-OUT_VARS = ["hice", "fice", "tice", "weasd", "tskin", "tprcp", "stc", \
-            "ep", "snwdph", "qsurf", "snowmt", "gflux", "cmm", "chh", \
-            "evap", "hflx"]
+OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
+            "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
+            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
+            "smcwlt2", "smcref2", "wet1"]
 
 SELECT_SP = None
-#SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
+#SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -47,6 +51,7 @@ def compare_data(exp_data, ref_data):
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
 
+
 for tile in range(6):
 
     if SELECT_SP is not None:
@@ -65,7 +70,7 @@ for tile in range(6):
                sp.name != SELECT_SP["savepoint"].replace("-in-", "-out-"):
                 continue
 
-        if sp.name.startswith("sfc_sice-in"):
+        if sp.name.startswith("sfc_drv-in"):
 
             if isready:
                 raise Exception("out-of-order data enountered: " + sp.name)
@@ -76,11 +81,11 @@ for tile in range(6):
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
             # run Python version
-            out_data = si.run(in_data)
+            out_data = noah_lsm.run(in_data)
             
             isready = True
 
-        if sp.name.startswith("sfc_sice-out"):
+        if sp.name.startswith("sfc_drv-out"):
 
             if not isready:
                 raise Exception("out-of-order data encountered: " + sp.name)
@@ -94,3 +99,4 @@ for tile in range(6):
             compare_data(out_data, ref_data)
 
             isready = False
+
