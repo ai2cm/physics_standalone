@@ -2,10 +2,11 @@
 
 import numpy as np
 
-OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
-            "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
-            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
+OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy",
+            "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx",
+            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf",
             "smcwlt2", "smcref2", "wet1"]
+
 
 def run(in_dict):
     """run function"""
@@ -28,7 +29,7 @@ def sfc_drv(
     prsl1, prslki, zf, land, wind, slopetyp,
     shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,
     lheatstrg, isot, ivegsrc,
-    bexppert, xlaipert, vegfpert,pertvegf,
+    bexppert, xlaipert, vegfpert, pertvegf,
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -36,58 +37,197 @@ def sfc_drv(
     sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,
     cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,
     smcwlt2, smcref2, wet1
-):  
+):
     # --- ... subprograms called: ppfbet, sflx
 
-    #TODO
+    # TODO
 
     # more constant definitions
+    cp = 1.0046e+3
+    hvap = 2.5e+6
+    grav = 9.80665
+    rd = 2.8705e+2
+    eps = rd/4.6150e+2
+    epsm1 = rd/4.6150e+2 - 1.
+    rvrdm1 = 4.6150e+2/rd - 1.
 
     # set constant parameters
-    
-    # initialize arrays
+    cpinv = 1./cp
+    hvapi = 1./hvap
+    elocp = hvap/cp
+    rhoh2o = 1000.
+    a2 = 17.2693882
+    a3 = 273.16
+    a4 = 35.86
+    a23m4 = a2*(a3-a4)
+    zsoil_noah = np.array([-0.1, -0.4, -1.0, -2.0])
+
+    # initialize local arrays
+    mode = "nan"
+    rch = init_array([im], mode)
+    rho = init_array([im], mode)
+    q0 = init_array([im], mode)
+    qs1 = init_array([im], mode)
+    theta1 = init_array([im], mode)
+    weasd_old = init_array([im], mode)
+    snwdph_old = init_array([im], mode)
+    tprcp_old = init_array([im], mode)
+    srflag_old = init_array([im], mode)
+    tskin_old = init_array([im], mode)
+    canopy_old = init_array([im], mode)
+    et = init_array([km], mode)
+    sldpth = init_array([km], mode)
+    stsoil = init_array([km], mode)
+    smsoil = init_array([km], mode)
+    slsoil = init_array([km], mode)
+    zsoil = init_array([im, km], mode)
+    smc_old = init_array([im, km], mode)
+    stc_old = init_array([im, km], mode)
+    slc_old = init_array([im, km], mode)
 
     # save land-related prognostic fields for guess run
-    
+    i = land & flag_guess  # TODO: check if boolean
+    weasd_old[i] = weasd[i]
+    snwdph_old[i] = snwdph[i]
+    tskin_old[i] = tskin[i]
+    canopy_old[i] = canopy[i]
+    tprcp_old[i] = tprcp[i]
+    srflag_old[i] = srflag[i]
+    smc_old[i, :] = smc[i, :]
+    stc_old[i, :] = stc[i, :]
+    slc_old[i, :] = slc[i, :]
+
     # initialization block
-    
+    i = flag_iter & land
+    ep[i] = 0.
+    evap[i] = 0.
+    hflx[i] = 0.
+    gflux[i] = 0.
+    drain[i] = 0.
+    canopy[i] = max(canopy[i], 0.)
+
+    evbs[i] = 0.
+    evcw[i] = 0.
+    trans[i] = 0.
+    sbsno[i] = 0.
+    snowc[i] = 0.
+    snohf[i] = 0.
+
     # initialize variables
+    # q1=specific humidity at level 1 (kg/kg)
+    q0[i] = max(q1[i], 1.e-8)
+    # adiabatic temp at level 1 (k)
+    theta1[i] = t1[i] * prslki[i]
+    rho[i] = prsl1[i] / (rd*t1[i]*(1.0+rvrdm1*q0[i]))
+    qs1[i] = fpvs(t1[i])
+    qs1[i] = max(eps*qs1[i] / (prsl1[i]+epsm1*qs1[i]), 1.e-8)
+    q0[i] = min(qs1[i], q0[i])
+
+    zsoil[i, :] = zsoil_noah[:]
+
+    # noah: prepare variables to run noah lsm
+    for i in range(0, im):
+        if not(flag_iter[i] & land[i]):
+            continue
 
     # 1. configuration information
+        couple = 1
+        ffrozp = srflag[i]
+        ice = 0
+        zlvl = zf[i]
+        nsoil = km
+        sldpth[0] = - zsoil[i, 0]
+        sldpth[1:] = zsoil[i, :km-1] - zsoil[i, 1:]
 
     # 2. forcing data
+        lwdn = dlwflx[i]
+        swdn = dswsfc[i]
+        solnet = snet[i]
+        sfcems = sfcemis[i]
+
+        sfcprs = prsl1[i]
+        prcp = rhoh2o * tprcp[i] / delt
+        sfctmp = t1[i]
+        th2 = theta1[i]
+        q2 = q0[i]
 
     # 3. other forcing data
+        sfcspd = wind[i]
+        q2sat = qs1[i]
+        dqsdt2 = q2sat * a23m4/(sfctmp-a4)**2
 
     # 4. canopy/soil characteristics
+        vtype = vegtype[i]
+        stype = soiltyp[i]
+        slope = slopetyp[i]
+        shdfac = sigmaf[i]
+
+        vegfp = vegfpert[i]
+        if(pertvegf[0] < 0.):
+            # this condition is never true
+            # if it was true ppfbet would be called
+            # TODO: include assert
+            print("ERROR: case not implemented")
+
+        shdmin1d = shdmin[i]
+        shdmax1d = shdmax[i]
+        snoalb1d = snoalb[i]
+
+        ptu = 0.0
+        alb = sfalb[i]
+        tbot = tg3[i]
 
     # 5.history (state) variables
+        cmc = canopy[i] * 0.001           # convert from mm to m
+        tsea = tsurf[i]                   # clu_q2m_iter
 
-    # call noah lsm
-    # sflx( # inputs
-    #       nsoil, couple, icein, ffrozp, dt, zlvl, sldpth,
-    #       swdn, swnet, lwdn, sfcems, sfcprs, sfctmp,
-    #       sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
-    #       vegtyp, soiltyp, slopetyp,
-    #       # in/outs
-    #       tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
-    #       #outputs
-    #       nroot, shdfac, snowh, albedo, eta, sheat, ec,
-            # edir, et, ett, esnow, drip, dew, beta, etp, ssoil,
-            # flx1, flx2, flx3, runoff1, runoff2, runoff3,
-            # snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,
-            # rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax)
+        stsoil = stc[i, :]
+        smsoil = smc[i, :]
+        slsoil = slc[i, :]
+
+        snowh = snwdph[i] * 0.001         # convert from mm to m
+        sneqv = weasd[i] * 0.001         # convert from mm to m
+        if (sneqv != 0.0 & snowh == 0.0):
+            # not called
+            # TODO: remove?
+            snowh = 10.0 * sneqv
+
+        chx = ch[i] * wind[i]              # compute conductance
+        cmx = cm[i] * wind[i]
+        chh[i] = chx * rho[i]
+        cmm[i] = cmx
+
+        z0 = zorl[i]/100.       # outside sflx, roughness uses cm as unit
+        bexpp = bexppert[i]
+        xlaip = xlaipert[i]
+
+        # call noah lsm
+        # TODO: check if allowed to include nondeclared vars
+        sflx(  # inputs
+            nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,
+            swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,
+            sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
+            vtype, soiltyp, slopetyp, shdmin, alb, snoalb,
+            bexpp, xlaip, lheatstrg,
+            # in/outs
+            tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
+            # outputs
+            nroot, shdfac, snowh, albedo, eta, sheat, ec,
+            edir, et, ett, esnow, drip, dew, beta, etp, ssoil,
+            flx1, flx2, flx3, runoff1, runoff2, runoff3,
+            snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,
+            rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax)
 
     # 6. output
 
     # compute qsurf
 
     # restore land-related prognostic fields for guess run
-   
+
     pass
 
 
-def ppfbet(pr,p,q,iflag,x):
+def ppfbet(pr, p, q, iflag, x):
     # is not called
     pass
 
@@ -100,7 +240,7 @@ def sflx(
     vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,
     bexpp, xlaip, lheatstrg,
     # in/outs
-    tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm,z0,
+    tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
     nroot, shdfac, snowh, albedo, eta, sheat, ec,
     edir, et, ett, esnow, drip, dew, beta, etp, ssoil,
@@ -109,13 +249,13 @@ def sflx(
     rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax
 ):
     # --- ... subprograms called: redprm, snow_new, csnow, snfrac, alcalc, tdfcnd, snowz0, sfcdif, penman, canres, nopac, snopac.
-    #TODO
+    # TODO
     pass
 
 
-#*************************************
+# *************************************
 # 1st level subprograms
-#*************************************
+# *************************************
 
 
 def alcalc(
@@ -123,10 +263,10 @@ def alcalc(
     alb, snoalb, shdfac, shdmin, sncovr, tsnow,
     # outputs
     albedo
-):  
+):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def canres(
@@ -138,8 +278,8 @@ def canres(
     rc, pc, rcs, rct, rcq, rcsoil
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def csnow(
@@ -149,8 +289,8 @@ def csnow(
     sncond
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def nopac(
@@ -160,15 +300,15 @@ def nopac(
     t24, th2, fdown, epsca, bexp, pc, rch, rr, cfactr,
     slope, kdt, frzx, psisat, zsoil, dksat, dwsat,
     zbot, ice, rtdis, quartz, fxexp, csoil,
-    #in/outs
+    # in/outs
     cmc, t1, stc, sh2o, tbot,
     # outputs
     eta, smc, ssoil, runoff1, runoff2, runoff3, edir,
     ec, et, ett, beta, drip, dew, flx1, flx3
 ):
     # --- ... subprograms called: evapo, smflx, tdfcnd, shflx
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def penman(
@@ -179,8 +319,8 @@ def penman(
     t24, etp, rch, epsca, rr, flx2
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def redprm(
@@ -194,8 +334,8 @@ def redprm(
     z0, czil, xlai, csoil
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def sfcdif(
@@ -205,8 +345,8 @@ def sfcdif(
     cm, ch
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def snfrac(
@@ -216,8 +356,8 @@ def snfrac(
     sncovr
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def snopac(
@@ -235,8 +375,8 @@ def snopac(
     ett, snomlt, drip, dew, flx1, flx3, esnow
 ):
     # --- ... subprograms called: evapo, smflx, shflx, snowpack
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def snow_new(
@@ -246,8 +386,8 @@ def snow_new(
     snowh, sndens
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def snowz0(
@@ -257,8 +397,8 @@ def snowz0(
     z0
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def tdfcnd(
@@ -268,13 +408,13 @@ def tdfcnd(
     df
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
-#*************************************
+# *************************************
 # 2nd level subprograms
-#*************************************
+# *************************************
 
 
 def evapo(
@@ -286,8 +426,8 @@ def evapo(
     eta1, edir1, ec1, et1, ett1
 ):
     # --- ... subprograms called: devap, transp
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def shflx(
@@ -300,8 +440,8 @@ def shflx(
     ssoil
 ):
     # --- ... subprograms called: hstep, hrtice, hrt
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def smflx(
@@ -315,8 +455,8 @@ def smflx(
     smc, runoff1, runoff2, runoff3, drip
 ):
     # --- ... subprograms called: srt, sstep
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def snowpack(
@@ -326,13 +466,13 @@ def snowpack(
     snowh, sndens
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
-#*************************************
+# *************************************
 # 3rd level subprograms
-#*************************************
+# *************************************
 
 
 def devap(
@@ -342,8 +482,8 @@ def devap(
     edir1
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def frh2o(
@@ -353,8 +493,8 @@ def frh2o(
     liqwat
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def hrt(
@@ -368,8 +508,8 @@ def hrt(
     rhsts, ai, bi, ci
 ):
     # --- ... subprograms called: tbnd, snksrc, tmpavg
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def hrtice(
@@ -381,8 +521,8 @@ def hrtice(
     rhsts, ai, bi, ci
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def hstep(
@@ -394,8 +534,8 @@ def hstep(
     stcout
 ):
     # --- ... subprograms called: rosr12
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def rosr12(
@@ -407,8 +547,8 @@ def rosr12(
     p, delta
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def snksrc(
@@ -420,8 +560,8 @@ def snksrc(
     tsrc
 ):
     # --- ... subprograms called: frh2o
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def srt(
@@ -432,8 +572,8 @@ def srt(
     rhstt, runoff1, runoff2, ai, bi, ci
 ):
     # --- ... subprograms called: wdfcnd
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def sstep(
@@ -445,8 +585,8 @@ def sstep(
     sh2oout, runoff3, smc
 ):
     # --- ... subprograms called: rosr12
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def tbnd(
@@ -456,8 +596,8 @@ def tbnd(
     tbnd1
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def tmpavg(
@@ -467,8 +607,8 @@ def tmpavg(
     tavg
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def transp(
@@ -479,8 +619,8 @@ def transp(
     et1
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
 
 
 def wdfcnd(
@@ -490,5 +630,77 @@ def wdfcnd(
     wdf, wcnd
 ):
     # --- ... subprograms called: none
-    #TODO
-    pass 
+    # TODO
+    pass
+
+
+# *************************************
+# helper functions
+# *************************************
+
+
+def init_array(shape, mode):
+    arr = np.empty(shape)
+    if mode == "none":
+        pass
+    if mode == "zero":
+        arr[:] = 0.
+    elif mode == "nan":
+        arr[:] = np.nan
+    return arr
+
+
+# TODO: check iff correct, this is copied from seaice
+# TODO - this should be moved into a shared physics functions module
+def fpvs(t):
+    """Compute saturation vapor pressure
+       t: Temperature [K]
+    fpvs: Vapor pressure [Pa]
+    """
+
+    # constants
+    # TODO - this should be moved into a shared physics constants module
+    con_psat = 6.1078e+2
+    con_ttp = 2.7316e+2
+    con_cvap = 1.8460e+3
+    con_cliq = 4.1855e+3
+    con_hvap = 2.5000e+6
+    con_rv = 4.6150e+2
+    con_csol = 2.1060e+3
+    con_hfus = 3.3358e+5
+
+    tliq = con_ttp
+    tice = con_ttp - 20.0
+    dldtl = con_cvap - con_cliq
+    heatl = con_hvap
+    xponal = -dldtl / con_rv
+    xponbl = -dldtl / con_rv + heatl / (con_rv * con_ttp)
+    dldti = con_cvap - con_csol
+    heati = con_hvap + con_hfus
+    xponai = -dldti / con_rv
+    xponbi = -dldti / con_rv + heati / (con_rv * con_ttp)
+
+    convert_to_scalar = False
+    if np.isscalar(t):
+        t = np.array(t)
+        convert_to_scalar = True
+
+    fpvs = np.empty_like(t)
+    tr = con_ttp / t
+
+    ind1 = t >= tliq
+    fpvs[ind1] = con_psat * (tr[ind1]**xponal) * np.exp(xponbl*(1. - tr[ind1]))
+
+    ind2 = t < tice
+    fpvs[ind2] = con_psat * (tr[ind2]**xponai) * np.exp(xponbi*(1. - tr[ind2]))
+
+    ind3 = ~np.logical_or(ind1, ind2)
+    w = (t[ind3] - tice) / (tliq - tice)
+    pvl = con_psat * (tr[ind3]**xponal) * np.exp(xponbl*(1. - tr[ind3]))
+    pvi = con_psat * (tr[ind3]**xponai) * np.exp(xponbi*(1. - tr[ind3]))
+    fpvs[ind3] = w * pvl + (1. - w) * pvi
+
+    if convert_to_scalar:
+        fpvs = fpvs.item()
+
+    return fpvs
