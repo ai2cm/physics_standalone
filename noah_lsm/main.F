@@ -136,7 +136,8 @@ program test
         !  ---  outputs:
               sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,      &
               cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,            &
-              smcwlt2, smcref2, wet1                                     &
+              smcwlt2, smcref2, wet1,                                    &
+              iter, ser_count_str                                        &
             )
 
         call toc(time1, time2)

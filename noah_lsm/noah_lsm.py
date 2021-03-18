@@ -8,7 +8,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
             "smcwlt2", "smcref2", "wet1"]
 
 
-def run(in_dict):
+def run(in_dict, in_dict2):
     """run function"""
 
     # setup output
@@ -17,7 +17,7 @@ def run(in_dict):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
-    sfc_drv(**in_dict, **out_dict)
+    sfc_drv(**in_dict, **in_dict2, **out_dict)
 
     return out_dict
 
@@ -30,6 +30,8 @@ def sfc_drv(
     shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
+    # Inputs to probe for port
+    zsoil_noah_ref,
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -39,8 +41,6 @@ def sfc_drv(
     smcwlt2, smcref2, wet1
 ):
     # --- ... subprograms called: ppfbet, sflx
-
-    # TODO
 
     # more constant definitions
     cp = 1.0046e+3
@@ -61,6 +61,9 @@ def sfc_drv(
     a4 = 35.86
     a23m4 = a2*(a3-a4)
     zsoil_noah = np.array([-0.1, -0.4, -1.0, -2.0])
+
+    # serialbox test
+    serialbox_test(zsoil_noah_ref, zsoil_noah, "zsoil_noah")
 
     # initialize local arrays
     mode = "nan"
@@ -104,7 +107,7 @@ def sfc_drv(
     hflx[i] = 0.
     gflux[i] = 0.
     drain[i] = 0.
-    canopy[i] = max(canopy[i], 0.)
+    canopy[i] = np.maximum(canopy[i], 0.)
 
     evbs[i] = 0.
     evcw[i] = 0.
@@ -115,13 +118,13 @@ def sfc_drv(
 
     # initialize variables
     # q1=specific humidity at level 1 (kg/kg)
-    q0[i] = max(q1[i], 1.e-8)
+    q0[i] = np.maximum(q1[i], 1.e-8)
     # adiabatic temp at level 1 (k)
     theta1[i] = t1[i] * prslki[i]
     rho[i] = prsl1[i] / (rd*t1[i]*(1.0+rvrdm1*q0[i]))
     qs1[i] = fpvs(t1[i])
-    qs1[i] = max(eps*qs1[i] / (prsl1[i]+epsm1*qs1[i]), 1.e-8)
-    q0[i] = min(qs1[i], q0[i])
+    qs1[i] = np.maximum(eps*qs1[i] / (prsl1[i]+epsm1*qs1[i]), 1.e-8)
+    q0[i] = np.minimum(qs1[i], q0[i])
 
     zsoil[i, :] = zsoil_noah[:]
 
@@ -163,11 +166,11 @@ def sfc_drv(
         shdfac = sigmaf[i]
 
         vegfp = vegfpert[i]
-        if(pertvegf[0] < 0.):
+        if(pertvegf[0] > 0.):
             # this condition is never true
             # if it was true ppfbet would be called
             # TODO: include assert
-            print("ERROR: case not implemented")
+            print("ERROR: case not implemented", pertvegf[0])
 
         shdmin1d = shdmin[i]
         shdmax1d = shdmax[i]
@@ -187,7 +190,7 @@ def sfc_drv(
 
         snowh = snwdph[i] * 0.001         # convert from mm to m
         sneqv = weasd[i] * 0.001         # convert from mm to m
-        if (sneqv != 0.0 & snowh == 0.0):
+        if ((sneqv != 0.) & (snowh == 0.)):
             # not called
             # TODO: remove?
             snowh = 10.0 * sneqv
@@ -202,29 +205,82 @@ def sfc_drv(
         xlaip = xlaipert[i]
 
         # call noah lsm
-        # TODO: check if allowed to include nondeclared vars
-        sflx(  # inputs
-            nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,
-            swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,
-            sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
-            vtype, soiltyp, slopetyp, shdmin, alb, snoalb,
-            bexpp, xlaip, lheatstrg,
-            # in/outs
-            tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
-            # outputs
-            nroot, shdfac, snowh, albedo, eta, sheat, ec,
-            edir, et, ett, esnow, drip, dew, beta, etp, ssoil,
-            flx1, flx2, flx3, runoff1, runoff2, runoff3,
-            snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,
-            rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax)
+        # TODO: shdfac, snowh are marked as output variables but are declared before. In sflx shdfac value is used.
+        nroot, albedo, eta, sheat, ec, \
+            edir, et, ett, esnow, drip, dew, beta, etp, ssoil, \
+            flx1, flx2, flx3, runoff1, runoff2, runoff3, \
+            snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq, \
+            rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax = sflx(  # inputs
+                nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,
+                swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,
+                sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
+                vtype, soiltyp, slopetyp, shdmin, alb, snoalb,
+                bexpp, xlaip, lheatstrg,
+                # in/outs
+                tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
+                # outputs
+                shdfac, snowh  # TODO: are they not in/outs?
+            )
 
     # 6. output
+        # TODO: merge return from sflx driectly
+        evap[i] = eta
+        hflx[i] = sheat
+        gflux[i] = ssoil
+
+        evbs[i] = edir
+        evcw[i] = ec
+        trans[i] = ett
+        sbsno[i] = esnow
+        snowc[i] = sncovr
+        stm[i] = soilm * 1000.0  # unit conversion (from m to kg m-2)
+        snohf[i] = flx1 + flx2 + flx3
+
+        smcwlt2[i] = smcwlt
+        smcref2[i] = smcref
+
+        ep[i] = etp
+        tsurf[i] = tsea
+
+        stc[i, :] = stsoil
+        smc[i, :] = smsoil
+        slc[i, :] = slsoil
+        wet1[i] = smsoil[0] / smcmax
+
+        # unit conversion (from m s-1 to mm s-1 and kg m-2 s-1)
+        runoff[i] = runoff1 * 1000.0
+        drain[i] = runoff2 * 1000.0
+
+        # unit conversion (from m to mm)
+        canopy[i] = cmc * 1000.0
+        snwdph[i] = snowh * 1000.0
+        weasd[i] = sneqv * 1000.0
+        sncovr1[i] = sncovr
+
+        # outside sflx, roughness uses cm as unit (update after snow's effect)
+        zorl[i] = z0*100.
 
     # compute qsurf
+    i = flag_iter & land
+    rch[i] = rho[i] * cp * ch[i] * wind[i]
+    qsurf[i] = q1[i] + evap[i] / (elocp*rch[i])
+    tem = 1.0 / rho[i]
+    hflx[i] = hflx[i] * tem * cpinv
+    evap[i] = evap[i] * tem * hvapi
 
     # restore land-related prognostic fields for guess run
-
-    pass
+    i = land & flag_guess
+    weasd[i] = weasd_old[i]
+    snwdph[i] = snwdph_old[i]
+    tskin[i] = tskin_old[i]
+    canopy[i] = canopy_old[i]
+    tprcp[i] = tprcp_old[i]
+    srflag[i] = srflag_old[i]
+    smc[i, :] = smc_old[i, :]
+    stc[i, :] = stc_old[i, :]
+    slc[i, :] = slc_old[i, :]
+    i = land & np.logical_not(flag_guess)
+    tskin[i] = tsurf[i]
 
 
 def ppfbet(pr, p, q, iflag, x):
@@ -242,15 +298,75 @@ def sflx(
     # in/outs
     tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
-    nroot, shdfac, snowh, albedo, eta, sheat, ec,
-    edir, et, ett, esnow, drip, dew, beta, etp, ssoil,
-    flx1, flx2, flx3, runoff1, runoff2, runoff3,
-    snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,
-    rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax
+    shdfac, snowh
 ):
     # --- ... subprograms called: redprm, snow_new, csnow, snfrac, alcalc, tdfcnd, snowz0, sfcdif, penman, canres, nopac, snopac.
+
+    nsold = 2
+    gs1 = 9.8
+    gs2 = 9.81
+    trfreez = 2.7315e+2
+    lsubc = 2.501e+6
+    lsubf = 3.335e5
+    lsubs = 2.83e+6
+    elcp = 2.4888e+3
+    rd1 = 287.04
+    cp = 1.0046e+3
+    cp1 = 1004.5
+    cp2 = 1004.0
+    cph2o1 = 4.218e+3
+    cpice = 2.1060e+3
+    cpice1 = 2.106e6
+    sigma1 = 5.67e-8
+
+    nroot = 0
+    albedo = 0
+    eta = 0
+    sheat = 0
+    ec = 0
+     
+    edir = 0
+    et = 0
+    ett = 0
+    esnow = 0
+    drip = 0
+    dew = 0
+    beta = 0
+    etp = 0
+    ssoil = 0
+    
+    flx1 = 0
+    flx2 = 0
+    flx3 = 0
+    runoff1 = 0
+    runoff2 = 0
+    runoff3 = 0
+    
+    snomlt = 0
+    sncovr = 0
+    rc = 0
+    pc = 0
+    rsmin = 0
+    xlai = 0
+    rcs = 0
+    rct = 0
+    rcq = 0
+    
+    rcsoil = 0
+    soilw = 0
+    soilm = 0
+    smcwlt = 0
+    smcdry = 0
+    smcref = 0
+    smcmax = 10
+        
+
     # TODO
-    pass
+    return nroot, albedo, eta, sheat, ec, \
+        edir, et, ett, esnow, drip, dew, beta, etp, ssoil, \
+        flx1, flx2, flx3, runoff1, runoff2, runoff3, \
+        snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq, \
+        rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax
 
 
 # *************************************
@@ -704,3 +820,10 @@ def fpvs(t):
         fpvs = fpvs.item()
 
     return fpvs
+
+
+def serialbox_test(fortran_sol, py_sol, name):
+    if(sum(fortran_sol - py_sol) == 0):
+        print(name, "IS CORRECT")
+    else:
+        print(name, "IS FALSE!!!")

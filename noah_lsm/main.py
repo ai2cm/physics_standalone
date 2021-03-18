@@ -3,6 +3,7 @@
 import os
 import sys
 import numpy as np
+from numpy.lib.npyio import save
 import noah_lsm
 
 #SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
@@ -19,6 +20,8 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
+
+IN_VARS2 = {"zsoil_noah_ref"}
 
 OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
             "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
@@ -60,7 +63,11 @@ for tile in range(6):
 
     serializer = ser.Serializer(ser.OpenModeKind.Read, "./data", "Generator_rank" + str(tile))
 
+    serializer2 = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
+
     savepoints = serializer.savepoint_list()
+
+    savepoint2 = serializer2.savepoint_list()
 
     isready = False
     for sp in savepoints:
@@ -80,8 +87,10 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
+            in_data_test = data_dict_from_var_list(IN_VARS2, serializer2, savepoint2[0])
+
             # run Python version
-            out_data = noah_lsm.run(in_data)
+            out_data = noah_lsm.run(in_data, in_data_test)
             
             isready = True
 
