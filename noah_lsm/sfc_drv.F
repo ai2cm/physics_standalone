@@ -259,14 +259,6 @@ module module_sfc_drv
    endif   ! land & flag_guess
  enddo
 
-!$ser mode write
-!$ser verbatim if (iter == 1) then
-!$ser savepoint "test-out-iter1-"//trim(ser_count_str)
-!$ser verbatim else
-!$ser savepoint "test-out-iter2-"//trim(ser_count_str)
-!$ser verbatim end if
-!$ser data zsoil_noah_ref=zsoil_noah
-
 !  --- ...  initialization block
 
  do i = 1, im
@@ -288,7 +280,7 @@ module module_sfc_drv
  enddo
 
 !  --- ...  initialize variables
-
+ 
  do i = 1, im
    if (flag_iter(i) .and. land(i)) then
      q0(i)   = max(q1(i), 1.e-8)   !* q1=specific humidity at level 1 (kg/kg)
@@ -308,6 +300,14 @@ module module_sfc_drv
      enddo
    endif   ! flag_iter & land
  enddo
+
+!$ser mode write
+!$ser verbatim if (iter == 1) then
+!$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+!$ser verbatim else
+!$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+!$ser verbatim end if
+!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 zsoil_ref=zsoil
 
  do i = 1, im
    if (flag_iter(i) .and. land(i)) then
