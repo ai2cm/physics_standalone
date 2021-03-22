@@ -32,7 +32,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    zsoil_noah_ref, canopy_ref, q0_ref, theta1_ref, rho_ref, qs1_ref, zsoil_ref,
+    zsoil_noah_ref, canopy_ref, q0_ref, theta1_ref, rho_ref, qs1_ref, zsoil_ref, flag_test_ref,
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -126,6 +126,7 @@ def sfc_drv(
     serialbox_test(qs1_ref, qs1, "qs1")
     serialbox_test(zsoil_ref, zsoil, "zsoil")
     serialbox_test(canopy_ref, canopy, "canopy")
+    serialbox_test(flag_test_ref, i, "flag_test")
 
     # noah: prepare variables to run noah lsm
     for i in range(0, im):
@@ -172,7 +173,6 @@ def sfc_drv(
             print("ERROR: case not implemented")
 
         shdmin1d = shdmin[i]
-        shdmax1d = shdmax[i]
         snoalb1d = snoalb[i]
 
         ptu = 0.0
@@ -213,7 +213,7 @@ def sfc_drv(
                 nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,
                 swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,
                 sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
-                vtype, soiltyp, slopetyp, shdmin, alb, snoalb,
+                vtype, stype, slope, shdmin1d, alb, snoalb1d,
                 bexpp, xlaip, lheatstrg,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
@@ -583,7 +583,7 @@ def sflx(
     else:
         eta = etp
 
-    beta = eta / etp    
+    beta = eta / etp
 
     # convert the sign of soil heat flux so that:
     # ssoil>0: warm the surface  (night time)
@@ -591,10 +591,10 @@ def sflx(
     ssoil = -1.0 * ssoil
 
     if ice == 0:
-    # for the case of land (but not glacial-ice):
-    # convert runoff3 (internal layer runoff from supersat) from m 
-    # to m s-1 and add to subsurface runoff/baseflow (runoff2).
-    # runoff2 is already a rate at this point.        
+        # for the case of land (but not glacial-ice):
+        # convert runoff3 (internal layer runoff from supersat) from m
+        # to m s-1 and add to subsurface runoff/baseflow (runoff2).
+        # runoff2 is already a rate at this point.
         runoff3 = runoff3 / dt
         runoff2 = runoff2 + runoff3
 
@@ -602,10 +602,10 @@ def sflx(
         # for the case of sea-ice (ice=1) or glacial-ice (ice=-1), add any
         # snowmelt directly to surface runoff (runoff1) since there is no
         # soil medium, and thus no call to subroutine smflx (for soil
-        # moisture tendency).   
-        runoff1 = snomlt / dt     
+        # moisture tendency).
+        runoff1 = snomlt / dt
 
-    # total column soil moisture in meters (soilm) and root-zone 
+    # total column soil moisture in meters (soilm) and root-zone
     # soil moisture availability (fraction) relative to porosity/saturation
     zsoil_dif = np.concatenate(-zsoil[0], zsoil[:nsoil-1]-zsoil[1:], axis=0)
     soilm = np.sum(smc*zsoil_dif)
@@ -683,25 +683,54 @@ def redprm(
 ):
     # --- ... subprograms called: none
 
-    # some stop conditions: not called
+    if soiltyp > defined_soil:
+        print("warning: too many soil types, soiltyp =",
+              soiltyp, "defined_soil = ", defined_soil)
 
+    if vegtyp > defined_veg:
+        print("warning: too many veg types")
+
+    if slopetyp > defined_slope:
+        print("warning: too many slope types")
 
     # set-up soil parameters
-    # bexp = bb(soiltyp)
-    # dksat = satdk(soiltyp)
-    # dwsat = satdw(soiltyp)
-    # f1 = f11(soiltyp)
-    # kdt = refkdt * dksat / refdk
+    bexp = bb[soiltyp]
+    dksat = satdk[soiltyp]
+    dwsat = satdw[soiltyp]
+    f1 = f11[soiltyp]
+    kdt = refkdt * dksat / refdk
 
-    # psisat = satpsi(soiltyp)
-    # quartz = qtz(soiltyp)
-    # smcdry = drysmc(soiltyp)
-    # smcmax = maxsmc(soiltyp)
-    # smcref = refsmc(soiltyp)
-    # smcwlt = wltsmc(soiltyp)
+    psisat = satpsi[soiltyp]
+    quartz = qtz[soiltyp]
+    smcdry = drysmc[soiltyp]
+    smcmax = maxsmc[soiltyp]
+    smcref = refsmc[soiltyp]
+    smcwlt = wltsmc[soiltyp]
 
-    # TODO
-    return     # outputs
+    frzfact = smcmax / smcref * 0.412 / 0.468
+
+    # to adjust frzk parameter to actual soil type: frzk * frzfact
+    frzx = frzk * frzfact
+
+    # set-up vegetation parameters
+    nroot = nroot_data[vegtyp]
+    snup = snupx[vegtyp]
+    rsmin = rsmtbl[vegtyp]
+    rgl = rgltbl[vegtyp]
+    hs = hstbl[vegtyp]
+    xlai = lai_data[vegtyp]
+
+    if vegtyp == bare:
+        shdfac = 0.0
+
+    if nroot > nsoil:
+        print("warning: too many root layers")
+
+    # calculate root distribution.  present version assumes uniform
+    # distribution based on soil layer depths.
+    rtdis = - sldpth / zsoil[nroot]
+
+    return
     cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,
     sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,
     snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,
@@ -1068,6 +1097,12 @@ def fpvs(t):
 
 
 def serialbox_test(fortran_sol, py_sol, name):
+    if fortran_sol.dtype == bool:
+        if not np.logical_xor(fortran_sol, py_sol).any():
+            print(f'{name:14}', "IS CORRECT")
+        else:
+            print(f'{name:14}', "IS FALSE!!!", fortran_sol, py_sol)
+        return
     if(np.sum(fortran_sol - py_sol) == 0):
         print(f'{name:14}', "IS CORRECT")
     else:

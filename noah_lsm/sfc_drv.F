@@ -193,7 +193,7 @@ module module_sfc_drv
 
  real (kind=kind_phys),  intent(in) :: delt
 
- logical, dimension(im), intent(in) :: flag_iter, flag_guess, land
+ logical, dimension(im), intent(in) :: flag_iter, flag_guess, land, flag_test
 
  logical, intent(in) :: lheatstrg
 
@@ -301,13 +301,14 @@ module module_sfc_drv
    endif   ! flag_iter & land
  enddo
 
+flag_test = flag_iter .and. land
 !$ser mode write
 !$ser verbatim if (iter == 1) then
 !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
 !$ser verbatim else
 !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
 !$ser verbatim end if
-!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 zsoil_ref=zsoil
+!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 zsoil_ref=zsoil flag_test_ref=flag_test
 
  do i = 1, im
    if (flag_iter(i) .and. land(i)) then
