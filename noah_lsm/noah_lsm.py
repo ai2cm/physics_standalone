@@ -33,6 +33,7 @@ def sfc_drv(
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
     zsoil_noah_ref, canopy_ref, q0_ref, theta1_ref, rho_ref, qs1_ref, zsoil_ref, flag_test_ref,
+    sldpth_ref,
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -120,14 +121,24 @@ def sfc_drv(
 
     # serialbox test
     serialbox_test(zsoil_noah_ref, zsoil_noah, "zsoil_noah")
-    serialbox_test(q0_ref, q0, "q0")
-    serialbox_test(theta1_ref, theta1, "theta1")
-    serialbox_test(rho_ref, rho, "rho")
-    serialbox_test(qs1_ref, qs1, "qs1")
-    serialbox_test(zsoil_ref, zsoil, "zsoil")
+    serialbox_test_special(q0_ref, q0, i, "q0")
+    serialbox_test_special(theta1_ref, theta1, i, "theta1")
+    serialbox_test_special(rho_ref, rho, i, "rho")
+    serialbox_test_special(qs1_ref, qs1, i, "qs1")
+    # test how wrong qs1 is
+    count = 5
+    for j in range(qs1.size):
+        if i[j]:
+            print("qs1 diff:", qs1[j]- qs1_ref[j])
+            count -= 1
+            if count == 0:
+                break
+
+    serialbox_test_special(zsoil_ref, zsoil, i, "zsoil")
     serialbox_test(canopy_ref, canopy, "canopy")
     serialbox_test(flag_test_ref, i, "flag_test")
 
+    first_iter = True
     # noah: prepare variables to run noah lsm
     for i in range(0, im):
         if not(flag_iter[i] & land[i]):
@@ -141,6 +152,9 @@ def sfc_drv(
         nsoil = km
         sldpth[0] = - zsoil[i, 0]
         sldpth[1:] = zsoil[i, :km-1] - zsoil[i, 1:]
+
+        if(first_iter):
+            serialbox_test(sldpth_ref, sldpth, "sldpth")
 
     # 2. forcing data
         lwdn = dlwflx[i]
@@ -173,6 +187,7 @@ def sfc_drv(
             print("ERROR: case not implemented")
 
         shdmin1d = shdmin[i]
+        shdmax1d = shdmax[i]
         snoalb1d = snoalb[i]
 
         ptu = 0.0
@@ -214,7 +229,8 @@ def sfc_drv(
                 swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,
                 sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
                 vtype, stype, slope, shdmin1d, alb, snoalb1d,
-                bexpp, xlaip, lheatstrg,
+                bexpp, xlaip, lheatstrg, 
+                first_iter, zsoil_ref,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
                 # outputs
@@ -259,6 +275,8 @@ def sfc_drv(
         # outside sflx, roughness uses cm as unit (update after snow's effect)
         zorl[i] = z0*100.
 
+        first_iter = False
+
     # compute qsurf
     i = flag_iter & land
     rch[i] = rho[i] * cp * ch[i] * wind[i]
@@ -294,29 +312,13 @@ def sflx(
     sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
     vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,
     bexpp, xlaip, lheatstrg,
+    first_iter, zsoil_ref,
     # in/outs
     tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
     shdfac, snowh
 ):
     # --- ... subprograms called: redprm, snow_new, csnow, snfrac, alcalc, tdfcnd, snowz0, sfcdif, penman, canres, nopac, snopac.
-
-    nsold = 2
-    gs1 = 9.8
-    gs2 = 9.81
-    tfreez = 2.7315e+2
-    lsubc = 2.501e+6
-    lsubf = 3.335e5
-    lsubs = 2.83e+6
-    elcp = 2.4888e+3
-    rd1 = 287.04
-    cp = 1.0046e+3
-    cp1 = 1004.5
-    cp2 = 1004.0
-    cph2o1 = 4.218e+3
-    cpice = 2.1060e+3
-    cpice1 = 2.106e6
-    sigma1 = 5.67e-8
 
     # parameters for heat storage parametrization
     z0min = 0.2
@@ -340,7 +342,6 @@ def sflx(
         ice = -1
         shdfac = 0.0
 
-    # TODO: Initialize arrays
     zsoil = init_array([nsoil], "nan")
     if ice == 1:
         # not called TODO: set assert
@@ -348,6 +349,8 @@ def sflx(
     else:
         zsoil[0] = -sldpth[0]
         zsoil[1:] = -sldpth[1:] + zsoil[:nsoil-1]
+    # if first_iter:
+    #     serialbox_test(zsoil_ref, zsoil, "zsoil")
 
     cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,\
         sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,\
@@ -646,8 +649,12 @@ def canres(
 
 def csnow(sndens):
     # --- ... subprograms called: none
-    sncond = None
-    # TODO
+
+    unit = 0.11631
+
+    c = 0.328 * 10**(2.25*sndens)
+    sncond = unit * c
+
     return sncond
 
 
@@ -751,8 +758,14 @@ def sfcdif(
 
 def snfrac(sneqv, snup, salp, snowh):
     # --- ... subprograms called: none
-    # TODO
-    sncovr = None
+
+    # determine snow fraction cover.
+    if sneqv < snup:
+        rsnow = sneqv / snup
+        sncovr = 1.0 - (np.exp(-salp*rsnow) - rsnow*np.exp(-salp))  
+    else:
+        sncovr = 1.0
+ 
     return sncovr
 
 
@@ -780,8 +793,25 @@ def snow_new(
     snowh, sndens
 ):
     # --- ... subprograms called: none
-    # TODO
-    pass
+    
+    # conversion into simulation units
+    snowhc = snowh * 100.0
+    newsnc = sn_new * 100.0
+    tempc  = sfctmp - tfreez
+
+    # calculating new snowfall density
+    if tempc <= -15.0:
+        dsnew = 0.05
+    else:
+        dsnew = 0.05 + 0.0017*(tempc + 15.0)**1.5
+    
+    # adjustment of snow density depending on new snowfall
+    hnewc  = newsnc / dsnew
+    sndens = (snowhc*sndens + hnewc*dsnew) / (snowhc + hnewc)
+    snowhc = snowhc + hnewc
+    snowh  = snowhc * 0.01
+
+    return
 
 
 def snowz0(
@@ -1095,6 +1125,12 @@ def fpvs(t):
 
     return fpvs
 
+def serialbox_test_special(fortran_sol, py_sol, flag_test, name):
+    if(np.sum(fortran_sol[flag_test] - py_sol[flag_test]) == 0.):
+        print(f'{name:14}', "IS CORRECT")
+    else:
+        errors = np.sum(fortran_sol[flag_test] - py_sol[flag_test] != 0.)
+        print(f'{name:14}', "IS FALSE!!!", errors, "wrong elements")
 
 def serialbox_test(fortran_sol, py_sol, name):
     if fortran_sol.dtype == bool:
@@ -1103,7 +1139,7 @@ def serialbox_test(fortran_sol, py_sol, name):
         else:
             print(f'{name:14}', "IS FALSE!!!", fortran_sol, py_sol)
         return
-    if(np.sum(fortran_sol - py_sol) == 0):
+    if(np.sum(fortran_sol - py_sol) == 0.):
         print(f'{name:14}', "IS CORRECT")
     else:
         print(f'{name:14}', "IS FALSE!!!", fortran_sol, py_sol)

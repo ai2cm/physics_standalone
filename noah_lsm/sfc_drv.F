@@ -236,6 +236,7 @@ module module_sfc_drv
 
  integer :: couple, ice, nsoil, nroot, slope, stype, vtype
  integer :: i, k, iflag
+ logical :: first_iter
 
 !
 !===> ...  begin here
@@ -302,14 +303,16 @@ module module_sfc_drv
  enddo
 
 flag_test = flag_iter .and. land
+
 !$ser mode write
 !$ser verbatim if (iter == 1) then
 !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
 !$ser verbatim else
 !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
 !$ser verbatim end if
-!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 zsoil_ref=zsoil flag_test_ref=flag_test
+!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 flag_test_ref=flag_test
 
+first_iter = .true.
  do i = 1, im
    if (flag_iter(i) .and. land(i)) then
 
@@ -341,6 +344,11 @@ flag_test = flag_iter .and. land
      do k = 2, km
        sldpth(k) = zsoil(i,k-1) - zsoil(i,k)
      enddo
+
+    !$ser verbatim if (first_iter) then
+    !$ser data sldpth_ref=sldpth
+    !$ser verbatim end if
+     
 
 !   2. forcing data (f):
 !      -----------------
@@ -462,7 +470,7 @@ flag_test = flag_iter .and. land
 &       sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
 &       vtype, stype, slope, shdmin1d, alb, snoalb1d,              &
 &       bexpp, xlaip,                                              & ! sfc-perts, mgehne
-&       lheatstrg,                                                 &
+&       lheatstrg, first_iter, iter, ser_count_str,                                                &
 !  ---  input/outputs:
 &       tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx,  &
 &       z0,                                                        &
@@ -560,7 +568,7 @@ flag_test = flag_iter .and. land
 !              (volumetric)
 !    nroot   - number of root layers, a function of veg type, determined
 !              in subroutine redprm.
-
+    if (first_iter) first_iter = .false.
    endif   ! flag_iter and flag
  enddo   ! end do_i_loop
 

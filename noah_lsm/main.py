@@ -21,7 +21,8 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
-IN_VARS2 = ["zsoil_noah_ref", "canopy_ref", "q0_ref", "theta1_ref", "rho_ref", "qs1_ref", "zsoil_ref", "flag_test_ref"]
+IN_VARS2 = ["zsoil_noah_ref", "canopy_ref", "q0_ref", "theta1_ref", "rho_ref", "qs1_ref", "zsoil_ref", "flag_test_ref", \
+            "sldpth_ref"]
 
 OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
             "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \

@@ -13,6 +13,23 @@ eps = rd/4.6150e+2
 epsm1 = rd/4.6150e+2 - 1.
 rvrdm1 = 4.6150e+2/rd - 1.
 
+nsold = 2
+gs1 = 9.8
+gs2 = 9.81
+tfreez = 2.7315e+2
+lsubc = 2.501e+6
+lsubf = 3.335e5
+lsubs = 2.83e+6
+elcp = 2.4888e+3
+rd1 = 287.04
+cp = 1.0046e+3
+cp1 = 1004.5
+cp2 = 1004.0
+cph2o1 = 4.218e+3
+cpice = 2.1060e+3
+cpice1 = 2.106e6
+sigma1 = 5.67e-8
+
 # redprm
 
 zbot = -8.0

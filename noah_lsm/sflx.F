@@ -7,7 +7,7 @@
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
              vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,            &
              bexpp, xlaip,                                              & !  sfc-perts, mgehne
-             lheatstrg,                                                 &
+             lheatstrg, first_iter, iter, ser_count_str,                &                                     &
 !  ---  input/outputs:
              tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm,z0,           &
 !  ---  outputs:
@@ -198,14 +198,14 @@
 
 !  ---  inputs:
       integer, intent(in) :: nsoil, couple, icein, vegtyp, soiltyp,     &
-             slopetyp, ivegsrc
+             slopetyp, ivegsrc, iter
 
       real (kind=kind_phys), intent(in) :: ffrozp, dt, zlvl, lwdn,      &
              sldpth(nsoil), swdn, swnet, sfcems, sfcprs, sfctmp,        &
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, shdmin, alb, snoalb, &
              bexpp, xlaip
 
-      logical, intent(in) :: lheatstrg
+      logical, intent(in) :: lheatstrg, first_iter
 
 !  ---  input/outputs:
       real (kind=kind_phys), intent(inout) :: tbot, cmc, t1, sneqv,     &
@@ -236,6 +236,8 @@
       logical :: frzgra, snowng
 
       integer :: ice, k, kz
+
+      character(len=6) :: ser_count_str
 !
 !  --- parameters for heat storage parametrization
 !
@@ -304,6 +306,17 @@
 !  --- ...  next is crucial call to set the land-surface parameters, 
 !           including soil-type and veg-type dependent parameters.
 !           set shdfac=0.0 for bare soil surfaces
+
+      ! !$ser mode write
+      ! !$ser verbatim if (iter == 1) then
+      ! !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+      ! !$ser verbatim else
+      ! !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+      ! !$ser verbatim end if
+
+      ! !$ser verbatim if (first_iter) then
+      ! !$ser data zsoil2_ref=zsoil
+      ! !$ser verbatim end if
 
       call redprm
         if(ivegsrc == 1) then
