@@ -7,7 +7,7 @@
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
              vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,            &
              bexpp, xlaip,                                              & !  sfc-perts, mgehne
-             lheatstrg, first_iter, iter, ser_count_str,                &                                     &
+             lheatstrg, first_iter, iter, ser_count_str,                &
 !  ---  input/outputs:
              tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm,z0,           &
 !  ---  outputs:

@@ -310,7 +310,7 @@ flag_test = flag_iter .and. land
 !$ser verbatim else
 !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
 !$ser verbatim end if
-!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 flag_test_ref=flag_test
+!$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 flag_test_ref=flag_test zsoil_ref=zsoil
 
 first_iter = .true.
  do i = 1, im

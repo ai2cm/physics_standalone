@@ -109,6 +109,8 @@ wltsmc1 = maxsmc[i] * np.power(200./satpsi[i], -1./bb[i])
 wltsmc[i] = wltsmc1 - smlow*wltsmc1
 
 # assume ivet == 1
+slope_data = np.zeros(30)
+slope_data[:20] = 1.0
 snupx = np.array([
     0.080, 0.080, 0.080, 0.080, 0.080, 0.020,
     0.020, 0.060, 0.040, 0.020, 0.010, 0.020,
@@ -150,3 +152,4 @@ nroot_data = np.array([4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 1, 3, 2,
                        3, 1, 3, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 bare = 16
 defined_slope = 9
+
