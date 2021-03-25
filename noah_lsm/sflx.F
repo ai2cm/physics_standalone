@@ -1,202 +1,45 @@
-!-----------------------------------
       subroutine sflx                                                   &
-!...................................
-!  ---  inputs:
+
            ( nsoil, couple, icein, ffrozp, dt, zlvl, sldpth,            &
              swdn, swnet, lwdn, sfcems, sfcprs, sfctmp,                 &
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
              vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,            &
-             bexpp, xlaip,                                              & !  sfc-perts, mgehne
+             bexpp, xlaip,                                              & 
              lheatstrg, first_iter, iter, ser_count_str,                &
-!  ---  input/outputs:
              tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm,z0,           &
-!  ---  outputs:
              nroot, shdfac, snowh, albedo, eta, sheat, ec,              &
              edir, et, ett, esnow, drip, dew, beta, etp, ssoil,         &
              flx1, flx2, flx3, runoff1, runoff2, runoff3,               &
              snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,        &
              rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax)
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine sflx - version 2.7:                                       !
-!  sub-driver for "noah/osu lsm" family of physics subroutines for a    !
-!  soil/veg/snowpack land-surface model to update soil moisture, soil   !
-!  ice, soil temperature, skin temperature, snowpack water content,     !
-!  snowdepth, and all terms of the surface energy balance and surface   !
-!  water balance (excluding input atmospheric forcings of downward      !
-!  radiation and precip)                                                !
-!                                                                       !
-!  usage:                                                               !
-!                                                                       !
-!      call sflx                                                        !
-!  ---  inputs:                                                         !
-!          ( nsoil, couple, icein, ffrozp, dt, zlvl, sldpth,            !
-!            swdn, swnet, lwdn, sfcems, sfcprs, sfctmp,                 !
-!            sfcspd, prcp, q2, q2sat, dqsdt2, th2,ivegsrc,              !
-!            vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,            !
-!  ---  input/outputs:                                                  !
-!            tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm,              !
-!  ---  outputs:                                                        !
-!            nroot, shdfac, snowh, albedo, eta, sheat, ec,              !
-!            edir, et, ett, esnow, drip, dew, beta, etp, ssoil,         !
-!            flx1, flx2, flx3, runoff1, runoff2, runoff3,               !
-!            snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,        !
-!            rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax )     !
-!                                                                       !
-!                                                                       !
-!  subprograms called:  redprm, snow_new, csnow, snfrac, alcalc,        !
-!            tdfcnd, snowz0, sfcdif, penman, canres, nopac, snopac.     !
-!                                                                       !
-!                                                                       !
-!  program history log:                                                 !
-!    jun  2003  -- k. mitchell et. al -- created version 2.7            !
-!         200x  -- sarah lu    modified the code including:             !
-!                       added passing argument, couple; replaced soldn  !
-!                       and solnet by radflx; call sfcdif if couple=0;  !
-!                       apply time filter to stc and tskin; and the     !
-!                       way of namelist inport.                         !
-!    feb  2004 -- m. ek noah v2.7.1 non-linear weighting of snow vs     !
-!                       non-snow covered portions of gridbox            !
-!    apr  2009  -- y.-t. hou   added lw surface emissivity effect,      !
-!                       streamlined and reformatted the code, and       !
-!                       consolidated constents/parameters by using      !
-!                       module physcons, and added program documentation!               !
-!    sep  2009 -- s. moorthi minor fixes                                !
-!    nov  2018 -- j. han add canopy heat storage parameterization       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs:                                                       size   !
-!     nsoil    - integer, number of soil layers (>=2 but <=nsold)  1    !
-!     couple   - integer, =0:uncoupled (land model only)           1    !
-!                         =1:coupled with parent atmos model            !
-!     icein    - integer, sea-ice flag (=1: sea-ice, =0: land)     1    !
-!     ffrozp   - real, fractional snow/rain                        1    !
-!     dt       - real, time step (<3600 sec)                       1    !
-!     zlvl     - real, height abv atmos ground forcing vars (m)    1    !
-!     sldpth   - real, thickness of each soil layer (m)          nsoil  !
-!     swdn     - real, downward sw radiation flux (w/m**2)         1    !
-!     swnet    - real, downward sw net (dn-up) flux (w/m**2)       1    !
-!     lwdn     - real, downward lw radiation flux (w/m**2)         1    !
-!     sfcems   - real, sfc lw emissivity (fractional)              1    !
-!     sfcprs   - real, pressure at height zlvl abv ground(pascals) 1    !
-!     sfctmp   - real, air temp at height zlvl abv ground (k)      1    !
-!     sfcspd   - real, wind speed at height zlvl abv ground (m/s)  1    !
-!     prcp     - real, precip rate (kg m-2 s-1)                    1    !
-!     q2       - real, mixing ratio at hght zlvl abv grnd (kg/kg)  1    !
-!     q2sat    - real, sat mixing ratio at zlvl abv grnd (kg/kg)   1    !
-!     dqsdt2   - real, slope of sat specific humidity curve at     1    !
-!                      t=sfctmp (kg kg-1 k-1)                           !
-!     th2      - real, air potential temp at zlvl abv grnd (k)     1    !
-!     ivegsrc  - integer, sfc veg type data source umd or igbp          !
-!     vegtyp   - integer, vegetation type (integer index)          1    !
-!     soiltyp  - integer, soil type (integer index)                1    !
-!     slopetyp - integer, class of sfc slope (integer index)       1    !
-!     shdmin   - real, min areal coverage of green veg (fraction)  1    !
-!     alb      - real, bkground snow-free sfc albedo (fraction)    1    !
-!     snoalb   - real, max albedo over deep snow     (fraction)    1    !
-!     lheatstrg- logical, flag for canopy heat storage             1    !
-!                         parameterization                              !
-!                                                                       !
-!  input/outputs:                                                       !
-!     tbot     - real, bottom soil temp (k)                        1    !
-!                      (local yearly-mean sfc air temp)                 !
-!     cmc      - real, canopy moisture content (m)                 1    !
-!     t1       - real, ground/canopy/snowpack eff skin temp (k)    1    !
-!     stc      - real, soil temp (k)                             nsoil  !
-!     smc      - real, total soil moisture (vol fraction)        nsoil  !
-!     sh2o     - real, unfrozen soil moisture (vol fraction)     nsoil  !
-!                      note: frozen part = smc-sh2o                     !
-!     sneqv    - real, water-equivalent snow depth (m)             1    !
-!                      note: snow density = snwqv/snowh                 !
-!     ch       - real, sfc exchange coeff for heat & moisture (m/s)1    !
-!                      note: conductance since it's been mult by wind   !
-!     cm       - real, sfc exchange coeff for momentum (m/s)       1    !
-!                      note: conductance since it's been mult by wind   !
-!                                                                       !
-!  outputs:                                                             !
-!     nroot    - integer, number of root layers                    1    !
-!     shdfac   - real, aeral coverage of green veg (fraction)      1    !
-!     snowh    - real, snow depth (m)                              1    !
-!     albedo   - real, sfc albedo incl snow effect (fraction)      1    !
-!     eta      - real, downward latent heat flux (w/m2)            1    !
-!     sheat    - real, downward sensible heat flux (w/m2)          1    !
-!     ec       - real, canopy water evaporation (w/m2)             1    !
-!     edir     - real, direct soil evaporation (w/m2)              1    !
-!     et       - real, plant transpiration     (w/m2)            nsoil  !
-!     ett      - real, total plant transpiration (w/m2)            1    !
-!     esnow    - real, sublimation from snowpack (w/m2)            1    !
-!     drip     - real, through-fall of precip and/or dew in excess 1    !
-!                      of canopy water-holding capacity (m)             !
-!     dew      - real, dewfall (or frostfall for t<273.15) (m)     1    !
-!     beta     - real, ratio of actual/potential evap              1    !
-!     etp      - real, potential evaporation (w/m2)                1    !
-!     ssoil    - real, upward soil heat flux (w/m2)                1    !
-!     flx1     - real, precip-snow sfc flux  (w/m2)                1    !
-!     flx2     - real, freezing rain latent heat flux (w/m2)       1    !
-!     flx3     - real, phase-change heat flux from snowmelt (w/m2) 1    !
-!     snomlt   - real, snow melt (m) (water equivalent)            1    !
-!     sncovr   - real, fractional snow cover                       1    !
-!     runoff1  - real, surface runoff (m/s) not infiltrating sfc   1    !
-!     runoff2  - real, sub sfc runoff (m/s) (baseflow)             1    !
-!     runoff3  - real, excess of porosity for a given soil layer   1    !
-!     rc       - real, canopy resistance (s/m)                     1    !
-!     pc       - real, plant coeff (fraction) where pc*etp=transpi 1    !
-!     rsmin    - real, minimum canopy resistance (s/m)             1    !
-!     xlai     - real, leaf area index  (dimensionless)            1    !
-!     rcs      - real, incoming solar rc factor  (dimensionless)   1    !
-!     rct      - real, air temp rc factor        (dimensionless)   1    !
-!     rcq      - real, atoms vapor press deficit rc factor         1    !
-!     rcsoil   - real, soil moisture rc factor   (dimensionless)   1    !
-!     soilw    - real, available soil mois in root zone            1    !
-!     soilm    - real, total soil column mois (frozen+unfrozen) (m)1    !
-!     smcwlt   - real, wilting point (volumetric)                  1    !
-!     smcdry   - real, dry soil mois threshold (volumetric)        1    !
-!     smcref   - real, soil mois threshold     (volumetric)        1    !
-!     smcmax   - real, porosity (sat val of soil mois)             1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
       use machine ,   only : kind_phys
-!
+
       use physcons,   only : con_cp, con_rd, con_t0c, con_g, con_pi,    &
                              con_cliq, con_csol, con_hvap, con_hfus,    &
                              con_sbc
-!
+
       implicit none
 
-!  ---  constant parameters:
-!      *** note: some of the constants are different in subprograms and need to
-!          be consolidated with the standard def in module physcons at sometime
-!          at the present time, those diverse values are kept temperately to 
-!          provide the same result as the original codes.  -- y.t.h.  may09
+      integer,               parameter :: nsold   = 4           
 
-      integer,               parameter :: nsold   = 4           ! max soil layers
+      real (kind=kind_phys), parameter :: gs1     = 9.8         
+      real (kind=kind_phys), parameter :: gs2     = 9.81        
+      real (kind=kind_phys), parameter :: tfreez  = con_t0c    
+      real (kind=kind_phys), parameter :: lsubc   = 2.501e+6   
+      real (kind=kind_phys), parameter :: lsubf   = 3.335e5    
+      real (kind=kind_phys), parameter :: lsubs   = 2.83e+6    
+      real (kind=kind_phys), parameter :: elcp    = 2.4888e+3  
+      real (kind=kind_phys), parameter :: rd1     = 287.04     
+      real (kind=kind_phys), parameter :: cp      = con_cp    
+      real (kind=kind_phys), parameter :: cp1     = 1004.5    
+      real (kind=kind_phys), parameter :: cp2     = 1004.0    
+      real (kind=kind_phys), parameter :: cph2o1  = 4.218e+3   
+      real (kind=kind_phys), parameter :: cph2o2  = 4.2e6      
+      real (kind=kind_phys), parameter :: cpice   = con_csol   
+      real (kind=kind_phys), parameter :: cpice1  = 2.106e6     
+      real (kind=kind_phys), parameter :: sigma1  = 5.67e-8    
 
-!     real (kind=kind_phys), parameter :: gs      = con_g       ! con_g   =9.80665
-      real (kind=kind_phys), parameter :: gs1     = 9.8         ! con_g in sfcdif
-      real (kind=kind_phys), parameter :: gs2     = 9.81        ! con_g in snowpack, frh2o
-      real (kind=kind_phys), parameter :: tfreez  = con_t0c     ! con_t0c =273.16
-      real (kind=kind_phys), parameter :: lsubc   = 2.501e+6    ! con_hvap=2.5000e+6
-      real (kind=kind_phys), parameter :: lsubf   = 3.335e5     ! con_hfus=3.3358e+5
-      real (kind=kind_phys), parameter :: lsubs   = 2.83e+6     ! ? in sflx, snopac
-      real (kind=kind_phys), parameter :: elcp    = 2.4888e+3   ! ? in penman
-!     real (kind=kind_phys), parameter :: rd      = con_rd      ! con_rd  =287.05
-      real (kind=kind_phys), parameter :: rd1     = 287.04      ! con_rd in sflx, penman, canres
-      real (kind=kind_phys), parameter :: cp      = con_cp      ! con_cp  =1004.6
-      real (kind=kind_phys), parameter :: cp1     = 1004.5      ! con_cp in sflx, canres
-      real (kind=kind_phys), parameter :: cp2     = 1004.0      ! con_cp in htr
-!     real (kind=kind_phys), parameter :: cph2o   = con_cliq    ! con_cliq=4.1855e+3
-      real (kind=kind_phys), parameter :: cph2o1  = 4.218e+3    ! con_cliq in penman, snopac
-      real (kind=kind_phys), parameter :: cph2o2  = 4.2e6       ! con_cliq in hrt *unit diff!
-      real (kind=kind_phys), parameter :: cpice   = con_csol    ! con_csol=2.106e+3
-      real (kind=kind_phys), parameter :: cpice1  = 2.106e6     ! con_csol in hrt *unit diff!
-!     real (kind=kind_phys), parameter :: sigma   = con_sbc     ! con_sbc=5.6704e-8
-      real (kind=kind_phys), parameter :: sigma1  = 5.67e-8     ! con_sbc in penman, nopac, snopac
-
-!  ---  inputs:
       integer, intent(in) :: nsoil, couple, icein, vegtyp, soiltyp,     &
              slopetyp, ivegsrc, iter
 
@@ -207,11 +50,9 @@
 
       logical, intent(in) :: lheatstrg, first_iter
 
-!  ---  input/outputs:
       real (kind=kind_phys), intent(inout) :: tbot, cmc, t1, sneqv,     &
              stc(nsoil), smc(nsoil), sh2o(nsoil), ch, cm
 
-!  ---  outputs:
       integer, intent(out) :: nroot
 
       real (kind=kind_phys), intent(out) :: shdfac, snowh, albedo,      &
@@ -221,8 +62,6 @@
              rct, rcq, rcsoil, soilw, soilm, smcwlt, smcdry, smcref,    &
              smcmax
 
-!  ---  locals:
-!     real (kind=kind_phys) ::  df1h,
       real (kind=kind_phys) ::  bexp, cfactr, cmcmax, csoil, czil,      &
              df1, df1a, dksat, dwsat, dsoil, dtot, frcsno,              &
              frcsoi, epsca, fdown, f1, fxexp, frzx, hs, kdt, prcp1,     &
@@ -238,9 +77,7 @@
       integer :: ice, k, kz
 
       character(len=6) :: ser_count_str
-!
-!  --- parameters for heat storage parametrization
-!
+
       real (kind=kind_phys)            :: cpx, cpx1, cpfac, xx1, xx2
       real (kind=kind_phys), parameter :: z0min=0.2_kind_phys,          &
                                           z0max=1.0_kind_phys
@@ -307,16 +144,16 @@
 !           including soil-type and veg-type dependent parameters.
 !           set shdfac=0.0 for bare soil surfaces
 
-      ! !$ser mode write
-      ! !$ser verbatim if (iter == 1) then
-      ! !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
-      ! !$ser verbatim else
-      ! !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
-      ! !$ser verbatim end if
+      !$ser mode write
+      !$ser verbatim if (iter == 1) then
+      !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+      !$ser verbatim else
+      !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+      !$ser verbatim end if
 
-      ! !$ser verbatim if (first_iter) then
-      ! !$ser data zsoil2_ref=zsoil
-      ! !$ser verbatim end if
+      !$ser verbatim if (first_iter) then
+      !$ser data zsoil2_ref=zsoil
+      !$ser verbatim end if
 
       call redprm
         if(ivegsrc == 1) then
@@ -857,54 +694,6 @@
 
 !-----------------------------------
       subroutine alcalc
-!...................................
-!  ---  inputs:
-!    &     ( alb, snoalb, shdfac, shdmin, sncovr, tsnow,                &
-!  ---  outputs:
-!    &       albedo                                                     &
-!    &     )
-
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine alcalc calculates albedo including snow effect (0 -> 1)   !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from calling program:                                  size   !
-!     alb      - real, snowfree albedo                             1    !
-!     snoalb   - real, maximum (deep) snow albedo                  1    !
-!     shdfac   - real, areal fractional coverage of green veg.     1    !
-!     shdmin   - real, minimum areal coverage of green veg.        1    !
-!     sncovr   - real, fractional snow cover                       1    !
-!     tsnow    - real, snow surface temperature (k)                1    !
-!                                                                       !
-!  outputs to calling program:                                          !
-!     albedo   - real, surface albedo including snow effect        1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     real (kind=kind_phys), intent(in) :: alb, snoalb, shdfac,         &
-!    &       shdmin, sncovr, tsnow
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: albedo
-
-!  ---  locals: (none)
-
-!
-!===> ...  begin here
-!
-!  --- ...  snoalb is argument representing maximum albedo over deep snow,
-!           as passed into sflx, and adapted from the satellite-based
-!           maximum snow albedo fields provided by d. robinson and g. kukla
-!           (1985, jcam, vol 24, 402-411)
-
-!         albedo = alb + (1.0-(shdfac-shdmin))*sncovr*(snoalb-alb)
           albedo = alb + sncovr*(snoalb - alb)
 
           if (albedo > snoalb) albedo = snoalb
@@ -939,78 +728,7 @@
 
 !-----------------------------------
       subroutine canres
-!...................................
-!  ---  inputs:
-!    &     ( nsoil, nroot, swdn, ch, q2, q2sat, dqsdt2, sfctmp,         &
-!    &       cpx1, sfcprs, sfcems, sh2o, smcwlt, smcref, zsoil, rsmin,  &
-!    &       rsmax, topt, rgl, hs, xlai,                                &
-!  ---  outputs:
-!    &       rc, pc, rcs, rct, rcq, rcsoil                              &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine canres calculates canopy resistance which depends on      !
-!  incoming solar radiation, air temperature, atmospheric water vapor   !
-!  pressure deficit at the lowest model level, and soil moisture        !
-!  (preferably unfrozen soil moisture rather than total)                !
-!                                                                       !
-!  source:   jarvis (1976), noilhan and planton (1989, mwr), jacquemin  !
-!            and noilhan (1990, blm)                                    !
-!  see also: chen et al (1996, jgr, vol 101(d3), 7251-7268), eqns       !
-!            12-14 and table 2 of sec. 3.1.2                            !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from calling program:                                  size   !
-!     nsoil    - integer, no. of soil layers                       1    !
-!     nroot    - integer, no. of soil layers in root zone (<nsoil) 1    !
-!     swdn     - real, incoming solar radiation                    1    !
-!     ch       - real, sfc exchange coeff for heat and moisture    1    !
-!     q2       - real, air humidity at 1st level above ground      1    !
-!     q2sat    - real, sat. air humidity at 1st level abv ground   1    !
-!     dqsdt2   - real, slope of sat. humidity function wrt temp    1    !
-!     sfctmp   - real, sfc temperature at 1st level above ground   1    !
-!     cpx1     - real, enhanced air heat capacity for heat storage 1    !
-!     sfcprs   - real, sfc pressure                                1    !
-!     sfcems   - real, sfc emissivity for lw radiation             1    !
-!     sh2o     - real, volumetric soil moisture                  nsoil  !
-!     smcwlt   - real, wilting point                               1    !
-!     smcref   - real, reference soil moisture                     1    !
-!     zsoil    - real, soil depth (negative sign, as below grd)  nsoil  !
-!     rsmin    - real, mimimum stomatal resistance                 1    !
-!     rsmax    - real, maximum stomatal resistance                 1    !
-!     topt     - real, optimum transpiration air temperature       1    !
-!     rgl      - real, canopy resistance func (in solar rad term)  1    !
-!     hs       - real, canopy resistance func (vapor deficit term) 1    !
-!     xlai     - real, leaf area index                             1    !
-!                                                                       !
-!  outputs to calling program:                                          !
-!     rc       - real, canopy resistance                           1    !
-!     pc       - real, plant coefficient                           1    !
-!     rcs      - real, incoming solar rc factor                    1    !
-!     rct      - real, air temp rc factor                          1    !
-!     rcq      - real, atoms vapor press deficit rc factor         1    !
-!     rcsoil   - real, soil moisture rc factor                     1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     integer, intent(in) :: nsoil, nroot
-
-!     real (kind=kind_phys), intent(in) :: swdn, ch, q2, q2sat,         &
-!    &       dqsdt2, sfctmp, sfcprs, sfcems, smcwlt, smcref, rsmin,     &
-!    &       rsmax, topt, rgl, hs, xlai, sh2o(nsoil), zsoil(nsoil)
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: rc, pc, rcs, rct, rcq,      &
-!    &       rcsoil
-
-!  ---  locals:
       real (kind=kind_phys) :: delta, ff, gx, rr, part(nsold)
 
       integer :: k
@@ -1094,40 +812,8 @@
 
 !-----------------------------------
       subroutine csnow
-!...................................
-!  ---  inputs:
-!    &     ( sndens,                                                    &
-!  ---  outputs:
-!    &       sncond                                                     &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine csnow calculates snow termal conductivity                 !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from the calling program:                              size   !
-!     sndens   - real, snow density                                1    !
-!                                                                       !
-!  outputs to the calling program:                                      !
-!     sncond   - real, snow termal conductivity                    1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  constant parameters:
       real (kind=kind_phys), parameter :: unit = 0.11631
-
-!  ---  inputs:
-!     real (kind=kind_phys), intent(in) :: sndens
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: sncond
-
-!  ---  locals:
       real (kind=kind_phys) :: c
 
 !
@@ -1155,116 +841,7 @@
 
 !-----------------------------------
       subroutine nopac
-!...................................
-!  ---  inputs:
-!    &     ( nsoil, nroot, etp, prcp, smcmax, smcwlt, smcref,           &
-!    &       smcdry, cmcmax, dt, shdfac, sbeta, sfctmp, sfcems,         &
-!    &       t24, th2, fdown, epsca, bexp, pc, rch, rr, cfactr,         &
-!    &       slope, kdt, frzx, psisat, zsoil, dksat, dwsat,             &
-!    &       zbot, ice, rtdis, quartz, fxexp, csoil,                    &
-!  ---  input/outputs:
-!    &       cmc, t1, stc, sh2o, tbot,                                  &
-!  ---  outputs:
-!    &       eta, smc, ssoil, runoff1, runoff2, runoff3, edir,          &
-!    &       ec, et, ett, beta, drip, dew, flx1, flx3                   &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine nopac calculates soil moisture and heat flux values and   !
-!  update soil moisture content and soil heat content values for the    !
-!  case when no snow pack is present.                                   !
-!                                                                       !
-!                                                                       !
-!  subprograms called:  evapo, smflx, tdfcnd, shflx                     !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from calling program:                                  size   !
-!     nsoil    - integer, number of soil layers                    1    !
-!     nroot    - integer, number of root layers                    1    !
-!     etp      - real, potential evaporation                       1    !
-!     prcp     - real, precip rate                                 1    !
-!     smcmax   - real, porosity (sat val of soil mois)             1    !
-!     smcwlt   - real, wilting point                               1    !
-!     smcref   - real, soil mois threshold                         1    !
-!     smcdry   - real, dry soil mois threshold                     1    !
-!     cmcmax   - real, maximum canopy water parameters             1    !
-!     dt       - real, time step                                   1    !
-!     shdfac   - real, aeral coverage of green veg                 1    !
-!     sbeta    - real, param to cal veg effect on soil heat flux   1    !
-!     sfctmp   - real, air temp at height zlvl abv ground          1    !
-!     sfcems   - real, sfc lw emissivity                           1    !
-!     t24      - real, sfctmp**4                                   1    !
-!     th2      - real, air potential temp at zlvl abv grnd         1    !
-!     fdown    - real, net solar + downward lw flux at sfc         1    !
-!     epsca    - real,                                             1    !
-!     bexp     - real, soil type "b" parameter                     1    !
-!     pc       - real, plant coeff                                 1    !
-!     rch      - real, companion coefficient of ch                 1    !
-!     rr       - real,                                             1    !
-!     cfactr   - real, canopy water parameters                     1    !
-!     slope    - real, linear reservoir coefficient                1    !
-!     kdt      - real,                                             1    !
-!     frzx     - real, frozen ground parameter                     1    !
-!     psisat   - real, saturated soil potential                    1    !
-!     zsoil    - real, soil layer depth below ground (negative)  nsoil  !
-!     dksat    - real, saturated soil hydraulic conductivity       1    !
-!     dwsat    - real, saturated soil diffusivity                  1    !
-!     zbot     - real, specify depth of lower bd soil              1    !
-!     ice      - integer, sea-ice flag (=1: sea-ice, =0: land)     1    !
-!     rtdis    - real, root distribution                         nsoil  !
-!     quartz   - real, soil quartz content                         1    !
-!     fxexp    - real, bare soil evaporation exponent              1    !
-!     csoil    - real, soil heat capacity                          1    !
-!                                                                       !
-!  input/outputs from and to the calling program:                       !
-!     cmc      - real, canopy moisture content                     1    !
-!     t1       - real, ground/canopy/snowpack eff skin temp        1    !
-!     stc      - real, soil temp                                 nsoil  !
-!     sh2o     - real, unfrozen soil moisture                    nsoil  !
-!     tbot     - real, bottom soil temp                            1    !
-!                                                                       !
-!  outputs to the calling program:                                      !
-!     eta      - real, downward latent heat flux                   1    !
-!     smc      - real, total soil moisture                       nsoil  !
-!     ssoil    - real, upward soil heat flux                       1    !
-!     runoff1  - real, surface runoff not infiltrating sfc         1    !
-!     runoff2  - real, sub surface runoff (baseflow)               1    !
-!     runoff3  - real, excess of porosity                          1    !
-!     edir     - real, direct soil evaporation                     1    !
-!     ec       - real, canopy water evaporation                    1    !
-!     et       - real, plant transpiration                       nsoil  !
-!     ett      - real, total plant transpiration                   1    !
-!     beta     - real, ratio of actual/potential evap              1    !
-!     drip     - real, through-fall of precip and/or dew           1    !
-!     dew      - real, dewfall (or frostfall)                      1    !
-!     flx1     - real, precip-snow sfc flux                        1    !
-!     flx3     - real, phase-change heat flux from snowmelt        1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     integer, intent(in) :: nsoil, nroot, ice
-
-!     real (kind=kind_phys), intent(in) :: etp, prcp, smcmax,           &
-!            smcwlt, smcref, smcdry, cmcmax, dt, shdfac, sbeta,         &
-!            sfctmp, sfcems, t24, th2, fdown, epsca, bexp, pc,          &
-!            rch, rr, cfactr, slope, kdt, frzx, psisat,                 &
-!            zsoil(nsoil), dksat, dwsat, zbot, rtdis(nsoil),            &
-!            quartz, fxexp, csoil
-
-!  ---  input/outputs:
-!     real (kind=kind_phys), intent(inout) :: cmc, t1, stc(nsoil),      &
-!            sh2o(nsoil), tbot
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: eta, smc(nsoil), ssoil,     &
-!            runoff1, runoff2, runoff3, edir, ec, et(nsoil), ett,       &
-!            beta, drip, dew, flx1, flx3
-
-!  ---  locals:
       real (kind=kind_phys) :: df1, eta1, etp1, prcp1, yy, yynum,       &
              zz1, ec1, edir1, et1(nsoil), ett1
 
@@ -1422,65 +999,7 @@
 
 !-----------------------------------
       subroutine penman
-!...................................
-!  ---  inputs:
-!    &     ( sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,         &
-!    &       cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra,      &
-!  ---  outputs:
-!    &       t24, etp, rch, epsca, rr, flx2                             &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine penman calculates potential evaporation for the current   !
-!  point.  various partial sums/products are also calculated and passed !
-!  back to the calling routine for later use.                           !
-!                                                                       !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs:                                                       size   !
-!     sfctmp   - real, sfc temperature at 1st level above ground   1    !
-!     sfcprs   - real, sfc pressure                                1    !
-!     sfcems   - real, sfc emissivity for lw radiation             1    !
-!     ch       - real, sfc exchange coeff for heat & moisture      1    !
-!     t2v      - real, sfc virtual temperature                     1    !
-!     th2      - real, air potential temp at zlvl abv grnd         1    !
-!     prcp     - real, precip rate                                 1    !
-!     fdown    - real, net solar + downward lw flux at sfc         1    !
-!     cpx      - real, enhanced air heat capacity for heat storage 1    !
-!     cpfac    - real, ratio air heat capacity to enhanced one     1    !
-!     ssoil    - real, upward soil heat flux                       1    !
-!     q2       - real, mixing ratio at hght zlvl abv ground        1    !
-!     q2sat    - real, sat mixing ratio at zlvl abv ground         1    !
-!     dqsdt2   - real, slope of sat specific humidity curve        1    !
-!     snowng   - logical, snow flag                                1    !
-!     frzgra   - logical, freezing rain flag                       1    !
-!                                                                       !
-!  outputs:                                                             !
-!     t24      - real, sfctmp**4                                   1    !
-!     etp      - real, potential evaporation                       1    !
-!     rch      - real, companion coefficient of ch                 1    !
-!     epsca    - real,                                             1    !
-!     rr       - real,                                             1    !
-!     flx2     - real, freezing rain latent heat flux              1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     real (kind=kind_phys), intent(in) :: sfctmp, sfcprs, sfcems,      &
-!    &       ch, t2v, th2, prcp, fdown, ssoil, q2, q2sat, dqsdt2
-
-!     logical, intent(in) :: snowng, frzgra
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: t24, etp, rch, epsca,       &
-!    &       rr, flx2
-
-!  ---  locals:
       real (kind=kind_phys) :: a, delta, fnet, rad, rho
 
 !
@@ -1532,196 +1051,9 @@
 
 !-----------------------------------
       subroutine redprm
-!...................................
-!  ---  inputs:
-!    &     ( nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil,              &
-!  ---  outputs:
-!    &       cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,              &
-!    &       sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,            &
-!    &       snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,               &
-!    &       smcref, smcdry, f1, quartz, fxexp, rtdis, nroot,              &
-!    &       z0, czil, xlai, csoil                                         &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine redprm internally sets(default valuess), or optionally    !
-!  read-in via namelist i/o, all soil and vegetation parameters         !
-!  required for the execusion of the noah lsm.                          !
-!                                                                       !
-!  optional non-default parameters can be read in, accommodating up to  !
-!  30 soil, veg, or slope classes, if the default max number of soil,   !
-!  veg, and/or slope types is reset.                                    !
-!                                                                       !
-!  future upgrades of routine redprm must expand to incorporate some    !
-!  of the empirical parameters of the frozen soil and snowpack physics  !
-!  (such as in routines frh2o, snowpack, and snow_new) not yet set in   !
-!  this redprm routine, but rather set in lower level subroutines.      !
-!                                                                       !
-!  all soil, veg, slope, and universal parameters values are defined    !
-!  externally (in subroutine "set_soilveg.f") and then accessed via     !
-!  "use namelist_soilveg" (below) and then set here.                    !
-!                                                                       !
-!  soil types   zobler (1986)      cosby et al (1984) (quartz cont.(1)) !
-!      1         coarse            loamy sand            (0.82)         !
-!      2         medium            silty clay loam       (0.10)         !
-!      3         fine              light clay            (0.25)         !
-!      4         coarse-medium     sandy loam            (0.60)         !
-!      5         coarse-fine       sandy clay            (0.52)         !
-!      6         medium-fine       clay loam             (0.35)         !
-!      7         coarse-med-fine   sandy clay loam       (0.60)         !
-!      8         organic           loam                  (0.40)         !
-!      9         glacial land ice  loamy sand            (na using 0.82)!
-!     13: <old>- glacial land ice -<old>                                !
-!     13:        glacial-ice (no longer use these parameters), now      !
-!                treated as ice-only surface and sub-surface            !
-!                (in subroutine hrtice)                                 !
-!  upgraded to statsgo (19-type)
-!     1: sand
-!     2: loamy sand
-!     3: sandy loam
-!     4: silt loam
-!     5: silt
-!     6:loam
-!     7:sandy clay loam
-!     8:silty clay loam
-!     9:clay loam
-!     10:sandy clay
-!     11: silty clay
-!     12: clay
-!     13: organic material
-!     14: water
-!     15: bedrock
-!     16: other (land-ice)
-!     17: playa
-!     18: lava
-!     19: white sand
-!                                                                       !
-!  ssib vegetation types (dorman and sellers, 1989; jam)                !
-!      1:  broadleaf-evergreen trees  (tropical forest)                 !
-!      2:  broadleaf-deciduous trees                                    !
-!      3:  broadleaf and needleleaf trees (mixed forest)                !
-!      4:  needleleaf-evergreen trees                                   !
-!      5:  needleleaf-deciduous trees (larch)                           !
-!      6:  broadleaf trees with groundcover (savanna)                   !
-!      7:  groundcover only (perennial)                                 !
-!      8:  broadleaf shrubs with perennial groundcover                  !
-!      9:  broadleaf shrubs with bare soil                              !
-!     10:  dwarf trees and shrubs with groundcover (tundra)             !
-!     11:  bare soil                                                    !
-!     12:  cultivations (the same parameters as for type 7)             !
-!     13: <old>- glacial (the same parameters as for type 11) -<old>    !
-!     13:  glacial-ice (no longer use these parameters), now treated as !
-!          ice-only surface and sub-surface (in subroutine hrtice)      !
-!  upgraded to IGBP (20-type)
-!      1:Evergreen Needleleaf Forest
-!      2:Evergreen Broadleaf Forest
-!      3:Deciduous Needleleaf Forest
-!      4:Deciduous Broadleaf Forest
-!      5:Mixed Forests
-!      6:Closed Shrublands
-!      7:Open Shrublands
-!      8:Woody Savannas
-!      9:Savannas
-!      10:Grasslands
-!      11:Permanent wetlands
-!      12:Croplands
-!      13:Urban and Built-Up
-!      14:Cropland/natural vegetation mosaic
-!      15:Snow and Ice
-!      16:Barren or Sparsely Vegetated
-!      17:Water
-!      18:Wooded Tundra
-!      19:Mixed Tundra
-!      20:Bare Ground Tundra
-!                                                                       !
-!  slopetyp is to estimate linear reservoir coefficient slope to the    !
-!  baseflow runoff out of the bottom layer. lowest class (slopetyp=0)   !
-!  means highest slope parameter = 1.                                   !
-!                                                                       !
-!  slope class       percent slope                                      !
-!      1                0-8                                             !
-!      2                8-30                                            !
-!      3                > 30                                            !
-!      4                0-30                                            !
-!      5                0-8 & > 30                                      !
-!      6                8-30 & > 30                                     !
-!      7                0-8, 8-30, > 30                                 !
-!      9                glacial ice                                     !
-!    blank              ocean/sea                                       !
-!                                                                       !
-!  note: class 9 from zobler file should be replaced by 8 and 'blank' 9 !
-!                                                                       !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from calling program:                                  size   !
-!     nsoil    - integer, number of soil layers                    1    !
-!     vegtyp   - integer, vegetation type (integer index)          1    !
-!     soiltyp  - integer, soil type (integer index)                1    !
-!     slopetyp - integer, class of sfc slope (integer index)       1    !
-!     sldpth   - integer, thickness of each soil layer (m)       nsoil  !
-!     zsoil    - integer, soil depth (negative sign) (m)         nsoil  !
-!                                                                       !
-!  outputs to the calling program:                                      !
-!     cfactr   - real, canopy water parameters                     1    !
-!     cmcmax   - real, maximum canopy water parameters             1    !
-!     rsmin    - real, mimimum stomatal resistance                 1    !
-!     rsmax    - real, maximum stomatal resistance                 1    !
-!     topt     - real, optimum transpiration air temperature       1    !
-!     refkdt   - real, =2.e-6 the sat. dk. val for soil type 2     1    !
-!     kdt      - real,                                             1    !
-!     sbeta    - real, param to cal veg effect on soil heat flux   1    !
-!     shdfac   - real, vegetation greenness fraction               1    !
-!     rgl      - real, canopy resistance func (in solar rad term)  1    !
-!     hs       - real, canopy resistance func (vapor deficit term) 1    !
-!     zbot     - real, specify depth of lower bd soil temp (m)     1    !
-!     frzx     - real, frozen ground parameter, ice content        1    !
-!                      threshold above which frozen soil is impermeable !
-!     psisat   - real, saturated soil potential                    1    !
-!     slope    - real, linear reservoir coefficient                1    !
-!     snup     - real, threshold snow depth (water equi m)         1    !
-!     salp     - real, snow cover shape parameter                  1    !
-!                      from anderson's hydro-17 best fit salp = 2.6     !
-!     bexp     - real, the 'b' parameter                           1    !
-!     dksat    - real, saturated soil hydraulic conductivity       1    !
-!     dwsat    - real, saturated soil diffusivity                  1    !
-!     smcmax   - real, max soil moisture content (porosity)        1    !
-!     smcwlt   - real, wilting pt soil moisture contents           1    !
-!     smcref   - real, reference soil moisture (onset stress)      1    !
-!     smcdry   - real, air dry soil moist content limits           1    !
-!     f1       - real, used to comp soil diffusivity/conductivity  1    !
-!     quartz   - real, soil quartz content                         1    !
-!     fxexp    - real, bare soil evaporation exponent              1    !
-!     rtdis    - real, root distribution                         nsoil  !
-!     nroot    - integer, number of root layers                    1    !
-!     z0       - real, roughness length (m)                        1    !
-!     czil     - real, param to cal roughness length of heat       1    !
-!     xlai     - real, leaf area index                             1    !
-!     csoil    - real, soil heat capacity (j m-3 k-1)              1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
       use namelist_soilveg
 
-!  ---  input:
-!     integer, intent(in) :: nsoil, vegtyp, soiltyp, slopetyp
-
-!     real (kind=kind_phys), intent(in) :: sldpth(nsoil), zsoil(nsoil)
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: cfactr, cmcmax, rsmin,      &
-!    &       rsmax, topt, refkdt, kdt, sbeta, shdfac, rgl, hs, zbot,    &
-!    &       frzx, psisat, slope, snup, salp, bexp, dksat, dwsat,       &
-!    &       smcmax, smcwlt, smcref, smcdry, f1, quartz, fxexp, z0,     &
-!    &       czil, xlai, csoil, rtdis(nsoil)
-
-!     integer, intent(out) :: nroot
-
-!  ---  locals:
       real (kind=kind_phys) :: frzfact, frzk, refdk
 
       integer :: i
@@ -1821,39 +1153,7 @@
 
 !-----------------------------------
       subroutine sfcdif
-!...................................
-!  ---  inputs:
-!    &     ( zlvl, z0, t1v, th2v, sfcspd, czil,                         &
-!  ---  input/outputs:
-!    &       cm, ch                                                     &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine sfcdif calculates surface layer exchange coefficients     !
-!  via iterative process. see chen et al (1997, blm)                    !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from the calling program:                              size   !
-!     zlvl     - real, height abv atmos ground forcing vars (m)    1    !
-!     z0       - real, roughness length (m)                        1    !
-!     t1v      - real, surface exchange coefficient                1    !
-!     th2v     - real, surface exchange coefficient                1    !
-!     sfcspd   - real, wind speed at height zlvl abv ground (m/s)  1    !
-!     czil     - real, param to cal roughness length of heat       1    !
-!                                                                       !
-!  input/outputs from and to the calling program:                       !
-!     cm       - real, sfc exchange coeff for momentum (m/s)       1    !
-!     ch       - real, sfc exchange coeff for heat & moisture (m/s)1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  --- constant parameters:
       integer,               parameter :: itrmx  = 5
       real (kind=kind_phys), parameter :: wwst   = 1.2
       real (kind=kind_phys), parameter :: wwst2  = wwst*wwst
@@ -1879,14 +1179,6 @@
       real (kind=kind_phys), parameter :: rfc    = 0.191
       real (kind=kind_phys), parameter :: rfac   = ric/(fhneu*rfc*rfc)
 
-!  ---  inputs:
-!     real (kind=kind_phys),  intent(in) :: zlvl, z0, t1v, th2v,        &
-!    &       sfcspd, czil
-
-!  ---  input/outputs:
-!     real (kind=kind_phys),  intent(inout) :: cm, ch
-
-!  ---  locals:
       real (kind=kind_phys) :: zilfc, zu, zt, rdz, cxch, dthv, du2,     &
              btgh, wstar2, ustar, zslu, zslt, rlogu, rlogt, rlmo,       &
              zetalt, zetalu, zetau, zetat, xlu4, xlt4, xu4, xt4,        &
@@ -1895,19 +1187,14 @@
 
       integer :: ilech, itr
 
-!  ---  define local in-line functions:
 
       real (kind=kind_phys) :: pslmu, pslms, pslhu, pslhs, zz
       real (kind=kind_phys) :: pspmu, pspms, psphu, psphs, xx, yy
-
-!  ...  1) lech's surface functions
 
       pslmu( zz ) = -0.96 * log( 1.0-4.5*zz )
       pslms( zz ) = zz*rric - 2.076*(1.0 - 1.0/(zz + 1.0))
       pslhu( zz ) = -0.96 * log( 1.0-4.5*zz )
       pslhs( zz ) = zz*rfac - 2.076*(1.0 - 1.0/(zz + 1.0))
-
-!  ...  2) paulson's surface functions
 
       pspmu( xx ) = -2.0 * log( (xx + 1.0)*0.5 )                        &
                   - log( (xx*xx + 1.0)*0.5 ) + 2.0*atan(xx) - pihf
@@ -2106,41 +1393,7 @@
 
 !-----------------------------------
       subroutine snfrac
-!...................................
-!  ---  inputs:
-!    &     ( sneqv, snup, salp, snowh,                                  &
-!  ---  outputs:
-!    &       sncovr                                                     &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine snfrac calculatexsnow fraction (0 -> 1)                   !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from the calling program:                              size   !
-!     sneqv    - real, snow water equivalent (m)                   1    !
-!     snup     - real, threshold sneqv depth above which sncovr=1  1    !
-!     salp     - real, tuning parameter                            1    !
-!     snowh    - real, snow depth (m)                              1    !
-!                                                                       !
-!  outputs to the calling program:                                      !
-!     sncovr   - real, fractional snow cover                       1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     real (kind=kind_phys),  intent(in) :: sneqv, snup, salp, snowh
-
-!  ---  outputs:
-!     real (kind=kind_phys),  intent(out) :: sncovr
-
-!  ---  locals:
       real (kind=kind_phys) :: rsnow, z0n
 
 !
@@ -2175,129 +1428,9 @@
 
 !-----------------------------------
       subroutine snopac
-!...................................
-!  ---  inputs:
-!    &     ( nsoil, nroot, etp, prcp, smcmax, smcwlt, smcref, smcdry,   &
-!    &       cmcmax, dt, df1, sfcems, sfctmp, t24, th2, fdown, epsca,   &
-!    &       bexp, pc, rch, rr, cfactr, slope, kdt, frzx, psisat,       &
-!    &       zsoil, dwsat, dksat, zbot, shdfac, ice, rtdis, quartz,     &
-!    &       fxexp, csoil, flx2, snowng,                                &
-!  ---  input/outputs:
-!    &       prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh,         &
-!    &       sh2o, tbot, beta,                                          &
-!  ---  outputs:
-!    &       smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et,       &
-!    &       ett, snomlt, drip, dew, flx1, flx3, esnow                  &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine snopac calculates soil moisture and heat flux values and  !
-!  update soil moisture content and soil heat content values for the    !
-!  case when a snow pack is present.                                    !
-!                                                                       !
-!                                                                       !
-!  subprograms called:  evapo, smflx, shflx, snowpack
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from the calling program:                              size   !
-!     nsoil    - integer, number of soil layers                    1    !
-!     nroot    - integer, number of root layers                    1    !
-!     etp      - real, potential evaporation                       1    !
-!     prcp     - real, precip rate                                 1    !
-!     smcmax   - real, porosity                                    1    !
-!     smcwlt   - real, wilting point                               1    !
-!     smcref   - real, soil mois threshold                         1    !
-!     smcdry   - real, dry soil mois threshold                     1    !
-!     cmcmax   - real, maximum canopy water parameters             1    !
-!     dt       - real, time step                                   1    !
-!     df1      - real, thermal diffusivity                         m    !
-!     sfcems   - real, lw surface emissivity                       1    !
-!     sfctmp   - real, sfc temperature                             1    !
-!     t24      - real, sfctmp**4                                   1    !
-!     th2      - real, sfc air potential temperature               1    !
-!     fdown    - real, net solar + downward lw flux at sfc         1    !
-!     epsca    - real,                                             1    !
-!     bexp     - real, soil type "b" parameter                     1    !
-!     pc       - real, plant coeff                                 1    !
-!     rch      - real, companion coefficient of ch                 1    !
-!     rr       - real,                                             1    !
-!     cfactr   - real, canopy water parameters                     1    !
-!     slope    - real, linear reservoir coefficient                1    !
-!     kdt      - real,                                             1    !
-!     frzx     - real, frozen ground parameter                     1    !
-!     psisat   - real, saturated soil potential                    1    !
-!     zsoil    - real, soil layer depth below ground (negative)  nsoil  !
-!     dwsat    - real, saturated soil diffusivity                  1    !
-!     dksat    - real, saturated soil hydraulic conductivity       1    !
-!     zbot     - real, specify depth of lower bd soil              1    !
-!     shdfac   - real, aeral coverage of green vegetation          1    !
-!     ice      - integer, sea-ice flag (=1: sea-ice, =0: land)     1    !
-!     rtdis    - real, root distribution                         nsoil  !
-!     quartz   - real, soil quartz content                         1    !
-!     fxexp    - real, bare soil evaporation exponent              1    !
-!     csoil    - real, soil heat capacity                          1    !
-!     flx2     - real, freezing rain latent heat flux              1    !
-!     snowng   - logical, snow flag                                1    !
-!                                                                       !
-!  input/outputs from and to the calling program:                       !
-!     prcp1    - real, effective precip                            1    !
-!     cmc      - real, canopy moisture content                     1    !
-!     t1       - real, ground/canopy/snowpack eff skin temp        1    !
-!     stc      - real, soil temperature                          nsoil  !
-!     sncovr   - real, snow cover                                  1    !
-!     sneqv    - real, water-equivalent snow depth                 1    !
-!     sndens   - real, snow density                                1    !
-!     snowh    - real, snow depth                                  1    !
-!     sh2o     - real, unfrozen soil moisture                    nsoil  !
-!     tbot     - real, bottom soil temperature                     1    !
-!     beta     - real, ratio of actual/potential evap              1    !
-!                                                                       !
-!  outputs to the calling program:                                      !
-!     smc      - real, total soil moisture                       nsoil  !
-!     ssoil    - real, upward soil heat flux                       1    !
-!     runoff1  - real, surface runoff not infiltrating sfc         1    !
-!     runoff2  - real, sub surface runoff                          1    !
-!     runoff3  - real, excess of porosity for a given soil layer   1    !
-!     edir     - real, direct soil evaporation                     1    !
-!     ec       - real, canopy water evaporation                    1    !
-!     et       - real, plant transpiration                       nsoil  !
-!     ett      - real, total plant transpiration                   1    !
-!     snomlt   - real, snow melt water equivalent                  1    !
-!     drip     - real, through-fall of precip                      1    !
-!     dew      - real, dewfall (or frostfall)                      1    !
-!     flx1     - real, precip-snow sfc flux                        1    !
-!     flx3     - real, phase-change heat flux from snowmelt        1    !
-!     esnow    - real, sublimation from snowpack                   1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  constant parameters:
       real, parameter :: esdmin = 1.e-6
 
-!  ---  inputs:
-!     integer, intent(in) :: nsoil, nroot, ice
-
-!     real (kind=kind_phys), intent(in) :: etp, prcp, smcmax, smcref,   &
-!    &       smcwlt, smcdry, cmcmax, dt, df1, sfcems, sfctmp, t24,      &
-!    &       th2, fdown, epsca, bexp, pc, rch, rr, cfactr, slope, kdt,  &
-!    &       frzx, psisat, dwsat, dksat, zbot, shdfac, quartz,          &
-!    &       csoil, fxexp, flx2, zsoil(nsoil), rtdis(nsoil)
-
-!     logical, intent(in) :: snowng
-
-!  ---  input/outputs:
-!     real (kind=kind_phys), intent(inout) :: prcp1, t1, sncovr, sneqv, &
-!    &       sndens, snowh, cmc, tbot, beta, sh2o(nsoil), stc(nsoil)
-
-!  ---  outputs:
-!     real (kind=kind_phys), intent(out) :: ssoil, runoff1, runoff2,    &
-!    &       runoff3, edir, ec, et(nsoil), ett, snomlt, drip, dew,      &
-!    &       flx1, flx3, esnow, smc(nsoil)
-
-!  ---  locals:
       real (kind=kind_phys):: denom, dsoil, dtot, etp1, ssoil1,         &
              snoexp, ex, t11, t12, t12a, t12b, yy, zz1, seh, t14,       &
              ec1, edir1, ett1, etns, etns1, esnow1, esnow2, etanrg,     &
@@ -2305,8 +1438,7 @@
 
       integer k
 
-!     data snoexp /1.0/    !!! <----- for noah v2.7
-      data snoexp /2.0/    !!! <----- for noah v2.7.1
+      data snoexp /2.0/   
 
 !  --- ...  convert potential evap (etp) from kg m-2 s-1 to m s-1 and then to an
 !           amount (m) given timestep (dt) and call it an effective snowpack
@@ -2694,41 +1826,7 @@
 
 !-----------------------------------
       subroutine snow_new
-!...................................
-!  ---  inputs:
-!    &     ( sfctmp, sn_new,                                            &
-!  ---  input/outputs:
-!    &       snowh, sndens                                              &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!    subroutine snow_new calculates snow depth and densitity to account !
-!    for the new snowfall. new values of snow depth & density returned. !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from the calling program:                              size   !
-!     sfctmp   - real, surface air temperature (k)                 1    !
-!     sn_new   - real, new snowfall (m)                            1    !
-!                                                                       !
-!  input/outputs from and to the calling program:                       !
-!     snowh    - real, snow depth (m)                              1    !
-!     sndens   - real, snow density                                1    !
-!                      (g/cm3=dimensionless fraction of h2o density)    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     real(kind=kind_phys), intent(in) :: sfctmp, sn_new
-
-!  ---  input/outputs:
-!     real(kind=kind_phys), intent(inout) :: snowh, sndens
-
-!  ---  locals:
       real(kind=kind_phys) :: dsnew, snowhc, hnewc, newsnc, tempc
 
 !
@@ -2766,37 +1864,7 @@
 
 !-----------------------------------
       subroutine snowz0
-!...................................
-!  ---  inputs:
-!    &     ( sncovr,                                                    &
-!  ---  input/outputs:
-!    &       z0                                                         &
-!    &     )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!    subroutine snowz0 calculates total roughness length over snow      !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs from the calling program:                              size   !
-!     sncovr   - real, fractional snow cover                       1    !
-!                                                                       !
-!  input/outputs from and to the calling program:                       !
-!     z0       - real, roughness length (m)                        1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
-!     real(kind=kind_phys), intent(in) :: sncovr
-
-!  ---  input/outputs:
-!     real(kind=kind_phys), intent(inout) :: z0
-
-!  ---  locals:
       real(kind=kind_phys) :: z0s
 !
 !===> ...  begin here
@@ -2816,10 +1884,7 @@
 
 !-----------------------------------
       subroutine tdfcnd                                                 &
-!...................................
-!  ---  inputs:
            ( smc, qz, smcmax, sh2o,                                     &
-!  ---  outputs:
              df                                                         &
            )
 
@@ -2958,12 +2023,9 @@
 
 !-----------------------------------
       subroutine evapo                                                  &
-!...................................
-!  ---  inputs:
            ( nsoil, nroot, cmc, cmcmax, etp1, dt, zsoil,                &
              sh2o, smcmax, smcwlt, smcref, smcdry, pc,                  &
              shdfac, cfactr, rtdis, fxexp,                              &
-!  ---  outputs:
              eta1, edir1, ec1, et1, ett1                                &
            )
 
@@ -3104,13 +2166,9 @@
 
 !-----------------------------------
       subroutine shflx                                                  &
-!...................................
-!  ---  inputs:
            ( nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,              &
              psisat, bexp, df1, ice, quartz, csoil, vegtyp,             &
-!  ---  input/outputs:
              stc, t1, tbot, sh2o,                                       &
-!  ---  outputs:
              ssoil                                                      &
            )
 
@@ -3266,14 +2324,10 @@
 
 !-----------------------------------
       subroutine smflx                                                    &
-!...................................
-!  ---  inputs:
            ( nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,               &
              zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,              &
              edir1, ec1, et1,                                             &
-!  ---  input/outputs:
              cmc, sh2o,                                                   &
-!  ---  outputs:
              smc, runoff1, runoff2, runoff3, drip                         &
            )
 
@@ -3472,10 +2526,7 @@
 
 !-----------------------------------
       subroutine snowpack                                               &
-!...................................
-!  ---  inputs:
            ( esd, dtsec, tsnow, tsoil,                                  &
-!  ---  input/outputs:
              snowh, sndens                                              &
            )
 
@@ -3634,10 +2685,7 @@
 
 !-----------------------------------
       subroutine devap                                                  &
-!...................................
-!  ---  inputs:
            ( etp1, smc, shdfac, smcmax, smcdry, fxexp,                  &
-!  ---  outputs:
              edir1                                                      &
            )
 
@@ -3703,10 +2751,7 @@
 
 !-----------------------------------
       subroutine frh2o                                                  &
-!...................................
-!  ---  inputs:
            ( tkelv, smc, sh2o, smcmax, bexp, psis,                      &
-!  ---  outputs:
              liqwat                                                     &
            )
 
@@ -3854,14 +2899,10 @@
 
 !-----------------------------------
       subroutine hrt                                                    &
-!...................................
-!  ---  inputs:
            ( nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,             &
              zbot, psisat, dt, bexp, df1, quartz, csoil, vegtyp,        &
              shdfac,                                                    &
-!  ---  input/outputs:
              sh2o,                                                      &
-!  ---  outputs:
              rhsts, ai, bi, ci                                          &
            )
 
@@ -4208,12 +3249,8 @@
 
 !-----------------------------------
       subroutine hrtice                                                 &
-!...................................
-!  ---  inputs:
            ( nsoil, stc, zsoil, yy, zz1, df1, ice,                      &
-!  ---  input/outputs:
              tbot,                                                      &
-!  ---  outputs:
              rhsts, ai, bi, ci                                          &
            )
 
@@ -4380,12 +3417,8 @@
 
 !-----------------------------------
       subroutine hstep                                                  &
-!...................................
-!  ---  inputs:
            ( nsoil, stcin, dt,                                          &
-!  ---  input/outputs:
              rhsts, ai, bi, ci,                                         &
-!  ---  outputs:
              stcout                                                     &
            )
 
@@ -4479,12 +3512,8 @@
 
 !-----------------------------------
       subroutine rosr12                                                 &
-!...................................
-!  ---  inputs:
            ( nsoil, a, b, d,                                            &
-!  ---  input/outputs:
              c,                                                         &
-!  ---  outputs:
              p, delta                                                   &
            )
 
@@ -4581,13 +3610,9 @@
 
 !-----------------------------------
       subroutine snksrc                                                 &
-!...................................
-!  ---  inputs:
            ( nsoil, k, tavg, smc, smcmax, psisat, bexp, dt,             &
              qtot, zsoil, shdfac,                                       &
-!  ---  input/outputs:
              sh2o,                                                      &
-!  ---  outputs:
              tsrc                                                       &
            )
 
@@ -4726,11 +3751,8 @@
 
 !-----------------------------------
       subroutine srt                                                    &
-!...................................
-!  ---  inputs:
            ( nsoil, edir, et, sh2o, sh2oa, pcpdrp, zsoil, dwsat,        &
              dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,   &
-!  ---  outputs:
              rhstt, runoff1, runoff2, ai, bi, ci                        &
            )
 
@@ -5036,12 +4058,8 @@
 
 !-----------------------------------
       subroutine sstep                                                  &
-!...................................
-!  ---  inputs:
            ( nsoil, sh2oin, rhsct, dt, smcmax, cmcmax, zsoil, sice,     &
-!  ---  input/outputs:
              cmc, rhstt, ai, bi, ci,                                    &
-!  ---  outputs:
              sh2oout, runoff3, smc                                      &
            )
 
@@ -5182,10 +4200,7 @@
 
 !-----------------------------------
       subroutine tbnd                                                   &
-!...................................
-!  ---  inputs:
            ( tu, tb, zsoil, zbot, k, nsoil,                             &
-!  ---  outputs:
              tbnd1                                                      &
            )
 
@@ -5252,10 +4267,7 @@
 
 !-----------------------------------
       subroutine tmpavg                                                 &
-!...................................
-!  ---  inputs:
            ( tup, tm, tdn, zsoil, nsoil, k,                             &
-!  ---  outputs:
              tavg                                                       &
            )
 
@@ -5356,11 +4368,8 @@
 
 !-----------------------------------
       subroutine transp                                                    &
-!...................................
-!  ---  inputs:
            ( nsoil, nroot, etp1, smc, smcwlt, smcref,                   &
              cmc, cmcmax, zsoil, shdfac, pc, cfactr, rtdis,             &
-!  ---  outputs:
              et1                                                        &
            )
 
@@ -5488,10 +4497,7 @@
 
 !-----------------------------------
       subroutine wdfcnd                                                 &
-!...................................
-!  ---  inputs:
            ( smc, smcmax, bexp, dksat, dwsat, sicemax,                  &
-!  ---  outputs:
              wdf, wcnd                                                  &
            )
 
