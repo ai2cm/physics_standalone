@@ -673,14 +673,13 @@ def canres(
     rcq = max(rcq, 0.01)
 
     # contribution due to soil moisture availability.
-    gx = np.maximum( 0.0, np.minimum( 1.0, (sh2o - smcwlt) / (smcref - smcwlt) ) )
+    gx = np.maximum(0.0, np.minimum(1.0, (sh2o - smcwlt) / (smcref - smcwlt)))
 
     # use soil depth as weighting factor
     # TODO: check if only until nroot which is 3
     part = np.empty(gx.size)
     part[0] = (zsoil[0]/zsoil[nroot-1]) * gx[0]
     part[1:] = ((zsoil[1:] - zsoil[:-1])/zsoil[-1]) * gx[1:]
-
 
     rcsoil = max(np.sum(part), 0.0001)
 
@@ -716,7 +715,76 @@ def nopac(
     cmc, t1, stc, sh2o, tbot
 ):
     # --- ... subprograms called: evapo, smflx, tdfcnd, shflx
-    # TODO
+
+    # convert etp from kg m-2 s-1 to ms-1 and initialize dew.
+    prcp1 = prcp * 0.001
+    etp1 = etp * 0.001
+    dew = 0.0
+    edir = 0.0
+    edir1 = 0.0
+    ec = 0.0
+    ec1 = 0.0
+
+    et = init_array(nsoil, "zero")
+    et1 = init_array(nsoil, "zero")
+
+    ett = 0.
+    ett1 = 0.
+
+    if etp > 0.:
+        eta1, edir1, ec1, et1, ett1 = evapo(nsoil, nroot, cmc, cmcmax, etp1, dt, zsoil,
+                                            sh2o, smcmax, smcwlt, smcref, smcdry, pc,
+                                            shdfac, cfactr, rtdis, fxexp)
+
+        smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+                                                     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
+                                                     edir1, ec1, et1, cmc, sh2o)
+
+    else:
+        # if etp < 0, assume dew forms
+        eta1 = 0.0
+        dew = -etp1
+        prcp1 += dew
+
+        smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+                                                     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
+                                                     edir1, ec1, et1, cmc, sh2o)
+
+    # convert modeled evapotranspiration fm  m s-1  to  kg m-2 s-1
+    eta = eta1 * 1000.0
+    edir = edir1 * 1000.0
+    ec = ec1 * 1000.0
+    et = et1 * 1000.0
+    ett = ett1 * 1000.0
+
+    # based on etp and e values, determine beta
+    if etp < 0.0:
+        beta = 1.0
+    elif etp == 0.0:
+        beta = 0.0
+    else:
+        beta = eta / etp
+
+    # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
+    df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
+
+    if (ivegsrc == 1) & (vegtyp == 13):
+        df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
+    else:
+        df1 *= np.exp(sbeta*shdfac)
+
+    # compute intermediate terms passed to routine hrt
+    yynum = fdown - sfcems*sigma1*t24
+    yy = sfctmp + (yynum/rch + th2 - sfctmp - beta*epsca)/rr
+    zz1 = df1/(-0.5*zsoil(1)*rch*rr) + 1.0
+
+    ssoil = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
+                  psisat, bexp, df1, ice, quartz, csoil, vegtyp,
+                  stc, t1, tbot, sh2o)
+
+    flx1 = 0.0
+    flx3 = 0.0
+
     return eta, smc, ssoil, runoff1, runoff2, runoff3, edir, \
         ec, et, ett, beta, drip, dew, flx1, flx3
 
@@ -1049,13 +1117,37 @@ def evapo(
     # inputs
     nsoil, nroot, cmc, cmcmax, etp1, dt, zsoil,
     sh2o, smcmax, smcwlt, smcref, smcdry, pc,
-    shdfac, cfactr, rtdis, fxexp,
-    # outputs
-    eta1, edir1, ec1, et1, ett1
+    shdfac, cfactr, rtdis, fxexp
 ):
     # --- ... subprograms called: devap, transp
-    # TODO
-    pass
+
+    ec1 = 0.0
+
+    if etp1 > 0.0:
+        # retrieve direct evaporation from soil surface.
+        if shdfac < 1.0:
+            edir1 = devap(etp1, sh2o[0], shdfac, smcmax, smcdry, fxexp)
+
+        # initialize plant total transpiration, retrieve plant transpiration,
+        # and accumulate it for all soil layers.
+        if shdfac > 0.:
+            et1 = transp(nsoil, nroot, etp1, sh2o, smcwlt, smcref,
+                         cmc, cmcmax, zsoil, shdfac, pc, cfactr, rtdis)
+            ett1 = np.sum(et1)
+
+            # calculate canopy evaporation.
+            if cmc > 0.0:
+                ec1 = shdfac * ((cmc/cmcmax)**cfactr) * etp1
+            else:
+                ec1 = 0.0
+
+            # ec should be limited by the total amount of available water on the canopy
+            cmc2ms = cmc / dt
+            ec1 = min(cmc2ms, ec1)
+
+    eta1 = edir1 + ett1 + ec1
+
+    return eta1, edir1, ec1, et1, ett1
 
 
 def shflx(
@@ -1063,13 +1155,23 @@ def shflx(
     nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
     psisat, bexp, df1, ice, quartz, csoil, vegtyp,
     # in/outs
-    stc, t1, tbot, sh2o,
-    # outputs
-    ssoil
+    stc, t1, tbot, sh2o
 ):
     # --- ... subprograms called: hstep, hrtice, hrt
-    # TODO
-    pass
+
+    # updates the temperature state of the soil column
+
+    ctfil1 = 0.5
+    ctfil2 = 1.0 - ctfil1
+
+    oldt1 = t1
+    stsoil = stc
+
+    if ice != 0:  # sea-ice or glacial ice case
+        hrtice(nsoil, stc, zsoil, yy, zz1, df1, ice, tbot,
+               rhsts, ai, bi, ci)
+
+    return ssoil
 
 
 def smflx(
@@ -1078,13 +1180,57 @@ def smflx(
     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
     edir1, ec1, et1,
     # in/outs
-    cmc, sh2o,
-    # outputs
-    smc, runoff1, runoff2, runoff3, drip
+    cmc, sh2o
 ):
     # --- ... subprograms called: srt, sstep
-    # TODO
-    pass
+
+    dummy = 0.
+
+    # compute the right hand side of the canopy eqn term
+    rhsct = shdfac*prcp1 - ec1
+
+    drip = 0.
+    trhsct = dt * rhsct
+    excess = cmc + trhsct
+
+    if excess > cmcmax:
+        drip = excess - cmcmax
+
+    # pcpdrp is the combined prcp1 and drip (from cmc) that goes into the soil
+    pcpdrp = (1.0 - shdfac)*prcp1 + drip/dt
+
+    # store ice content at each soil layer before calling srt & sstep
+    # TODO: smc is not declared how to use it here?
+    #sice = smc - sh2o
+    sice = smcmax-sh2o  # only a suggestion
+
+    if (pcpdrp*dt) > (0.001*1000.0*(-zsoil[0])*smcmax):
+        #     rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
+        #                                               dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice)
+
+        #     sh2ofg, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
+        #                                  dummy, rhstt, ai, bi, ci)
+
+        #     sh2oa = (sh2o + sh2ofg) * 0.5
+
+        #     rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
+        #                                               dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice)
+
+        #     sh2ofg, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
+        #                                  dummy, rhstt, ai, bi, ci)
+
+        # not called
+        print("Error: case not implemented")
+
+    else:
+        srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
+            dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,
+            rhstt, runoff1, runoff2, ai, bi, ci)
+
+        sh2ofg, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
+                                     dummy, rhstt, ai, bi, ci)
+
+    return smc, runoff1, runoff2, runoff3, drip
 
 
 def snowpack(
@@ -1103,15 +1249,22 @@ def snowpack(
 # *************************************
 
 
-def devap(
-    # inputs
-    etp1, smc, shdfac, smcmax, smcdry, fxexp,
-    # outputs
-    edir1
-):
+def devap(etp1, smc, shdfac, smcmax, smcdry, fxexp):
     # --- ... subprograms called: none
-    # TODO
-    pass
+
+    # calculates direct soil evaporation
+
+    sratio = (smc - smcdry) / (smcmax - smcdry)
+
+    if sratio > 0.0:
+        fx = sratio**fxexp
+        fx = max(min(fx, 1.0), 0.0)
+    else:
+        fx = 0.0
+
+    # allow for the direct-evap-reducing effect of shade
+    edir1 = fx * (1.0 - shdfac) * etp1
+    return edir1
 
 
 def frh2o(
@@ -1149,8 +1302,58 @@ def hrtice(
     rhsts, ai, bi, ci
 ):
     # --- ... subprograms called: none
-    # TODO
-    pass
+
+    # calculates the right hand side of the time tendency
+    # term of the soil thermal diffusion equation for sea-ice or glacial-ice
+
+    # set a nominal universal value of specific heat capacity
+    if ice == 1:        # sea-ice
+        hcpct = 1.72396e+6
+        tbot = 271.16
+    else:               # glacial-ice
+        hcpct = 1.89000e+6
+
+    # set ice pack depth
+    if ice == 1:
+        zbot = zsoil[-1]
+    else:
+        zbot = -25.0
+
+    # calc the matrix coefficients ai, bi, and ci for the top layer
+    ddz = 1.0 / (-0.5*zsoil[1])
+    ai[0] = 0.0
+    ci[0] = (df1*ddz) / (zsoil[0]*hcpct)
+    bi[0] = -ci[0] + df1 / (0.5*zsoil[0]*zsoil[0]*hcpct*zz1)
+
+    # calc the vertical soil temp gradient btwn the top and 2nd soil
+    dtsdz = (stc[0] - stc[1]) / (-0.5*zsoil[1])
+    ssoil = df1 * (stc[0] - yy) / (0.5*zsoil[0]*zz1)
+    rhsts[0] = (df1*dtsdz - ssoil) / (zsoil[0]*hcpct)
+
+    ddz = 0.0
+
+    # the remaining soil layers, repeating the above process
+    denom = 0.5 * (zsoil[:-2] - zsoil[2:])
+    dtsdz2 = (zsoil[1:-1] - zsoil[2:]) / denom
+    ddz2 = 2.0 / (zsoil[:-2] - zsoil[2:])
+    ci[1:-1] = -df1*ddz2 / ((zsoil[:-2] - zsoil[1:-1])*hcpct)
+
+    # lowest layer
+    dtsdz2.append(stc[-1] - tbot) / (0.5 * (zsoil[-2]-zsoil[-1]) - zbot)
+    ci[-1] = 0.0
+
+    ddz.append(ddz2[:-1])
+    dtsdz.append(dtsdz2[:-1])
+
+    # calc rhsts for this layer after calc'ng a partial product.
+    denom = (zsoil[1:] - zsoil[:-1]) * hcpct
+    rhsts[1:] = (df1*dtsdz2 - df1*dtsdz) / denom
+
+    # calc matrix coefs
+    ai[1:] = - df1*ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct)
+    bi[1:] = -(ai[1:] + ci[1:])
+
+    return
 
 
 def hstep(
@@ -1200,8 +1403,82 @@ def srt(
     rhstt, runoff1, runoff2, ai, bi, ci
 ):
     # --- ... subprograms called: wdfcnd
-    # TODO
-    pass
+
+    # determine rainfall infiltration rate and runoff
+    cvfrz = 3
+    iohinf = 1
+
+    sicemax = np.max(sice)
+
+    pddum = pcpdrp
+    runoff1 = 0.0
+
+    if pcpdrp != 0:
+        # frozen ground version
+        dt1 = dt/86400.
+        smcav = smcmax - smcwlt
+        dmax = -zsoil(1) * smcav
+        dmax.append((zsoil[:-1]-zsoil[1:]) * smcav)
+        dmax *= 1.0 - (sh2oa + sice - smcwlt)/smcav
+
+        dice = -zsoil[0] * sice[0] + np.sum((zsoil[:-1]-zsoil[1:]) * sice[1:])
+        dd = np.sum(dmax)
+
+        val = 1.0 - np.exp(-kdt*dt1)
+        ddt = dd * val
+
+        px = pcpdrp * dt
+
+        if px < 0.0:
+            px = 0.0
+
+        infmax = (px*(ddt/(px+ddt)))/dt
+
+        # reduction of infiltration based on frozen ground parameters
+        fcr = 1.
+
+        if dice > 1.e-2:
+            acrt = cvfrz * frzx / dice
+            ialp1 = cvfrz - 1
+
+            j = np.arange(ialp1)
+            sum = np.sum(np.power(acrt, cvfrz - j) /
+                         (np.factorial(ialp1)/np.factorial(j)))
+
+            fcr = 1. - np.exp(-acrt) * sum
+
+        infmax *= fcr
+
+        # correction of infiltration limitation
+        mxsmc = sh2oa[0]
+
+        wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
+
+        infmax = max(infmax, wcnd)
+        infmax = min(infmax, px)
+
+        if pcpdrp > infmax:
+            runoff1 = pcpdrp - infmax
+            pddum = infmax
+
+        # TODO: necessary to redo?
+        mxsmc = sh2oa[0]
+        wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
+
+        # calc the matrix coefficients ai, bi, and ci for the top layer
+        ddz = 1.0 / (-.5*zsoil[1])
+        ai[0] = 0.0
+        bi[0] = wdf * ddz / (-zsoil[0])
+        ci[0] = -bi[0]
+
+        # TODO: change so we do not have to use for loop
+        dsmdz = (sh2o[0] - sh2o[1]) / (-.5*zsoil[1])
+        rhstt[0] = (wdf*dsmdz + wcnd - pddum + edir + et[0]) / zsoil[0]
+        sstt = wdf * dsmdz + wcnd + edir + et[0]
+
+        # TODO: finish last part
+
+    return
 
 
 def sstep(
@@ -1210,11 +1487,11 @@ def sstep(
     # in/outs
     cmc, rhstt, ai, bi, ci,
     # outputs
-    sh2oout, runoff3, smc
 ):
     # --- ... subprograms called: rosr12
     # TODO
-    pass
+    sh2oout = runoff3 = smc = 0
+    return sh2oout, runoff3, smc
 
 
 def tbnd(
@@ -1242,13 +1519,30 @@ def tmpavg(
 def transp(
     # inputs
     nsoil, nroot, etp1, smc, smcwlt, smcref,
-    cmc, cmcmax, zsoil, shdfac, pc, cfactr, rtdis,
-    # outputs
-    et1
+    cmc, cmcmax, zsoil, shdfac, pc, cfactr, rtdis
 ):
     # --- ... subprograms called: none
-    # TODO
-    pass
+
+    # calculates transpiration for the veg class
+
+    # initialize plant transp to zero for all soil layers.
+    et1 = init_array(nsoil, "zeros")
+
+    if cmc != 0.0:
+        etp1a = shdfac * pc * etp1 * (1.0 - (cmc / cmcmax) ** cfactr)
+    else:
+        etp1a = shdfac * pc * etp1
+
+    gx = np.maximum(np.minimum((smc - smcwlt) / (smcref - smcwlt), 1.0), 0.0)
+    sgx = np.sum(gx)
+
+    rtx = rtdis + gx - sgx
+    gx *= np.maximum(rtx, 0.0)
+    denom = np.sum(gx)
+
+    et1 = etp1a * gx / denom
+
+    return et1
 
 
 def wdfcnd(
