@@ -1,6 +1,6 @@
       subroutine sflx                                                   &
 
-           ( nsoil, couple, icein, ffrozp, dt, zlvl, sldpth,            &
+           (nsoil, couple, icein, ffrozp, dt, zlvl, sldpth,             &
              swdn, swnet, lwdn, sfcems, sfcprs, sfctmp,                 &
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
              vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,            &
@@ -384,9 +384,7 @@
 !            the quartz content of the given soil class (see routine redprm)
 
         call tdfcnd                                                     &
-!  ---  inputs:
            ( smc(1), quartz, smcmax, sh2o(1),                           &
-!  ---  outputs:
              df1                                                        &
            )
 !       if(ivegsrc == 1) then
@@ -692,7 +690,6 @@
 !  section-1  1st level subprograms   !
 !*************************************!
 
-!-----------------------------------
       subroutine alcalc
           albedo = alb + sncovr*(snoalb - alb)
 
@@ -873,22 +870,17 @@
 !  --- ...  convert prcp from 'kg m-2 s-1' to 'm s-1'.
 
         call evapo                                                      &
-!  ---  inputs:
            ( nsoil, nroot, cmc, cmcmax, etp1, dt, zsoil,                &
              sh2o, smcmax, smcwlt, smcref, smcdry, pc,                  &
              shdfac, cfactr, rtdis, fxexp,                              &
-!  ---  outputs:
              eta1, edir1, ec1, et1, ett1                                &
            )
 
         call smflx                                                      &
-!  ---  inputs:
            ( nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,             &
              zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,            &
              edir1, ec1, et1,                                           &
-!  ---  input/outputs:
              cmc, sh2o,                                                 &
-!  ---  outputs:
              smc, runoff1, runoff2, runoff3, drip                       &
            )
 
@@ -905,13 +897,10 @@
         prcp1 = prcp1 + dew
 
         call smflx                                                      &
-!  ---  inputs:
            ( nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,             &
              zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,            &
              edir1, ec1, et1,                                           &
-!  ---  input/outputs:
              cmc, sh2o,                                                 &
-!  ---  outputs:
              smc, runoff1, runoff2, runoff3, drip                       &
            )
 
@@ -945,9 +934,7 @@
 !           call shflx to compute/update soil heat flux and soil temps.
 
       call tdfcnd                                                       &
-!  ---  inputs:
            ( smc(1), quartz, smcmax, sh2o(1),                           &
-!  ---  outputs:
              df1                                                        &
            )
 !      if(ivegsrc == 1) then
@@ -975,12 +962,9 @@
       zz1 = df1/(-0.5*zsoil(1)*rch*rr) + 1.0
 
       call shflx                                                        &
-!  ---  inputs:
            ( nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,              &
              psisat, bexp, df1, ice, quartz, csoil, vegtyp,             &
-!  ---  input/outputs:
              stc, t1, tbot, sh2o,                                       &
-!  ---  outputs:
              ssoil                                                      &
            )
 
@@ -1503,11 +1487,9 @@
           if (sncovr < 1.0) then
 
             call evapo                                                  &
-!  ---  inputs:
            ( nsoil, nroot, cmc, cmcmax, etp1, dt, zsoil,                &
              sh2o, smcmax, smcwlt, smcref, smcdry, pc,                  &
              shdfac, cfactr, rtdis, fxexp,                              &
-!  ---  outputs:
              etns1, edir1, ec1, et1, ett1                               &
            )
 
@@ -1702,13 +1684,10 @@
       if (ice == 0) then
 
         call smflx                                                        &
-!  ---  inputs:
            ( nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,               &
              zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,              &
              edir1, ec1, et1,                                             &
-!  ---  input/outputs:
              cmc, sh2o,                                                   &
-!  ---  outputs:
              smc, runoff1, runoff2, runoff3, drip                         &
            )
 
@@ -1732,12 +1711,9 @@
 !           updated instead near the beginning of the call to snopac.
 
       call shflx                                                        &
-!  ---  inputs:
            ( nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,              &
              psisat, bexp, df1, ice, quartz, csoil, vegtyp,             &
-!  ---  input/outputs:
              stc, t11, tbot, sh2o,                                      &
-!  ---  outputs:
              ssoil1                                                     &
            )
 
@@ -1749,9 +1725,7 @@
         if (sneqv > 0.0) then
 
           call snowpack                                                 &
-!  ---  inputs:
            ( sneqv, dt, t1, yy,                                         &
-!  ---  input/outputs:
              snowh, sndens                                              &
            )
 
@@ -1776,9 +1750,7 @@
         if (sneqv >= 0.01) then
 
           call snowpack                                                 &
-!  ---  inputs:
            ( sneqv, dt, t1, yy,                                         &
-!  ---  input/outputs:
              snowh, sndens                                              &
            )
 
@@ -1798,9 +1770,7 @@
         if (sneqv >= 0.10) then
 
           call snowpack                                                 &
-!  ---  inputs:
            ( sneqv, dt, t1, yy,                                         &
-!  ---  input/outputs:
              snowh, sndens                                              &
            )
 
@@ -2110,9 +2080,7 @@
         if (shdfac < 1.0) then
 
           call devap                                                    &
-!  ---  inputs:
            ( etp1, sh2o(1), shdfac, smcmax, smcdry, fxexp,              &
-!  ---  outputs:
              edir1                                                      &
            )
 
@@ -2124,10 +2092,8 @@
         if (shdfac > 0.0) then
 
           call transp                                                   &
-!  ---  inputs:
            ( nsoil, nroot, etp1, sh2o, smcwlt, smcref,                   &
              cmc, cmcmax, zsoil, shdfac, pc, cfactr, rtdis,             &
-!  ---  outputs:
              et1                                                        &
            )
 
@@ -2250,20 +2216,14 @@
 !  --- ...  sea-ice case, glacial-ice case
 
         call hrtice                                                     &
-!  ---  inputs:
            ( nsoil, stc, zsoil, yy, zz1, df1, ice,                      &
-!  ---  input/outputs:
              tbot,                                                      &
-!  ---  outputs:
              rhsts, ai, bi, ci                                          &
            )
 
         call hstep                                                      &
-!  ---  inputs:
            ( nsoil, stc, dt,                                            &
-!  ---  input/outputs:
              rhsts, ai, bi, ci,                                         &
-!  ---  outputs:
              stcf                                                       &
            )
 
@@ -2272,22 +2232,16 @@
 !  --- ...  land-mass case
 
         call hrt                                                        &
-!  ---  inputs:
            ( nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,             &
              zbot, psisat, dt, bexp, df1, quartz, csoil,vegtyp,         &
              shdfac,                                                    &
-!  ---  input/outputs:
              sh2o,                                                      &
-!  ---  outputs:
              rhsts, ai, bi, ci                                          &
            )
 
         call hstep                                                      &
-!  ---  inputs:
            ( nsoil, stc, dt,                                            &
-!  ---  input/outputs:
              rhsts, ai, bi, ci,                                         &
-!  ---  outputs:
              stcf                                                       &
            )
 
@@ -2458,19 +2412,14 @@
 !           added.  all water balance calculations using unfrozen water
 
         call srt                                                        &
-!  ---  inputs:
            ( nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,       &
              dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,   &
-!  ---  outputs:
              rhstt, runoff1, runoff2, ai, bi, ci                        &
            )
 
         call sstep                                                      &
-!  ---  inputs:
            ( nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,       &
-!  ---  input/outputs:
              dummy, rhstt, ai, bi, ci,                                  &
-!  ---  outputs:
              sh2ofg, runoff3, smc                                       &
            )
 
@@ -2479,38 +2428,28 @@
         enddo
 
         call srt                                                        &
-!  ---  inputs:
            ( nsoil, edir1, et1, sh2o, sh2oa, pcpdrp, zsoil, dwsat,      &
              dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,   &
-!  ---  outputs:
              rhstt, runoff1, runoff2, ai, bi, ci                        &
            )
 
         call sstep                                                      &
-!  ---  inputs:
            ( nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,       &
-!  ---  input/outputs:
              cmc, rhstt, ai, bi, ci,                                    &
-!  ---  outputs:
              sh2o, runoff3, smc                                         &
            )
 
       else
 
         call srt                                                        &
-!  ---  inputs:
            ( nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,       &
              dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,   &
-!  ---  outputs:
              rhstt, runoff1, runoff2, ai, bi, ci                        &
            )
 
         call sstep                                                      &
-!  ---  inputs:
            ( nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,       &
-!  ---  input/outputs:
              cmc, rhstt, ai, bi, ci,                                    &
-!  ---  outputs:
              sh2o, runoff3, smc                                         &
            )
 
@@ -3032,9 +2971,7 @@
         tsurf = (yy + (zz1-1)*stc(1)) / zz1
 
         call tbnd                                                       &
-!  ---  inputs:
            ( stc(1), stc(2), zsoil, zbot, 1, nsoil,                     &
-!  ---  outputs:
              tbk                                                        &
            )
 
@@ -3055,9 +2992,7 @@
         if (itavg) then
 
           call tmpavg                                                   &
-!  ---  inputs:
            ( tsurf, stc(1), tbk, zsoil, nsoil, 1,                       &
-!  ---  outputs:
              tavg                                                       &
            )
 
@@ -3068,12 +3003,9 @@
         endif   ! end if_itavg_block
 
         call snksrc                                                     &
-!  ---  inputs:
            ( nsoil, 1, tavg, smc(1), smcmax, psisat, bexp, dt,          &
              qtot, zsoil, shdfac,                                       &
-!  ---  input/outputs:
              sh2o(1),                                                   &
-!  ---  outputs:
              tsnsr                                                      &
            )
 
@@ -3106,9 +3038,7 @@
 !           calculate thermal diffusivity for this layer.
 
           call tdfcnd                                                   &
-!  ---  inputs:
            ( smc(k), quartz, smcmax, sh2o(k),                           &
-!  ---  outputs:
              df1n                                                       &
            )
 !urban
@@ -3136,9 +3066,7 @@
           if (itavg) then
 
             call tbnd                                                   &
-!  ---  inputs:
            ( stc(k), stc(k+1), zsoil, zbot, k, nsoil,                   &
-!  ---  outputs:
              tbk1                                                       &
            )
 
@@ -3150,9 +3078,7 @@
 !           for bottom layer.
 
           call tdfcnd                                                   &
-!  ---  inputs:
            ( smc(k), quartz, smcmax, sh2o(k),                           &
-!  ---  outputs:
              df1n                                                       &
            )
 !urban
@@ -3179,9 +3105,7 @@
           if (itavg) then
 
             call tbnd                                                   &
-!  ---  inputs:
            ( stc(k), tbot, zsoil, zbot, k, nsoil,                       &
-!  ---  outputs:
              tbk1                                                       &
            )
 
@@ -3203,9 +3127,7 @@
           if (itavg) then
 
             call tmpavg                                                 &
-!  ---  inputs:
            ( tbk, stc(k), tbk1, zsoil, nsoil, k,                        &
-!  ---  outputs:
              tavg                                                       &
            )
 
@@ -3214,12 +3136,9 @@
           endif
 
           call snksrc                                                   &
-!  ---  inputs:
            ( nsoil, k, tavg, smc(k), smcmax, psisat, bexp, dt,          &
              qtot, zsoil, shdfac,                                       &
-!  ---  input/outputs:
              sh2o(k),                                                   &
-!  ---  outputs:
              tsnsr                                                      &
            )
 
@@ -3254,55 +3173,16 @@
              rhsts, ai, bi, ci                                          &
            )
 
-! ===================================================================== !
-!  description:                                                         !
-!                                                                       !
-!  subroutine hrtice calculates the right hand side of the time tendency!
-!  term of the soil thermal diffusion equation for sea-ice (ice = 1) or !
-!  glacial-ice (ice). compute (prepare) the matrix coefficients for the !
-!  tri-diagonal matrix of the implicit time scheme.                     !
-!  (note:  this subroutine only called for sea-ice or glacial ice, but  !
-!  not for non-glacial land (ice = 0).                                  !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs:                                                       size   !
-!     nsoil    - integer, number of soil layers                    1    !
-!     stc      - real, soil temperature                          nsoil  !
-!     zsoil    - real, soil depth (negative sign, as below grd)  nsoil  !
-!     yy       - real, soil temperature at the top of column       1    !
-!     zz1      - real,                                             1    !
-!     df1      - real, thermal diffusivity and conductivity        1    !
-!     ice      - integer, sea-ice flag (=1: sea-ice, =0: land)     1    !
-!                                                                       !
-!  input/outputs:                                                       !
-!     tbot     - real, bottom soil temperature                     1    !
-!                                                                       !
-!  outputs:                                                             !
-!     rhsts    - real, time tendency of soil thermal diffusion   nsoil  !
-!     ai       - real, matrix coefficients                       nsold  !
-!     bi       - real, matrix coefficients                       nsold  !
-!     ci       - real, matrix coefficients                       nsold  !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  inputs:
       integer, intent(in) :: nsoil, ice
 
       real (kind=kind_phys), intent(in) :: stc(nsoil), zsoil(nsoil),    &
              yy, zz1, df1
 
-!  ---  input/outputs:
       real (kind=kind_phys), intent(inout) :: tbot
 
-!  ---  outputs:
       real (kind=kind_phys), intent(out) :: rhsts(nsoil), ai(nsold),    &
              bi(nsold), ci(nsold)
 
-!  ---  locals:
       real (kind=kind_phys) :: ddz, ddz2, denom, dtsdz, dtsdz2,         &
              hcpct, ssoil, zbot
 
@@ -3490,11 +3370,8 @@
 !  --- ...  solve the tri-diagonal matrix equation
 
       call rosr12                                                       &
-!  ---  inputs:
            ( nsoil, ai, bi, rhstsin,                                    &
-!  ---  input/outputs:
              ciin,                                                      &
-!  ---  outputs:
              ci, rhsts                                                  &
            )
 
@@ -3611,10 +3488,7 @@
 !-----------------------------------
       subroutine snksrc                                                 &
            ( nsoil, k, tavg, smc, smcmax, psisat, bexp, dt,             &
-             qtot, zsoil, shdfac,                                       &
-             sh2o,                                                      &
-             tsrc                                                       &
-           )
+             qtot, zsoil, shdfac,sh2o,tsrc)
 
 ! ===================================================================== !
 !  description:                                                         !
@@ -3694,9 +3568,7 @@
 !     free = frh2o( tavg,smc,sh2o,smcmax,bexp,psisat )
 
       call frh2o                                                        &
-!  ---  inputs:
            ( tavg, smc, sh2o, smcmax, bexp, psisat,                     &
-!  ---  outputs:
              free                                                       &
            )
 
@@ -3922,9 +3794,7 @@
         mxsmc = sh2oa(1)
 
         call wdfcnd                                                     &
-!  ---  inputs:
            ( mxsmc, smcmax, bexp, dksat, dwsat, sicemax,                &
-!  ---  outputs:
              wdf, wcnd                                                  &
            )
 
@@ -3945,9 +3815,7 @@
       mxsmc = sh2oa(1)
 
       call wdfcnd                                                       &
-!  ---  inputs:
            ( mxsmc, smcmax, bexp, dksat, dwsat, sicemax,                &
-!  ---  outputs:
              wdf, wcnd                                                  &
            )
 
@@ -3984,9 +3852,7 @@
           mxsmc2 = sh2oa(k)
 
           call wdfcnd                                                   &
-!  ---  inputs:
            ( mxsmc2, smcmax, bexp, dksat, dwsat, sicemax,               &
-!  ---  outputs:
              wdf2, wcnd2                                                &
            )
 
@@ -4010,9 +3876,7 @@
 !           for this layer
 
           call wdfcnd                                                   &
-!  ---  inputs:
            ( sh2oa(nsoil), smcmax, bexp, dksat, dwsat, sicemax,         &
-!  ---  outputs:
              wdf2, wcnd2                                                &
            )
 
@@ -4144,11 +4008,8 @@
 !  --- ...  call rosr12 to solve the tri-diagonal matrix
 
       call rosr12                                                       &
-!  ---  inputs:
            ( nsoil, ai, bi, rhsttin,                                    &
-!  ---  input/outputs:
              ciin,                                                      &
-!  ---  outputs:
              ci, rhstt                                                  &
            )
 
@@ -4367,11 +4228,10 @@
 
 
 !-----------------------------------
-      subroutine transp                                                    &
+      subroutine transp                                                 &
            ( nsoil, nroot, etp1, smc, smcwlt, smcref,                   &
              cmc, cmcmax, zsoil, shdfac, pc, cfactr, rtdis,             &
-             et1                                                        &
-           )
+             et1)
 
 ! ===================================================================== !
 !  description:                                                         !
@@ -4501,38 +4361,11 @@
              wdf, wcnd                                                  &
            )
 
-! ===================================================================== !
-!  description:                                                         !
-!     subroutine wdfcnd calculates soil water diffusivity and soil      !
-!     hydraulic conductivity.                                           !
-!                                                                       !
-!  subprogram called:  none                                             !
-!                                                                       !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs:                                                       size   !
-!     smc      - real, layer total soil moisture                   1    !
-!     smcmax   - real, porosity                                    1    !
-!     bexp     - real, soil type "b" parameter                     1    !
-!     dksat    - real, saturated soil hydraulic conductivity       1    !
-!     dwsat    - real, saturated soil diffusivity                  1    !
-!     sicemax  - real, max frozen water content in soil layer      1    !
-!                                                                       !
-!  outputs:                                                             !
-!     wdf      - real, soil water diffusivity                      1    !
-!     wcnd     - real, soil hydraulic conductivity                 1    !
-!                                                                       !
-!  ====================    end of description    =====================  !
-!
-!  ---  input:
       real (kind=kind_phys), intent(in)  :: smc, smcmax, bexp, dksat,   &
              dwsat, sicemax
 
-!  ---  output:
       real (kind=kind_phys), intent(out) :: wdf, wcnd
 
-!  ---  locals:
       real (kind=kind_phys) :: expon, factr1, factr2, vkwgt
 !
 !===> ...  begin here

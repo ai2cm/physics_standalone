@@ -464,17 +464,14 @@ first_iter = .true.
 !  --- ...  call noah lsm
 
      call sflx                                                     &
-!  ---  inputs:
 &     ( nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,            &
 &       swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,                &
 &       sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
 &       vtype, stype, slope, shdmin1d, alb, snoalb1d,              &
-&       bexpp, xlaip,                                              & ! sfc-perts, mgehne
-&       lheatstrg, first_iter, iter, ser_count_str,                                                &
-!  ---  input/outputs:
+&       bexpp, xlaip,                                              & 
+&       lheatstrg, first_iter, iter, ser_count_str,                &
 &       tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx,  &
 &       z0,                                                        &
-!  ---  outputs:
 &       nroot, shdfac, snowh, albedo, eta, sheat, ec,              &
 &       edir, et, ett, esnow, drip, dew, beta, etp, ssoil,         &
 &       flx1, flx2, flx3, runoff1, runoff2, runoff3,               &
