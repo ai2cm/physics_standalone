@@ -1,5 +1,4 @@
       subroutine sflx                                                   &
-
            (nsoil, couple, icein, ffrozp, dt, zlvl, sldpth,             &
              swdn, swnet, lwdn, sfcems, sfcprs, sfctmp,                 &
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
@@ -144,6 +143,16 @@
 !           including soil-type and veg-type dependent parameters.
 !           set shdfac=0.0 for bare soil surfaces
 
+      call redprm
+!  ---  inputs:                                                            !
+!          ( nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil,              !
+!  ---  outputs:                                                           !
+!            cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,              !
+!            sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,            !
+!            snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,               !
+!            smcref, smcdry, f1, quartz, fxexp, rtdis, nroot,              !
+!            z0, czil, xlai, csoil )                                       !
+
       !$ser mode write
       !$ser verbatim if (iter == 1) then
       !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
@@ -152,10 +161,13 @@
       !$ser verbatim end if
 
       !$ser verbatim if (first_iter) then
-      !$ser data zsoil2_ref=zsoil
+      !$ser data cfactr_ref=cfactr cmcmax_ref=cmcmax rsmin_ref=rsmin rsmax_ref=rsmax topt_ref=topt refkdt_ref=refkdt kdt_ref=kdt 
+      !$ser data sbeta_ref=sbeta shdfac_ref=shdfac rgl_ref=rgl hs_ref=hs zbot_ref=zbot frzx_ref=frzx psisat_ref=psisat slope_ref=slope
+      !$ser data snup_ref=snup salp_ref=salp bexp_ref=bexp dksat_ref=dksat dwsat_ref=dwsat smcmax_ref=smcmax smcwlt_ref=smcwlt
+      !$ser data smcref_ref=smcref smcdry_ref=smcdry f1_ref=f1 quartz_ref=quartz fxexp_ref=fxexp rtdis_ref=rtdis nroot_ref=nroot
+      !$ser data z0_ref=z0 czil_ref=czil xlai_ref=xlai csoil_ref=csoil
       !$ser verbatim end if
 
-      call redprm
         if(ivegsrc == 1) then
 !only igbp type has urban
 !urban
@@ -174,16 +186,6 @@
               smcdry = 0.40*(1-shdfac0)+smcdry*shdfac0
          endif
         endif
-
-!  ---  inputs:                                                            !
-!          ( nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil,              !
-!  ---  outputs:                                                           !
-!            cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,              !
-!            sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,            !
-!            snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,               !
-!            smcref, smcdry, f1, quartz, fxexp, rtdis, nroot,              !
-!            z0, czil, xlai, csoil )                                       !
-
 
 !  --- ...  bexp sfc-perts, mgehne
       if( bexpp < 0.) then
@@ -1124,6 +1126,7 @@
       do i = 1, nroot
         rtdis(i) = -sldpth(i) / zsoil(nroot)
       enddo
+      
 
 !  --- ...  set-up slope parameter
 

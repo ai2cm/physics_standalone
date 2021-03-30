@@ -100,11 +100,11 @@ f11 = np.zeros(satdk.size)
 refsmc = np.zeros(satdk.size)
 wltsmc = np.zeros(satdk.size)
 
-i = (satdk > 0.) & (bb > 0.)
-satdw[i] = bb[i] * satdk[i] / maxsmc[i]
+i = (satdk != 0.) & (bb > 0.)
+satdw[i] = bb[i] * satdk[i] * satpsi[i]/ maxsmc[i]
 f11[i] = np.log10(satpsi[i]) + bb[i]*np.log10(maxsmc[i]) + 2.0
-refsmc1 = maxsmc[i]*np.power(5.79E-9/satdk[i], 1.0/(2.0*bb[i] + 3-0))
-refsmc[i] = (maxsmc[i]-refsmc1)/smhigh
+refsmc1 = maxsmc[i]*np.power(5.79E-9/satdk[i], 1.0/(2.0*bb[i] + 3.0))
+refsmc[i] = refsmc1 + (maxsmc[i]-refsmc1)/smhigh
 wltsmc1 = maxsmc[i] * np.power(200./satpsi[i], -1./bb[i])
 wltsmc[i] = wltsmc1 - smlow*wltsmc1
 

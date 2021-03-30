@@ -21,8 +21,13 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
-IN_VARS2 = ["zsoil_noah_ref", "canopy_ref", "q0_ref", "theta1_ref", "rho_ref", "qs1_ref", "zsoil_ref", "flag_test_ref", \
-            "sldpth_ref"]
+IN_VARS2 = ["sldpth_ref","cfactr_ref", "cmcmax_ref", "rsmin_ref", "rsmax_ref", "topt_ref", "refkdt_ref", "kdt_ref",\
+        "sbeta_ref", "rgl_ref", "hs_ref", "zbot_ref", "frzx_ref", "psisat_ref", "slope_ref",\
+        "snup_ref", "salp_ref", "bexp_ref", "dksat_ref", "dwsat_ref", "smcmax_ref", "smcwlt_ref",\
+        "smcref_ref", "smcdry_ref", "f1_ref", "quartz_ref", "fxexp_ref", "rtdis_ref", "nroot_ref", \
+        "czil_ref", "xlai_ref", "csoil_ref"]
+# IN_VARS2 = ["zsoil_noah_ref", "canopy_ref", "q0_ref", "theta1_ref", "rho_ref", "qs1_ref", "zsoil_ref", "flag_test_ref", \
+#             "sldpth_ref", "zsoil2_ref"]
 
 OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
             "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \

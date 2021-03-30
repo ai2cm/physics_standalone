@@ -32,8 +32,11 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    zsoil_noah_ref, canopy_ref, q0_ref, theta1_ref, rho_ref, qs1_ref, zsoil_ref, flag_test_ref,
-    sldpth_ref,
+    sldpth_ref, cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
+        sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
+        snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
+        smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
+        czil_ref, xlai_ref, csoil_ref, 
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -43,6 +46,11 @@ def sfc_drv(
     smcwlt2, smcref2, wet1
 ):
     # --- ... subprograms called: ppfbet, sflx
+
+    # Fortran starts with one, python with zero
+    # TODO: check how to implement this fix nicely
+    vegtype -= 1
+    soiltyp -= 1
 
     # set constant parameters
     cpinv = 1./cp
@@ -120,28 +128,28 @@ def sfc_drv(
     zsoil[i, :] = zsoil_noah[:]
 
     # serialbox test
-    serialbox_test(zsoil_noah_ref, zsoil_noah, "zsoil_noah")
-    serialbox_test_special(q0_ref, q0, i, "q0")
-    serialbox_test_special(theta1_ref, theta1, i, "theta1")
-    serialbox_test_special(rho_ref, rho, i, "rho")
-    serialbox_test_special(qs1_ref, qs1, i, "qs1")
-    # test how wrong qs1 is
-    count = 5
-    for j in range(qs1.size):
-        if i[j]:
-            print("qs1 diff:", qs1[j] - qs1_ref[j])
-            count -= 1
-            if count == 0:
-                break
+    # serialbox_test(zsoil_noah_ref, zsoil_noah, "zsoil_noah")
+    # serialbox_test_special(q0_ref, q0, i, "q0")
+    # serialbox_test_special(theta1_ref, theta1, i, "theta1")
+    # serialbox_test_special(rho_ref, rho, i, "rho")
+    # serialbox_test_special(qs1_ref, qs1, i, "qs1")
+    # # test how wrong qs1 is
+    # count = 5
+    # for j in range(qs1.size):
+    #     if i[j]:
+    #         print("qs1 diff:", qs1[j] - qs1_ref[j])
+    #         count -= 1
+    #         if count == 0:
+    #             break
 
-    serialbox_test_special(zsoil_ref, zsoil, i, "zsoil")
-    serialbox_test(canopy_ref, canopy, "canopy")
-    serialbox_test(flag_test_ref, i, "flag_test")
+    # serialbox_test_special(zsoil_ref, zsoil, i, "zsoil")
+    # serialbox_test(canopy_ref, canopy, "canopy")
+    # serialbox_test(flag_test_ref, i, "flag_test")
 
     first_iter = True
     # noah: prepare variables to run noah lsm
     for i in range(0, im):
-        if not(flag_iter[i] & land[i]):
+        if not(flag_iter[i] and land[i]):
             continue
 
     # 1. configuration information
@@ -204,7 +212,7 @@ def sfc_drv(
 
         snowh = snwdph[i] * 0.001         # convert from mm to m
         sneqv = weasd[i] * 0.001         # convert from mm to m
-        if ((sneqv != 0.) & (snowh == 0.)):
+        if ((sneqv != 0.) and (snowh == 0.)):
             # not called
             # TODO: remove?
             snowh = 10.0 * sneqv
@@ -230,7 +238,13 @@ def sfc_drv(
                 sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
                 vtype, stype, slope, shdmin1d, alb, snoalb1d,
                 bexpp, xlaip, lheatstrg,
-                first_iter, zsoil_ref,
+                first_iter,
+                # Inputs to probe for port
+                cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
+                sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
+                snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
+                smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
+                czil_ref, xlai_ref, csoil_ref, sldpth_ref,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
                 # outputs
@@ -312,7 +326,13 @@ def sflx(
     sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,
     vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb,
     bexpp, xlaip, lheatstrg,
-    first_iter, zsoil_ref,
+    first_iter,
+    # Inputs to probe for port
+    cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
+    sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
+    snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
+    smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
+    czil_ref, xlai_ref, csoil_ref, sldpth_ref,
     # in/outs
     tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
@@ -334,13 +354,13 @@ def sflx(
     ice = icein
 
     # is not called
-    if ivegsrc == 2 & vegtyp == 13:
+    if ivegsrc == 2 and vegtyp == 13:
         ice = -1
         shdfac = 0.0
         # not called
         print("ERROR: not called")
 
-    if ivegsrc == 1 & vegtyp == 15:
+    if ivegsrc == 1 and vegtyp == 15:
         ice = -1
         shdfac = 0.0
 
@@ -349,19 +369,28 @@ def sflx(
         # not called TODO: set assert
         print("ERROR: case not implemented")
     else:
-        zsoil[0] = -sldpth[0]
-        zsoil[1:] = -sldpth[1:] + zsoil[:nsoil-1]
-    # if first_iter:
-    #     serialbox_test(zsoil_ref, zsoil, "zsoil")
+        # calculate depth (negative) below ground
+        zsoil = np.cumsum(-sldpth)
 
-    cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,\
-        sbeta, rgl, hs, zbot, frzx, psisat, slope,\
-        snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,\
-        smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
-        czil, xlai, csoil = redprm(
-            nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac)
+        cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,\
+            sbeta, rgl, hs, zbot, frzx, psisat, slope,\
+            snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,\
+            smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
+            czil, xlai, csoil = redprm(
+                nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac)
 
-    if ivegsrc == 1 & vegtyp == 13:
+    serialbox_test_function([cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
+                             sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
+                             snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
+                             smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
+                             czil_ref, xlai_ref, csoil_ref],
+                            [cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,
+                             sbeta, rgl, hs, zbot, frzx, psisat, slope,
+                             snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,
+                             smcref, smcdry, f1, quartz, fxexp, rtdis, nroot,
+                             czil, xlai, csoil], "redprm")
+
+    if ivegsrc == 1 and vegtyp == 13:
         rsmin = 400.0*(1-shdfac0)+40.0*shdfac0
         shdfac = shdfac0
         smcmax = 0.45*(1-shdfac0)+smcmax*shdfac0
@@ -385,7 +414,7 @@ def sflx(
     if ice == 1:
         # not called
         print("ERROR: case not implemented")
-    elif (ice == -1) & (sneqv < 0.10):
+    elif (ice == -1) and (sneqv < 0.10):
         # not called
         print("ERROR: case not implemented")
 
@@ -411,8 +440,8 @@ def sflx(
     # if it's prcping and the air temp is colder than 0 c, it's snowing!
     # if it's prcping and the air temp is warmer than 0 c, but the grnd
     # temp is colder than 0 c, freezing rain is presumed to be falling.
-    snowng = (prcp > 0.) & (ffrozp > 0.)
-    frzgra = (prcp > 0.) & (ffrozp <= 0.) & (t1 <= tfreez)
+    snowng = (prcp > 0.) and (ffrozp > 0.)
+    frzgra = (prcp > 0.) and (ffrozp <= 0.) and (t1 <= tfreez)
 
     # if either prcp flag is set, determine new snowfall (converting
     # prcp rate from kg m-2 s-1 to a liquid equiv snow depth in meters)
@@ -430,7 +459,7 @@ def sflx(
         sneqv = sneqv + sn_new
         prcp1 = 0.0
 
-    if snowng | frzgra:
+    if snowng or frzgra:
 
         # update snow density based on new snowfall, using old and new
         # snow.  update snow thermal conductivity
@@ -469,7 +498,7 @@ def sflx(
         # calculate the subsurface heat flux, which first requires calculation
         # of the thermal diffusivity.
         df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
-        if ivegsrc == 1 & vegtyp == 13:
+        if ivegsrc == 1 and vegtyp == 13:
             df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
         else:
             df1 = df1 * np.exp(sbeta*shdfac)
@@ -526,7 +555,7 @@ def sflx(
     cpx = cp
     cpx1 = cp1
     cpfac = 1.0
-    if lheatstrg & ((ivegsrc == 1 & vegtyp != 13) | ivegsrc == 2):
+    if lheatstrg and ((ivegsrc == 1 and vegtyp != 13) or ivegsrc == 2):
         # xx1 = (z0 - z0min) / (z0max - z0min)
         # xx2 = 1.0 + min(max(xx1, 0.0), 1.0)
         # cpx = cp * xx2
@@ -768,7 +797,7 @@ def nopac(
     # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
     df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
 
-    if (ivegsrc == 1) & (vegtyp == 13):
+    if (ivegsrc == 1) and (vegtyp == 13):
         df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
     else:
         df1 *= np.exp(sbeta*shdfac)
@@ -833,7 +862,6 @@ def penman(
 def redprm(
     # inputs
     nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac
-
 ):
     # --- ... subprograms called: none
 
@@ -882,7 +910,9 @@ def redprm(
 
     # calculate root distribution.  present version assumes uniform
     # distribution based on soil layer depths.
-    rtdis = - sldpth / zsoil[nroot]
+    # TODO: check if rtdis size of nsoil is needed or rather just
+    rtdis = init_array(nsoil, "zero")
+    rtdis[:nroot] = - sldpth[:nroot] / zsoil[nroot-1]
 
     # set-up slope parameter
     slope = slope_data[slopetyp]
@@ -1199,7 +1229,7 @@ def smflx(
     # pcpdrp is the combined prcp1 and drip (from cmc) that goes into the soil
     pcpdrp = (1.0 - shdfac)*prcp1 + drip/dt
 
-    # store ice content at each soil layer before calling srt & sstep
+    # store ice content at each soil layer before calling srt and sstep
     # TODO: smc is not declared how to use it here?
     #sice = smc - sh2o
     sice = smcmax-sh2o  # only a suggestion
@@ -1633,6 +1663,14 @@ def serialbox_test_special(fortran_sol, py_sol, flag_test, name):
         print(f'{name:14}', "IS CORRECT")
     else:
         errors = np.sum(fortran_sol[flag_test] - py_sol[flag_test] != 0.)
+        print(f'{name:14}', "IS FALSE!!!", errors, "wrong elements")
+
+
+def serialbox_test_function(fortran_sol, py_sol, name):
+    if(fortran_sol == py_sol):
+        print(f'{name:14}', "IS CORRECT")
+    else:
+        errors = np.sum(fortran_sol != py_sol)
         print(f'{name:14}', "IS FALSE!!!", errors, "wrong elements")
 
 
