@@ -576,7 +576,7 @@ def sflx(
                                                              smcdry, cmcmax, dt, shdfac, sbeta, sfctmp, sfcems,
                                                              t24, th2, fdown, epsca, bexp, pc, rch, rr, cfactr,
                                                              slope, kdt, frzx, psisat, zsoil, dksat, dwsat,
-                                                             zbot, ice, rtdis, quartz, fxexp, csoil,
+                                                             zbot, ice, rtdis, quartz, fxexp, csoil, ivegsrc, vegtyp,
                                                              cmc, t1, stc, sh2o, tbot)
 
     else:
@@ -724,7 +724,7 @@ def nopac(
     smcdry, cmcmax, dt, shdfac, sbeta, sfctmp, sfcems,
     t24, th2, fdown, epsca, bexp, pc, rch, rr, cfactr,
     slope, kdt, frzx, psisat, zsoil, dksat, dwsat,
-    zbot, ice, rtdis, quartz, fxexp, csoil,
+    zbot, ice, rtdis, quartz, fxexp, csoil, ivegsrc, vegtyp,
     # in/outs
     cmc, t1, stc, sh2o, tbot
 ):
@@ -793,7 +793,7 @@ def nopac(
     zz1 = df1/(-0.5*zsoil(1)*rch*rr) + 1.0
 
     ssoil = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
-                  psisat, bexp, df1, ice, quartz, csoil, vegtyp,
+                  psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
                   stc, t1, tbot, sh2o)
 
     flx1 = 0.0
@@ -1168,7 +1168,7 @@ def evapo(
 def shflx(
     # inputs
     nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
-    psisat, bexp, df1, ice, quartz, csoil, vegtyp,
+    psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
     # in/outs
     stc, t1, tbot, sh2o
 ):
@@ -1189,7 +1189,7 @@ def shflx(
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
     else:
         hrt(nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
-            zbot, psisat, dt, bexp, df1, quartz, csoil, vegtyp,
+            zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
             shdfac, sh2o, rhsts, ai, bi, ci)
 
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
@@ -1315,18 +1315,134 @@ def frh2o(
 def hrt(
     # inputs
     nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
-    zbot, psisat, dt, bexp, df1, quartz, csoil, vegtyp,
+    zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
     shdfac,
     # in/outs
     sh2o,
-    
+    # out
+    rhsts, ai, bi, ci
 ):
-    # --- ... subprograms called: tbnd, snksrc, tmpavg
-    # calculates the right hand side of the time tendency term 
-    # of the soil thermal diffusion equation
 
-    
-    return rhsts, ai, bi, ci
+    # --- ... subprograms called: tbnd, snksrc, tmpavg
+    # calculates the right hand side of the time tendency term
+    # of the soil thermal diffusion equation.
+
+    csoil_loc = csoil
+
+    if ivegsrc == 1 and vegtyp == 13:
+        csoil_loc = 3.0e6*(1.-shdfac)+csoil*shdfac
+
+    #  initialize logical for soil layer temperature averaging.
+    # TODO: can itavg be removed?
+    itavg = True
+
+    # calc the heat capacity of the top soil layer
+    hcpct = sh2o[0]*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+        (smcmax - smc[0])*cp2 + (smc[0] - sh2o[0])*cpice1
+
+    # calc the matrix coefficients ai, bi, and ci for the top layer
+    ddz = 1.0 / (-0.5*zsoil[1])
+    ai[0] = 0.0
+    ci[0] = (df1*ddz) / (zsoil[0]*hcpct)
+    bi[0] = -ci[0] + df1 / (0.5*zsoil[0]*zsoil[0]*hcpct*zz1)
+
+    # calc the vertical soil temp gradient btwn the top and 2nd soil
+    dtsdz = (stc[0] - stc[1]) / (-0.5*zsoil[1])
+    ssoil = df1 * (stc[0] - yy) / (0.5*zsoil[0]*zz1)
+    rhsts[0] = (df1*dtsdz - ssoil) / (zsoil[0]*hcpct)
+
+    # capture the vertical difference of the heat flux at top and
+    # bottom of first soil layer
+    qtot = ssoil - df1 * dtsdz
+
+    if itavg:
+        tsurf = (yy + (zz1-1)*stc[0]) / zz1
+        tbk = tbnd(stc[0], stc[2], zsoil, zbot, 1, nsoil)
+
+    # calculate frozen water content in 1st soil layer.
+    sice = smc[0] - sh2o[0]
+
+    if sice > 0. or tsurf > tfreez or stc[0] < tfreez or tbk < tfreez:
+        if itavg:
+            tavg = tmpavg(tsurf, stc[0], tbk, zsoil, nsoil, 1)
+        else:
+            tavg = stc[0]
+
+        tsnsr = snksrc(nsoil, 1, tavg, smc[0], smcmax, psisat, bexp, dt,
+                       qtot, zsoil, shdfac, sh2o[0])
+        rhsts[0] = tsnsr / (zsoil[0] * hcpct)
+
+    ddz2 = 0.
+
+    # loop thru the remaining soil layers, repeating the above process
+    df1k = df1
+
+    for k in range(1, nsoil):
+        hcpct = sh2o[k]*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+            (smcmax - smc[k])*cp2 + (smc[k] - sh2o[k])*cpice1
+
+        if k != nsoil:
+            df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
+
+            if ivegsrc == 1 and vegtyp == 13:
+                df1n = 3.24*(1.-shdfac) + shdfac*df1n
+
+            # calc the vertical soil temp gradient thru this layer
+            denom = 0.5 * zsoil[k-1] - zsoil[k+1]
+            dtsdz2 = (stc[k] - stc[k+1]) / denom
+
+            # calc the matrix coef, ci, after calc'ng its partial product
+            ddz2 = 2.0 / (zsoil[k-1] - zsoil[k+1])
+            ci[k] = - df1n*ddz2 / ((zsoil[k-1] - zsoil[k]) * hcpct)
+
+            # calculate temp at bottom of layer
+            if itavg:
+                tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
+
+        else:
+            # calculate thermal diffusivity for bottom layer
+            df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
+
+            if ivegsrc == 1 and vegtyp == 13:
+                df1n = 3.24*(1.-shdfac) + shdfac*df1n
+
+            # calc the vertical soil temp gradient thru this layer
+            denom = 0.5 * zsoil[k-1] - zsoil[k] - zbot
+            dtsdz2 = (stc[k] - tbot) / denom
+
+            # set matrix coef, ci to zero if bottom layer.
+            ci[k] = 0.
+
+            if itavg:
+                tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
+
+        # calculate rhsts
+        denom = (zsoil[k] - zsoil[k-1])*hcpct
+        rhsts[k] = (df1n*dtsdz2 - df1k*dtsdz)/denom
+
+        qtot = -1. * denom * rhsts[k]
+
+        if sice > 0. or tbk < tfreez or stc[k] < tfreez or tbk1 < tfreez:
+            if itavg:
+                tavg = tmpavg(tbk, stc[k], tbk1, zsoil, nsoil, k)
+            else:
+                tavg = stc[k]
+
+        tsnsr = snksrc(nsoil, k, tavg, smc[k], smcmax, psisat, bexp, dt,
+                       qtot, zsoil, shdfac, sh2o[k])
+        rhsts[k] -= tsnsr / denom
+
+        # calc matrix coefs, ai, and bi for this layer.
+        ai[k] = - df1 * ddz / ((zsoil[k-1] - zsoil[k]) * hcpct)
+        bi[k] = -(ai[k] + ci[k])
+
+        # reset values of df1, dtsdz, ddz, and tbk for loop to next soil layer.
+        tbk = tbk1
+        df1k = df1n
+        dtsdz = dtsdz2
+        ddz = ddz2
+
+    return
 
 
 def hrtice(
@@ -1449,13 +1565,10 @@ def snksrc(
     # inputs
     nsoil, k, tavg, smc, smcmax, psisat, bexp, dt,
     # in/outs
-    sh2o,
-    # outputs
-    tsrc
-):
+        sh2o):
     # --- ... subprograms called: frh2o
     # TODO
-    pass
+    return tsrc
 
 
 def srt(
@@ -1524,7 +1637,7 @@ def srt(
             runoff1 = pcpdrp - infmax
             pddum = infmax
 
-        # TODO: necessary to redo?
+        # TODO: necessary to re-do?
         mxsmc = sh2oa[0]
         wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
 
@@ -1557,26 +1670,19 @@ def sstep(
     return sh2oout, runoff3, smc
 
 
-def tbnd(
-    # inputs
-    tu, tb, zsoil, zbot, k, nsoil,
-    # outputs
-    tbnd1
-):
+def tbnd(tu, tb, zsoil, zbot, k, nsoil):
     # --- ... subprograms called: none
     # TODO
-    pass
+    return tbk
 
 
 def tmpavg(
     # inputs
-    tup, tm, tdn, zsoil, nsoil, k,
-    # outputs
-    tavg
+    tup, tm, tdn, zsoil, nsoil, k
 ):
     # --- ... subprograms called: none
     # TODO
-    pass
+    return tavg
 
 
 def transp(
