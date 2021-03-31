@@ -32,11 +32,9 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    sldpth_ref, cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
-        sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
-        snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
-        smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
-        czil_ref, xlai_ref, csoil_ref, 
+    t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
+    sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
+    cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgra_ref,
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -161,9 +159,6 @@ def sfc_drv(
         sldpth[0] = - zsoil[i, 0]
         sldpth[1:] = zsoil[i, :km-1] - zsoil[i, 1:]
 
-        if(first_iter):
-            serialbox_test(sldpth_ref, sldpth, "sldpth")
-
     # 2. forcing data
         lwdn = dlwflx[i]
         swdn = dswsfc[i]
@@ -240,11 +235,9 @@ def sfc_drv(
                 bexpp, xlaip, lheatstrg,
                 first_iter,
                 # Inputs to probe for port
-                cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
-                sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
-                snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
-                smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
-                czil_ref, xlai_ref, csoil_ref, sldpth_ref,
+                t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
+                sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
+                cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgra_ref,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
                 # outputs
@@ -328,11 +321,9 @@ def sflx(
     bexpp, xlaip, lheatstrg,
     first_iter,
     # Inputs to probe for port
-    cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
-    sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
-    snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
-    smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
-    czil_ref, xlai_ref, csoil_ref, sldpth_ref,
+    t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
+    sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
+    cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgramake_ref,
     # in/outs
     tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
@@ -378,17 +369,6 @@ def sflx(
             smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
             czil, xlai, csoil = redprm(
                 nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac)
-
-    serialbox_test_function([cfactr_ref, cmcmax_ref, rsmin_ref, rsmax_ref, topt_ref, refkdt_ref, kdt_ref,
-                             sbeta_ref, rgl_ref, hs_ref, zbot_ref, frzx_ref, psisat_ref, slope_ref,
-                             snup_ref, salp_ref, bexp_ref, dksat_ref, dwsat_ref, smcmax_ref, smcwlt_ref,
-                             smcref_ref, smcdry_ref, f1_ref, quartz_ref, fxexp_ref, rtdis_ref, nroot_ref,
-                             czil_ref, xlai_ref, csoil_ref],
-                            [cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,
-                             sbeta, rgl, hs, zbot, frzx, psisat, slope,
-                             snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,
-                             smcref, smcdry, f1, quartz, fxexp, rtdis, nroot,
-                             czil, xlai, csoil], "redprm")
 
     if ivegsrc == 1 and vegtyp == 13:
         rsmin = 400.0*(1-shdfac0)+40.0*shdfac0
@@ -569,7 +549,11 @@ def sflx(
     # and other partial products and sums save in common/rite for later
     # calculations.
     t24, etp, rch, epsca, rr, flx2 = penman(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
-                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra,)
+                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra)
+    serialbox_test_function([sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
+    cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgramake_ref], [sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
+                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra], "before penman")
+    serialbox_test_function([t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref], [t24, etp, rch, epsca, rr, flx2], "penman")
 
     # call canres to calculate the canopy resistance and convert it
     # into pc if nonzero greenness fraction
@@ -1672,6 +1656,7 @@ def serialbox_test_function(fortran_sol, py_sol, name):
     else:
         errors = np.sum(fortran_sol != py_sol)
         print(f'{name:14}', "IS FALSE!!!", errors, "wrong elements")
+        print(np.array(fortran_sol)-np.array(py_sol))
 
 
 def serialbox_test(fortran_sol, py_sol, name):

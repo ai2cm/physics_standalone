@@ -153,21 +153,6 @@
 !            smcref, smcdry, f1, quartz, fxexp, rtdis, nroot,              !
 !            z0, czil, xlai, csoil )                                       !
 
-      !$ser mode write
-      !$ser verbatim if (iter == 1) then
-      !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
-      !$ser verbatim else
-      !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
-      !$ser verbatim end if
-
-      !$ser verbatim if (first_iter) then
-      !$ser data cfactr_ref=cfactr cmcmax_ref=cmcmax rsmin_ref=rsmin rsmax_ref=rsmax topt_ref=topt refkdt_ref=refkdt kdt_ref=kdt 
-      !$ser data sbeta_ref=sbeta shdfac_ref=shdfac rgl_ref=rgl hs_ref=hs zbot_ref=zbot frzx_ref=frzx psisat_ref=psisat slope_ref=slope
-      !$ser data snup_ref=snup salp_ref=salp bexp_ref=bexp dksat_ref=dksat dwsat_ref=dwsat smcmax_ref=smcmax smcwlt_ref=smcwlt
-      !$ser data smcref_ref=smcref smcdry_ref=smcdry f1_ref=f1 quartz_ref=quartz fxexp_ref=fxexp rtdis_ref=rtdis nroot_ref=nroot
-      !$ser data z0_ref=z0 czil_ref=czil xlai_ref=xlai csoil_ref=csoil
-      !$ser verbatim end if
-
         if(ivegsrc == 1) then
 !only igbp type has urban
 !urban
@@ -555,6 +540,19 @@
 
 !  --- ...  call canres to calculate the canopy resistance and convert it
 !           into pc if nonzero greenness fraction
+
+      !$ser mode write
+      !$ser verbatim if (iter == 1) then
+      !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+      !$ser verbatim else
+      !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+      !$ser verbatim end if
+
+      !$ser verbatim if (first_iter) then
+      !$ser data sfctmp_ref=sfctmp sfcprs_ref=sfcprs sfcems_ref=sfcems ch_ref=ch t2v_ref=t2v th2_ref=th2 prcp_ref=prcp fdown_ref=fdown
+      !$ser data cpx_ref=cpx cpfac_ref=cpfac ssoil_ref=ssoil q2_ref=q2 q2sat_ref=q2sat dqsdt2_ref=dqsdt2 snowng_ref=snowng frzgra_ref=frzgra
+      !$ser data t24_ref=t24 etp_ref=etp rch_ref=rch epsca_ref=epsca rr_ref=rr flx2_ref=flx2
+      !$ser verbatim end if
 
       if (shdfac > 0.) then
 
