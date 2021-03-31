@@ -551,9 +551,10 @@ def sflx(
     t24, etp, rch, epsca, rr, flx2 = penman(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
                                             cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra)
     serialbox_test_function([sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
-    cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgramake_ref], [sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
-                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra], "before penman")
-    serialbox_test_function([t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref], [t24, etp, rch, epsca, rr, flx2], "penman")
+                             cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgramake_ref], [sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
+                                                                                                                         cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra], "before penman")
+    serialbox_test_function([t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref], [
+                            t24, etp, rch, epsca, rr, flx2], "penman")
 
     # call canres to calculate the canopy resistance and convert it
     # into pc if nonzero greenness fraction
@@ -1185,6 +1186,25 @@ def shflx(
         hrtice(nsoil, stc, zsoil, yy, zz1, df1, ice, tbot,
                rhsts, ai, bi, ci)
 
+        stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
+    else:
+        hrt(nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
+            zbot, psisat, dt, bexp, df1, quartz, csoil, vegtyp,
+            shdfac, sh2o, rhsts, ai, bi, ci)
+
+        stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
+
+    stc = stcf
+
+    # update the grnd (skin) temperature in the no snowpack case
+    t1 = (yy + (zz1 - 1.0)*stc[0]) / zz1
+    t1 = ctfil1*t1 + ctfil2*oldt1
+
+    stc = ctfil1*stc + ctfil2*stsoil
+
+    # calculate surface soil heat flux
+    ssoil = df1*(stc[0] - t1) / (0.5*zsoil[0])
+
     return ssoil
 
 
@@ -1299,12 +1319,14 @@ def hrt(
     shdfac,
     # in/outs
     sh2o,
-    # outputs
-    rhsts, ai, bi, ci
+    
 ):
     # --- ... subprograms called: tbnd, snksrc, tmpavg
-    # TODO
-    pass
+    # calculates the right hand side of the time tendency term 
+    # of the soil thermal diffusion equation
+
+    
+    return rhsts, ai, bi, ci
 
 
 def hrtice(
@@ -1374,26 +1396,53 @@ def hstep(
     # inputs
     nsoil, stcin, dt,
     # in/outs
-    rhsts, ai, bi, ci,
-    # outputs
-    stcout
+    rhsts, ai, bi, ci
 ):
     # --- ... subprograms called: rosr12
-    # TODO
-    pass
+    # calculates/updates the soil temperature field.
+
+    # create finite difference values for use in rosr12 routine
+    rhsts *= dt
+    ai *= dt
+    bi = 1. + bi*dt
+    ci *= dt
+
+    # solve tri-diagonal matrix-equation
+    # TODO: is return rhsts necessary?
+    ci, rhsts = rosr12(nsoil, ai, bi, rhsts, ci)
+
+    # calc/update the soil temps using matrix solution
+    stcout = stcin + ci
+
+    return stcout
 
 
-def rosr12(
-    # inputs
-    nsoil, a, b, d,
-    # in/outs
-    c,
-    # outputs
-    p, delta
-):
+def rosr12(nsoil, a, b, d, c):
     # --- ... subprograms called: none
-    # TODO
-    pass
+    # inverts (solve) the tri-diagonal matrix problem
+
+    p = np.empty(nsoil)
+    delta = np.empty(nsoil)
+
+    # initialize eqn coef c for the lowest soil layer
+    c[nsoil-1] = 0.
+
+    # solve the coefs for the 1st soil layer
+    p[0] = -c[0]/b[0]
+    delta[0] = d[0]/b[0]
+
+    for k in range(1, nsoil):
+        p[k] = - c[k] / (b[k] + a[k] * p[k-1])
+        delta[k] = (d[k] - a[k]*delta[k-1])/(b[k] + a[k]*p[k-1])
+
+    # set p to delta for lowest soil layer
+    p[-1] = delta[-1]
+
+    # adjust p for soil layers 2 thru nsoil
+    for k in range(nsoil-2, -1, -1):
+        p[k] = p[k]*p[k+1] + delta[k]
+
+    return p, delta
 
 
 def snksrc(
@@ -1654,7 +1703,7 @@ def serialbox_test_function(fortran_sol, py_sol, name):
     if(fortran_sol == py_sol):
         print(f'{name:14}', "IS CORRECT")
     else:
-        errors = np.sum(fortran_sol != py_sol)
+        errors = np.sum(np.array(fortran_sol) != np.array(py_sol))
         print(f'{name:14}', "IS FALSE!!!", errors, "wrong elements")
         print(np.array(fortran_sol)-np.array(py_sol))
 
