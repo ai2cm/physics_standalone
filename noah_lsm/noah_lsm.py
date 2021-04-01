@@ -1670,8 +1670,8 @@ def srt(
     slopx[-1] = slope
 
     # calc rhstt for this layer after calc'ng its numerator
-    ddz.append(ddz2[:-1])
-    dsmdz.append(dsmdz2[:-1])
+    ddz = np.append(ddz, ddz2[:-1])
+    dsmdz = np.append(dsmdz, dsmdz2[:-1])
     numer = wdf[1:]*dsmdz2 + slopx*wcnd[1:] - \
         wdf[:-1]*dsmdz - wcnd[:-1] + et[1:]
     rhstt[1:] = -numer / denom2
@@ -1689,12 +1689,48 @@ def sstep(
     # inputs
     nsoil, sh2oin, rhsct, dt, smcmax, cmcmax, zsoil, sice,
     # in/outs
-    cmc, rhstt, ai, bi, ci,
-    # outputs
+    cmc, rhstt, ai, bi, ci
 ):
     # --- ... subprograms called: rosr12
-    # TODO
-    sh2oout = runoff3 = smc = 0
+    # calculates/updates soil moisture content values and
+    # canopy moisture content values.
+
+    sh2oout = np.empty(nsoil)
+    smc = np.empty(nsoil)
+
+    # create 'amount' values of variables to be input to the
+    # tri-diagonal matrix routine.
+    rhstt *= dt
+    ai *= dt
+    bi = 1. + bi*dt
+    ci *= dt
+
+    # solve the tri-diagonal matrix
+    ci, rhstt = rosr12(nsoil, ai, bi, rhstt, ci)
+
+    # sum the previous smc value and the matrix solution
+    ddz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
+    wplus =0.
+    
+    for k in range(nsoil):
+        sh2oout[k] = sh2oin[k] + ci[k] +wplus/ddz[k]
+        stot = sh2oout[k] + sice[k]
+
+        if stot > smcmax:
+            wplus = (stot-smcmax)*ddz[k]
+        else:
+            wplus = 0.
+
+        smc[k] = max(min(stot, smcmax), 0.02)
+        sh2oout[k] = max(smc[k]-sice[k], 0.0)
+
+    runoff3 = wplus        
+
+    # update canopy water content/interception
+    cmc += dt * rhsct
+    if cmc < 1.e-20: cmc = 0.0
+    cmc = min(cmc, cmcmax)
+
     return sh2oout, runoff3, smc
 
 
