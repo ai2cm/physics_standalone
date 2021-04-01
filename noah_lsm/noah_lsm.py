@@ -9,7 +9,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
             "smcwlt2", "smcref2", "wet1"]
 
 
-def run(in_dict, in_dict2):
+def run(in_dict, in_dict2, in_dict3):
     """run function"""
 
     # setup output
@@ -18,7 +18,7 @@ def run(in_dict, in_dict2):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
-    sfc_drv(**in_dict, **in_dict2, **out_dict)
+    sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
 
     return out_dict
 
@@ -32,10 +32,11 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    c1xpvs, c2xpvs, tbpvs,
     t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
     sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
     cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgra_ref,
+    # parameters for fpvs
+    c1xpvs, c2xpvs, tbpvs,
     # in/outs
     weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
     canopy, trans, tsurf, zorl,
@@ -1820,8 +1821,9 @@ def init_array(shape, mode):
 # TODO: check iff correct, this is copied from seaice
 # TODO - this should be moved into a shared physics functions module
 def fpvs(c1xpvs, c2xpvs, tbpvs, t):
-    xj = min(max(c1xpvs+c2xpvs*t, 1.), real(nxpvs))
-    jx = min(xj, nxpvs - 1.)
+    nxpvs = 7501.
+    xj = np.minimum(np.maximum(c1xpvs+c2xpvs*t, 1.), nxpvs)
+    jx = np.minimum(xj, nxpvs - 1.).astype(int)
     fpvs = tbpvs[jx-1]+(xj-jx)*(tbpvs[jx]-tbpvs[jx-1])
 
     return fpvs
