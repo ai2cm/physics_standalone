@@ -32,6 +32,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
+    c1xpvs, c2xpvs, tbpvs,
     t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
     sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
     cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgra_ref,
@@ -119,7 +120,7 @@ def sfc_drv(
     # TODO: what happens when i is false?
     theta1[i] = t1[i] * prslki[i]
     rho[i] = prsl1[i] / (rd*t1[i]*(1.0+rvrdm1*q0[i]))
-    qs1[i] = fpvs(t1[i])
+    qs1[i] = fpvs(c1xpvs, c2xpvs, tbpvs, t1[i])
     qs1[i] = np.maximum(eps*qs1[i] / (prsl1[i]+epsm1*qs1[i]), 1.e-8)
     q0[i] = np.minimum(qs1[i], q0[i])
 
@@ -1584,7 +1585,7 @@ def srt(
     cvfrz = 3
     iohinf = 1
 
-    sicemax = np.max(sice)
+    sicemax = max(np.max(sice), 0.)
 
     pddum = pcpdrp
     runoff1 = 0.0
@@ -1628,7 +1629,7 @@ def srt(
         # correction of infiltration limitation
         mxsmc = sh2oa[0]
 
-        wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
+        wdf, wcnd = wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax)
 
         infmax = max(infmax, wcnd)
         infmax = min(infmax, px)
@@ -1637,22 +1638,49 @@ def srt(
             runoff1 = pcpdrp - infmax
             pddum = infmax
 
-        # TODO: necessary to re-do?
-        mxsmc = sh2oa[0]
-        wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
+    mxsmc = sh2oa
+    wdf, wcnd = wdfcnd(mxsmc, smcmax, bexp, dksat, dwsat, sicemax)
 
-        # calc the matrix coefficients ai, bi, and ci for the top layer
-        ddz = 1.0 / (-.5*zsoil[1])
-        ai[0] = 0.0
-        bi[0] = wdf * ddz / (-zsoil[0])
-        ci[0] = -bi[0]
+    # calc the matrix coefficients ai, bi, and ci for the top layer
+    ddz = 1.0 / (-.5*zsoil[1])
+    ai[0] = 0.0
+    bi[0] = wdf[0] * ddz / (-zsoil[0])
+    ci[0] = -bi[0]
 
-        # TODO: change so we do not have to use for loop
-        dsmdz = (sh2o[0] - sh2o[1]) / (-.5*zsoil[1])
-        rhstt[0] = (wdf*dsmdz + wcnd - pddum + edir + et[0]) / zsoil[0]
-        sstt = wdf * dsmdz + wcnd + edir + et[0]
+    # calc rhstt for the top layer
+    dsmdz = (sh2o[0] - sh2o[1]) / (-.5*zsoil[1])
+    rhstt[0] = (wdf[0]*dsmdz + wcnd[0] - pddum + edir + et[0]) / zsoil[0]
+    sstt = wdf[0] * dsmdz + wcnd[0] + edir + et[0]
 
-        # TODO: finish last part
+    # the remaining soil layers, repeating the above process
+    denom2 = zsoil[:-1] - zsoil[1:]
+    denom = (zsoil[:-2] - zsoil[2:])
+    dsmdz2 = (zsoil[1:-1] - zsoil[2:]) / (denom * 0.5)
+    # calc the matrix coef, ci, after calc'ng its partial product
+    ddz2 = 2.0 / denom
+    ci[1:-1] = -wdf[1:-1]*ddz2 / denom2[:-1]
+
+    # lowest layer
+    dsmdz2.append(0.)
+    ci[-1] = 0.0
+
+    # slope
+    slopx = np.empty(nsoil-1)
+    slopx[:-1] = 1.
+    slopx[-1] = slope
+
+    # calc rhstt for this layer after calc'ng its numerator
+    ddz.append(ddz2[:-1])
+    dsmdz.append(dsmdz2[:-1])
+    numer = wdf[1:]*dsmdz2 + slopx*wcnd[1:] - \
+        wdf[:-1]*dsmdz - wcnd[:-1] + et[1:]
+    rhstt[1:] = -numer / denom2
+
+    # calc matrix coefs
+    ai[1:] = - wdf[:-1]*ddz / denom2
+    bi[1:] = -(ai[1:] + ci[1:])
+
+    runoff2 = slopx[-1] * wcnd[-1]
 
     return
 
@@ -1714,15 +1742,27 @@ def transp(
     return et1
 
 
-def wdfcnd(
-    # inputs
-    smc, smcmax, bexp, dksat, dwsat, sicemax,
-    # outputs
-    wdf, wcnd
-):
+def wdfcnd(smc, smcmax, bexp, dksat, dwsat, sicemax):
     # --- ... subprograms called: none
-    # TODO
-    pass
+
+    # calc the ratio of the actual to the max psbl soil h2o content of each layer
+    factr1 = min(1.0, max(0.0, 0.2/smcmax))
+    factr2 = np.min(1.0, np.max(0.0, smc/smcmax))
+
+    # prep an expntl coef and calc the soil water diffusivity
+    expon = bexp + 2.0
+    wdf = dwsat * factr2 ** expon
+
+    # frozen soil hydraulic diffusivity.
+    if sicemax > 0.:
+        vkwgt = 1.0 / (1.0 + (500.0*sicemax)**3.0)
+        wdf = vkwgt*wdf + (1.0 - vkwgt)*dwsat*factr1**expon
+
+    # reset the expntl coef and calc the hydraulic conductivity
+    expon = (2.0 * bexp) + 3.0
+    wcnd = dksat * factr2 ** expon
+
+    return wdf, wcnd
 
 
 # *************************************
@@ -1743,10 +1783,10 @@ def init_array(shape, mode):
 
 # TODO: check iff correct, this is copied from seaice
 # TODO - this should be moved into a shared physics functions module
-def fpvs(t):
-    xj=min(max(c1xpvs+c2xpvs*t,1.),real(nxpvs))
-    jx = min(xj, nxpvs - 1.) 
-    fpvs=tbpvs[jx-1]+(xj-jx)*(tbpvs[jx]-tbpvs[jx-1])
+def fpvs(c1xpvs, c2xpvs, tbpvs, t):
+    xj = min(max(c1xpvs+c2xpvs*t, 1.), real(nxpvs))
+    jx = min(xj, nxpvs - 1.)
+    fpvs = tbpvs[jx-1]+(xj-jx)*(tbpvs[jx]-tbpvs[jx-1])
 
     return fpvs
 

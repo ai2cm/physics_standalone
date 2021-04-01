@@ -51,7 +51,7 @@ program test
     ser_count_max = 15
     num_tiles = 6
 
-    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
+    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=0
 
     ! initialize
     call gfuncphys()
