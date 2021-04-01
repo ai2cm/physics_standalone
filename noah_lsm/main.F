@@ -51,6 +51,8 @@ program test
     ser_count_max = 15
     num_tiles = 6
 
+    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
+
     ! initialize
     call gfuncphys()
     me = 0
@@ -62,8 +64,6 @@ program test
     call cdstart(num_tiles * ser_count_max * 2)
 
     do tile = 0, num_tiles - 1
-
-    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
 
     do ser_count = 0, ser_count_max
     do iter = 1, 2

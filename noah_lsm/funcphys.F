@@ -2893,6 +2893,10 @@ contains
     call gpkap
     call grkap
     call gtlcl
+
+    !$ser mode write
+    !$ser savepoint "funcphys-out"
+    !$ser data c1xpvs=c1xpvs c2xpvs=c2xpvs tbpvs=tbpvs
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   end subroutine
 !-------------------------------------------------------------------------------
