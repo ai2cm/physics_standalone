@@ -1111,13 +1111,19 @@ def tdfcnd(smc, qz, smcmax, sh2o):
     # dry thermal conductivity in w.m-1.k-1
     thkdry = (0.135*gammd + 64.7) / (2700.0 - 0.947*gammd)
 
-    if sh2o+0.0005 < smc:    # frozen
-        ake = satratio
-    elif satratio > 0.1:
-        # kersten number
-        ake = np.log10(satratio) + 1.0
+    if sh2o.size > 1:
+        ake = np.empty(len(sh2o))
+        ake[sh2o+0.0005 < smc] = satratio   # frozen
+        ake[(sh2o+0.0005 >= smc) & (satratio > 0.1)] = np.log10(satratio[(sh2o+0.0005 >= smc) & (satratio > 0.1)]) + 1.0   # kersten number
+        ake[(sh2o+0.0005 >= smc) & (satratio <= 0.1)] = 0.0
     else:
-        ake = 0.0
+        if sh2o+0.0005 < smc:    # frozen
+            ake = satratio
+        elif satratio > 0.1:
+            # kersten number
+            ake = np.log10(satratio) + 1.0
+        else:
+            ake = 0.0
 
     # thermal conductivity
     df = ake * (thksat - thkdry) + thkdry
@@ -1341,110 +1347,147 @@ def hrt(
     itavg = True
 
     # calc the heat capacity of the top soil layer
-    hcpct = sh2o[0]*cph2o2 + (1.0 - smcmax)*csoil_loc + \
-        (smcmax - smc[0])*cp2 + (smc[0] - sh2o[0])*cpice1
+    hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+        (smcmax - smc)*cp2 + (smc - sh2o)*cpice1
 
     # calc the matrix coefficients ai, bi, and ci for the top layer
     ddz = 1.0 / (-0.5*zsoil[1])
     ai[0] = 0.0
-    ci[0] = (df1*ddz) / (zsoil[0]*hcpct)
-    bi[0] = -ci[0] + df1 / (0.5*zsoil[0]*zsoil[0]*hcpct*zz1)
+    ci[0] = (df1*ddz) / (zsoil[0]*hcpct[0])
+    bi[0] = -ci[0] + df1 / (0.5*zsoil[0]*zsoil[0]*hcpct[0]*zz1)
 
     # calc the vertical soil temp gradient btwn the top and 2nd soil
     dtsdz = (stc[0] - stc[1]) / (-0.5*zsoil[1])
     ssoil = df1 * (stc[0] - yy) / (0.5*zsoil[0]*zz1)
-    rhsts[0] = (df1*dtsdz - ssoil) / (zsoil[0]*hcpct)
+    rhsts[0] = (df1*dtsdz - ssoil) / (zsoil[0]*hcpct[0])
 
     # capture the vertical difference of the heat flux at top and
     # bottom of first soil layer
     qtot = ssoil - df1 * dtsdz
 
-    if itavg:
-        tsurf = (yy + (zz1-1)*stc[0]) / zz1
-        tbk = tbnd(stc[0], stc[2], zsoil, zbot, 1, nsoil)
-
     # calculate frozen water content in 1st soil layer.
     sice = smc[0] - sh2o[0]
 
-    if sice > 0. or tsurf > tfreez or stc[0] < tfreez or tbk < tfreez:
-        if itavg:
-            tavg = tmpavg(tsurf, stc[0], tbk, zsoil, nsoil, 1)
-        else:
-            tavg = stc[0]
+    # calculate thermal diffusivity for each layer
+    df1n = tdfcnd(smc[1:], quartz, smcmax, sh2o[1:])
+    df1k = np.append(df1, df1n[:-1])
 
-        tsnsr = snksrc(nsoil, 1, tavg, smc[0], smcmax, psisat, bexp, dt,
-                       qtot, zsoil, shdfac, sh2o[0])
-        rhsts[0] = tsnsr / (zsoil[0] * hcpct)
+    if ivegsrc == 1 and vegtyp == 13:
+        df1n = 3.24*(1.-shdfac) + shdfac*df1n
 
-    ddz2 = 0.
+    # calc the vertical soil temp gradient thru each layer
+    denom = 0.5 * (zsoil[:-2] - zsoil[2:])
+    dtsdz2 = (stc[1:-1] - stc[2:]) / denom
+    dtsdz2 = np.append(dtsdz2, (stc[-1] - tbot)/(0.5 * zsoil[-2] - zsoil[-1] - zbot))
 
-    # loop thru the remaining soil layers, repeating the above process
-    df1k = df1
+    # calc the matrix coef, ci, after calc'ng its partial product
+    ddz2 = 2.0 / (zsoil[:-2] - zsoil[2:])
+    ddz = np.append(ddz, ddz2[1:])
+    ci[1:-1] = - df1n[:-1]*ddz2 / ((zsoil[:-2] - zsoil[1:-1]) * hcpct[1:-1])
+    ci[-1] = 0.
 
-    for k in range(1, nsoil):
-        hcpct = sh2o[k]*cph2o2 + (1.0 - smcmax)*csoil_loc + \
-            (smcmax - smc[k])*cp2 + (smc[k] - sh2o[k])*cpice1
+    tavg = np.zeros(nsoil)
 
-        if k != nsoil:
-            df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
+    if itavg:
+        # calculate temp at bottom of each layer
+        tsurf = (yy + (zz1-1)*stc[0]) / zz1
+        tbk = tbnd(stc, np.append(stc[1:], tbot), zsoil, zbot, nsoil)
 
-            if ivegsrc == 1 and vegtyp == 13:
-                df1n = 3.24*(1.-shdfac) + shdfac*df1n
+    # calculate rhsts
+    denom = (zsoil[1:] - zsoil[:-1])*hcpct[1:]
+    dtsdz = np.append(dtsdz, dtsdz2[:-1])
+    rhsts[1:] = (df1n*dtsdz2 - df1k*dtsdz)/denom
 
-            # calc the vertical soil temp gradient thru this layer
-            denom = 0.5 * zsoil[k-1] - zsoil[k+1]
-            dtsdz2 = (stc[k] - stc[k+1]) / denom
+    qtot = np.append(qtot, -1. * denom * rhsts[1:])
 
-            # calc the matrix coef, ci, after calc'ng its partial product
-            ddz2 = 2.0 / (zsoil[k-1] - zsoil[k+1])
-            ci[k] = - df1n*ddz2 / ((zsoil[k-1] - zsoil[k]) * hcpct)
-
-            # calculate temp at bottom of layer
+    if sice > 0.:
+            i = (np.append(tsurf, tbk[:-1]) < tfreez) | (
+                stc < tfreez) | (tbk < tfreez)
             if itavg:
-                tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
-
-        else:
-            # calculate thermal diffusivity for bottom layer
-            df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
-
-            if ivegsrc == 1 and vegtyp == 13:
-                df1n = 3.24*(1.-shdfac) + shdfac*df1n
-
-            # calc the vertical soil temp gradient thru this layer
-            denom = 0.5 * zsoil[k-1] - zsoil[k] - zbot
-            dtsdz2 = (stc[k] - tbot) / denom
-
-            # set matrix coef, ci to zero if bottom layer.
-            ci[k] = 0.
-
-            if itavg:
-                tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
-
-        # calculate rhsts
-        denom = (zsoil[k] - zsoil[k-1])*hcpct
-        rhsts[k] = (df1n*dtsdz2 - df1k*dtsdz)/denom
-
-        qtot = -1. * denom * rhsts[k]
-
-        if sice > 0. or tbk < tfreez or stc[k] < tfreez or tbk1 < tfreez:
-            if itavg:
-                tavg = tmpavg(tbk, stc[k], tbk1, zsoil, nsoil, k)
+                tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i, tavg)
             else:
-                tavg = stc[k]
+                tavg[i] = stc[i]
 
-        tsnsr = snksrc(nsoil, k, tavg, smc[k], smcmax, psisat, bexp, dt,
-                       qtot, zsoil, shdfac, sh2o[k])
-        rhsts[k] -= tsnsr / denom
+    if sice > 0.:
+        i = (np.append(stc[1:], tbot) < tfreez) | (
+            stc < tfreez) | (tbk < tfreez)
+        tsnsr = np.empty(nsoil)
+        snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
+               qtot, zsoil, shdfac, sh2o, tsnsr)
+        rhsts[0] -= tsnsr / (zsoil[0] * hcpct[0])
+        rhsts[1:] -= tsnsr / denom
 
-        # calc matrix coefs, ai, and bi for this layer.
-        ai[k] = - df1 * ddz / ((zsoil[k-1] - zsoil[k]) * hcpct)
-        bi[k] = -(ai[k] + ci[k])
+    # calc matrix coefs, ai, and bi for this layer.
+    ai[1:] = - df1 * ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct[1:])
+    bi[1:] = -(ai[1:] + ci[1:])
 
-        # reset values of df1, dtsdz, ddz, and tbk for loop to next soil layer.
-        tbk = tbk1
-        df1k = df1n
-        dtsdz = dtsdz2
-        ddz = ddz2
+
+    # # loop thru the remaining soil layers, repeating the above process
+
+    # for k in range(1, nsoil):
+    #     hcpct = sh2o[k]*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+    #         (smcmax - smc[k])*cp2 + (smc[k] - sh2o[k])*cpice1
+
+    #     if k != nsoil:
+    #         df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
+
+    #         if ivegsrc == 1 and vegtyp == 13:
+    #             df1n = 3.24*(1.-shdfac) + shdfac*df1n
+
+    #         # calc the vertical soil temp gradient thru this layer
+    #         denom = 0.5 * (zsoil[k-1] - zsoil[k+1])
+    #         dtsdz2 = (stc[k] - stc[k+1]) / denom
+
+    #         # calc the matrix coef, ci, after calc'ng its partial product
+    #         ddz2 = 2.0 / (zsoil[k-1] - zsoil[k+1])
+    #         ci[k] = - df1n*ddz2 / ((zsoil[k-1] - zsoil[k]) * hcpct)
+
+    #         # calculate temp at bottom of layer
+    #         if itavg:
+    #             tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
+
+    #     else:
+    #         # calculate thermal diffusivity for bottom layer
+    #         df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
+
+    #         if ivegsrc == 1 and vegtyp == 13:
+    #             df1n = 3.24*(1.-shdfac) + shdfac*df1n
+
+    #         # calc the vertical soil temp gradient thru this layer
+    #         denom = 0.5 * zsoil[k-1] - zsoil[k] - zbot
+    #         dtsdz2 = (stc[k] - tbot) / denom
+
+    #         # set matrix coef, ci to zero if bottom layer.
+    #         ci[k] = 0.
+
+    #         if itavg:
+    #             tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
+
+    #     # calculate rhsts
+    #     denom = (zsoil[k] - zsoil[k-1])*hcpct
+    #     rhsts[k] = (df1n*dtsdz2 - df1k*dtsdz)/denom
+
+    #     qtot = -1. * denom * rhsts[k]
+
+    #     if sice > 0. or tbk < tfreez or stc[k] < tfreez or tbk1 < tfreez:
+    #         if itavg:
+    #             tavg = tmpavg(tbk, stc[k], tbk1, zsoil, nsoil, k)
+    #         else:
+    #             tavg = stc[k]
+
+    #         tsnsr = snksrc(nsoil, k, tavg, smc[k], smcmax, psisat, bexp, dt,
+    #                     qtot, zsoil, shdfac, sh2o[k])
+    #         rhsts[k] -= tsnsr / denom
+
+    #     # calc matrix coefs, ai, and bi for this layer.
+    #     ai[k] = - df1 * ddz / ((zsoil[k-1] - zsoil[k]) * hcpct)
+    #     bi[k] = -(ai[k] + ci[k])
+
+    #     # reset values of df1, dtsdz, ddz, and tbk for loop to next soil layer.
+    #     tbk = tbk1
+    #     df1k = df1n
+    #     dtsdz = dtsdz2
+    #     ddz = ddz2
 
     return rhsts, ai, bi, ci
 
@@ -1565,13 +1608,41 @@ def rosr12(nsoil, a, b, d, c):
     return p, delta
 
 
-def snksrc(
-    # inputs
-    nsoil, k, tavg, smc, smcmax, psisat, bexp, dt,
-    # in/outs
-        sh2o):
+def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
+    qtot, zsoil, shdfac, sh2o):
+
+    # TODO: include i
+
     # --- ... subprograms called: frh2o
-    # TODO
+    # calculates sink/source term of the termal diffusion equation.
+
+    dz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
+
+    # compute potential or 'equilibrium' unfrozen supercooled free water
+    free = frh2o(tavg, smc, sh2o, smcmax, bexp, psisat)
+
+    # estimate the new amount of liquid water
+    dh2o = 1.0000e3
+    xh2o = sh2o + qtot*dt / (dh2o*lsubf*dz)
+
+    # reduce extent of freezing
+    j1 = xh2o < sh2o < free
+    j2 = xh2o <  free < sh2o
+    xh2o[j1] = sh2o[j1]
+    xh2o[j2] = free[j2]
+
+    # then reduce extent of thaw
+    j1 = free < sh2o < xh2o
+    j2 = sh2o < free < xh2o
+    xh2o[j1] = sh2o[j1]
+    xh2o[j2] = free[j2]
+
+    xh2o = max( min( xh2o, smc ), 0.0 )
+
+    # calculate phase-change heat source/sink term
+    tsrc = -dh2o * lsubf * dz * (xh2o - sh2o) / dt
+    sh2o = xh2o
+
     return tsrc
 
 
@@ -1741,19 +1812,65 @@ def sstep(
     return sh2oout, runoff3, smc
 
 
-def tbnd(tu, tb, zsoil, zbot, k, nsoil):
+def tbnd(tu, tb, zsoil, zbot, nsoil):
     # --- ... subprograms called: none
-    # TODO
+    # calculates temperature on the boundary of the
+    # layer by interpolation of the middle layer temperature
+
+    # use surface temperature on the top of the first layer
+    zup = np.append(0.0, zsoil[:-1])
+
+    # use depth of the constant bottom temperature when interpolate
+    # temperature into the last layer boundary
+    zb = np.append(zsoil[1:], 2.0*zbot - zsoil[-1])
+
+    # linear interpolation between the average layer temperatures
+    tbk = tu + (tb-tu)*(zup-zsoil)/(zup-zb)
+
     return tbk
 
 
 def tmpavg(
     # inputs
-    tup, tm, tdn, zsoil, nsoil, k
+    tup, tm, tdn, zsoil, nsoil, i, tavg
 ):
     # --- ... subprograms called: none
-    # TODO
-    return tavg
+
+    dz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
+
+    dzh = dz * 0.5
+
+    j = (tup < tfreez) & (tm < tfreez) & (tdn < tfreez)
+    tavg[j] = (tup[j] + 2.0*tm[j] + tdn[j]) / 4.0
+
+    j = (tup < tfreez) & (tm < tfreez) & (tdn >= tfreez)
+    x0 = (tfreez - tm[j]) * dzh[j] / (tdn[j] - tm[j])
+    tavg[j] = 0.5*(tup[j]*dzh[j] + tm[j]*(dzh[j] + x0) +
+                   tfreez*(2.*dzh[j]-x0)) / dz[j]
+
+    j = (tup < tfreez) & (tm >= tfreez) & (tdn < tfreez)
+    xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
+    xdn = dzh[j] - (tfreez - tm[j]) * dzh[j] / (tdn[j] - tm[j])
+    tavg = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup-xdn)+tdn[j]*xdn) / dz[j]
+
+    j = (tup < tfreez) & (tm >= tfreez) & (tdn >= tfreez)
+    xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
+    tavg = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup)) / dz[j]
+
+    j = (tup >= tfreez) & (tm < tfreez) & (tdn < tfreez)
+    xup = dzh[j] - (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
+    tavg = 0.5*(tfreez * (dz[j] - xup) + tm[j] *
+                (dzh[j] + xup) + tdn[j] * dzh[j]) / dz[j]
+
+    j = (tup >= tfreez) & (tm < tfreez) & (tdn >= tfreez)
+    xup = dzh[j] - (tfreez-tup[j]) * dzh[j] / (tm[j]-tup[j])
+    xdn = (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
+    tavg = 0.5 * (tfreez*(2. * dz[j] - xup - xdn) +
+                  tm[j] * (xup + xdn)) / dz[j]
+
+    j = (tup >= tfreez) & (tm >= tfreez) & (tdn < tfreez)
+    xdn = dzh[j] - (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
+    tavg = (tfreez * (dz[j] - xdn) + 0.5*(tfreez + tdn[j]) * xdn) / dz[j]
 
 
 def transp(
