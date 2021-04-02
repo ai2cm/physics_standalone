@@ -13,7 +13,7 @@ eps = rd/4.6150e+2
 epsm1 = rd/4.6150e+2 - 1.
 rvrdm1 = 4.6150e+2/rd - 1.
 
-nsold = 2
+nsold = 4
 gs1 = 9.8
 gs2 = 9.81
 tfreez = 2.7315e+2
@@ -26,6 +26,7 @@ cp = 1.0046e+3
 cp1 = 1004.5
 cp2 = 1004.0
 cph2o1 = 4.218e+3
+cph2o2 = 4.2e6
 cpice = 2.1060e+3
 cpice1 = 2.106e6
 sigma1 = 5.67e-8
@@ -101,7 +102,7 @@ refsmc = np.zeros(satdk.size)
 wltsmc = np.zeros(satdk.size)
 
 i = (satdk != 0.) & (bb > 0.)
-satdw[i] = bb[i] * satdk[i] * satpsi[i]/ maxsmc[i]
+satdw[i] = bb[i] * satdk[i] * satpsi[i] / maxsmc[i]
 f11[i] = np.log10(satpsi[i]) + bb[i]*np.log10(maxsmc[i]) + 2.0
 refsmc1 = maxsmc[i]*np.power(5.79E-9/satdk[i], 1.0/(2.0*bb[i] + 3.0))
 refsmc[i] = refsmc1 + (maxsmc[i]-refsmc1)/smhigh
@@ -152,4 +153,3 @@ nroot_data = np.array([4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 1, 3, 2,
                        3, 1, 3, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 bare = 16
 defined_slope = 9
-

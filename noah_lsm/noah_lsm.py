@@ -792,10 +792,10 @@ def nopac(
     # compute intermediate terms passed to routine hrt
     yynum = fdown - sfcems*sigma1*t24
     yy = sfctmp + (yynum/rch + th2 - sfctmp - beta*epsca)/rr
-    zz1 = df1/(-0.5*zsoil(1)*rch*rr) + 1.0
+    zz1 = df1/(-0.5*zsoil[0]*rch*rr) + 1.0
 
     ssoil = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
-                  psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
+                  psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
                   stc, t1, tbot, sh2o)
 
     flx1 = 0.0
@@ -1170,7 +1170,7 @@ def evapo(
 def shflx(
     # inputs
     nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
-    psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
+    psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
     # in/outs
     stc, t1, tbot, sh2o
 ):
@@ -1190,9 +1190,9 @@ def shflx(
 
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
     else:
-        hrt(nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
-            zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
-            shdfac, sh2o, rhsts, ai, bi, ci)
+        rhsts, ai, bi, ci = hrt(nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
+                                zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
+                                shdfac, sh2o)
 
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
 
@@ -1259,9 +1259,8 @@ def smflx(
         print("Error: case not implemented")
 
     else:
-        srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
-            dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,
-            rhstt, runoff1, runoff2, ai, bi, ci)
+        rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
+                                                  dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice)
 
         sh2ofg, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
                                      dummy, rhstt, ai, bi, ci)
@@ -1320,14 +1319,17 @@ def hrt(
     zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
     shdfac,
     # in/outs
-    sh2o,
-    # out
-    rhsts, ai, bi, ci
+    sh2o
 ):
 
     # --- ... subprograms called: tbnd, snksrc, tmpavg
     # calculates the right hand side of the time tendency term
     # of the soil thermal diffusion equation.
+
+    rhsts = np.empty(nsoil)
+    ai = np.empty(nsold)
+    bi = np.empty(nsold)
+    ci = np.empty(nsold)
 
     csoil_loc = csoil
 
@@ -1444,7 +1446,7 @@ def hrt(
         dtsdz = dtsdz2
         ddz = ddz2
 
-    return
+    return rhsts, ai, bi, ci
 
 
 def hrtice(
@@ -1576,15 +1578,17 @@ def snksrc(
 def srt(
     # inputs
     nsoil, edir, et, sh2o, sh2oa, pcpdrp, zsoil, dwsat,
-    dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice,
-    # outputs
-    rhstt, runoff1, runoff2, ai, bi, ci
+    dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice
 ):
     # --- ... subprograms called: wdfcnd
 
     # determine rainfall infiltration rate and runoff
     cvfrz = 3
     iohinf = 1
+    rhstt = np.empty(nsoil)
+    ai = np.empty(nsold)
+    bi = np.empty(nsold)
+    ci = np.empty(nsold)
 
     sicemax = max(np.max(sice), 0.)
 
@@ -1595,8 +1599,8 @@ def srt(
         # frozen ground version
         dt1 = dt/86400.
         smcav = smcmax - smcwlt
-        dmax = -zsoil(1) * smcav
-        dmax.append((zsoil[:-1]-zsoil[1:]) * smcav)
+        dmax = -zsoil[0] * smcav
+        dmax = np.append(dmax, (zsoil[:-1]-zsoil[1:]) * smcav)
         dmax *= 1.0 - (sh2oa + sice - smcwlt)/smcav
 
         dice = -zsoil[0] * sice[0] + np.sum((zsoil[:-1]-zsoil[1:]) * sice[1:])
@@ -1620,8 +1624,9 @@ def srt(
             ialp1 = cvfrz - 1
 
             j = np.arange(ialp1)
+            j_factorial = np.array([np.math.factorial(i) for i in j])
             sum = np.sum(np.power(acrt, cvfrz - j) /
-                         (np.factorial(ialp1)/np.factorial(j)))
+                         (np.math.factorial(ialp1)/j_factorial))
 
             fcr = 1. - np.exp(-acrt) * sum
 
@@ -1662,7 +1667,7 @@ def srt(
     ci[1:-1] = -wdf[1:-1]*ddz2 / denom2[:-1]
 
     # lowest layer
-    dsmdz2.append(0.)
+    dsmdz2 = np.append(dsmdz2, 0.)
     ci[-1] = 0.0
 
     # slope
@@ -1671,7 +1676,7 @@ def srt(
     slopx[-1] = slope
 
     # calc rhstt for this layer after calc'ng its numerator
-    ddz = np.append(ddz, ddz2[:-1])
+    ddz = np.append(ddz, ddz2)
     dsmdz = np.append(dsmdz, dsmdz2[:-1])
     numer = wdf[1:]*dsmdz2 + slopx*wcnd[1:] - \
         wdf[:-1]*dsmdz - wcnd[:-1] + et[1:]
@@ -1683,7 +1688,7 @@ def srt(
 
     runoff2 = slopx[-1] * wcnd[-1]
 
-    return
+    return rhstt, runoff1, runoff2, ai, bi, ci
 
 
 def sstep(
@@ -1711,10 +1716,10 @@ def sstep(
 
     # sum the previous smc value and the matrix solution
     ddz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
-    wplus =0.
-    
+    wplus = 0.
+
     for k in range(nsoil):
-        sh2oout[k] = sh2oin[k] + ci[k] +wplus/ddz[k]
+        sh2oout[k] = sh2oin[k] + ci[k] + wplus/ddz[k]
         stot = sh2oout[k] + sice[k]
 
         if stot > smcmax:
@@ -1725,11 +1730,12 @@ def sstep(
         smc[k] = max(min(stot, smcmax), 0.02)
         sh2oout[k] = max(smc[k]-sice[k], 0.0)
 
-    runoff3 = wplus        
+    runoff3 = wplus
 
     # update canopy water content/interception
     cmc += dt * rhsct
-    if cmc < 1.e-20: cmc = 0.0
+    if cmc < 1.e-20:
+        cmc = 0.0
     cmc = min(cmc, cmcmax)
 
     return sh2oout, runoff3, smc
@@ -1774,6 +1780,9 @@ def transp(
     gx *= np.maximum(rtx, 0.0)
     denom = np.sum(gx)
 
+    if denom <= 0.0:
+        denom = 1.0
+
     et1 = etp1a * gx / denom
 
     return et1
@@ -1784,7 +1793,7 @@ def wdfcnd(smc, smcmax, bexp, dksat, dwsat, sicemax):
 
     # calc the ratio of the actual to the max psbl soil h2o content of each layer
     factr1 = min(1.0, max(0.0, 0.2/smcmax))
-    factr2 = np.min(1.0, np.max(0.0, smc/smcmax))
+    factr2 = np.minimum(1.0, np.maximum(0.0, smc/smcmax))
 
     # prep an expntl coef and calc the soil water diffusivity
     expon = bexp + 2.0
