@@ -445,7 +445,7 @@ def sflx(
 
         # update snow density based on new snowfall, using old and new
         # snow.  update snow thermal conductivity
-        snow_new(sfctmp, sn_new, snowh, sndens)
+        snowh, sndens = snow_new(sfctmp, sn_new, snowh, sndens)
         sncond = csnow(sndens)
 
     else:
@@ -506,7 +506,7 @@ def sflx(
     # determine surface roughness over snowpack using snow condition
     # from the previous timestep.
     if sncovr > 0.:
-        snowz0(sncovr, z0)
+        z0 = snowz0(sncovr, z0)
 
     # calc virtual temps and virtual potential temps needed by
     # subroutines sfcdif and penman.
@@ -684,13 +684,13 @@ def canres(
     rcq = max(rcq, 0.01)
 
     # contribution due to soil moisture availability.
-    gx = np.maximum(0.0, np.minimum(1.0, (sh2o - smcwlt) / (smcref - smcwlt)))
+    gx = np.maximum(0.0, np.minimum(1.0, (sh2o[:nroot] - smcwlt) / (smcref - smcwlt)))
 
     # use soil depth as weighting factor
     # TODO: check if only until nroot which is 3
-    part = np.empty(gx.size)
+    part = np.empty(nroot)
     part[0] = (zsoil[0]/zsoil[nroot-1]) * gx[0]
-    part[1:] = ((zsoil[1:] - zsoil[:-1])/zsoil[-1]) * gx[1:]
+    part[1:] = ((zsoil[1:nroot] - zsoil[:nroot-1])/zsoil[nroot-1]) * gx[1:]
 
     rcsoil = max(np.sum(part), 0.0001)
 
@@ -1234,7 +1234,7 @@ def snow_new(
     snowhc = snowhc + hnewc
     snowh = snowhc * 0.01
 
-    return
+    return snowh, sndens
 
 
 def snowz0(
@@ -1249,7 +1249,7 @@ def snowz0(
     z0 = (1.0 - sncovr) * z0 + sncovr * z0
     # TODO: that is totally unnecessary right? z0 = z0
 
-    return
+    return z0
 
 
 def tdfcnd(smc, qz, smcmax, sh2o):
