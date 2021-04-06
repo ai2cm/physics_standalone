@@ -551,12 +551,7 @@ def sflx(
     # and other partial products and sums save in common/rite for later
     # calculations.
     t24, etp, rch, epsca, rr, flx2 = penman(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
-                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra)
-    serialbox_test_function([sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
-                             cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgramake_ref], [sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
-                                                                                                                         cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra], "before penman")
-    serialbox_test_function([t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref], [
-                            t24, etp, rch, epsca, rr, flx2], "penman")
+                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra, ffrozp)
 
     # call canres to calculate the canopy resistance and convert it
     # into pc if nonzero greenness fraction
@@ -587,9 +582,9 @@ def sflx(
                                                                cmcmax, dt, df1, sfcems, sfctmp, t24, th2, fdown, epsca,
                                                                bexp, pc, rch, rr, cfactr, slope, kdt, frzx, psisat,
                                                                zsoil, dwsat, dksat, zbot, shdfac, ice, rtdis, quartz,
-                                                               fxexp, csoil, flx2, snowng,
+                                                               fxexp, csoil, flx2, snowng, ffrozp, ivegsrc, vegtyp,
                                                                prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh,
-                                                               sh2o, tbot, beta)
+                                                               sh2o, tbot)
 
     # prepare sensible heat (h) for return to parent model
     sheat = -(ch*cp1*sfcprs) / (rd1*t2v) * (th2 - t1)
@@ -634,7 +629,7 @@ def sflx(
 
     # total column soil moisture in meters (soilm) and root-zone
     # soil moisture availability (fraction) relative to porosity/saturation
-    zsoil_dif = np.concatenate(-zsoil[0], zsoil[:nsoil-1]-zsoil[1:], axis=0)
+    zsoil_dif = np.append(-zsoil[0], zsoil[:nsoil-1]-zsoil[1:])
     soilm = np.sum(smc*zsoil_dif)
     soilwm = (smcmax-smcwlt) * np.sum(zsoil_dif)
     soilww = np.sum((smc - smcwlt) * zsoil_dif)
@@ -805,10 +800,8 @@ def nopac(
         ec, et, ett, beta, drip, dew, flx1, flx3
 
 
-def penman(
-    sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
-    cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra
-):
+def penman(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
+           cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra, ffrozp):
     # --- ... subprograms called: none
 
     flx2 = 0.
@@ -1026,15 +1019,194 @@ def snopac(
     cmcmax, dt, df1, sfcems, sfctmp, t24, th2, fdown, epsca,
     bexp, pc, rch, rr, cfactr, slope, kdt, frzx, psisat,
     zsoil, dwsat, dksat, zbot, shdfac, ice, rtdis, quartz,
-    fxexp, csoil, flx2, snowng,
+    fxexp, csoil, flx2, snowng, ffrozp, ivegsrc, vegtyp,
     # in/outs
     prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh,
-    sh2o, tbot, beta
+    sh2o, tbot
 ):
     # --- ... subprograms called: evapo, smflx, shflx, snowpack
-    # TODO
-    return smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et,
-    ett, snomlt, drip, dew, flx1, flx3, esnow
+
+    # calculates soil moisture and heat flux values and
+    # update soil moisture content and soil heat content values for the
+    # case when a snow pack is present.
+
+    snoexp = 2.0
+    esdmin = 1.e-6
+
+    prcp1 = prcp1 * 0.001
+    edir = 0.0
+    edir1 = 0.0
+
+    ec = 0.0
+    ec1 = 0.0
+
+    et = np.zeros(nsoil)
+    et1 = np.zeros(nsoil)
+
+    ett = 0.0
+    ett1 = 0.0
+    etns = 0.0
+    etns1 = 0.0
+    esnow = 0.0
+    esnow1 = 0.0
+    esnow2 = 0.0
+
+    dew = 0.0
+    etp1 = etp * 0.001
+
+    if etp < 0.0:
+        # dewfall (=frostfall in this case).
+        dew = -etp1
+        esnow2 = etp1 * dt
+        etanrg = etp * ((1.0-sncovr)*lsubc + sncovr*lsubs)
+
+    else:
+        # upward moisture flux
+        if ice != 0:
+            # for sea-ice and glacial-ice case
+            esnow = etp
+            esnow1 = esnow * 0.001
+            esnow2 = esnow1 * dt
+            etanrg = esnow * lsubs
+
+        else:
+            # for non-glacial land case
+            if sncovr < 1.0:
+                etns1, edir1, ec1, et1, ett1 = evapo(nsoil, nroot, cmc, cmcmax, etp1, dt, zsoil,
+                                                     sh2o, smcmax, smcwlt, smcref, smcdry, pc,
+                                                     shdfac, cfactr, rtdis, fxexp)
+
+                edir1 *= 1.0 - sncovr
+                ec1 *= 1.0 - sncovr
+                et1 *= 1.0 - sncovr
+                ett1 *= 1.0 - sncovr
+                etns1 *= 1.0 - sncovr
+
+                edir = edir1 * 1000.0
+                ec = ec1 * 1000.0
+                et = et1 * 1000.0
+                ett = ett1 * 1000.0
+                etns = etns1 * 1000.0
+
+            esnow = etp * sncovr
+            esnow1 = esnow * 0.001
+            esnow2 = esnow1 * dt
+            etanrg = esnow*lsubs + etns*lsubc
+
+    # if precip is falling, calculate heat flux from snow sfc to newly accumulating precip
+    flx1 = 0.0
+    if snowng:
+        # fractional snowfall/rainfall
+        flx1 = (cpice * ffrozp + cph2o1*(1.-ffrozp)) * prcp * (t1 - sfctmp)
+
+    elif prcp > 0.0:
+        flx1 = cph2o1 * prcp * (t1 - sfctmp)
+
+    # calculate an 'effective snow-grnd sfc temp' based on heat fluxes between
+    # the snow pack and the soil and on net radiation.
+    dsoil = -0.5 * zsoil[0]
+    dtot = snowh + dsoil
+    denom = 1.0 + df1 / (dtot * rr * rch)
+    t12a = ((fdown - flx1 - flx2 - sfcems*sigma1*t24) /
+            rch + th2 - sfctmp - etanrg / rch) / rr
+    t12b = df1 * stc[0] / (dtot * rr * rch)
+    t12 = (sfctmp + t12a + t12b) / denom
+
+    if t12 <= tfreez:    # no snow melt will occur.
+
+        # set the skin temp to this effective temp
+        t1 = t12
+        # update soil heat flux
+        ssoil = df1 * (t1 - stc[0]) / dtot
+        # update depth of snowpack
+        sneqv = max(0.0, sneqv-esnow2)
+        flx3 = 0.0
+        ex = 0.0
+        snomlt = 0.0
+
+    else:    # snow melt will occur.
+        t1 = tfreez * max(0.01, sncovr**snoexp) + t12 * \
+            (1.0 - max(0.01, sncovr**snoexp))
+        ssoil = df1 * (t1 - stc[0]) / dtot
+
+        if sneqv - esnow2 <= esdmin:
+            # snowpack has sublimated away, set depth to zero.
+            sneqv = 0.0
+            ex = 0.0
+            snomlt = 0.0
+            flx3 = 0.0
+
+        else:
+            # potential evap (sublimation) less than depth of snowpack
+            sneqv -= esnow2
+            seh = rch * (t1 - th2)
+
+            t14 = t1 * t1
+            t14 = t14 * t14
+
+            flx3 = fdown - flx1 - flx2 - sfcems*sigma1*t14 - ssoil - seh - etanrg
+            if flx3 <= 0.0:
+                flx3 = 0.0
+
+            ex = flx3 * 0.001 / lsubf
+
+            # snowmelt reduction
+            snomlt = ex * dt
+
+            if sneqv - snomlt >= esdmin:
+                # retain snowpack
+                sneqv -= snomlt
+            else:
+                # snowmelt exceeds snow depth
+                ex = sneqv / dt
+                flx3 = ex * 1000.0 * lsubf
+                snomlt = sneqv
+                sneqv = 0.0
+
+        if ice == 0:
+            prcp1 += ex
+
+    if ice == 0:
+        # smflx returns updated soil moisture values for non-glacial land.
+        smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+                                                     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
+                                                     edir1, ec1, et1, cmc, sh2o)
+
+    zz1 = 1.0
+    yy = stc[0] - 0.5 * ssoil * zsoil[0] * zz1 / df1
+    t11 = t1
+
+    # shflx will calc/update the soil temps.
+    ssoil1 = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
+                   psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
+                   shdfac, stc, t11, tbot, sh2o)
+
+    # snow depth and density adjustment based on snow compaction.
+    if ice == 0:
+        if sneqv > 0.0:
+            snowpack(sneqv, dt, t1, yy, snowh, sndens)
+
+        else:
+            sneqv = 0.0
+            snowh = 0.0
+            sndens = 0.0
+            sncovr = 0.0
+
+    elif ice == 1:
+        if sneqv >= 0.01:
+            snowpack(sneqv, dt, t1, yy, snowh, sndens)
+        else:
+            sneqv = 0.01
+            snowh = 0.05
+            sncovr = 1.0
+
+    else:
+        sneqv = 0.10
+        snowh = 0.50
+        sncovr = 1.0
+
+    return smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, ett, \
+        snomlt, drip, dew, flx1, flx3, esnow
 
 
 def snow_new(
@@ -1114,7 +1286,8 @@ def tdfcnd(smc, qz, smcmax, sh2o):
     if sh2o.size > 1:
         ake = np.empty(len(sh2o))
         ake[sh2o+0.0005 < smc] = satratio   # frozen
-        ake[(sh2o+0.0005 >= smc) & (satratio > 0.1)] = np.log10(satratio[(sh2o+0.0005 >= smc) & (satratio > 0.1)]) + 1.0   # kersten number
+        ake[(sh2o+0.0005 >= smc) & (satratio > 0.1)] = np.log10(satratio[(sh2o +
+                                                                          0.0005 >= smc) & (satratio > 0.1)]) + 1.0   # kersten number
         ake[(sh2o+0.0005 >= smc) & (satratio <= 0.1)] = 0.0
     else:
         if sh2o+0.0005 < smc:    # frozen
@@ -1281,8 +1454,54 @@ def snowpack(
     snowh, sndens
 ):
     # --- ... subprograms called: none
-    # TODO
-    pass
+
+    # calculates compaction of snowpack under conditions of
+    # increasing snow density.
+
+    c1 = 0.01
+    c2 = 21.0
+
+    # conversion into simulation units
+    snowhc = snowh * 100.0
+    esdc = esd * 100.0
+    dthr = dtsec / 3600.0
+    tsnowc = tsnow - tfreez
+    tsoilc = tsoil - tfreez
+
+    # calculating of average temperature of snow pack
+    tavgc = 0.5 * (tsnowc + tsoilc)
+
+    # calculating of snow depth and density as a result of compaction
+    if esdc > 1.e-2:
+        esdcx = esdc
+    else:
+        esdcx = 1.e-2
+
+    bfac = dthr*c1 * np.exp(0.08*tavgc - c2*sndens)
+
+    # number of terms of polynomial expansion and its accuracy is governed by iteration limit "ipol".
+    ipol = 4
+    pexp = 0.0
+
+    for j in range(ipol, 0, -1):
+        pexp = (1.0 + pexp)*bfac*esdcx/(j+1)
+    pexp += 1.
+
+    dsx = sndens * pexp
+    # set upper/lower limit on snow density
+    dsx = max(min(dsx, 0.40), 0.05)
+    sndens = dsx
+
+    # update of snow depth and density depending on liquid water during snowmelt.
+    if tsnowc >= 0.0:
+        dw = 0.13 * dthr / 24.0
+        sndens = max(sndens*(1.0 - dw) + dw, 0.40)
+
+    # calculate snow depth (cm) from snow water equivalent and snow density.
+    snowhc = esdc / sndens
+    snowh = snowhc * 0.01
+
+    return
 
 
 # *************************************
@@ -1308,15 +1527,53 @@ def devap(etp1, smc, shdfac, smcmax, smcdry, fxexp):
     return edir1
 
 
-def frh2o(
-    # inputs
-    tkelv, smc, sh2o, smcmax, bexp, psis,
-    # outputs
-    liqwat
-):
+def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis):
     # --- ... subprograms called: none
-    # TODO
-    pass
+
+    # calculates amount of supercooled liquid soil water
+    # content if temperature is below 273.15k
+
+    # constant parameters
+    ck = 8.0
+    blim = 5.5
+    error = 0.005
+
+    # limits on parameter b
+    bx = bexp
+    if bexp > blim:
+        bx = blim
+
+    nlog = 0
+    liqwat = np.empty(smc.size)
+
+    # if temperature not significantly below freezing (t0), sh2o = smc
+    j = tkelv <= tfreez - 1.e-3
+    swl = np.zeros(smc.size)
+
+    # initial guess for swl (frozen content)
+    swl[j] = smc[j] - sh2o[j]
+
+    while nlog < 10 and j.all():
+        nlog += 1
+
+        df = np.log((psis*gs2/lsubf) * ((1.0 + ck*swl[j])**2.0) * (smcmax /
+                                                                   (smc[j] - swl[j]))**bx) - np.log(-(tkelv[j] - tfreez) / tkelv[j])
+
+        denom = 2.0*ck/(1.0 + ck*swl[j]) + bx/(smc[j] - swl[j])
+        swlk = swl[j] - df / denom
+
+        # bounds useful for mathematical solution.
+        swlk = np.maximum(np.minimum(swlk, smc[j]-0.02), 0.0)
+
+        # mathematical solution bounds applied.
+        dswl = np.abs(swlk - swl[j])
+        swl[j] = swlk
+
+        j = j & (dswl <= error)
+
+    liqwat = smc - swl
+
+    return liqwat
 
 
 def hrt(
@@ -1378,11 +1635,12 @@ def hrt(
     # calc the vertical soil temp gradient thru each layer
     denom = 0.5 * (zsoil[:-2] - zsoil[2:])
     dtsdz2 = (stc[1:-1] - stc[2:]) / denom
-    dtsdz2 = np.append(dtsdz2, (stc[-1] - tbot)/(0.5 * zsoil[-2] - zsoil[-1] - zbot))
+    dtsdz2 = np.append(dtsdz2, (stc[-1] - tbot) /
+                       (0.5 * zsoil[-2] - zsoil[-1] - zbot))
 
     # calc the matrix coef, ci, after calc'ng its partial product
     ddz2 = 2.0 / (zsoil[:-2] - zsoil[2:])
-    ddz = np.append(ddz, ddz2[1:])
+    ddz = np.append(ddz, ddz2)
     ci[1:-1] = - df1n[:-1]*ddz2 / ((zsoil[:-2] - zsoil[1:-1]) * hcpct[1:-1])
     ci[-1] = 0.
 
@@ -1401,12 +1659,12 @@ def hrt(
     qtot = np.append(qtot, -1. * denom * rhsts[1:])
 
     if sice > 0.:
-            i = (np.append(tsurf, tbk[:-1]) < tfreez) | (
-                stc < tfreez) | (tbk < tfreez)
-            if itavg:
-                tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i, tavg)
-            else:
-                tavg[i] = stc[i]
+        i = (np.append(tsurf, tbk[:-1]) < tfreez) | (
+            stc < tfreez) | (tbk < tfreez)
+        if itavg:
+            tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i, tavg)
+        else:
+            tavg[i] = stc[i]
 
     if sice > 0.:
         i = (np.append(stc[1:], tbot) < tfreez) | (
@@ -1414,13 +1672,12 @@ def hrt(
         tsnsr = np.empty(nsoil)
         snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
                qtot, zsoil, shdfac, sh2o, tsnsr)
-        rhsts[0] -= tsnsr / (zsoil[0] * hcpct[0])
-        rhsts[1:] -= tsnsr / denom
+        rhsts[0] -= tsnsr[0] / (zsoil[0] * hcpct[0])
+        rhsts[1:] -= tsnsr[1:] / denom
 
     # calc matrix coefs, ai, and bi for this layer.
     ai[1:] = - df1 * ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct[1:])
     bi[1:] = -(ai[1:] + ci[1:])
-
 
     # # loop thru the remaining soil layers, repeating the above process
 
@@ -1609,7 +1866,7 @@ def rosr12(nsoil, a, b, d, c):
 
 
 def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
-    qtot, zsoil, shdfac, sh2o):
+           qtot, zsoil, shdfac, sh2o, tsrc):
 
     # TODO: include i
 
@@ -1626,24 +1883,22 @@ def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
     xh2o = sh2o + qtot*dt / (dh2o*lsubf*dz)
 
     # reduce extent of freezing
-    j1 = xh2o < sh2o < free
-    j2 = xh2o <  free < sh2o
+    j1 = (xh2o < sh2o) & (sh2o < free)
+    j2 = (xh2o < free) & (free < sh2o)
     xh2o[j1] = sh2o[j1]
     xh2o[j2] = free[j2]
 
     # then reduce extent of thaw
-    j1 = free < sh2o < xh2o
-    j2 = sh2o < free < xh2o
+    j1 = (free < sh2o) & (sh2o < xh2o)
+    j2 = (sh2o < free) & (free < xh2o)
     xh2o[j1] = sh2o[j1]
     xh2o[j2] = free[j2]
 
-    xh2o = max( min( xh2o, smc ), 0.0 )
+    xh2o = np.maximum(np.minimum(xh2o, smc), 0.0)
 
     # calculate phase-change heat source/sink term
     tsrc = -dh2o * lsubf * dz * (xh2o - sh2o) / dt
     sh2o = xh2o
-
-    return tsrc
 
 
 def srt(
