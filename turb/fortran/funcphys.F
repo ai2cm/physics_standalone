@@ -2847,7 +2847,7 @@ contains
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   end function
 !-------------------------------------------------------------------------------
-  subroutine gfuncphys
+  subroutine gfuncphys(me, master, nlunit, logunit)
 !$$$     Subprogram Documentation Block
 !
 ! Subprogram: gfuncphys    Compute all physics function tables
@@ -2881,6 +2881,11 @@ contains
 !
 !$$$
     implicit none
+
+    integer, intent (in) :: me
+    integer, intent (in) :: master
+    integer, intent (in) :: nlunit
+    integer, intent (in) :: logunit
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     call gpvsl
     call gpvsi
