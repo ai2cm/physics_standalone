@@ -9,7 +9,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
             "smcwlt2", "smcref2", "wet1"]
 
 
-def run(in_dict, in_dict2, in_dict3):
+def run(in_dict, in_dict2):
     """run function"""
 
     # setup output
@@ -18,7 +18,7 @@ def run(in_dict, in_dict2, in_dict3):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
-    sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
+    sfc_drv(**in_dict, **in_dict2, **out_dict)
 
     return out_dict
 
@@ -32,9 +32,6 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
-    sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
-    cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgra_ref,
     # parameters for fpvs
     c1xpvs, c2xpvs, tbpvs,
     # in/outs
@@ -225,7 +222,9 @@ def sfc_drv(
 
         # call noah lsm
         # TODO: shdfac, snowh are marked as output variables but are declared before. In sflx shdfac value is used.
-        nroot, albedo, eta, sheat, ec, \
+        # in/outs
+        tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0, shdfac, snowh, \
+            nroot, albedo, eta, sheat, ec, \
             edir, et, ett, esnow, drip, dew, beta, etp, ssoil, \
             flx1, flx2, flx3, runoff1, runoff2, runoff3, \
             snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq, \
@@ -237,9 +236,6 @@ def sfc_drv(
                 bexpp, xlaip, lheatstrg,
                 first_iter,
                 # Inputs to probe for port
-                t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
-                sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
-                cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgra_ref,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
                 # outputs
@@ -323,9 +319,6 @@ def sflx(
     bexpp, xlaip, lheatstrg,
     first_iter,
     # Inputs to probe for port
-    t24_ref, etp_ref, rch_ref, epsca_ref, rr_ref, flx2_ref,
-    sfctmp_ref, sfcprs_ref, sfcems_ref, ch_ref, t2v_ref, th2_ref, prcp_ref, fdown_ref,
-    cpx_ref, cpfac_ref, ssoil_ref, q2_ref, q2sat_ref, dqsdt2_ref, snowng_ref, frzgramake_ref,
     # in/outs
     tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
@@ -342,6 +335,8 @@ def sflx(
     runoff2 = 0.
     runoff3 = 0.
     snomlt = 0.
+
+    pc = 0.
 
     shdfac0 = shdfac
     ice = icein
@@ -397,8 +392,9 @@ def sflx(
         # not called
         print("ERROR: case not implemented")
     elif (ice == -1) and (sneqv < 0.10):
-        # not called
-        print("ERROR: case not implemented")
+        # TODO: check if it is called
+        sneqv = 0.10
+        snowh = 1.00
 
     # for sea-ice and glacial-ice cases, set smc and sh2o values = 1
     # as a flag for non-soil medium
@@ -555,6 +551,14 @@ def sflx(
 
     # call canres to calculate the canopy resistance and convert it
     # into pc if nonzero greenness fraction
+
+    # TODO: check what happens to rc when shdfac <= 0.
+    rc = 0.
+    rcs = 0.
+    rct = 0.
+    rcq = 0.
+    rcsoil = 0.
+
     if shdfac > 0.:
 
         # frozen ground extension: total soil water "smc" was replaced
@@ -574,7 +578,7 @@ def sflx(
                                                              t24, th2, fdown, epsca, bexp, pc, rch, rr, cfactr,
                                                              slope, kdt, frzx, psisat, zsoil, dksat, dwsat,
                                                              zbot, ice, rtdis, quartz, fxexp, csoil, ivegsrc, vegtyp,
-                                                             cmc, t1, stc, sh2o, tbot)
+                                                             cmc, t1, stc, sh2o, tbot, smc)
 
     else:
         smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, \
@@ -635,7 +639,9 @@ def sflx(
     soilww = np.sum((smc - smcwlt) * zsoil_dif)
     soilw = soilww / soilwm
 
-    return nroot, albedo, eta, sheat, ec, \
+    return tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0, \
+        shdfac, snowh, \
+        nroot, albedo, eta, sheat, ec, \
         edir, et, ett, esnow, drip, dew, beta, etp, ssoil, \
         flx1, flx2, flx3, runoff1, runoff2, runoff3, \
         snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq, \
@@ -684,7 +690,8 @@ def canres(
     rcq = max(rcq, 0.01)
 
     # contribution due to soil moisture availability.
-    gx = np.maximum(0.0, np.minimum(1.0, (sh2o[:nroot] - smcwlt) / (smcref - smcwlt)))
+    gx = np.maximum(0.0, np.minimum(
+        1.0, (sh2o[:nroot] - smcwlt) / (smcref - smcwlt)))
 
     # use soil depth as weighting factor
     # TODO: check if only until nroot which is 3
@@ -723,7 +730,7 @@ def nopac(
     slope, kdt, frzx, psisat, zsoil, dksat, dwsat,
     zbot, ice, rtdis, quartz, fxexp, csoil, ivegsrc, vegtyp,
     # in/outs
-    cmc, t1, stc, sh2o, tbot
+    cmc, t1, stc, sh2o, tbot, smc
 ):
     # --- ... subprograms called: evapo, smflx, tdfcnd, shflx
 
@@ -749,7 +756,7 @@ def nopac(
 
         smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
                                                      zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
-                                                     edir1, ec1, et1, cmc, sh2o)
+                                                     edir1, ec1, et1, cmc, sh2o, smc)
 
     else:
         # if etp < 0, assume dew forms
@@ -759,7 +766,7 @@ def nopac(
 
         smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
                                                      zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
-                                                     edir1, ec1, et1, cmc, sh2o)
+                                                     edir1, ec1, et1, cmc, sh2o, smc)
 
     # convert modeled evapotranspiration fm  m s-1  to  kg m-2 s-1
     eta = eta1 * 1000.0
@@ -1040,8 +1047,15 @@ def snopac(
     ec = 0.0
     ec1 = 0.0
 
+    runoff1 = 0.0
+    runoff2 = 0.0
+    runoff3 = 0.0
+
+    drip = 0.0
+
     et = np.zeros(nsoil)
     et1 = np.zeros(nsoil)
+    smc = np.zeros(nsoil)
 
     ett = 0.0
     ett1 = 0.0
@@ -1285,7 +1299,7 @@ def tdfcnd(smc, qz, smcmax, sh2o):
 
     if sh2o.size > 1:
         ake = np.empty(len(sh2o))
-        ake[sh2o+0.0005 < smc] = satratio   # frozen
+        ake[sh2o+0.0005 < smc] = satratio[sh2o+0.0005 < smc]   # frozen
         ake[(sh2o+0.0005 >= smc) & (satratio > 0.1)] = np.log10(satratio[(sh2o +
                                                                           0.0005 >= smc) & (satratio > 0.1)]) + 1.0   # kersten number
         ake[(sh2o+0.0005 >= smc) & (satratio <= 0.1)] = 0.0
@@ -1364,8 +1378,7 @@ def shflx(
     stsoil = stc
 
     if ice != 0:  # sea-ice or glacial ice case
-        hrtice(nsoil, stc, zsoil, yy, zz1, df1, ice, tbot,
-               rhsts, ai, bi, ci)
+        rhsts, ai, bi, ci = hrtice(nsoil, stc, zsoil, yy, zz1, df1, ice, tbot)
 
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
     else:
@@ -1395,7 +1408,7 @@ def smflx(
     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
     edir1, ec1, et1,
     # in/outs
-    cmc, sh2o
+    cmc, sh2o, smc
 ):
     # --- ... subprograms called: srt, sstep
 
@@ -1417,7 +1430,7 @@ def smflx(
     # store ice content at each soil layer before calling srt and sstep
     # TODO: smc is not declared how to use it here?
     #sice = smc - sh2o
-    sice = smcmax-sh2o  # only a suggestion
+    sice = smc-sh2o  # only a suggestion
 
     if (pcpdrp*dt) > (0.001*1000.0*(-zsoil[0])*smcmax):
         #     rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
@@ -1753,9 +1766,7 @@ def hrtice(
     # inputs
     nsoil, stc, zsoil, yy, zz1, df1, ice,
     # in/outs
-    tbot,
-    # outputs
-    rhsts, ai, bi, ci
+    tbot
 ):
     # --- ... subprograms called: none
 
@@ -1774,6 +1785,11 @@ def hrtice(
         zbot = zsoil[-1]
     else:
         zbot = -25.0
+
+    ai = np.zeros(nsoil)
+    bi = np.zeros(nsoil)
+    ci = np.zeros(nsoil)
+    rhsts = np.zeros(nsoil)
 
     # calc the matrix coefficients ai, bi, and ci for the top layer
     ddz = 1.0 / (-0.5*zsoil[1])
@@ -1795,11 +1811,12 @@ def hrtice(
     ci[1:-1] = -df1*ddz2 / ((zsoil[:-2] - zsoil[1:-1])*hcpct)
 
     # lowest layer
-    dtsdz2.append(stc[-1] - tbot) / (0.5 * (zsoil[-2]-zsoil[-1]) - zbot)
+    dtsdz2 = np.append(dtsdz2, stc[-1] - tbot) / \
+        (0.5 * (zsoil[-2]-zsoil[-1]) - zbot)
     ci[-1] = 0.0
 
-    ddz.append(ddz2[:-1])
-    dtsdz.append(dtsdz2[:-1])
+    ddz = np.append(ddz, ddz2)
+    dtsdz = np.append(dtsdz, dtsdz2[:-1])
 
     # calc rhsts for this layer after calc'ng a partial product.
     denom = (zsoil[1:] - zsoil[:-1]) * hcpct
@@ -1809,7 +1826,7 @@ def hrtice(
     ai[1:] = - df1*ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct)
     bi[1:] = -(ai[1:] + ci[1:])
 
-    return
+    return rhsts, ai, bi, ci
 
 
 def hstep(
@@ -2004,6 +2021,7 @@ def srt(
     # calc rhstt for this layer after calc'ng its numerator
     ddz = np.append(ddz, ddz2)
     dsmdz = np.append(dsmdz, dsmdz2[:-1])
+
     numer = wdf[1:]*dsmdz2 + slopx*wcnd[1:] - \
         wdf[:-1]*dsmdz - wcnd[:-1] + et[1:]
     rhstt[1:] = -numer / denom2
@@ -2138,24 +2156,25 @@ def transp(
     # calculates transpiration for the veg class
 
     # initialize plant transp to zero for all soil layers.
-    et1 = init_array(nsoil, "zeros")
+    et1 = np.zeros(nsoil)
 
     if cmc != 0.0:
         etp1a = shdfac * pc * etp1 * (1.0 - (cmc / cmcmax) ** cfactr)
     else:
         etp1a = shdfac * pc * etp1
 
-    gx = np.maximum(np.minimum((smc - smcwlt) / (smcref - smcwlt), 1.0), 0.0)
-    sgx = np.sum(gx)
+    gx = np.maximum(np.minimum(
+        (smc[:nroot] - smcwlt) / (smcref - smcwlt), 1.0), 0.0)
+    sgx = np.sum(gx) / nroot
 
-    rtx = rtdis + gx - sgx
+    rtx = rtdis[:nroot] + gx - sgx
     gx *= np.maximum(rtx, 0.0)
-    denom = np.sum(gx)
+    denom = sum(gx)
 
     if denom <= 0.0:
         denom = 1.0
 
-    et1 = etp1a * gx / denom
+    et1[:gx.size] = etp1a * gx / denom
 
     return et1
 
