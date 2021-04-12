@@ -754,9 +754,9 @@ def nopac(
                                             sh2o, smcmax, smcwlt, smcref, smcdry, pc,
                                             shdfac, cfactr, rtdis, fxexp)
 
-        smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
-                                                     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
-                                                     edir1, ec1, et1, cmc, sh2o, smc)
+        cmc, sh2o, smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+                                                                zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
+                                                                edir1, ec1, et1, cmc, sh2o, smc)
 
     else:
         # if etp < 0, assume dew forms
@@ -764,9 +764,9 @@ def nopac(
         dew = -etp1
         prcp1 += dew
 
-        smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
-                                                     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
-                                                     edir1, ec1, et1, cmc, sh2o, smc)
+        cmc, sh2o, smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+                                                                zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
+                                                                edir1, ec1, et1, cmc, sh2o, smc)
 
     # convert modeled evapotranspiration fm  m s-1  to  kg m-2 s-1
     eta = eta1 * 1000.0
@@ -1182,9 +1182,9 @@ def snopac(
 
     if ice == 0:
         # smflx returns updated soil moisture values for non-glacial land.
-        smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
-                                                     zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
-                                                     edir1, ec1, et1, cmc, sh2o)
+        cmc, sh2o, smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+                                                                zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
+                                                                edir1, ec1, et1, cmc, sh2o)
 
     zz1 = 1.0
     yy = stc[0] - 0.5 * ssoil * zsoil[0] * zz1 / df1
@@ -1454,10 +1454,10 @@ def smflx(
         rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
                                                   dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice)
 
-        sh2ofg, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
-                                     dummy, rhstt, ai, bi, ci)
+        sh2o, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
+                                   dummy, rhstt, ai, bi, ci)
 
-    return smc, runoff1, runoff2, runoff3, drip
+    return cmc, sh2o, smc, runoff1, runoff2, runoff3, drip
 
 
 def snowpack(
@@ -2004,7 +2004,7 @@ def srt(
     # the remaining soil layers, repeating the above process
     denom2 = zsoil[:-1] - zsoil[1:]
     denom = (zsoil[:-2] - zsoil[2:])
-    dsmdz2 = (zsoil[1:-1] - zsoil[2:]) / (denom * 0.5)
+    dsmdz2 = (sh2o[1:-1] - sh2o[2:]) / (denom * 0.5)
     # calc the matrix coef, ci, after calc'ng its partial product
     ddz2 = 2.0 / denom
     ci[1:-1] = -wdf[1:-1]*ddz2 / denom2[:-1]
