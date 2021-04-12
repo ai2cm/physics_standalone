@@ -348,7 +348,7 @@ subroutine gfdl_cloud_microphys_driver (qv, ql, qr, qi, qs, qg, qa, qn,   &
         qv_dt, ql_dt, qr_dt, qi_dt, qs_dt, qg_dt, qa_dt, pt_dt, pt, w,    &
         uin, vin, udt, vdt, dz, delp, area, dt_in, land, rain, snow, ice, &
         graupel, hydrostatic, phys_hydrostatic, iis, iie, jjs, jje, kks,  &
-        kke, ktop, kbot, seconds, p, lradar, refl_10cm, reset)
+        kke, ktop, kbot, seconds, p, lradar, refl_10cm, reset, do_timings, timings, fact_idx)
     implicit none
     
     logical, intent (in) :: hydrostatic, phys_hydrostatic,lradar
@@ -366,10 +366,15 @@ subroutine gfdl_cloud_microphys_driver (qv, ql, qr, qi, qs, qg, qa, qn,   &
     real, intent (in), dimension (:, :, :) :: delp, dz, uin, vin, p
     real, intent (in), dimension (:, :, :) :: pt, qv, ql, qr, qg, qa, qn
     
+    logical, intent(in) :: do_timings
+    integer, intent(in) :: fact_idx
+    
     real, intent (inout), dimension (:, :, :) :: qi, qs
     real, intent (inout), dimension (:, :, :) :: pt_dt, qa_dt, udt, vdt, w
     real, intent (inout), dimension (:, :, :) :: qv_dt, ql_dt, qr_dt
     real, intent (inout), dimension (:, :, :) :: qi_dt, qs_dt, qg_dt
+    
+    real, intent (inout), dimension (:, :) :: timings
     
     real, intent (out), dimension (:, :, :) :: refl_10cm
     real, intent (out), dimension (:, :) :: rain, snow, ice, graupel
@@ -402,6 +407,7 @@ subroutine gfdl_cloud_microphys_driver (qv, ql, qr, qi, qs, qg, qa, qn,   &
     ie = iie - iis + 1
     je = jje - jjs + 1
     ke = kke - kks + 1
+    
     ! call mpp_clock_begin (gfdl_mp_clock)
     
     ! -----------------------------------------------------------------------
@@ -474,13 +480,13 @@ subroutine gfdl_cloud_microphys_driver (qv, ql, qr, qi, qs, qg, qa, qn,   &
             rain (:, j), snow (:, j), graupel (:, j), ice (:, j), m2_rain,     &
             m2_sol, cond (:, j), area (:, j), land (:, j), udt, vdt, pt_dt,    &
             qv_dt, ql_dt, qr_dt, qi_dt, qs_dt, qg_dt, qa_dt, w_var, vt_r,      &
-            vt_s, vt_g, vt_i, qn2)
+            vt_s, vt_g, vt_i, qn2, do_timings, timings, fact_idx)
     enddo
     
     ! -----------------------------------------------------------------------
     ! no clouds allowed above ktop
     ! -----------------------------------------------------------------------
-    
+
     if (ks < ktop) then
         do k = ks, ktop
             if (do_qa) then
@@ -657,7 +663,7 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
         qg, qa, qn, dz, is, ie, js, je, ks, ke, ktop, kbot, j, dt_in, ntimes, &
         rain, snow, graupel, ice, m2_rain, m2_sol, cond, area1, land,         &
         u_dt, v_dt, pt_dt, qv_dt, ql_dt, qr_dt, qi_dt, qs_dt, qg_dt, qa_dt,   &
-        w_var, vt_r, vt_s, vt_g, vt_i, qn2)
+        w_var, vt_r, vt_s, vt_g, vt_i, qn2, do_timings, timings, fact_idx)
     
     implicit none
     
@@ -673,11 +679,16 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
     real, intent (in), dimension (is:, js:, ks:) :: uin, vin, delp, pt, dz
     real, intent (in), dimension (is:, js:, ks:) :: qv, ql, qr, qg, qa, qn
     
+    logical, intent(in) :: do_timings
+    integer, intent(in) :: fact_idx
+    
     real, intent (inout), dimension (is:, js:, ks:) :: qi, qs
     real, intent (inout), dimension (is:, js:, ks:) :: u_dt, v_dt, w, pt_dt, qa_dt
     real, intent (inout), dimension (is:, js:, ks:) :: qv_dt, ql_dt, qr_dt, qi_dt, qs_dt, qg_dt
     
     real, intent (inout), dimension (is:) :: rain, snow, ice, graupel, cond
+    
+    real, intent (inout), dimension (:, :) :: timings
     
     real, intent (out), dimension (is:, js:) :: w_var
     
@@ -701,6 +712,11 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
     real :: dqi, qio, qin
     
     integer :: i, k, n
+    
+    real :: t_warm_rain_1_start, t_warm_rain_1_end, &
+            t_sedimentation_start, t_sedimentation_end, &
+            t_warm_rain_2_start, t_warm_rain_2_end, &
+            t_icloud_start, t_icloud_end
     
     dts = dt_in / real (ntimes)
     dt_rain = dts * 0.5
@@ -861,7 +877,11 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
         m2_sol (i, :) = 0.
         
         do n = 1, ntimes
-            
+
+            if (do_timings) then
+                call cpu_time(t_warm_rain_1_start)
+            endif
+
             ! -----------------------------------------------------------------------
             ! define air density based on hydrostatical property
             ! -----------------------------------------------------------------------
@@ -894,6 +914,14 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
                 m1 (k) = m1 (k) + m1_rain (k)
             enddo
             
+            if (do_timings) then
+                call cpu_time(t_warm_rain_1_end)
+                
+                timings(1, fact_idx) = timings(1, fact_idx) + (t_warm_rain_1_end - t_warm_rain_1_start)
+                
+                call cpu_time(t_sedimentation_start)
+            endif
+
             ! -----------------------------------------------------------------------
             ! sedimentation of cloud ice, snow, and graupel
             ! -----------------------------------------------------------------------
@@ -916,6 +944,14 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
                 call sedi_heat (ktop, kbot, dp1, m1_sol, dz1, tz, qvz, qlz, qrz, qiz, &
                     qsz, qgz, c_ice)
             
+            if (do_timings) then
+                call cpu_time(t_sedimentation_end)
+                
+                timings(2, fact_idx) = timings(2, fact_idx) + (t_sedimentation_end - t_sedimentation_start)
+                
+                call cpu_time(t_warm_rain_2_start)
+            endif
+
             ! -----------------------------------------------------------------------
             ! time - split warm rain processes: 2nd pass
             ! -----------------------------------------------------------------------
@@ -931,12 +967,26 @@ subroutine mpdrv (hydrostatic, uin, vin, w, delp, pt, qv, ql, qr, qi, qs,     &
                 m1 (k) = m1 (k) + m1_rain (k) + m1_sol (k)
             enddo
             
+            if (do_timings) then
+                call cpu_time(t_warm_rain_2_end)
+                
+                timings(3, fact_idx) = timings(3, fact_idx) + (t_warm_rain_2_end - t_warm_rain_2_start)
+                
+                call cpu_time(t_icloud_start)
+            endif
+            
             ! -----------------------------------------------------------------------
             ! ice - phase microphysics
             ! -----------------------------------------------------------------------
             
             call icloud (ktop, kbot, tz, p1, qvz, qlz, qrz, qiz, qsz, qgz, dp1, den, &
                 denfac, vtsz, vtgz, vtrz, qaz, rh_adj, rh_rain, dts, h_var)
+            
+            if (do_timings) then
+                call cpu_time(t_icloud_end)
+                
+                timings(4, fact_idx) = timings(4, fact_idx) + (t_icloud_end - t_icloud_start)
+            endif
             
         enddo
         
@@ -3502,13 +3552,15 @@ subroutine gfdl_cloud_microphys_init (me, master, nlunit, input_nml_file, loguni
     read (nlunit, nml = gfdl_cloud_microphysics_nml)
     close (nlunit)
 #endif
-    
+
+#ifdef PRINT_NML
     ! write version number and namelist to log file
     if (me == master) then
         write (logunit, *) " ================================================================== "
         write (logunit, *) "gfdl_cloud_microphys_mod"
         write (logunit, nml = gfdl_cloud_microphysics_nml)
     endif
+#endif
     
     if (do_setup) then
         call setup_con
@@ -3776,7 +3828,13 @@ real function wqs1 (ta, den)
     !> input "den" can be either dry or moist air density
     
     real, intent (in) :: ta, den
+
+#ifdef EXACT_SVP
+
+    wqs1 = (e00 * exp((dc_vap * log(ta / t_ice) + lv0 * (ta - t_ice) / (ta * t_ice)) / rvgas)) / ( rvgas * ta * den )
     
+#else
+
     real :: es, ap1, tmin
     
     integer :: it
@@ -3787,7 +3845,9 @@ real function wqs1 (ta, den)
     it = ap1
     es = tablew (it) + (ap1 - it) * desw (it)
     wqs1 = es / (rvgas * ta * den)
-    
+
+#endif
+
 end function wqs1
 
 ! =======================================================================
@@ -3807,7 +3867,14 @@ real function wqs2 (ta, den, dqdt)
     real, intent (in) :: ta, den
     
     real, intent (out) :: dqdt
+
+#ifdef EXACT_SVP
     
+    wqs2 = wqs1(ta, den)
+    dqdt = wqs2 * (dc_vap + lv0 / ta) / (rvgas * ta)
+
+#else
+
     real :: es, ap1, tmin
     
     integer :: it
@@ -3825,6 +3892,8 @@ real function wqs2 (ta, den, dqdt)
     ! finite diff, del_t = 0.1:
     dqdt = 10. * (desw (it) + (ap1 - it) * (desw (it + 1) - desw (it))) / (rvgas * ta * den)
     
+#endif
+
 end function wqs2
 
 ! =======================================================================
@@ -3868,6 +3937,30 @@ real function iqs1 (ta, den)
     !> input "den" can be either dry or moist air density
     
     real, intent (in) :: ta, den
+
+#ifdef EXACT_SVP
+
+    if (ta < t_ice) then
+
+        ! Over ice between -160 degrees Celsius and 0 degrees Celsius
+        if (ta >= t_ice - 160.) then
+            iqs1 = (e00 * exp((d2ice * log(ta / t_ice) + li2 * (ta - t_ice) / (ta * t_ice)) / rvgas)) / ( rvgas * ta * den )
+        else
+            iqs1 = (e00 * exp((d2ice * log(1. - 160. / t_ice) - li2 * 160. / ((t_ice - 160.) * t_ice)) / rvgas)) / ( rvgas * (t_ice - 160.) * den )
+        endif
+
+    else
+
+        ! Over water between 0 degrees Celsius and 102 degrees Celsius
+        if (ta <= t_ice + 102.) then
+            iqs1 = wqs1(ta, den)
+        else
+            iqs1 = wqs1(t_ice + 102., den)
+        endif
+
+    endif
+
+#else
     
     real :: es, ap1, tmin
     
@@ -3880,6 +3973,8 @@ real function iqs1 (ta, den)
     es = table2 (it) + (ap1 - it) * des2 (it)
     iqs1 = es / (rvgas * ta * den)
     
+#endif
+
 end function iqs1
 
 ! =======================================================================
@@ -3897,7 +3992,33 @@ real function iqs2 (ta, den, dqdt)
     real, intent (in) :: ta, den
     
     real, intent (out) :: dqdt
+
+#ifdef EXACT_SVP
+
+    iqs2 = iqs1(ta, den)
     
+    if (ta < t_ice) then
+
+        ! Over ice between -160 degrees Celsius and 0 degrees Celsius
+        if (ta >= t_ice - 160.) then
+            dqdt = iqs2 * (d2ice + li2 / ta) / (rvgas * ta)
+        else
+            dqdt = iqs2 * (d2ice + li2 / (t_ice - 160.)) / (rvgas * (t_ice - 160.))
+        endif
+
+    else
+
+        ! Over water between 0 degrees Celsius and 102 degrees Celsius
+        if (ta <= t_ice + 102.) then
+            dqdt = iqs2 * (dc_vap + lv0 / ta) / (rvgas * ta)
+        else
+            dqdt = iqs2 * (dc_vap + lv0 / (t_ice + 102.)) / (rvgas * (t_ice + 102.))
+        endif
+
+    endif
+
+#else
+
     real :: es, ap1, tmin
     
     integer :: it
@@ -3911,6 +4032,8 @@ real function iqs2 (ta, den, dqdt)
     it = ap1 - 0.5
     dqdt = 10. * (des2 (it) + (ap1 - it) * (des2 (it + 1) - des2 (it))) / (rvgas * ta * den)
     
+#endif
+
 end function iqs2
 
 ! =======================================================================
