@@ -21,7 +21,7 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
-IN_VARS2 = ["smc_ref", "sh2o_ref"]
+IN_VARS2 = ["weasd_ref", "vegtype_ref"]
 
 IN_VARS3 = ["c1xpvs", "c2xpvs", "tbpvs"]
 
@@ -65,13 +65,13 @@ for tile in range(6):
 
     serializer = ser.Serializer(ser.OpenModeKind.Read, "./data", "Generator_rank" + str(tile))
 
-    # serializer2 = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
+    serializer2 = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized_rank" + str(tile))
 
     serializer3 = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized")
 
     savepoints = serializer.savepoint_list()
 
-    # savepoint2 = serializer2.savepoint_list()
+    savepoint2 = serializer2.savepoint_list()
 
     savepoint3 = serializer3.savepoint_list()
 
@@ -94,13 +94,15 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-            # in_data_test = data_dict_from_var_list(IN_VARS2, serializer2, savepoint2[0])
+            in_data_test = data_dict_from_var_list(IN_VARS2, serializer2, savepoint2[0])
 
             in_data_fpvs = data_dict_from_var_list(IN_VARS3, serializer3, savepoint3[0])
 
+            # ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
+
             # run Python version
-            # out_data = noah_lsm.run(in_data, in_data_test, in_data_fpvs)
-            out_data = noah_lsm.run(in_data, in_data_fpvs)
+            out_data = noah_lsm.run(in_data, in_data_test, in_data_fpvs)
+            # out_data = noah_lsm.run(in_data, in_data_fpvs, ref_data)
 
             isready = True
 

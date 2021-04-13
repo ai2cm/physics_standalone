@@ -9,7 +9,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
             "smcwlt2", "smcref2", "wet1"]
 
 
-def run(in_dict, in_dict2):
+def run(in_dict, in_dict2, in_new):
     """run function"""
 
     # setup output
@@ -18,7 +18,7 @@ def run(in_dict, in_dict2):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
-    sfc_drv(**in_dict, **in_dict2, **out_dict)
+    sfc_drv(**in_dict, **in_dict2, **in_new, **out_dict)
     # sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
 
     return out_dict
@@ -33,7 +33,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    # smc_ref, sh2o_ref,
+    weasd_ref, vegtype_ref,
     # parameters for fpvs
     c1xpvs, c2xpvs, tbpvs,
     # in/outs
@@ -307,6 +307,13 @@ def sfc_drv(
     i = land & np.logical_not(flag_guess)
     tskin[i] = tsurf[i]
 
+    # for j in range(0, im):
+    #     if weasd_ref[j] != weasd[j]:
+    #         print(j)
+    #         break
+
+    np.testing.assert_array_equal(weasd_ref, weasd)
+
 
 def ppfbet(pr, p, q, iflag, x):
     # is not called
@@ -346,13 +353,13 @@ def sflx(
     ice = icein
 
     # is not called
-    if ivegsrc == 2 and vegtyp == 13:
+    if ivegsrc == 1 and vegtyp == 12:
         ice = -1
         shdfac = 0.0
         # not called
         print("ERROR: not called")
 
-    if ivegsrc == 1 and vegtyp == 15:
+    if ivegsrc == 0 and vegtyp == 14:
         ice = -1
         shdfac = 0.0
 
@@ -393,8 +400,8 @@ def sflx(
     # set at lower bound and store the source increment in subsurface
     # runoff/baseflow (runoff2).
     if ice == 1:
-        # not called
         print("ERROR: case not implemented")
+
     elif (ice == -1) and (sneqv < 0.10):
         # TODO: check if it is called
         sneqv = 0.10
@@ -792,7 +799,7 @@ def nopac(
     # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
     df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
 
-    if (ivegsrc == 1) and (vegtyp == 13):
+    if (ivegsrc == 0) and (vegtyp == 12):
         df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
     else:
         df1 *= np.exp(sbeta*shdfac)
@@ -895,7 +902,7 @@ def redprm(
     hs = hstbl[vegtyp]
     xlai = lai_data[vegtyp]
 
-    if vegtyp == bare:
+    if vegtyp + 1 == bare:
         shdfac = 0.0
 
     if nroot > nsoil:
@@ -1615,7 +1622,7 @@ def hrt(
 
     csoil_loc = csoil
 
-    if ivegsrc == 1 and vegtyp == 13:
+    if ivegsrc == 0 and vegtyp == 12:
         csoil_loc = 3.0e6*(1.-shdfac)+csoil*shdfac
 
     #  initialize logical for soil layer temperature averaging.
@@ -1648,7 +1655,7 @@ def hrt(
     df1n = tdfcnd(smc[1:], quartz, smcmax, sh2o[1:])
     df1k = np.append(df1, df1n[:-1])
 
-    if ivegsrc == 1 and vegtyp == 13:
+    if ivegsrc == 0 and vegtyp == 12:
         df1n = 3.24*(1.-shdfac) + shdfac*df1n
 
     # calc the vertical soil temp gradient thru each layer
@@ -1697,73 +1704,6 @@ def hrt(
     # calc matrix coefs, ai, and bi for this layer.
     ai[1:] = - df1 * ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct[1:])
     bi[1:] = -(ai[1:] + ci[1:])
-
-    # # loop thru the remaining soil layers, repeating the above process
-
-    # for k in range(1, nsoil):
-    #     hcpct = sh2o[k]*cph2o2 + (1.0 - smcmax)*csoil_loc + \
-    #         (smcmax - smc[k])*cp2 + (smc[k] - sh2o[k])*cpice1
-
-    #     if k != nsoil:
-    #         df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
-
-    #         if ivegsrc == 1 and vegtyp == 13:
-    #             df1n = 3.24*(1.-shdfac) + shdfac*df1n
-
-    #         # calc the vertical soil temp gradient thru this layer
-    #         denom = 0.5 * (zsoil[k-1] - zsoil[k+1])
-    #         dtsdz2 = (stc[k] - stc[k+1]) / denom
-
-    #         # calc the matrix coef, ci, after calc'ng its partial product
-    #         ddz2 = 2.0 / (zsoil[k-1] - zsoil[k+1])
-    #         ci[k] = - df1n*ddz2 / ((zsoil[k-1] - zsoil[k]) * hcpct)
-
-    #         # calculate temp at bottom of layer
-    #         if itavg:
-    #             tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
-
-    #     else:
-    #         # calculate thermal diffusivity for bottom layer
-    #         df1n = tdfcnd(smc[k], quartz, smcmax, sh2o[k])
-
-    #         if ivegsrc == 1 and vegtyp == 13:
-    #             df1n = 3.24*(1.-shdfac) + shdfac*df1n
-
-    #         # calc the vertical soil temp gradient thru this layer
-    #         denom = 0.5 * zsoil[k-1] - zsoil[k] - zbot
-    #         dtsdz2 = (stc[k] - tbot) / denom
-
-    #         # set matrix coef, ci to zero if bottom layer.
-    #         ci[k] = 0.
-
-    #         if itavg:
-    #             tbk1 = tbnd(stc[k], stc[k+1], zsoil, zbot, k, nsoil)
-
-    #     # calculate rhsts
-    #     denom = (zsoil[k] - zsoil[k-1])*hcpct
-    #     rhsts[k] = (df1n*dtsdz2 - df1k*dtsdz)/denom
-
-    #     qtot = -1. * denom * rhsts[k]
-
-    #     if sice > 0. or tbk < tfreez or stc[k] < tfreez or tbk1 < tfreez:
-    #         if itavg:
-    #             tavg = tmpavg(tbk, stc[k], tbk1, zsoil, nsoil, k)
-    #         else:
-    #             tavg = stc[k]
-
-    #         tsnsr = snksrc(nsoil, k, tavg, smc[k], smcmax, psisat, bexp, dt,
-    #                     qtot, zsoil, shdfac, sh2o[k])
-    #         rhsts[k] -= tsnsr / denom
-
-    #     # calc matrix coefs, ai, and bi for this layer.
-    #     ai[k] = - df1 * ddz / ((zsoil[k-1] - zsoil[k]) * hcpct)
-    #     bi[k] = -(ai[k] + ci[k])
-
-    #     # reset values of df1, dtsdz, ddz, and tbk for loop to next soil layer.
-    #     tbk = tbk1
-    #     df1k = df1n
-    #     dtsdz = dtsdz2
-    #     ddz = ddz2
 
     return sh2o, rhsts, ai, bi, ci
 
