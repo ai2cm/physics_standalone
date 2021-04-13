@@ -19,6 +19,7 @@ def run(in_dict, in_dict2):
         del in_dict[key]
 
     sfc_drv(**in_dict, **in_dict2, **out_dict)
+    # sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
 
     return out_dict
 
@@ -32,6 +33,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
+    # smc_ref, sh2o_ref,
     # parameters for fpvs
     c1xpvs, c2xpvs, tbpvs,
     # in/outs
@@ -236,6 +238,7 @@ def sfc_drv(
                 bexpp, xlaip, lheatstrg,
                 first_iter,
                 # Inputs to probe for port
+                # smc_ref, sh2o_ref,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
                 # outputs
@@ -319,6 +322,7 @@ def sflx(
     bexpp, xlaip, lheatstrg,
     first_iter,
     # Inputs to probe for port
+    # smc_ref, sh2o_ref,
     # in/outs
     tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0,
     # outputs
@@ -572,7 +576,8 @@ def sflx(
     esnow = 0.
 
     if sneqv == 0.:
-        eta, smc, ssoil, runoff1, runoff2, runoff3, edir, \
+        cmc, t1, stc, sh2o, tbot, \
+            eta, smc, ssoil, runoff1, runoff2, runoff3, edir, \
             ec, et, ett, beta, drip, dew, flx1, flx3 = nopac(nsoil, nroot, etp, prcp, smcmax, smcwlt, smcref,
                                                              smcdry, cmcmax, dt, shdfac, sbeta, sfctmp, sfcems,
                                                              t24, th2, fdown, epsca, bexp, pc, rch, rr, cfactr,
@@ -581,14 +586,15 @@ def sflx(
                                                              cmc, t1, stc, sh2o, tbot, smc)
 
     else:
-        smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, \
+        prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh, sh2o, tbot, \
+            smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, \
             ett, snomlt, drip, dew, flx1, flx3, esnow = snopac(nsoil, nroot, etp, prcp, smcmax, smcwlt, smcref, smcdry,
                                                                cmcmax, dt, df1, sfcems, sfctmp, t24, th2, fdown, epsca,
                                                                bexp, pc, rch, rr, cfactr, slope, kdt, frzx, psisat,
                                                                zsoil, dwsat, dksat, zbot, shdfac, ice, rtdis, quartz,
                                                                fxexp, csoil, flx2, snowng, ffrozp, ivegsrc, vegtyp,
                                                                prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh,
-                                                               sh2o, tbot)
+                                                               sh2o, tbot, smc)
 
     # prepare sensible heat (h) for return to parent model
     sheat = -(ch*cp1*sfcprs) / (rd1*t2v) * (th2 - t1)
@@ -635,8 +641,8 @@ def sflx(
     # soil moisture availability (fraction) relative to porosity/saturation
     zsoil_dif = np.append(-zsoil[0], zsoil[:nsoil-1]-zsoil[1:])
     soilm = np.sum(smc*zsoil_dif)
-    soilwm = (smcmax-smcwlt) * np.sum(zsoil_dif)
-    soilww = np.sum((smc - smcwlt) * zsoil_dif)
+    soilwm = (smcmax-smcwlt) * np.sum(zsoil_dif[:nroot])
+    soilww = np.sum((smc[:nroot] - smcwlt) * zsoil_dif[:nroot])
     soilw = soilww / soilwm
 
     return tbot, cmc, t1, stc, smc, sh2o, sneqv, ch, cm, z0, \
@@ -796,14 +802,14 @@ def nopac(
     yy = sfctmp + (yynum/rch + th2 - sfctmp - beta*epsca)/rr
     zz1 = df1/(-0.5*zsoil[0]*rch*rr) + 1.0
 
-    ssoil = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
-                  psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
-                  stc, t1, tbot, sh2o)
+    ssoil, stc, t1, tbot, sh2o = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
+                                       psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
+                                       stc, t1, tbot, sh2o)
 
     flx1 = 0.0
     flx3 = 0.0
 
-    return eta, smc, ssoil, runoff1, runoff2, runoff3, edir, \
+    return cmc, t1, stc, sh2o, tbot, eta, smc, ssoil, runoff1, runoff2, runoff3, edir, \
         ec, et, ett, beta, drip, dew, flx1, flx3
 
 
@@ -1029,7 +1035,7 @@ def snopac(
     fxexp, csoil, flx2, snowng, ffrozp, ivegsrc, vegtyp,
     # in/outs
     prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh,
-    sh2o, tbot
+    sh2o, tbot, smc
 ):
     # --- ... subprograms called: evapo, smflx, shflx, snowpack
 
@@ -1055,7 +1061,6 @@ def snopac(
 
     et = np.zeros(nsoil)
     et1 = np.zeros(nsoil)
-    smc = np.zeros(nsoil)
 
     ett = 0.0
     ett1 = 0.0
@@ -1184,21 +1189,21 @@ def snopac(
         # smflx returns updated soil moisture values for non-glacial land.
         cmc, sh2o, smc, runoff1, runoff2, runoff3, drip = smflx(nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
                                                                 zsoil, slope, frzx, bexp, dksat, dwsat, shdfac,
-                                                                edir1, ec1, et1, cmc, sh2o)
+                                                                edir1, ec1, et1, cmc, sh2o, smc)
 
     zz1 = 1.0
     yy = stc[0] - 0.5 * ssoil * zsoil[0] * zz1 / df1
     t11 = t1
 
     # shflx will calc/update the soil temps.
-    ssoil1 = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
-                   psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
-                   shdfac, stc, t11, tbot, sh2o)
+    ssoil1, stc, t11, tbot, sh2o = shflx(nsoil, smc, smcmax, dt, yy, zz1, zsoil, zbot,
+                                         psisat, bexp, df1, ice, quartz, csoil, ivegsrc, vegtyp,
+                                         shdfac, stc, t11, tbot, sh2o)
 
     # snow depth and density adjustment based on snow compaction.
     if ice == 0:
         if sneqv > 0.0:
-            snowpack(sneqv, dt, t1, yy, snowh, sndens)
+            snowh, sndens = snowpack(sneqv, dt, t1, yy, snowh, sndens)
 
         else:
             sneqv = 0.0
@@ -1208,7 +1213,7 @@ def snopac(
 
     elif ice == 1:
         if sneqv >= 0.01:
-            snowpack(sneqv, dt, t1, yy, snowh, sndens)
+            snowh, sndens = snowpack(sneqv, dt, t1, yy, snowh, sndens)
         else:
             sneqv = 0.01
             snowh = 0.05
@@ -1219,7 +1224,8 @@ def snopac(
         snowh = 0.50
         sncovr = 1.0
 
-    return smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, ett, \
+    return prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh, sh2o, tbot, \
+        smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, ett, \
         snomlt, drip, dew, flx1, flx3, esnow
 
 
@@ -1378,13 +1384,14 @@ def shflx(
     stsoil = stc
 
     if ice != 0:  # sea-ice or glacial ice case
-        rhsts, ai, bi, ci = hrtice(nsoil, stc, zsoil, yy, zz1, df1, ice, tbot)
+        tbot, rhsts, ai, bi, ci = hrtice(
+            nsoil, stc, zsoil, yy, zz1, df1, ice, tbot)
 
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
     else:
-        rhsts, ai, bi, ci = hrt(nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
-                                zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
-                                shdfac, sh2o)
+        sh2o, rhsts, ai, bi, ci = hrt(nsoil, stc, smc, smcmax, zsoil, yy, zz1, tbot,
+                                      zbot, psisat, dt, bexp, df1, quartz, csoil, ivegsrc, vegtyp,
+                                      shdfac, sh2o)
 
         stcf = hstep(nsoil, stc, dt, rhsts, ai, bi, ci)
 
@@ -1393,13 +1400,12 @@ def shflx(
     # update the grnd (skin) temperature in the no snowpack case
     t1 = (yy + (zz1 - 1.0)*stc[0]) / zz1
     t1 = ctfil1*t1 + ctfil2*oldt1
-
     stc = ctfil1*stc + ctfil2*stsoil
 
     # calculate surface soil heat flux
     ssoil = df1*(stc[0] - t1) / (0.5*zsoil[0])
 
-    return ssoil
+    return ssoil, stc, t1, tbot, sh2o
 
 
 def smflx(
@@ -1454,8 +1460,8 @@ def smflx(
         rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
                                                   dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice)
 
-        sh2o, runoff3, smc = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
-                                   dummy, rhstt, ai, bi, ci)
+        sh2o, runoff3, smc, cmc, rhstt, ai, bi, ci = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
+                                                           cmc, rhstt, ai, bi, ci)
 
     return cmc, sh2o, smc, runoff1, runoff2, runoff3, drip
 
@@ -1508,13 +1514,13 @@ def snowpack(
     # update of snow depth and density depending on liquid water during snowmelt.
     if tsnowc >= 0.0:
         dw = 0.13 * dthr / 24.0
-        sndens = max(sndens*(1.0 - dw) + dw, 0.40)
+        sndens = min(sndens*(1.0 - dw) + dw, 0.40)
 
     # calculate snow depth (cm) from snow water equivalent and snow density.
     snowhc = esdc / sndens
     snowh = snowhc * 0.01
 
-    return
+    return snowh, sndens
 
 
 # *************************************
@@ -1649,7 +1655,7 @@ def hrt(
     denom = 0.5 * (zsoil[:-2] - zsoil[2:])
     dtsdz2 = (stc[1:-1] - stc[2:]) / denom
     dtsdz2 = np.append(dtsdz2, (stc[-1] - tbot) /
-                       (0.5 * zsoil[-2] - zsoil[-1] - zbot))
+                       (0.5 * (zsoil[-2] + zsoil[-1]) - zbot))
 
     # calc the matrix coef, ci, after calc'ng its partial product
     ddz2 = 2.0 / (zsoil[:-2] - zsoil[2:])
@@ -1759,7 +1765,7 @@ def hrt(
     #     dtsdz = dtsdz2
     #     ddz = ddz2
 
-    return rhsts, ai, bi, ci
+    return sh2o, rhsts, ai, bi, ci
 
 
 def hrtice(
@@ -1802,8 +1808,6 @@ def hrtice(
     ssoil = df1 * (stc[0] - yy) / (0.5*zsoil[0]*zz1)
     rhsts[0] = (df1*dtsdz - ssoil) / (zsoil[0]*hcpct)
 
-    ddz = 0.0
-
     # the remaining soil layers, repeating the above process
     denom = 0.5 * (zsoil[:-2] - zsoil[2:])
     dtsdz2 = (zsoil[1:-1] - zsoil[2:]) / denom
@@ -1826,7 +1830,7 @@ def hrtice(
     ai[1:] = - df1*ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct)
     bi[1:] = -(ai[1:] + ci[1:])
 
-    return rhsts, ai, bi, ci
+    return tbot, rhsts, ai, bi, ci
 
 
 def hstep(
@@ -2082,7 +2086,7 @@ def sstep(
         cmc = 0.0
     cmc = min(cmc, cmcmax)
 
-    return sh2oout, runoff3, smc
+    return sh2oout, runoff3, smc, cmc, rhstt, ai, bi, ci
 
 
 def tbnd(tu, tb, zsoil, zbot, nsoil):
@@ -2238,7 +2242,7 @@ def serialbox_test_special(fortran_sol, py_sol, flag_test, name):
 
 
 def serialbox_test_function(fortran_sol, py_sol, name):
-    if(fortran_sol == py_sol):
+    if((fortran_sol == py_sol).all()):
         print(f'{name:14}', "IS CORRECT")
     else:
         errors = np.sum(np.array(fortran_sol) != np.array(py_sol))

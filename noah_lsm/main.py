@@ -21,9 +21,7 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
-IN_VARS2 = ["t24_ref", "etp_ref", "rch_ref", "epsca_ref", "rr_ref", "flx2_ref",\
-    "sfctmp_ref", "sfcprs_ref", "sfcems_ref", "ch_ref", "t2v_ref", "th2_ref", "prcp_ref", "fdown_ref",\
-                                            "cpx_ref", "cpfac_ref", "ssoil_ref", "q2_ref", "q2sat_ref", "dqsdt2_ref", "snowng_ref", "frzgra_ref"]
+IN_VARS2 = ["smc_ref", "sh2o_ref"]
 
 IN_VARS3 = ["c1xpvs", "c2xpvs", "tbpvs"]
 
@@ -101,6 +99,7 @@ for tile in range(6):
             in_data_fpvs = data_dict_from_var_list(IN_VARS3, serializer3, savepoint3[0])
 
             # run Python version
+            # out_data = noah_lsm.run(in_data, in_data_test, in_data_fpvs)
             out_data = noah_lsm.run(in_data, in_data_fpvs)
 
             isready = True
