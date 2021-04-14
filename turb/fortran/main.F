@@ -116,14 +116,14 @@ program test
         !$ser data dusfc=dusfc dvsfc=dvsfc dtsfc=dtsfc dqsfc=dqsfc
         !$ser data xkzm_m=xkzm_m xkzm_h=xkzm_h hpbl=hpbl
 
-        allocate(kpbl_s(im_s), kinver_s(im_s), xmu_s(im_s), garea_s(im_s), psk_s(ix_s), &
-        rbsoil_s(im_s), zorl_s(im_s), tsea_s(im_s), u10m_s(im_s), v10m_s(im_s), fm_s(im_s), &
-        fh_s(im_s), evap_s(im_s), heat_s(im_s), stress_s(im_s), spd1_s(im_s), dusfc_s(im_s), &
-        dvsfc_s(im_s), dtsfc_s(im_s), dqsfc_s(im_s), hpbl_s(im_s), dv_s(im_s, km), &
-        du_s(im_s, km), tdt_s(im_s, km), u1_s(ix_s, km), v1_s(ix_s, km), t1_s(ix_s, km), &
-        swh_s(ix_s, km), hlw_s(ix_s, km), prsi_s(ix_s, km+1), del_s(ix_s, km), prsl_s(ix_s, km), &
-        prslk_s(ix_s, km), phii_s(ix_s, km+1), phil_s(ix_s, km), rtg_s(im_s, km, ntrac), &
-        q1_s(ix_s, km, ntrac))
+        allocate(kpbl_s(INT(CN*CN)), kinver_s(INT(CN*CN)), xmu_s(INT(CN*CN)), garea_s(INT(CN*CN)), psk_s(INT(CN*CN)), &
+        rbsoil_s(INT(CN*CN)), zorl_s(INT(CN*CN)), tsea_s(INT(CN*CN)), u10m_s(INT(CN*CN)), v10m_s(INT(CN*CN)), fm_s(INT(CN*CN)), &
+        fh_s(INT(CN*CN)), evap_s(INT(CN*CN)), heat_s(INT(CN*CN)), stress_s(INT(CN*CN)), spd1_s(INT(CN*CN)), dusfc_s(INT(CN*CN)), &
+        dvsfc_s(INT(CN*CN)), dtsfc_s(INT(CN*CN)), dqsfc_s(INT(CN*CN)), hpbl_s(INT(CN*CN)), dv_s(INT(CN*CN), km), &
+        du_s(INT(CN*CN), km), tdt_s(INT(CN*CN), km), u1_s(INT(CN*CN), km), v1_s(INT(CN*CN), km), t1_s(INT(CN*CN), km), &
+        swh_s(INT(CN*CN), km), hlw_s(INT(CN*CN), km), prsi_s(INT(CN*CN), km+1), del_s(INT(CN*CN), km), prsl_s(INT(CN*CN), km), &
+        prslk_s(INT(CN*CN), km), phii_s(INT(CN*CN), km+1), phil_s(INT(CN*CN), km), rtg_s(INT(CN*CN), km, ntrac), &
+        q1_s(INT(CN*CN), km, ntrac))
 
 
         do rep_idx=1, REPS+1
@@ -140,7 +140,7 @@ program test
 
             if (rep_idx .gt. 1) then
                         call cpu_time(t_driver_end)
-                        timings(6, fact_idx) = timings(6, fact_idx) + (t_driver_end - t_driver_start)
+                        timings(6, 1) = timings(6, 1) + (t_driver_end - t_driver_start)
             endif
 
         enddo
