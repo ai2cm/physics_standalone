@@ -14,17 +14,16 @@ program test
 
     integer :: ierror, n_ranks, rank_idx
     integer :: factors_size, fact_idx, rep_idx
-
+    character(len=10) :: file_id
     real :: t_driver_start, t_driver_end, &
             t_tot_start, t_tot_end
     
-    real, dimension(:, :), allocatable :: timings
-    
+    real :: timings(7, 1)
+    real :: C_orig, CN
     real, dimension(:), allocatable :: factors
 
     ! GT4Py development
-    logical :: VALIDATION=.false., BENCHMARK=.false., &
-               NORMAL=.false., WEAK=.false., STRONG=.false.
+    logical :: VALIDATION=.false.
 
     integer :: ix, im, km, ntrac, ntcw, ntiw, ntke
     integer, dimension(:), allocatable :: kpbl, kinver, kpbl_ref
@@ -67,52 +66,20 @@ program test
     ser_count_max = 19
     num_tiles = 6
 
-#ifdef RUN_MODE
-    if (RUN_MODE .eq. 0) then
-        VALIDATION = .true.
-    elseif (RUN_MODE .eq. 1) then
-        BENCHMARK = .true.
-        NORMAL    = .true.
-    elseif (RUN_MODE .eq. 2) then
-        BENCHMARK = .true.
-        WEAK      = .true.
-    elseif (RUN_MODE .eq. 3) then
-        BENCHMARK = .true.
-        STRONG    = .true.
-    else
-        VALIDATION = .true.
-    endif
-#endif
-
-    if (NORMAL) then
-        allocate(factors(12), timings(7, 12))
-        factors = (/ 1./12., 1./6., 0.25, 1./3., 5./12., 0.5, 7./12., 2./3., 0.75, 10./12., 11./12., 1. /)
-    elseif (WEAK) then
-        allocate(factors(1), timings(7, 1))
-        factors = (/ 1. /)
-    elseif (STRONG) then
-        allocate(factors(5), timings(7, 1))
-        factors = (/ 12./n_ranks /)
-    else
-        allocate(factors(1), timings(7, 1))
-        factors = (/ 1. /)
-    endif
+    timings(:,:) = 0.
+    CN = real(CNINPUT)
     
-    timings = 0.
-    
-    factors_size = size(factors)
-
 #ifdef PROGRESS_MODE
     call cdstart(num_tiles * ser_count_max)
 #endif
     ! initialize
     call gfuncphys(rank_idx, 0, nunit, 6)
 
-    do tile = 0, num_tiles - 1
+    do tile = 0, 0 !num_tiles - 1
     
-    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
+    !$ser init directory='./data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
 
-    do ser_count = 0, ser_count_max
+    do ser_count = 19, 19
 
 #ifdef PROGRESS_MODE
         call cdshow(tile * ser_count_max + ser_count)
@@ -149,154 +116,46 @@ program test
         !$ser data dusfc=dusfc dvsfc=dvsfc dtsfc=dtsfc dqsfc=dqsfc
         !$ser data xkzm_m=xkzm_m xkzm_h=xkzm_h hpbl=hpbl
 
-        do fact_idx=1, factors_size
+        allocate(kpbl_s(im_s), kinver_s(im_s), xmu_s(im_s), garea_s(im_s), psk_s(ix_s), &
+        rbsoil_s(im_s), zorl_s(im_s), tsea_s(im_s), u10m_s(im_s), v10m_s(im_s), fm_s(im_s), &
+        fh_s(im_s), evap_s(im_s), heat_s(im_s), stress_s(im_s), spd1_s(im_s), dusfc_s(im_s), &
+        dvsfc_s(im_s), dtsfc_s(im_s), dqsfc_s(im_s), hpbl_s(im_s), dv_s(im_s, km), &
+        du_s(im_s, km), tdt_s(im_s, km), u1_s(ix_s, km), v1_s(ix_s, km), t1_s(ix_s, km), &
+        swh_s(ix_s, km), hlw_s(ix_s, km), prsi_s(ix_s, km+1), del_s(ix_s, km), prsl_s(ix_s, km), &
+        prslk_s(ix_s, km), phii_s(ix_s, km+1), phil_s(ix_s, km), rtg_s(im_s, km, ntrac), &
+        q1_s(ix_s, km, ntrac))
 
-            factor = factors(fact_idx)
-            ix_s = ix * factor
-            im_s = im * factor
 
-            allocate(kpbl_s(im_s), kinver_s(im_s), xmu_s(im_s), garea_s(im_s), psk_s(ix_s), &
-            rbsoil_s(im_s), zorl_s(im_s), tsea_s(im_s), u10m_s(im_s), v10m_s(im_s), fm_s(im_s), &
-            fh_s(im_s), evap_s(im_s), heat_s(im_s), stress_s(im_s), spd1_s(im_s), dusfc_s(im_s), &
-            dvsfc_s(im_s), dtsfc_s(im_s), dqsfc_s(im_s), hpbl_s(im_s), dv_s(im_s, km), &
-            du_s(im_s, km), tdt_s(im_s, km), u1_s(ix_s, km), v1_s(ix_s, km), t1_s(ix_s, km), &
-            swh_s(ix_s, km), hlw_s(ix_s, km), prsi_s(ix_s, km+1), del_s(ix_s, km), prsl_s(ix_s, km), &
-            prslk_s(ix_s, km), phii_s(ix_s, km+1), phil_s(ix_s, km), rtg_s(im_s, km, ntrac), &
-            q1_s(ix_s, km, ntrac))
+        do rep_idx=1, REPS+1
 
-            ! variables not written only needs to reset once
-            if (factor .le. 1.) then
-                u1_s(1:ix_s,:) = u1(1:ix_s,:)
-                v1_s(1:ix_s,:) = v1(1:ix_s,:)
-                t1_s(1:ix_s,:) = t1(1:ix_s,:)
-                q1_s(1:ix_s,:,:) = q1(1:ix_s,:,:)
-                swh_s(1:ix_s,:) = swh(1:ix_s,:)
-                hlw_s(1:ix_s,:) = hlw(1:ix_s,:)
-                xmu_s(1:im_s) = xmu(1:im_s)
-                garea_s(1:im_s) = garea(1:im_s)
-                psk_s(1:ix_s) = psk(1:ix_s)
-                rbsoil_s(1:im_s) = rbsoil(1:im_s)
-                zorl_s(1:im_s) = zorl(1:im_s)
-                u10m_s(1:im_s) = u10m(1:im_s)
-                v10m_s(1:im_s) = v10m(1:im_s)
-                fm_s(1:im_s) = fm(1:im_s)
-                fh_s(1:im_s) = fh(1:im_s)
-                tsea_s(1:im_s) = tsea(1:im_s)
-                heat_s(1:im_s) = heat(1:im_s)
-                evap_s(1:im_s) = evap(1:im_s)
-                stress_s(1:im_s) = stress(1:im_s)
-                spd1_s(1:im_s) = spd1(1:im_s)
-                prsi_s(1:ix_s,:) = prsi(1:ix_s,:)
-                del_s(1:ix_s,:) = del(1:ix_s,:)
-                prsl_s(1:ix_s,:) = prsl(1:ix_s,:)
-                prslk_s(1:ix_s,:) = prslk(1:ix_s,:)
-                phii_s(1:ix_s,:) = phii(1:ix_s,:)
-                phil_s(1:ix_s,:) = phil(1:ix_s,:)
-                kinver_s(1:im_s) = kinver(1:im_s)
-            else
+            if (rep_idx .gt. 1) call cpu_time(t_driver_start)
 
-                do part=1, int(factor)
+            call satmedmfvdif(ix_s, im_s, km, ntrac, ntcw, ntiw, ntke, &
+                dv_s, du_s, tdt_s, rtg_s, u1_s, v1_s, t1_s, q1_s, swh_s, hlw_s, xmu_s, garea_s, &
+                psk_s, rbsoil_s, zorl_s, u10m_s, v10m_s, fm_s, fh_s, &
+                tsea_s, heat_s, evap_s, stress_s, spd1_s, kpbl_s, &
+                prsi_s, del_s, prsl_s, prslk_s, phii_s, phil_s, delt,  &
+                dspheat, dusfc_s, dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, &
+                kinver_s, xkzm_m, xkzm_h, xkzm_s)
 
-                    st_im = (part-1)*im + 1
-                    st_ix = (part-1)*ix + 1
-                    en_im = part*im
-                    en_ix = part*ix
-
-                    u1_s(st_ix:en_ix,:) = u1(1:ix,:)
-                    v1_s(st_ix:en_ix,:) = v1(1:ix,:)
-                    t1_s(st_ix:en_ix,:) = t1(1:ix,:)
-                    q1_s(st_ix:en_ix,:,:) = q1(1:ix,:,:)
-                    swh_s(st_ix:en_ix,:) = swh(1:ix,:)
-                    hlw_s(st_ix:en_ix,:) = hlw(1:ix,:)
-                    xmu_s(st_im:en_im) = xmu(1:im)
-                    garea_s(st_im:en_im) = garea(1:im)
-                    psk_s(st_ix:en_ix) = psk(1:ix)
-                    rbsoil_s(st_im:en_im) = rbsoil(1:im)
-                    zorl_s(st_im:en_im) = zorl(1:im)
-                    u10m_s(st_im:en_im) = u10m(1:im)
-                    v10m_s(st_im:en_im) = v10m(1:im)
-                    fm_s(st_im:en_im) = fm(1:im)
-                    fh_s(st_im:en_im) = fh(1:im)
-                    tsea_s(st_im:en_im) = tsea(1:im)
-                    heat_s(st_im:en_im) = heat(1:im)
-                    evap_s(st_im:en_im) = evap(1:im)
-                    stress_s(st_im:en_im) = stress(1:im)
-                    spd1_s(st_im:en_im) = spd1(1:im)
-                    prsi_s(st_ix:en_ix,:) = prsi(1:ix,:)
-                    del_s(st_ix:en_ix,:) = del(1:ix,:)
-                    prsl_s(st_ix:en_ix,:) = prsl(1:ix,:)
-                    prslk_s(st_ix:en_ix,:) = prslk(1:ix,:)
-                    phii_s(st_ix:en_ix,:) = phii(1:ix,:)
-                    phil_s(st_ix:en_ix,:) = phil(1:ix,:)
-                    kinver_s(st_im:en_im) = kinver(1:im)
-                    
-                enddo
-            endif
-
-            do rep_idx=1, REPS+1
-
-                if (factor .le. 1.) then
-
-                    dv_s(1:im_s,:) = dv(1:im_s,:)
-                    du_s(1:im_s,:) = du(1:im_s,:)
-                    tdt_s(1:im_s,:) = tdt(1:im_s,:)
-                    rtg_s(1:im_s,:,:) = rtg(1:im_s,:,:)
-                    kpbl_s(1:im_s) = kpbl(1:im_s)
-                    dusfc_s(1:im_s) = dusfc(1:im_s)
-                    dvsfc_s(1:im_s) = dvsfc(1:im_s)
-                    dtsfc_s(1:im_s) = dtsfc(1:im_s)
-                    dqsfc_s(1:im_s) = dqsfc(1:im_s)
-
-                else
-
-                    do part=1, int(factor)
-
-                        st_im = (part-1)*im + 1
-                        en_im = part*im
-
-                        dv_s(st_im:en_im,:) = dv(1:im,:)
-                        du_s(st_im:en_im,:) = du(1:im,:)
-                        tdt_s(st_im:en_im,:) = tdt(1:im,:)
-                        rtg_s(st_im:en_im,:,:) = rtg(1:im,:,:)
-                        kpbl_s(st_im:en_im) = kpbl(1:im)
-                        dusfc_s(st_im:en_im) = dusfc(1:im)
-                        dvsfc_s(st_im:en_im) = dvsfc(1:im)
-                        dtsfc_s(st_im:en_im) = dtsfc(1:im)
-                        dqsfc_s(st_im:en_im) = dqsfc(1:im)
-                    enddo
-                
-                endif
-
-                if (BENCHMARK .and. (rep_idx .gt. 1)) call cpu_time(t_driver_start)
-
-                call satmedmfvdif(ix_s, im_s, km, ntrac, ntcw, ntiw, ntke, &
-                    dv_s, du_s, tdt_s, rtg_s, u1_s, v1_s, t1_s, q1_s, swh_s, hlw_s, xmu_s, garea_s, &
-                    psk_s, rbsoil_s, zorl_s, u10m_s, v10m_s, fm_s, fh_s, &
-                    tsea_s, heat_s, evap_s, stress_s, spd1_s, kpbl_s, &
-                    prsi_s, del_s, prsl_s, prslk_s, phii_s, phil_s, delt,  &
-                    dspheat, dusfc_s, dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, &
-                    kinver_s, xkzm_m, xkzm_h, xkzm_s)
-
-                if (BENCHMARK .and. (rep_idx .gt. 1)) then
-                            call cpu_time(t_driver_end)
-                            timings(6, fact_idx) = timings(6, fact_idx) + (t_driver_end - t_driver_start)
-                endif
-
-            enddo
-
-            if (fact_idx .ne. factors_size) then
-                deallocate(kpbl_s, kinver_s, xmu_s, garea_s, psk_s, &
-                        rbsoil_s, zorl_s, tsea_s, u10m_s, v10m_s, fm_s, &
-                        fh_s, evap_s, heat_s, stress_s, spd1_s, dusfc_s, &
-                        dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, dv_s, &
-                        du_s, tdt_s, u1_s, v1_s, t1_s, &
-                        swh_s, hlw_s, prsi_s, del_s, prsl_s, &
-                        prslk_s, phii_s, phil_s, rtg_s, &
-                        q1_s)
-
+            if (rep_idx .gt. 1) then
+                        call cpu_time(t_driver_end)
+                        timings(6, fact_idx) = timings(6, fact_idx) + (t_driver_end - t_driver_start)
             endif
 
         enddo
+
+        if (fact_idx .ne. factors_size) then
+            deallocate(kpbl_s, kinver_s, xmu_s, garea_s, psk_s, &
+                    rbsoil_s, zorl_s, tsea_s, u10m_s, v10m_s, fm_s, &
+                    fh_s, evap_s, heat_s, stress_s, spd1_s, dusfc_s, &
+                    dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, dv_s, &
+                    du_s, tdt_s, u1_s, v1_s, t1_s, &
+                    swh_s, hlw_s, prsi_s, del_s, prsl_s, &
+                    prslk_s, phii_s, phil_s, rtg_s, &
+                    q1_s)
+
+        endif
 
         dv = dv_s
         du = du_s
@@ -358,7 +217,8 @@ program test
 
     end do
 
-    if (BENCHMARK) call MPI_REDUCE(timings(1:4, :), timings(1:4, :), 4*factors_size, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
+    call MPI_REDUCE(timings(1:4, :), timings(1:4, :), 4, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
+
     if (rank_idx .eq. 0) then
         
         call cpu_time(t_tot_end)
@@ -366,43 +226,16 @@ program test
         timings(7, 1) = t_tot_end - t_tot_start
         
         write(*,*) 'FINISHED!'
-        
-        if (BENCHMARK) then
             
-            if (NORMAL) then
-                open(1, file="../out/timings_benchmark_fortran_normal.dat")
-            else if (WEAK) then
-                open(1, file="../out/timings_weak_fortran_normal.dat", status="old", position="append")
-            else if (STRONG) then
-                open(1, file="../out/timings_strong_fortran_normal.dat", status="old", position="append")
-            endif
-            
-            timings(1:6, :) = timings(1:6, :) / REPS
-            
-            do fact_idx=1, factors_size
-                
-                i_dim = int(im * factors(fact_idx) * n_ranks)
-                
-                timings(5, fact_idx) = timings(1, fact_idx) + timings(2, fact_idx) + timings(3, fact_idx) + timings(4, fact_idx)
-                
-                if (factors(fact_idx) .le. 1.) then
-                    divider    = factors(fact_idx)
-                    multiplier = 1.
-                else
-                    divider    = 1.
-                    multiplier = factors(fact_idx)
-                endif
-                
-                write(1, *) divider, multiplier, i_dim * km, n_ranks, &
-                            0., timings(1, fact_idx), 0., timings(2, fact_idx), &
-                            0., timings(3, fact_idx), 0., timings(4, fact_idx), &
-                            0., timings(5, fact_idx), timings(6, fact_idx)
-                
-            enddo
-            
-            close(1)
-            
-        endif
+        write(file_id, '(i0)') int(CN)
+        open(1, file='./out/timings_benchmark_fortran_normal_C'//trim(adjustl(file_id))//'.dat')
+
+        timings(1:6, :) = timings(1:6, :) / REPS        
+        timings(5, 1) = timings(1, 1) + timings(2, 1) + timings(3, 1) + timings(4, 1)
+        write(1, *) timings(1, 1), timings(2, 1), &
+                    timings(3, 1), timings(4, 1), &
+                    timings(5, 1), timings(6, 1)
+        close(1)
     
         write(*,*) ""
         write(*,'(a, F7.3, a)') ">> Total elapsed time: ", timings(7, 1), " seconds"
@@ -511,5 +344,163 @@ contains
         isclose_i = abs(a - b) <= atol_local
 
     end function isclose_i
+
+    subroutine scale_dataset_to_N(CN, km, ix, im, ntrac, &
+                                kpbl, kinver, xmu, garea, psk, &
+                                rbsoil, zorl, tsea, u10m, v10m, fm, &
+                                fh, evap, heat, stress, spd1, dusfc, &
+                                dvsfc, dtsfc, dqsfc, hpbl, dv, &
+                                du, tdt, u1, v1, t1, &
+                                swh, hlw, prsi, del, prsl, &
+                                prslk, phii, phil, rtg, &
+                                q1, &
+                                kpbl_s, kinver_s, xmu_s, garea_s, psk_s, &
+                                rbsoil_s, zorl_s, tsea_s, u10m_s, v10m_s, fm_s, &
+                                fh_s, evap_s, heat_s, stress_s, spd1_s, dusfc_s, &
+                                dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, dv_s, &
+                                du_s, tdt_s, u1_s, v1_s, t1_s, &
+                                swh_s, hlw_s, prsi_s, del_s, prsl_s, &
+                                prslk_s, phii_s, phil_s, rtg_s, &
+                                q1_s)
+        implicit none
+
+        real (kind=kind_phys), intent(in) :: kpbl(:), kinver(:), xmu(:), garea(:), psk(:), &
+            rbsoil(:), zorl(:), tsea(:), u10m(:), v10m(:), fm(:), &
+            fh(:), evap(:), heat(:), stress(:), spd1(:), dusfc(:), &
+            dvsfc(:), dtsfc(:), dqsfc(:), hpbl(:), dv(:, :), &
+            du(:, :), tdt(:, :), u1(:, :), v1(:, :), t1(:, :), &
+            swh(:, :), hlw(:, :), prsi(:, :), del(:, :), prsl(:, :), &
+            prslk(:, :), phii(:, :), phil(:, :), rtg(:, :, :), &
+            q1(:, :, :)
+
+        real (kind=kind_phys), dimension(:, :, :), allocatable :: rtg_temp, q1_temp
+        real (kind=kind_phys), dimension(:, :), allocatable :: dv_temp, &
+            du_temp, tdt_temp, u1_temp, v1_temp, t1_temp, &
+            swh_temp, hlw_temp, prsi_temp, del_temp, prsl_temp, &
+            prslk_temp, phii_temp, phil_temp
+        real (kind=kind_phys), dimension(:), allocatable :: kpbl_temp, kinver_temp, xmu_temp, garea_temp, psk_temp, &
+            rbsoil_temp, zorl_temp, tsea_temp, u10m_temp, v10m_temp, fm_temp, &
+            fh_temp, evap_temp, heat_temp, stress_temp, spd1_temp, dusfc_temp, &
+            dvsfc_temp, dtsfc_temp, dqsfc_temp, hpbl_temp
+
+        real (kind=kind_phys), intent(inout) :: kpbl_s(:), kinver_s(:), xmu_s(:), garea_s(:), psk_s(:), &
+                                rbsoil_s(:), zorl_s(:), tsea_s(:), u10m_s(:), v10m_s(:), fm_s(:), &
+                                fh_s(:), evap_s(:), heat_s(:), stress_s(:), spd1_s(:), dusfc_s(:), &
+                                dvsfc_s(:), dtsfc_s(:), dqsfc_s(:), hpbl_s(:), dv_s(:, :), &
+                                du_s(:, :), tdt_s(:, :), u1_s(:, :), v1_s(:, :), t1_s(:, :), &
+                                swh_s(:, :), hlw_s(:, :), prsi_s(:, :), del_s(:, :), prsl_s(:, :), &
+                                prslk_s(:, :), phii_s(:, :), phil_s(:, :), rtg_s(:, :, :), &
+                                q1_s(:, :, :)
+        real, intent(in) :: CN
+        real :: C_orig
+        integer, intent(in):: km, ix, im, ntrac
+        integer :: multiplier_ix, multiplier_im, part, temp_ix, temp_im
+        C_orig = real(ix)
+        multiplier_ix = ceiling((CN*CN)/C_orig)
+        temp_ix = multiplier_ix*ix
+        multiplier_im = ceiling((CN*CN)/real(im))
+        temp_im = multiplier_im*im
+
+        allocate(kpbl_temp(temp_im), kinver_temp(temp_im), xmu_temp(temp_im), garea_temp(temp_im), psk_temp(temp_ix), &
+            rbsoil_temp(temp_im), zorl_temp(temp_im), tsea_temp(temp_im), u10m_temp(temp_im), v10m_temp(temp_im), fm_temp(temp_im), &
+            fh_temp(temp_im), evap_temp(temp_im), heat_temp(temp_im), stress_temp(temp_im), spd1_temp(temp_im), dusfc_temp(temp_im), &
+            dvsfc_temp(temp_im), dtsfc_temp(temp_im), dqsfc_temp(temp_im), hpbl_temp(temp_im), &
+            dv_temp(temp_im, km), &
+            du_temp(temp_im, km), tdt_temp(temp_im, km), u1_temp(temp_ix, km), v1_temp(temp_ix, km), t1_temp(temp_ix, km), &
+            swh_temp(temp_ix, km), hlw_temp(temp_ix, km), prsi_temp(temp_ix, km+1), del_temp(temp_ix, km), prsl_temp(temp_ix, km), &
+            prslk_temp(temp_ix, km), phii_temp(temp_ix, km+1), phil_temp(temp_ix, km), &
+            rtg_temp(temp_im, km, ntrac), q1_temp(temp_ix, km, ntrac))
+
+        do part=1, multiplier_ix
+            kpbl_temp((part-1)*im+1:part*im) = kpbl(1:im)
+            kinver_temp((part-1)*im+1:part*im) = kinver(1:im)
+            xmu_temp((part-1)*im+1:part*im) = xmu(1:im)
+            garea_temp((part-1)*im+1:part*im) = garea(1:im)
+            rbsoil_temp((part-1)*im+1:part*im) = rbsoil(1:im)
+            zorl_temp((part-1)*im+1:part*im) = zorl(1:im)
+            tsea_temp((part-1)*im+1:part*im) = tsea(1:im)
+            u10m_temp((part-1)*im+1:part*im) = u10m(1:im)
+            v10m_temp((part-1)*im+1:part*im) = v10m(1:im)
+            fm_temp((part-1)*im+1:part*im) = fm(1:im)
+            fh_temp((part-1)*im+1:part*im) = fh(1:im)
+            evap_temp((part-1)*im+1:part*im) = evap(1:im)
+            heat_temp((part-1)*im+1:part*im) = heat(1:im)
+            stress_temp((part-1)*im+1:part*im) = stress(1:im)
+            spd1_temp((part-1)*im+1:part*im) = spd1(1:im)
+            dusfc_temp((part-1)*im+1:part*im) = dusfc(1:im)
+            dvsfc_temp((part-1)*im+1:part*im) = dvsfc(1:im)
+            dtsfc_temp((part-1)*im+1:part*im) = dtsfc(1:im)
+            dqsfc_temp((part-1)*im+1:part*im) = dqsfc(1:im)
+            hpbl_temp((part-1)*im+1:part*im) = hpbl(1:im)
+            du_temp((part-1)*im+1:part*im, :) = du(1:im,:) 
+            tdt_temp((part-1)*im+1:part*im, :) = tdt(1:im,:)
+            rtg_temp((part-1)*im+1:part*im, :, :) = rtg(1:im, :, :)
+        enddo
+
+        do part=1, multiplier_ix
+            psk_temp((part-1)*ix+1:part*ix) = psk(1:ix)
+            u1_temp((part-1)*ix+1:part*ix, :) = u1(1:ix, :)
+            v1_temp((part-1)*ix+1:part*ix, :) = v1(1:ix, :)
+            t1_temp((part-1)*ix+1:part*ix, :) = t1(1:ix, :)
+            swh_temp((part-1)*ix+1:part*ix, :) = swh(1:ix, :)
+            hlw_temp((part-1)*ix+1:part*ix, :) = hlw(1:ix, :)
+            prsi_temp((part-1)*ix+1:part*ix, :) = prsi(1:ix, :)
+            del_temp((part-1)*ix+1:part*ix, :) = del(1:ix, :)
+            prsl_temp((part-1)*ix+1:part*ix, :) = prsl(1:ix, :)
+            prslk_temp((part-1)*ix+1:part*ix, :) = prslk(1:ix, :)
+            phii_temp((part-1)*ix+1:part*ix, :) = phii(1:ix, :)
+            phil_temp((part-1)*ix+1:part*ix, :) = phil(1:ix, :)
+            q1_temp((part-1)*ix+1:part*ix, :, :) = q1(1:ix, :, :)
+        enddo
+
+        kpbl_s(1:INT(CN*CN)) = kpbl_temp(1:INT(CN*CN))
+        kinver_s(1:INT(CN*CN)) = kinver_temp(1:INT(CN*CN))
+        xmu_s(1:INT(CN*CN)) = xmu_temp(1:INT(CN*CN))
+        garea_s(1:INT(CN*CN)) = garea_temp(1:INT(CN*CN))
+        psk_s(1:INT(CN*CN)) = psk_temp(1:INT(CN*CN))
+        rbsoil_s(1:INT(CN*CN)) = rbsoil_temp(1:INT(CN*CN))
+        zorl_s(1:INT(CN*CN)) = zorl_temp(1:INT(CN*CN))
+        tsea_s(1:INT(CN*CN)) = tsea_temp(1:INT(CN*CN))
+        u10m_s(1:INT(CN*CN)) = u10m_temp(1:INT(CN*CN))
+        v10m_s(1:INT(CN*CN)) = v10m_temp(1:INT(CN*CN))
+        fm_s(1:INT(CN*CN)) = fm_temp(1:INT(CN*CN))
+        fh_s(1:INT(CN*CN)) = fh_temp(1:INT(CN*CN))
+        evap_s(1:INT(CN*CN)) = evap_temp(1:INT(CN*CN))
+        heat_s(1:INT(CN*CN)) = heat_temp(1:INT(CN*CN))
+        stress_s(1:INT(CN*CN)) = stress_temp(1:INT(CN*CN))
+        spd1_s(1:INT(CN*CN)) = spd1_temp(1:INT(CN*CN))
+        dusfc_s(1:INT(CN*CN)) = dusfc_temp(1:INT(CN*CN))
+        dvsfc_s(1:INT(CN*CN)) = dvsfc_temp(1:INT(CN*CN))
+        dtsfc_s(1:INT(CN*CN)) = dtsfc_temp(1:INT(CN*CN))
+        dqsfc_s(1:INT(CN*CN)) = dqsfc_temp(1:INT(CN*CN))
+        hpbl_s(1:INT(CN*CN)) = hpbl_temp(1:INT(CN*CN))
+        dv_s(1:INT(CN*CN), :) = dv_temp(1:INT(CN*CN), :)
+        du_s(1:INT(CN*CN), :) = du_temp(1:INT(CN*CN), :)
+        tdt_s(1:INT(CN*CN), :) = tdt_temp(1:INT(CN*CN), :)
+        u1_s(1:INT(CN*CN), :) = u1_temp(1:INT(CN*CN), :)
+        v1_s(1:INT(CN*CN), :) = v1_temp(1:INT(CN*CN), :)
+        t1_s(1:INT(CN*CN), :) = t1_temp(1:INT(CN*CN), :)
+        swh_s(1:INT(CN*CN), :) = swh_temp(1:INT(CN*CN), :)
+        hlw_s(1:INT(CN*CN), :) = hlw_temp(1:INT(CN*CN), :)
+        prsi_s(1:INT(CN*CN), :) = prsi_temp(1:INT(CN*CN), :)
+        del_s(1:INT(CN*CN), :) = del_temp(1:INT(CN*CN), :)
+        prsl_s(1:INT(CN*CN), :) = prsl_temp(1:INT(CN*CN), :)
+        prslk_s(1:INT(CN*CN), :) = prslk_temp(1:INT(CN*CN), :)
+        phii_s(1:INT(CN*CN), :) = phii_temp(1:INT(CN*CN), :)
+        phil_s(1:INT(CN*CN), :) = phil_temp(1:INT(CN*CN), :)
+        rtg_s(1:INT(CN*CN), :, :) = rtg_temp(1:INT(CN*CN), :, :)
+        q1_s(1:INT(CN*CN), :, :) = q1_temp(1:INT(CN*CN), :, :)
+
+        deallocate(kpbl_temp, kinver_temp, xmu_temp, garea_temp, psk_temp, &
+            rbsoil_temp, zorl_temp, tsea_temp, u10m_temp, v10m_temp, fm_temp, &
+            fh_temp, evap_temp, heat_temp, stress_temp, spd1_temp, dusfc_temp, &
+            dvsfc_temp, dtsfc_temp, dqsfc_temp, hpbl_temp, &
+            dv_temp, &
+            du_temp, tdt_temp, u1_temp, v1_temp, t1_temp, &
+            swh_temp, hlw_temp, prsi_temp, del_temp, prsl_temp, &
+            prslk_temp, phii_temp, phil_temp, &
+            rtg_temp, q1_temp)
+
+    end subroutine scale_dataset_to_N
 
 end program test
