@@ -150,7 +150,9 @@ def sfc_drv(
     for i in range(0, im):
         if not(flag_iter[i] and land[i]):
             continue
-
+        
+        if i == 2044:
+            hallo = 0
     # 1. configuration information
         couple = 1
         ffrozp = srflag[i]
@@ -307,10 +309,10 @@ def sfc_drv(
     i = land & np.logical_not(flag_guess)
     tskin[i] = tsurf[i]
 
-    # for j in range(0, im):
-    #     if weasd_ref[j] != weasd[j]:
-    #         print(j)
-    #         break
+    for j in range(0, im):
+        if weasd_ref[j] != weasd[j]:
+            print(j)
+            break
 
     np.testing.assert_array_equal(weasd_ref, weasd)
 
@@ -353,13 +355,13 @@ def sflx(
     ice = icein
 
     # is not called
-    if ivegsrc == 1 and vegtyp == 12:
+    if ivegsrc == 2 and vegtyp == 12:
         ice = -1
         shdfac = 0.0
         # not called
         print("ERROR: not called")
 
-    if ivegsrc == 0 and vegtyp == 14:
+    if ivegsrc == 1 and vegtyp == 14:
         ice = -1
         shdfac = 0.0
 
@@ -378,7 +380,7 @@ def sflx(
             czil, xlai, csoil = redprm(
                 nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac)
 
-    if ivegsrc == 1 and vegtyp == 13:
+    if ivegsrc == 2 and vegtyp == 13:
         rsmin = 400.0*(1-shdfac0)+40.0*shdfac0
         shdfac = shdfac0
         smcmax = 0.45*(1-shdfac0)+smcmax*shdfac0
@@ -487,7 +489,7 @@ def sflx(
         # calculate the subsurface heat flux, which first requires calculation
         # of the thermal diffusivity.
         df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
-        if ivegsrc == 1 and vegtyp == 13:
+        if ivegsrc == 2 and vegtyp == 13:
             df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
         else:
             df1 = df1 * np.exp(sbeta*shdfac)
@@ -799,7 +801,7 @@ def nopac(
     # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
     df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
 
-    if (ivegsrc == 0) and (vegtyp == 12):
+    if (ivegsrc == 1) and (vegtyp == 12):
         df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
     else:
         df1 *= np.exp(sbeta*shdfac)
@@ -1622,7 +1624,7 @@ def hrt(
 
     csoil_loc = csoil
 
-    if ivegsrc == 0 and vegtyp == 12:
+    if ivegsrc == 1 and vegtyp == 12:
         csoil_loc = 3.0e6*(1.-shdfac)+csoil*shdfac
 
     #  initialize logical for soil layer temperature averaging.
@@ -1655,7 +1657,7 @@ def hrt(
     df1n = tdfcnd(smc[1:], quartz, smcmax, sh2o[1:])
     df1k = np.append(df1, df1n[:-1])
 
-    if ivegsrc == 0 and vegtyp == 12:
+    if ivegsrc == 1 and vegtyp == 12:
         df1n = 3.24*(1.-shdfac) + shdfac*df1n
 
     # calc the vertical soil temp gradient thru each layer
