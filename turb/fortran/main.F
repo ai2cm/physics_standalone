@@ -75,11 +75,11 @@ program test
     ! initialize
     call gfuncphys(rank_idx, 0, nunit, 6)
 
-    do tile = 0, 0 !num_tiles - 1
+    do tile = 0, num_tiles - 1
     
-    !$ser init directory='./data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
+    !$ser init directory='../data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
 
-    do ser_count = 19, 19
+    do ser_count = 0, 0
 
 #ifdef PROGRESS_MODE
         call cdshow(tile * ser_count_max + ser_count)
@@ -87,7 +87,7 @@ program test
         write(ser_count_str, '(i6.6)') ser_count
 
         !$ser mode read
-        !$ser savepoint "satmedmfvdif-in-"//trim(ser_count_str)
+        !$ser savepoint "satmedmfvdif-in-000019"
         !$ser data ix=ix im=im km=km ntrac=ntrac ntcw=ntcw ntiw=ntiw
         !$ser data ntke=ntke
 
@@ -125,12 +125,29 @@ program test
         prslk_s(INT(CN*CN), km), phii_s(INT(CN*CN), km+1), phil_s(INT(CN*CN), km), rtg_s(INT(CN*CN), km, ntrac), &
         q1_s(INT(CN*CN), km, ntrac))
 
+        call scale_dataset_to_N(CN, km, ix, im, ntrac, &
+                                kpbl, kinver, xmu, garea, psk, &
+                                rbsoil, zorl, tsea, u10m, v10m, fm, &
+                                fh, evap, heat, stress, spd1, dusfc, &
+                                dvsfc, dtsfc, dqsfc, hpbl, dv, &
+                                du, tdt, u1, v1, t1, &
+                                swh, hlw, prsi, del, prsl, &
+                                prslk, phii, phil, rtg, &
+                                q1, &
+                                kpbl_s, kinver_s, xmu_s, garea_s, psk_s, &
+                                rbsoil_s, zorl_s, tsea_s, u10m_s, v10m_s, fm_s, &
+                                fh_s, evap_s, heat_s, stress_s, spd1_s, dusfc_s, &
+                                dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, dv_s, &
+                                du_s, tdt_s, u1_s, v1_s, t1_s, &
+                                swh_s, hlw_s, prsi_s, del_s, prsl_s, &
+                                prslk_s, phii_s, phil_s, rtg_s, &
+                                q1_s)
 
         do rep_idx=1, REPS+1
 
             if (rep_idx .gt. 1) call cpu_time(t_driver_start)
 
-            call satmedmfvdif(ix_s, im_s, km, ntrac, ntcw, ntiw, ntke, &
+            call satmedmfvdif(INT(CN*CN), INT(CN*CN), km, ntrac, ntcw, ntiw, ntke, &
                 dv_s, du_s, tdt_s, rtg_s, u1_s, v1_s, t1_s, q1_s, swh_s, hlw_s, xmu_s, garea_s, &
                 psk_s, rbsoil_s, zorl_s, u10m_s, v10m_s, fm_s, fh_s, &
                 tsea_s, heat_s, evap_s, stress_s, spd1_s, kpbl_s, &
@@ -144,47 +161,6 @@ program test
             endif
 
         enddo
-
-        if (fact_idx .ne. factors_size) then
-            deallocate(kpbl_s, kinver_s, xmu_s, garea_s, psk_s, &
-                    rbsoil_s, zorl_s, tsea_s, u10m_s, v10m_s, fm_s, &
-                    fh_s, evap_s, heat_s, stress_s, spd1_s, dusfc_s, &
-                    dvsfc_s, dtsfc_s, dqsfc_s, hpbl_s, dv_s, &
-                    du_s, tdt_s, u1_s, v1_s, t1_s, &
-                    swh_s, hlw_s, prsi_s, del_s, prsl_s, &
-                    prslk_s, phii_s, phil_s, rtg_s, &
-                    q1_s)
-
-        endif
-
-        dv = dv_s
-        du = du_s
-        tdt = tdt_s
-        rtg = rtg_s
-        kpbl = kpbl_s
-        dusfc = dusfc_s
-        dvsfc = dvsfc_s
-        dtsfc = dtsfc_s
-        dqsfc = dqsfc_s
-
-        !$ser mode read
-        !$ser savepoint "satmedmfvdif-out-"//trim(ser_count_str)
-        ! inout
-        !$ser data dv=dv_ref du=du_ref tdt=tdt_ref rtg=rtg_ref kpbl=kpbl_ref
-        !$ser data dusfc=dusfc_ref dvsfc=dvsfc_ref dtsfc=dtsfc_ref dqsfc=dqsfc_ref
-        !$ser data hpbl=hpbl_ref
-        
-        if (VALIDATION) then
-            call check_r_2d(dv, dv_ref, "dv")
-            call check_r_2d(du, du_ref, "du")
-            call check_r_2d(tdt, tdt_ref, "tdt")
-            call check_r_3d(rtg, rtg_ref, "rtg")
-            call check_i_1d(kpbl, kpbl_ref, "kpbl")
-            call check_r_1d(dusfc, dusfc_ref, "dusfc")
-            call check_r_1d(dvsfc, dvsfc_ref, "dvsfc")
-            call check_r_1d(dtsfc, dtsfc_ref, "dtsfc")
-            call check_r_1d(dqsfc, dqsfc_ref, "dqsfc")
-        endif
         
         deallocate(kpbl, kinver, xmu, garea, psk, &
             rbsoil, zorl, tsea, u10m, v10m, fm, &
@@ -363,8 +339,8 @@ contains
                                 prslk_s, phii_s, phil_s, rtg_s, &
                                 q1_s)
         implicit none
-
-        real (kind=kind_phys), intent(in) :: kpbl(:), kinver(:), xmu(:), garea(:), psk(:), &
+        integer, intent(in) :: kpbl(:), kinver(:)
+        real (kind=kind_phys), intent(in) :: xmu(:), garea(:), psk(:), &
             rbsoil(:), zorl(:), tsea(:), u10m(:), v10m(:), fm(:), &
             fh(:), evap(:), heat(:), stress(:), spd1(:), dusfc(:), &
             dvsfc(:), dtsfc(:), dqsfc(:), hpbl(:), dv(:, :), &
@@ -378,12 +354,13 @@ contains
             du_temp, tdt_temp, u1_temp, v1_temp, t1_temp, &
             swh_temp, hlw_temp, prsi_temp, del_temp, prsl_temp, &
             prslk_temp, phii_temp, phil_temp
-        real (kind=kind_phys), dimension(:), allocatable :: kpbl_temp, kinver_temp, xmu_temp, garea_temp, psk_temp, &
+        integer, dimension(:), allocatable :: kpbl_temp, kinver_temp
+        real (kind=kind_phys), dimension(:), allocatable :: xmu_temp, garea_temp, psk_temp, &
             rbsoil_temp, zorl_temp, tsea_temp, u10m_temp, v10m_temp, fm_temp, &
             fh_temp, evap_temp, heat_temp, stress_temp, spd1_temp, dusfc_temp, &
             dvsfc_temp, dtsfc_temp, dqsfc_temp, hpbl_temp
-
-        real (kind=kind_phys), intent(inout) :: kpbl_s(:), kinver_s(:), xmu_s(:), garea_s(:), psk_s(:), &
+        integer, intent(inout) :: kpbl_s(:), kinver_s(:)
+        real (kind=kind_phys), intent(inout) :: xmu_s(:), garea_s(:), psk_s(:), &
                                 rbsoil_s(:), zorl_s(:), tsea_s(:), u10m_s(:), v10m_s(:), fm_s(:), &
                                 fh_s(:), evap_s(:), heat_s(:), stress_s(:), spd1_s(:), dusfc_s(:), &
                                 dvsfc_s(:), dtsfc_s(:), dqsfc_s(:), hpbl_s(:), dv_s(:, :), &
