@@ -40,7 +40,7 @@ program test
 
     logical :: dspheat
 
-    integer :: i_dim, ix_s, im_s, st_ix, st_im, en_ix, en_im, part
+    integer :: i_dim, ix_s, im_s, st_ix, st_im, en_ix, en_im, part, dsize_per_rank
     real :: factor, divider, multiplier
     integer, dimension(:), allocatable :: kpbl_s, kinver_s
     real (kind=kind_phys), dimension(:), allocatable :: xmu_s, garea_s, &
@@ -68,6 +68,7 @@ program test
 
     timings(:,:) = 0.
     CN = real(CNINPUT)
+    dsize_per_rank = ceiling((CN*CN)/n_ranks)
     
 #ifdef PROGRESS_MODE
     call cdstart(num_tiles * ser_count_max)
@@ -116,16 +117,16 @@ program test
         !$ser data dusfc=dusfc dvsfc=dvsfc dtsfc=dtsfc dqsfc=dqsfc
         !$ser data xkzm_m=xkzm_m xkzm_h=xkzm_h hpbl=hpbl
 
-        allocate(kpbl_s(INT(CN*CN)), kinver_s(INT(CN*CN)), xmu_s(INT(CN*CN)), garea_s(INT(CN*CN)), psk_s(INT(CN*CN)), &
-        rbsoil_s(INT(CN*CN)), zorl_s(INT(CN*CN)), tsea_s(INT(CN*CN)), u10m_s(INT(CN*CN)), v10m_s(INT(CN*CN)), fm_s(INT(CN*CN)), &
-        fh_s(INT(CN*CN)), evap_s(INT(CN*CN)), heat_s(INT(CN*CN)), stress_s(INT(CN*CN)), spd1_s(INT(CN*CN)), dusfc_s(INT(CN*CN)), &
-        dvsfc_s(INT(CN*CN)), dtsfc_s(INT(CN*CN)), dqsfc_s(INT(CN*CN)), hpbl_s(INT(CN*CN)), dv_s(INT(CN*CN), km), &
-        du_s(INT(CN*CN), km), tdt_s(INT(CN*CN), km), u1_s(INT(CN*CN), km), v1_s(INT(CN*CN), km), t1_s(INT(CN*CN), km), &
-        swh_s(INT(CN*CN), km), hlw_s(INT(CN*CN), km), prsi_s(INT(CN*CN), km+1), del_s(INT(CN*CN), km), prsl_s(INT(CN*CN), km), &
-        prslk_s(INT(CN*CN), km), phii_s(INT(CN*CN), km+1), phil_s(INT(CN*CN), km), rtg_s(INT(CN*CN), km, ntrac), &
-        q1_s(INT(CN*CN), km, ntrac))
+        allocate(kpbl_s(dsize_per_rank), kinver_s(dsize_per_rank), xmu_s(dsize_per_rank), garea_s(dsize_per_rank), psk_s(dsize_per_rank), &
+        rbsoil_s(dsize_per_rank), zorl_s(dsize_per_rank), tsea_s(dsize_per_rank), u10m_s(dsize_per_rank), v10m_s(dsize_per_rank), fm_s(dsize_per_rank), &
+        fh_s(dsize_per_rank), evap_s(dsize_per_rank), heat_s(dsize_per_rank), stress_s(dsize_per_rank), spd1_s(dsize_per_rank), dusfc_s(dsize_per_rank), &
+        dvsfc_s(dsize_per_rank), dtsfc_s(dsize_per_rank), dqsfc_s(dsize_per_rank), hpbl_s(dsize_per_rank), dv_s(dsize_per_rank, km), &
+        du_s(dsize_per_rank, km), tdt_s(dsize_per_rank, km), u1_s(dsize_per_rank, km), v1_s(dsize_per_rank, km), t1_s(dsize_per_rank, km), &
+        swh_s(dsize_per_rank, km), hlw_s(dsize_per_rank, km), prsi_s(dsize_per_rank, km+1), del_s(dsize_per_rank, km), prsl_s(dsize_per_rank, km), &
+        prslk_s(dsize_per_rank, km), phii_s(dsize_per_rank, km+1), phil_s(dsize_per_rank, km), rtg_s(dsize_per_rank, km, ntrac), &
+        q1_s(dsize_per_rank, km, ntrac))
 
-        call scale_dataset_to_N(CN, km, ix, im, ntrac, &
+        call scale_dataset_to_N(CN, dsize_per_rank, km, ix, im, ntrac, &
                                 kpbl, kinver, xmu, garea, psk, &
                                 rbsoil, zorl, tsea, u10m, v10m, fm, &
                                 fh, evap, heat, stress, spd1, dusfc, &
@@ -145,9 +146,12 @@ program test
 
         do rep_idx=1, REPS+1
 
-            if (rep_idx .gt. 1) call cpu_time(t_driver_start)
+            if (rep_idx .gt. 1) then
+                call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
+                call cpu_time(t_driver_start)
+            endif
 
-            call satmedmfvdif(INT(CN*CN), INT(CN*CN), km, ntrac, ntcw, ntiw, ntke, &
+            call satmedmfvdif(dsize_per_rank, dsize_per_rank, km, ntrac, ntcw, ntiw, ntke, &
                 dv_s, du_s, tdt_s, rtg_s, u1_s, v1_s, t1_s, q1_s, swh_s, hlw_s, xmu_s, garea_s, &
                 psk_s, rbsoil_s, zorl_s, u10m_s, v10m_s, fm_s, fh_s, &
                 tsea_s, heat_s, evap_s, stress_s, spd1_s, kpbl_s, &
@@ -157,6 +161,7 @@ program test
 
             if (rep_idx .gt. 1) then
                         call cpu_time(t_driver_end)
+                        call MPI_BARRIER(MPI_COMM_WORLD, ierror)
                         timings(6, 1) = timings(6, 1) + (t_driver_end - t_driver_start)
             endif
 
@@ -193,7 +198,7 @@ program test
 
     end do
 
-    call MPI_REDUCE(timings(1:4, :), timings(1:4, :), 4, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
+    call MPI_REDUCE(timings(1:6, :), timings(1:6, :), 6, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
 
     if (rank_idx .eq. 0) then
         
@@ -202,7 +207,7 @@ program test
         timings(7, 1) = t_tot_end - t_tot_start
         
         write(*,*) 'FINISHED!'
-            
+        write(*,*) CN, dsize_per_rank
         write(file_id, '(i0)') int(CN)
         open(1, file='./out/timings_benchmark_fortran_normal_C'//trim(adjustl(file_id))//'.dat')
 
@@ -321,7 +326,7 @@ contains
 
     end function isclose_i
 
-    subroutine scale_dataset_to_N(CN, km, ix, im, ntrac, &
+    subroutine scale_dataset_to_N(CN, dsize_per_rank, km, ix, im, ntrac, &
                                 kpbl, kinver, xmu, garea, psk, &
                                 rbsoil, zorl, tsea, u10m, v10m, fm, &
                                 fh, evap, heat, stress, spd1, dusfc, &
@@ -368,14 +373,14 @@ contains
                                 swh_s(:, :), hlw_s(:, :), prsi_s(:, :), del_s(:, :), prsl_s(:, :), &
                                 prslk_s(:, :), phii_s(:, :), phil_s(:, :), rtg_s(:, :, :), &
                                 q1_s(:, :, :)
-        real, intent(in) :: CN
         real :: C_orig
-        integer, intent(in):: km, ix, im, ntrac
+        real, intent(in) :: CN
+        integer, intent(in):: dsize_per_rank, km, ix, im, ntrac
         integer :: multiplier_ix, multiplier_im, part, temp_ix, temp_im
         C_orig = real(ix)
-        multiplier_ix = ceiling((CN*CN)/C_orig)
+        multiplier_ix = ceiling(dsize_per_rank/C_orig)
         temp_ix = multiplier_ix*ix
-        multiplier_im = ceiling((CN*CN)/real(im))
+        multiplier_im = ceiling(dsize_per_rank/real(im))
         temp_im = multiplier_im*im
 
         allocate(kpbl_temp(temp_im), kinver_temp(temp_im), xmu_temp(temp_im), garea_temp(temp_im), psk_temp(temp_ix), &
@@ -430,43 +435,43 @@ contains
             q1_temp((part-1)*ix+1:part*ix, :, :) = q1(1:ix, :, :)
         enddo
 
-        kpbl_s(1:INT(CN*CN)) = kpbl_temp(1:INT(CN*CN))
-        kinver_s(1:INT(CN*CN)) = kinver_temp(1:INT(CN*CN))
-        xmu_s(1:INT(CN*CN)) = xmu_temp(1:INT(CN*CN))
-        garea_s(1:INT(CN*CN)) = garea_temp(1:INT(CN*CN))
-        psk_s(1:INT(CN*CN)) = psk_temp(1:INT(CN*CN))
-        rbsoil_s(1:INT(CN*CN)) = rbsoil_temp(1:INT(CN*CN))
-        zorl_s(1:INT(CN*CN)) = zorl_temp(1:INT(CN*CN))
-        tsea_s(1:INT(CN*CN)) = tsea_temp(1:INT(CN*CN))
-        u10m_s(1:INT(CN*CN)) = u10m_temp(1:INT(CN*CN))
-        v10m_s(1:INT(CN*CN)) = v10m_temp(1:INT(CN*CN))
-        fm_s(1:INT(CN*CN)) = fm_temp(1:INT(CN*CN))
-        fh_s(1:INT(CN*CN)) = fh_temp(1:INT(CN*CN))
-        evap_s(1:INT(CN*CN)) = evap_temp(1:INT(CN*CN))
-        heat_s(1:INT(CN*CN)) = heat_temp(1:INT(CN*CN))
-        stress_s(1:INT(CN*CN)) = stress_temp(1:INT(CN*CN))
-        spd1_s(1:INT(CN*CN)) = spd1_temp(1:INT(CN*CN))
-        dusfc_s(1:INT(CN*CN)) = dusfc_temp(1:INT(CN*CN))
-        dvsfc_s(1:INT(CN*CN)) = dvsfc_temp(1:INT(CN*CN))
-        dtsfc_s(1:INT(CN*CN)) = dtsfc_temp(1:INT(CN*CN))
-        dqsfc_s(1:INT(CN*CN)) = dqsfc_temp(1:INT(CN*CN))
-        hpbl_s(1:INT(CN*CN)) = hpbl_temp(1:INT(CN*CN))
-        dv_s(1:INT(CN*CN), :) = dv_temp(1:INT(CN*CN), :)
-        du_s(1:INT(CN*CN), :) = du_temp(1:INT(CN*CN), :)
-        tdt_s(1:INT(CN*CN), :) = tdt_temp(1:INT(CN*CN), :)
-        u1_s(1:INT(CN*CN), :) = u1_temp(1:INT(CN*CN), :)
-        v1_s(1:INT(CN*CN), :) = v1_temp(1:INT(CN*CN), :)
-        t1_s(1:INT(CN*CN), :) = t1_temp(1:INT(CN*CN), :)
-        swh_s(1:INT(CN*CN), :) = swh_temp(1:INT(CN*CN), :)
-        hlw_s(1:INT(CN*CN), :) = hlw_temp(1:INT(CN*CN), :)
-        prsi_s(1:INT(CN*CN), :) = prsi_temp(1:INT(CN*CN), :)
-        del_s(1:INT(CN*CN), :) = del_temp(1:INT(CN*CN), :)
-        prsl_s(1:INT(CN*CN), :) = prsl_temp(1:INT(CN*CN), :)
-        prslk_s(1:INT(CN*CN), :) = prslk_temp(1:INT(CN*CN), :)
-        phii_s(1:INT(CN*CN), :) = phii_temp(1:INT(CN*CN), :)
-        phil_s(1:INT(CN*CN), :) = phil_temp(1:INT(CN*CN), :)
-        rtg_s(1:INT(CN*CN), :, :) = rtg_temp(1:INT(CN*CN), :, :)
-        q1_s(1:INT(CN*CN), :, :) = q1_temp(1:INT(CN*CN), :, :)
+        kpbl_s(1:dsize_per_rank) = kpbl_temp(1:dsize_per_rank)
+        kinver_s(1:dsize_per_rank) = kinver_temp(1:dsize_per_rank)
+        xmu_s(1:dsize_per_rank) = xmu_temp(1:dsize_per_rank)
+        garea_s(1:dsize_per_rank) = garea_temp(1:dsize_per_rank)
+        psk_s(1:dsize_per_rank) = psk_temp(1:dsize_per_rank)
+        rbsoil_s(1:dsize_per_rank) = rbsoil_temp(1:dsize_per_rank)
+        zorl_s(1:dsize_per_rank) = zorl_temp(1:dsize_per_rank)
+        tsea_s(1:dsize_per_rank) = tsea_temp(1:dsize_per_rank)
+        u10m_s(1:dsize_per_rank) = u10m_temp(1:dsize_per_rank)
+        v10m_s(1:dsize_per_rank) = v10m_temp(1:dsize_per_rank)
+        fm_s(1:dsize_per_rank) = fm_temp(1:dsize_per_rank)
+        fh_s(1:dsize_per_rank) = fh_temp(1:dsize_per_rank)
+        evap_s(1:dsize_per_rank) = evap_temp(1:dsize_per_rank)
+        heat_s(1:dsize_per_rank) = heat_temp(1:dsize_per_rank)
+        stress_s(1:dsize_per_rank) = stress_temp(1:dsize_per_rank)
+        spd1_s(1:dsize_per_rank) = spd1_temp(1:dsize_per_rank)
+        dusfc_s(1:dsize_per_rank) = dusfc_temp(1:dsize_per_rank)
+        dvsfc_s(1:dsize_per_rank) = dvsfc_temp(1:dsize_per_rank)
+        dtsfc_s(1:dsize_per_rank) = dtsfc_temp(1:dsize_per_rank)
+        dqsfc_s(1:dsize_per_rank) = dqsfc_temp(1:dsize_per_rank)
+        hpbl_s(1:dsize_per_rank) = hpbl_temp(1:dsize_per_rank)
+        dv_s(1:dsize_per_rank, :) = dv_temp(1:dsize_per_rank, :)
+        du_s(1:dsize_per_rank, :) = du_temp(1:dsize_per_rank, :)
+        tdt_s(1:dsize_per_rank, :) = tdt_temp(1:dsize_per_rank, :)
+        u1_s(1:dsize_per_rank, :) = u1_temp(1:dsize_per_rank, :)
+        v1_s(1:dsize_per_rank, :) = v1_temp(1:dsize_per_rank, :)
+        t1_s(1:dsize_per_rank, :) = t1_temp(1:dsize_per_rank, :)
+        swh_s(1:dsize_per_rank, :) = swh_temp(1:dsize_per_rank, :)
+        hlw_s(1:dsize_per_rank, :) = hlw_temp(1:dsize_per_rank, :)
+        prsi_s(1:dsize_per_rank, :) = prsi_temp(1:dsize_per_rank, :)
+        del_s(1:dsize_per_rank, :) = del_temp(1:dsize_per_rank, :)
+        prsl_s(1:dsize_per_rank, :) = prsl_temp(1:dsize_per_rank, :)
+        prslk_s(1:dsize_per_rank, :) = prslk_temp(1:dsize_per_rank, :)
+        phii_s(1:dsize_per_rank, :) = phii_temp(1:dsize_per_rank, :)
+        phil_s(1:dsize_per_rank, :) = phil_temp(1:dsize_per_rank, :)
+        rtg_s(1:dsize_per_rank, :, :) = rtg_temp(1:dsize_per_rank, :, :)
+        q1_s(1:dsize_per_rank, :, :) = q1_temp(1:dsize_per_rank, :, :)
 
         deallocate(kpbl_temp, kinver_temp, xmu_temp, garea_temp, psk_temp, &
             rbsoil_temp, zorl_temp, tsea_temp, u10m_temp, v10m_temp, fm_temp, &

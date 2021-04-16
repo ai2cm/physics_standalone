@@ -34,7 +34,7 @@ program test
     logical :: lradar, reset
     integer :: ierror, n_ranks, rank_idx
     integer :: nunit, tile, num_tiles
-    integer :: ser_count, ser_count_max
+    integer :: ser_count, ser_count_max, dsize_per_rank
     character(len=100) :: nml_file
     character(len=6) :: ser_count_str
     real :: C_orig, CN
@@ -52,12 +52,13 @@ program test
 
     timings(:,:) = 0.
     CN = real(CNINPUT)
+    dsize_per_rank = ceiling((CN*CN)/n_ranks)
     nunit = 42
     nml_file = 'input.nml'
     ser_count_max = 10
     num_tiles = 6
 
-    call cdstart(num_tiles * ser_count_max)
+    ! call cdstart(num_tiles * ser_count_max)
 
     call gfdl_cloud_microphys_init(0, 0, nunit, (/''/), 6, nml_file)
 
@@ -66,8 +67,6 @@ program test
     !$ser init directory='./data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
 
     do ser_count = 0, 0 !ser_count_max
-
-        call cdshow(tile * ser_count_max + ser_count)
         
         write(ser_count_str, '(i6.6)') ser_count
 
@@ -102,15 +101,15 @@ program test
         !$ser data pt_dt=pt_dt w=w udt=udt vdt=vdt
         !$ser data rain=rain snow=snow ice=ice graupel=graupel
         !$ser data refl_10cm=refl_10cm
-        allocate( qv_s(INT(CN*CN), 1, kke), ql_s(INT(CN*CN), 1, kke), qr_s(INT(CN*CN), 1, kke), qg_s(INT(CN*CN), 1, kke), qa_s(INT(CN*CN), 1, kke), qn_s(INT(CN*CN), 1, kke), &
-                      pt_s(INT(CN*CN), 1, kke), uin_s(INT(CN*CN), 1, kke), vin_s(INT(CN*CN), 1, kke), dz_s(INT(CN*CN), 1, kke), delp_s(INT(CN*CN), 1, kke), p_s(INT(CN*CN), 1, kke), &
-                      area_s(INT(CN*CN), 1), land_s(INT(CN*CN), 1), &
-                      qi_s(INT(CN*CN), 1, kke), qs_s(INT(CN*CN), 1, kke), &
-                      qv_dt_s(INT(CN*CN), 1, kke), ql_dt_s(INT(CN*CN), 1, kke), qr_dt_s(INT(CN*CN), 1, kke), qi_dt_s(INT(CN*CN), 1, kke), qs_dt_s(INT(CN*CN), 1, kke), qg_dt_s(INT(CN*CN), 1, kke), qa_dt_s(INT(CN*CN), 1, kke), &
-                      pt_dt_s(INT(CN*CN), 1, kke), w_s(INT(CN*CN), 1, kke), udt_s(INT(CN*CN), 1, kke), vdt_s(INT(CN*CN), 1, kke), refl_10cm_s(INT(CN*CN), 1, kke), &
-                      rain_s(INT(CN*CN), 1), snow_s(INT(CN*CN), 1), ice_s(INT(CN*CN), 1), graupel_s(INT(CN*CN), 1) )
+        allocate( qv_s(dsize_per_rank, 1, kke), ql_s(dsize_per_rank, 1, kke), qr_s(dsize_per_rank, 1, kke), qg_s(dsize_per_rank, 1, kke), qa_s(dsize_per_rank, 1, kke), qn_s(dsize_per_rank, 1, kke), &
+                      pt_s(dsize_per_rank, 1, kke), uin_s(dsize_per_rank, 1, kke), vin_s(dsize_per_rank, 1, kke), dz_s(dsize_per_rank, 1, kke), delp_s(dsize_per_rank, 1, kke), p_s(dsize_per_rank, 1, kke), &
+                      area_s(dsize_per_rank, 1), land_s(dsize_per_rank, 1), &
+                      qi_s(dsize_per_rank, 1, kke), qs_s(dsize_per_rank, 1, kke), &
+                      qv_dt_s(dsize_per_rank, 1, kke), ql_dt_s(dsize_per_rank, 1, kke), qr_dt_s(dsize_per_rank, 1, kke), qi_dt_s(dsize_per_rank, 1, kke), qs_dt_s(dsize_per_rank, 1, kke), qg_dt_s(dsize_per_rank, 1, kke), qa_dt_s(dsize_per_rank, 1, kke), &
+                      pt_dt_s(dsize_per_rank, 1, kke), w_s(dsize_per_rank, 1, kke), udt_s(dsize_per_rank, 1, kke), vdt_s(dsize_per_rank, 1, kke), refl_10cm_s(dsize_per_rank, 1, kke), &
+                      rain_s(dsize_per_rank, 1), snow_s(dsize_per_rank, 1), ice_s(dsize_per_rank, 1), graupel_s(dsize_per_rank, 1) )
         
-        call scale_dataset_to_N(CN, kke, iie, &
+        call scale_dataset_to_N(CN, dsize_per_rank, kke, iie, &
                       qv, ql, qr, qg, qa, qn, &
                       pt, uin, vin, dz, delp, p, &
                       area, land, qi, qs, &
@@ -125,14 +124,18 @@ program test
                       rain_s, snow_s, ice_s, graupel_s)
         
         do rep_idx=1, REPS+1
-            if (rep_idx .gt. 1) call cpu_time(t_driver_start)
+            if (rep_idx .gt. 1) then
+                call MPI_BARRIER(MPI_COMM_WORLD, ierror) 
+                call cpu_time(t_driver_start)
+            endif
             call gfdl_cloud_microphys_driver (qv_s, ql_s, qr_s, qi_s, qs_s, qg_s, qa_s, qn_s,     &
                     qv_dt_s, ql_dt_s, qr_dt_s, qi_dt_s, qs_dt_s, qg_dt_s, qa_dt_s, pt_dt_s, pt_s, w_s,    &
                     uin_s, vin_s, udt_s, vdt_s, dz_s, delp_s, area_s, dt_in, land_s, rain_s, snow_s, ice_s, &
-                    graupel_s, .false., .true., 1, INT(CN*CN), 1, 1, 1,                        &
+                    graupel_s, .false., .true., 1, dsize_per_rank, 1, 1, 1,                        &
                     kke, 1, kbot, seconds, p_s, lradar, refl_10cm_s, reset, (rep_idx .gt. 1), timings, 1)
             if (rep_idx .gt. 1) then
                 call cpu_time(t_driver_end)
+                call MPI_BARRIER(MPI_COMM_WORLD, ierror)
                 timings(6, 1) = timings(6, 1) + (t_driver_end - t_driver_start)
             endif
         enddo
@@ -189,16 +192,15 @@ program test
 
     end do
 
-    call cdstop()
-
     call MPI_REDUCE(timings(1:4, :), timings(1:4, :), 4, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
-    
+    call MPI_REDUCE(timings(6, :), timings(6, :), 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
     if (rank_idx .eq. 0) then
         
         call cpu_time(t_tot_end)
         timings(7, 1) = t_tot_end - t_tot_start
         write(*,*) 'FINISHED!'
-        write(file_id, '(i0)') int(CN*CN)
+        write(*,*) CN, dsize_per_rank
+        write(file_id, '(i0)') int(CN)
         open(1, file='./out/timings_benchmark_fortran_normal_C'//trim(adjustl(file_id))//'.dat')
         timings(1:6, :) = timings(1:6, :) / REPS
         timings(5, 1) = timings(1, 1) + timings(2, 1) + timings(3, 1) + timings(4, 1)
@@ -319,7 +321,7 @@ contains
         write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
     end subroutine toc
 
-    subroutine scale_dataset_to_N(CN, kke, iie, &
+    subroutine scale_dataset_to_N(CN, dsize_per_rank, kke, iie, &
                       qv, ql, qr, qg, qa, qn, &
                       pt, uin, vin, dz, delp, p, &
                       area, land, qi, qs, &
@@ -357,10 +359,10 @@ contains
                       rain_s(:,:), snow_s(:,:), ice_s(:,:), graupel_s(:,:)
         real, intent(in) :: CN
         real :: C_orig
-        integer, intent(in):: kke, iie
+        integer, intent(in):: kke, iie, dsize_per_rank
         integer :: multiplier, part, temp
         C_orig = real(iie)
-        multiplier = ceiling((CN*CN)/C_orig)
+        multiplier = ceiling(dsize_per_rank/C_orig)
         temp = multiplier*iie
         allocate(qv_temp(temp,1,kke), ql_temp(temp,1,kke), qr_temp(temp,1,kke), qg_temp(temp,1,kke), qa_temp(temp,1,kke), qn_temp(temp,1,kke), &
                       pt_temp(temp,1,kke), uin_temp(temp,1,kke), vin_temp(temp,1,kke), dz_temp(temp,1,kke), delp_temp(temp,1,kke), p_temp(temp,1,kke), &
@@ -403,38 +405,38 @@ contains
             graupel_temp((part-1)*iie+1:part*iie,:) = graupel(1:iie,:)
         enddo
 
-        qv_s(1:INT(CN*CN),:,:) = qv_temp(1:INT(CN*CN),:,:)
-        ql_s(1:INT(CN*CN),:,:) = ql_temp(1:INT(CN*CN),:,:)
-        qr_s(1:INT(CN*CN),:,:) = qr_temp(1:INT(CN*CN),:,:)
-        qg_s(1:INT(CN*CN),:,:) = qg_temp(1:INT(CN*CN),:,:)
-        qa_s(1:INT(CN*CN),:,:) = qa_temp(1:INT(CN*CN),:,:)
-        qn_s(1:INT(CN*CN),:,:) = qn_temp(1:INT(CN*CN),:,:)
-        pt_s(1:INT(CN*CN),:,:) = pt_temp(1:INT(CN*CN),:,:)
-        uin_s(1:INT(CN*CN),:,:) = uin_temp(1:INT(CN*CN),:,:)
-        vin_s(1:INT(CN*CN),:,:) = vin_temp(1:INT(CN*CN),:,:)
-        dz_s(1:INT(CN*CN),:,:) = dz_temp(1:INT(CN*CN),:,:)
-        delp_s(1:INT(CN*CN),:,:) = delp_temp(1:INT(CN*CN),:,:)
-        p_s(1:INT(CN*CN),:,:) = p_temp(1:INT(CN*CN),:,:)
-        area_s(1:INT(CN*CN),:) = area_temp(1:INT(CN*CN),:)
-        land_s(1:INT(CN*CN),:) = land_temp(1:INT(CN*CN),:)
-        qi_s(1:INT(CN*CN),:,:) = qi_temp(1:INT(CN*CN),:,:)
-        qs_s(1:INT(CN*CN),:,:) = qs_temp(1:INT(CN*CN),:,:)
-        qv_dt_s(1:INT(CN*CN),:,:) = qv_dt_temp(1:INT(CN*CN),:,:)
-        ql_dt_s(1:INT(CN*CN),:,:) = ql_dt_temp(1:INT(CN*CN),:,:)
-        qr_dt_s(1:INT(CN*CN),:,:) = qr_dt_temp(1:INT(CN*CN),:,:)
-        qi_dt_s(1:INT(CN*CN),:,:) = qi_dt_temp(1:INT(CN*CN),:,:)
-        qs_dt_s(1:INT(CN*CN),:,:) = qs_dt_temp(1:INT(CN*CN),:,:)
-        qg_dt_s(1:INT(CN*CN),:,:) = qg_dt_temp(1:INT(CN*CN),:,:)
-        qa_dt_s(1:INT(CN*CN),:,:) = qa_dt_temp(1:INT(CN*CN),:,:)
-        pt_dt_s(1:INT(CN*CN),:,:) = pt_dt_temp(1:INT(CN*CN),:,:)
-        w_s(1:INT(CN*CN),:,:) = w_temp(1:INT(CN*CN),:,:)
-        udt_s(1:INT(CN*CN),:,:) = udt_temp(1:INT(CN*CN),:,:)
-        vdt_s(1:INT(CN*CN),:,:) = vdt_temp(1:INT(CN*CN),:,:)
-        refl_10cm_s(1:INT(CN*CN),:,:) = refl_10cm_temp(1:INT(CN*CN),:,:)
-        rain_s(1:INT(CN*CN),:) = rain_temp(1:INT(CN*CN),:)
-        snow_s(1:INT(CN*CN),:) = snow_temp(1:INT(CN*CN),:)
-        ice_s(1:INT(CN*CN),:) = ice_temp(1:INT(CN*CN),:)
-        graupel_s(1:INT(CN*CN),:) = graupel_temp(1:INT(CN*CN),:)
+        qv_s(1:dsize_per_rank,:,:) = qv_temp(1:dsize_per_rank,:,:)
+        ql_s(1:dsize_per_rank,:,:) = ql_temp(1:dsize_per_rank,:,:)
+        qr_s(1:dsize_per_rank,:,:) = qr_temp(1:dsize_per_rank,:,:)
+        qg_s(1:dsize_per_rank,:,:) = qg_temp(1:dsize_per_rank,:,:)
+        qa_s(1:dsize_per_rank,:,:) = qa_temp(1:dsize_per_rank,:,:)
+        qn_s(1:dsize_per_rank,:,:) = qn_temp(1:dsize_per_rank,:,:)
+        pt_s(1:dsize_per_rank,:,:) = pt_temp(1:dsize_per_rank,:,:)
+        uin_s(1:dsize_per_rank,:,:) = uin_temp(1:dsize_per_rank,:,:)
+        vin_s(1:dsize_per_rank,:,:) = vin_temp(1:dsize_per_rank,:,:)
+        dz_s(1:dsize_per_rank,:,:) = dz_temp(1:dsize_per_rank,:,:)
+        delp_s(1:dsize_per_rank,:,:) = delp_temp(1:dsize_per_rank,:,:)
+        p_s(1:dsize_per_rank,:,:) = p_temp(1:dsize_per_rank,:,:)
+        area_s(1:dsize_per_rank,:) = area_temp(1:dsize_per_rank,:)
+        land_s(1:dsize_per_rank,:) = land_temp(1:dsize_per_rank,:)
+        qi_s(1:dsize_per_rank,:,:) = qi_temp(1:dsize_per_rank,:,:)
+        qs_s(1:dsize_per_rank,:,:) = qs_temp(1:dsize_per_rank,:,:)
+        qv_dt_s(1:dsize_per_rank,:,:) = qv_dt_temp(1:dsize_per_rank,:,:)
+        ql_dt_s(1:dsize_per_rank,:,:) = ql_dt_temp(1:dsize_per_rank,:,:)
+        qr_dt_s(1:dsize_per_rank,:,:) = qr_dt_temp(1:dsize_per_rank,:,:)
+        qi_dt_s(1:dsize_per_rank,:,:) = qi_dt_temp(1:dsize_per_rank,:,:)
+        qs_dt_s(1:dsize_per_rank,:,:) = qs_dt_temp(1:dsize_per_rank,:,:)
+        qg_dt_s(1:dsize_per_rank,:,:) = qg_dt_temp(1:dsize_per_rank,:,:)
+        qa_dt_s(1:dsize_per_rank,:,:) = qa_dt_temp(1:dsize_per_rank,:,:)
+        pt_dt_s(1:dsize_per_rank,:,:) = pt_dt_temp(1:dsize_per_rank,:,:)
+        w_s(1:dsize_per_rank,:,:) = w_temp(1:dsize_per_rank,:,:)
+        udt_s(1:dsize_per_rank,:,:) = udt_temp(1:dsize_per_rank,:,:)
+        vdt_s(1:dsize_per_rank,:,:) = vdt_temp(1:dsize_per_rank,:,:)
+        refl_10cm_s(1:dsize_per_rank,:,:) = refl_10cm_temp(1:dsize_per_rank,:,:)
+        rain_s(1:dsize_per_rank,:) = rain_temp(1:dsize_per_rank,:)
+        snow_s(1:dsize_per_rank,:) = snow_temp(1:dsize_per_rank,:)
+        ice_s(1:dsize_per_rank,:) = ice_temp(1:dsize_per_rank,:)
+        graupel_s(1:dsize_per_rank,:) = graupel_temp(1:dsize_per_rank,:)
 
         deallocate(qv_temp, ql_temp, qr_temp, qg_temp, qa_temp, qn_temp, &
                       pt_temp, uin_temp, vin_temp, dz_temp, delp_temp, p_temp, &
