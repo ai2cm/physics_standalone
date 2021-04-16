@@ -21,7 +21,7 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
-IN_VARS2 = ["weasd_ref", "vegtype_ref"]
+IN_VARS2 = ["tskin_ref"]
 
 IN_VARS3 = ["c1xpvs", "c2xpvs", "tbpvs"]
 

@@ -33,7 +33,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    weasd_ref, vegtype_ref,
+    tskin_ref,
     # parameters for fpvs
     c1xpvs, c2xpvs, tbpvs,
     # in/outs
@@ -126,31 +126,12 @@ def sfc_drv(
 
     zsoil[i, :] = zsoil_noah[:]
 
-    # serialbox test
-    # serialbox_test(zsoil_noah_ref, zsoil_noah, "zsoil_noah")
-    # serialbox_test_special(q0_ref, q0, i, "q0")
-    # serialbox_test_special(theta1_ref, theta1, i, "theta1")
-    # serialbox_test_special(rho_ref, rho, i, "rho")
-    # serialbox_test_special(qs1_ref, qs1, i, "qs1")
-    # # test how wrong qs1 is
-    # count = 5
-    # for j in range(qs1.size):
-    #     if i[j]:
-    #         print("qs1 diff:", qs1[j] - qs1_ref[j])
-    #         count -= 1
-    #         if count == 0:
-    #             break
-
-    # serialbox_test_special(zsoil_ref, zsoil, i, "zsoil")
-    # serialbox_test(canopy_ref, canopy, "canopy")
-    # serialbox_test(flag_test_ref, i, "flag_test")
-
     first_iter = True
     # noah: prepare variables to run noah lsm
     for i in range(0, im):
         if not(flag_iter[i] and land[i]):
             continue
-        
+
         if i == 2044:
             hallo = 0
     # 1. configuration information
@@ -240,7 +221,6 @@ def sfc_drv(
                 bexpp, xlaip, lheatstrg,
                 first_iter,
                 # Inputs to probe for port
-                # smc_ref, sh2o_ref,
                 # in/outs
                 tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx, z0,
                 # outputs
@@ -310,11 +290,11 @@ def sfc_drv(
     tskin[i] = tsurf[i]
 
     for j in range(0, im):
-        if weasd_ref[j] != weasd[j]:
+        if tskin_ref[j] != tskin[j]:
             print(j)
             break
 
-    np.testing.assert_array_equal(weasd_ref, weasd)
+    np.testing.assert_array_equal(tskin_ref, tskin)
 
 
 def ppfbet(pr, p, q, iflag, x):
@@ -374,13 +354,13 @@ def sflx(
         zsoil = np.cumsum(-sldpth)
 
         cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,\
-            sbeta, rgl, hs, zbot, frzx, psisat, slope,\
+            sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,\
             snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,\
             smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
             czil, xlai, csoil = redprm(
                 nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac)
 
-    if ivegsrc == 2 and vegtyp == 13:
+    if ivegsrc == 1 and vegtyp == 12:
         rsmin = 400.0*(1-shdfac0)+40.0*shdfac0
         shdfac = shdfac0
         smcmax = 0.45*(1-shdfac0)+smcmax*shdfac0
@@ -489,7 +469,7 @@ def sflx(
         # calculate the subsurface heat flux, which first requires calculation
         # of the thermal diffusivity.
         df1 = tdfcnd(smc[0], quartz, smcmax, sh2o[0])
-        if ivegsrc == 2 and vegtyp == 13:
+        if ivegsrc == 1 and vegtyp == 12:
             df1 = 3.24*(1.-shdfac) + shdfac*df1*np.exp(sbeta*shdfac)
         else:
             df1 = df1 * np.exp(sbeta*shdfac)
@@ -891,7 +871,7 @@ def redprm(
     smcref = refsmc[soiltyp]
     smcwlt = wltsmc[soiltyp]
 
-    frzfact = smcmax / smcref * 0.412 / 0.468
+    frzfact = (smcmax / smcref) * (0.412 / 0.468)
 
     # to adjust frzk parameter to actual soil type: frzk * frzfact
     frzx = frzk * frzfact
@@ -920,7 +900,7 @@ def redprm(
     slope = slope_data[slopetyp]
 
     return cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt, \
-        sbeta, rgl, hs, zbot, frzx, psisat, slope, \
+        sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope, \
         snup, salp, bexp, dksat, dwsat, smcmax, smcwlt, \
         smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
         czil, xlai, csoil \
@@ -1347,6 +1327,9 @@ def evapo(
     # --- ... subprograms called: devap, transp
 
     ec1 = 0.0
+    ett1 = 0.0
+    edir1 = 0.0
+    et1 = np.zeros(nsoil)
 
     if etp1 > 0.0:
         # retrieve direct evaporation from soil surface.
@@ -1651,14 +1634,15 @@ def hrt(
     qtot = ssoil - df1 * dtsdz
 
     # calculate frozen water content in 1st soil layer.
-    sice = smc[0] - sh2o[0]
+    sice = (smc - sh2o > 0.)
 
     # calculate thermal diffusivity for each layer
     df1n = tdfcnd(smc[1:], quartz, smcmax, sh2o[1:])
-    df1k = np.append(df1, df1n[:-1])
 
     if ivegsrc == 1 and vegtyp == 12:
         df1n = 3.24*(1.-shdfac) + shdfac*df1n
+
+    df1k = np.append(df1, df1n[:-1])
 
     # calc the vertical soil temp gradient thru each layer
     denom = 0.5 * (zsoil[:-2] - zsoil[2:])
@@ -1686,22 +1670,23 @@ def hrt(
 
     qtot = np.append(qtot, -1. * denom * rhsts[1:])
 
-    if sice > 0.:
-        i = (np.append(tsurf, tbk[:-1]) < tfreez) | (
-            stc < tfreez) | (tbk < tfreez)
-        if itavg:
-            tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i, tavg)
-        else:
-            tavg[i] = stc[i]
+    i = sice & ((np.append(tsurf, tbk[:-1]) < tfreez) | (
+        stc < tfreez) | (tbk < tfreez))
+    if itavg:
+        tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i, tavg)
+    else:
+        tavg[i] = stc[i]
 
-    if sice > 0.:
-        i = (np.append(stc[1:], tbot) < tfreez) | (
-            stc < tfreez) | (tbk < tfreez)
-        tsnsr = np.empty(nsoil)
-        snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
-               qtot, zsoil, shdfac, sh2o, tsnsr)
+    i = sice & ((np.append(stc[1:], tbot) < tfreez) | (
+        stc < tfreez) | (tbk < tfreez))
+    tsnsr = np.empty(nsoil)
+    tsnsr, sh2o = snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
+                         qtot, zsoil, shdfac, sh2o)
+    if sice[0]:
         rhsts[0] -= tsnsr[0] / (zsoil[0] * hcpct[0])
-        rhsts[1:] -= tsnsr[1:] / denom
+
+    sice[0] = False
+    rhsts[sice] -= tsnsr[sice] / denom[sice[1:]]
 
     # calc matrix coefs, ai, and bi for this layer.
     ai[1:] = - df1 * ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct[1:])
@@ -1829,7 +1814,7 @@ def rosr12(nsoil, a, b, d, c):
 
 
 def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
-           qtot, zsoil, shdfac, sh2o, tsrc):
+           qtot, zsoil, shdfac, sh2o):
 
     # TODO: include i
 
@@ -1862,6 +1847,8 @@ def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
     # calculate phase-change heat source/sink term
     tsrc = -dh2o * lsubf * dz * (xh2o - sh2o) / dt
     sh2o = xh2o
+
+    return tsrc, sh2o
 
 
 def srt(
