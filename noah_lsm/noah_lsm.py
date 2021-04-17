@@ -33,7 +33,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    tskin_ref,
+    weasd_ref,
     # parameters for fpvs
     c1xpvs, c2xpvs, tbpvs,
     # in/outs
@@ -132,7 +132,7 @@ def sfc_drv(
         if not(flag_iter[i] and land[i]):
             continue
 
-        if i == 2044:
+        if i == 1217:
             hallo = 0
     # 1. configuration information
         couple = 1
@@ -288,13 +288,6 @@ def sfc_drv(
     slc[i, :] = slc_old[i, :]
     i = land & np.logical_not(flag_guess)
     tskin[i] = tsurf[i]
-
-    for j in range(0, im):
-        if tskin_ref[j] != tskin[j]:
-            print(j)
-            break
-
-    np.testing.assert_array_equal(tskin_ref, tskin)
 
 
 def ppfbet(pr, p, q, iflag, x):
@@ -1207,11 +1200,14 @@ def snopac(
             sneqv = 0.01
             snowh = 0.05
             sncovr = 1.0
-
     else:
-        sneqv = 0.10
-        snowh = 0.50
-        sncovr = 1.0
+        if sneqv >= 0.10:
+            snowh, sndens = snowpack(sneqv, dt, t1, yy, snowh, sndens)
+        else:
+            sneqv = 0.10
+            snowh = 0.50
+            sncovr = 1.0
+        
 
     return prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh, sh2o, tbot, \
         smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, ett, \
@@ -1656,8 +1652,6 @@ def hrt(
     ci[1:-1] = - df1n[:-1]*ddz2 / ((zsoil[:-2] - zsoil[1:-1]) * hcpct[1:-1])
     ci[-1] = 0.
 
-    tavg = np.zeros(nsoil)
-
     if itavg:
         # calculate temp at bottom of each layer
         tsurf = (yy + (zz1-1)*stc[0]) / zz1
@@ -1673,7 +1667,7 @@ def hrt(
     i = sice & ((np.append(tsurf, tbk[:-1]) < tfreez) | (
         stc < tfreez) | (tbk < tfreez))
     if itavg:
-        tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i, tavg)
+        tavg = tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i)
     else:
         tavg[i] = stc[i]
 
@@ -1845,8 +1839,9 @@ def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
     xh2o = np.maximum(np.minimum(xh2o, smc), 0.0)
 
     # calculate phase-change heat source/sink term
-    tsrc = -dh2o * lsubf * dz * (xh2o - sh2o) / dt
-    sh2o = xh2o
+    tsrc = np.empty(nsoil)
+    tsrc[i] = -dh2o * lsubf * dz[i] * (xh2o[i] - sh2o[i]) / dt
+    sh2o[i] = xh2o[i]
 
     return tsrc, sh2o
 
@@ -1999,7 +1994,7 @@ def sstep(
         sh2oout[k] = sh2oin[k] + ci[k] + wplus/ddz[k]
         stot = sh2oout[k] + sice[k]
 
-        if stot > smcmax:
+        if stot > smcmax: 
             wplus = (stot-smcmax)*ddz[k]
         else:
             wplus = 0.
@@ -2038,45 +2033,49 @@ def tbnd(tu, tb, zsoil, zbot, nsoil):
 
 def tmpavg(
     # inputs
-    tup, tm, tdn, zsoil, nsoil, i, tavg
+    tup, tm, tdn, zsoil, nsoil, i
 ):
     # --- ... subprograms called: none
+ 
+    tavg = np.zeros(nsoil)
 
     dz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
 
     dzh = dz * 0.5
 
-    j = (tup < tfreez) & (tm < tfreez) & (tdn < tfreez)
+    j = i & (tup < tfreez) & (tm < tfreez) & (tdn < tfreez)
     tavg[j] = (tup[j] + 2.0*tm[j] + tdn[j]) / 4.0
 
-    j = (tup < tfreez) & (tm < tfreez) & (tdn >= tfreez)
+    j = i & (tup < tfreez) & (tm < tfreez) & (tdn >= tfreez)
     x0 = (tfreez - tm[j]) * dzh[j] / (tdn[j] - tm[j])
     tavg[j] = 0.5*(tup[j]*dzh[j] + tm[j]*(dzh[j] + x0) +
                    tfreez*(2.*dzh[j]-x0)) / dz[j]
 
-    j = (tup < tfreez) & (tm >= tfreez) & (tdn < tfreez)
+    j = i & (tup < tfreez) & (tm >= tfreez) & (tdn < tfreez)
     xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
     xdn = dzh[j] - (tfreez - tm[j]) * dzh[j] / (tdn[j] - tm[j])
     tavg = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup-xdn)+tdn[j]*xdn) / dz[j]
 
-    j = (tup < tfreez) & (tm >= tfreez) & (tdn >= tfreez)
+    j = i &(tup < tfreez) & (tm >= tfreez) & (tdn >= tfreez)
     xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
     tavg = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup)) / dz[j]
 
-    j = (tup >= tfreez) & (tm < tfreez) & (tdn < tfreez)
+    j = i & (tup >= tfreez) & (tm < tfreez) & (tdn < tfreez)
     xup = dzh[j] - (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
     tavg = 0.5*(tfreez * (dz[j] - xup) + tm[j] *
                 (dzh[j] + xup) + tdn[j] * dzh[j]) / dz[j]
 
-    j = (tup >= tfreez) & (tm < tfreez) & (tdn >= tfreez)
+    j = i & (tup >= tfreez) & (tm < tfreez) & (tdn >= tfreez)
     xup = dzh[j] - (tfreez-tup[j]) * dzh[j] / (tm[j]-tup[j])
     xdn = (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
     tavg = 0.5 * (tfreez*(2. * dz[j] - xup - xdn) +
                   tm[j] * (xup + xdn)) / dz[j]
 
-    j = (tup >= tfreez) & (tm >= tfreez) & (tdn < tfreez)
+    j = i & (tup >= tfreez) & (tm >= tfreez) & (tdn < tfreez)
     xdn = dzh[j] - (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
     tavg = (tfreez * (dz[j] - xdn) + 0.5*(tfreez + tdn[j]) * xdn) / dz[j]
+
+    return tavg
 
 
 def transp(

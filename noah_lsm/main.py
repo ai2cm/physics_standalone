@@ -21,7 +21,7 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
-IN_VARS2 = ["tskin_ref"]
+IN_VARS2 = ["weasd_ref"]
 
 IN_VARS3 = ["c1xpvs", "c2xpvs", "tbpvs"]
 
@@ -49,6 +49,7 @@ def compare_data(exp_data, ref_data):
     assert set(exp_data.keys()) == set(ref_data.keys()), \
              "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
+        
         ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
         if ind.size > 0:
             i = tuple(ind[:, 0])
