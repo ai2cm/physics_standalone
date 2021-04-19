@@ -33,7 +33,7 @@ def sfc_drv(
     lheatstrg, isot, ivegsrc,
     bexppert, xlaipert, vegfpert, pertvegf,
     # Inputs to probe for port
-    weasd_ref,
+    # weasd_ref,
     # parameters for fpvs
     c1xpvs, c2xpvs, tbpvs,
     # in/outs
@@ -132,7 +132,7 @@ def sfc_drv(
         if not(flag_iter[i] and land[i]):
             continue
 
-        if i == 1217:
+        if i == 1910:
             hallo = 0
     # 1. configuration information
         couple = 1
@@ -1669,6 +1669,7 @@ def hrt(
     if itavg:
         tavg = tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i)
     else:
+        tavg = np.zeros(nsoil)
         tavg[i] = stc[i]
 
     i = sice & ((np.append(stc[1:], tbot) < tfreez) | (
@@ -1894,9 +1895,9 @@ def srt(
             acrt = cvfrz * frzx / dice
             ialp1 = cvfrz - 1
 
-            j = np.arange(ialp1)
+            j = np.arange(ialp1) + 1
             j_factorial = np.array([np.math.factorial(i) for i in j])
-            sum = np.sum(np.power(acrt, cvfrz - j) /
+            sum = 1. + np.sum(np.power(acrt, cvfrz - j) /
                          (np.math.factorial(ialp1)/j_factorial))
 
             fcr = 1. - np.exp(-acrt) * sum
@@ -2054,26 +2055,26 @@ def tmpavg(
     j = i & (tup < tfreez) & (tm >= tfreez) & (tdn < tfreez)
     xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
     xdn = dzh[j] - (tfreez - tm[j]) * dzh[j] / (tdn[j] - tm[j])
-    tavg = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup-xdn)+tdn[j]*xdn) / dz[j]
+    tavg[j] = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup-xdn)+tdn[j]*xdn) / dz[j]
 
     j = i &(tup < tfreez) & (tm >= tfreez) & (tdn >= tfreez)
     xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
-    tavg = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup)) / dz[j]
+    tavg[j] = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup)) / dz[j]
 
     j = i & (tup >= tfreez) & (tm < tfreez) & (tdn < tfreez)
     xup = dzh[j] - (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
-    tavg = 0.5*(tfreez * (dz[j] - xup) + tm[j] *
+    tavg[j] = 0.5*(tfreez * (dz[j] - xup) + tm[j] *
                 (dzh[j] + xup) + tdn[j] * dzh[j]) / dz[j]
 
     j = i & (tup >= tfreez) & (tm < tfreez) & (tdn >= tfreez)
     xup = dzh[j] - (tfreez-tup[j]) * dzh[j] / (tm[j]-tup[j])
     xdn = (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
-    tavg = 0.5 * (tfreez*(2. * dz[j] - xup - xdn) +
+    tavg[j] = 0.5 * (tfreez*(2. * dz[j] - xup - xdn) +
                   tm[j] * (xup + xdn)) / dz[j]
 
     j = i & (tup >= tfreez) & (tm >= tfreez) & (tdn < tfreez)
     xdn = dzh[j] - (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
-    tavg = (tfreez * (dz[j] - xdn) + 0.5*(tfreez + tdn[j]) * xdn) / dz[j]
+    tavg[j] = (tfreez * (dz[j] - xdn) + 0.5*(tfreez + tdn[j]) * xdn) / dz[j]
 
     return tavg
 
