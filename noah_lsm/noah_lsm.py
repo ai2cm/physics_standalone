@@ -9,7 +9,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
             "smcwlt2", "smcref2", "wet1"]
 
 
-def run(in_dict, in_dict2, in_new):
+def run(in_dict, in_dict2, in_new, tile, i):
     """run function"""
 
     # setup output
@@ -18,13 +18,13 @@ def run(in_dict, in_dict2, in_new):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
-    sfc_drv(**in_dict, **in_dict2, **in_new, **out_dict)
+    sfc_drv(tile, i, **in_dict, **in_dict2, **in_new, **out_dict)
     # sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
 
     return out_dict
 
 
-def sfc_drv(
+def sfc_drv(tile, ser_count,
     # inputs
     im, km, ps, t1, q1, soiltyp, vegtype, sigmaf,
     sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,
@@ -132,7 +132,7 @@ def sfc_drv(
         if not(flag_iter[i] and land[i]):
             continue
 
-        if i == 1910:
+        if i == 1995 and tile == 1:
             hallo = 0
     # 1. configuration information
         couple = 1
@@ -1534,7 +1534,7 @@ def devap(etp1, smc, shdfac, smcmax, smcdry, fxexp):
     return edir1
 
 
-def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis):
+def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis, i):
     # --- ... subprograms called: none
 
     # calculates amount of supercooled liquid soil water
@@ -1554,11 +1554,12 @@ def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis):
     liqwat = np.empty(smc.size)
 
     # if temperature not significantly below freezing (t0), sh2o = smc
-    j = tkelv <= tfreez - 1.e-3
+    j = i & (tkelv <= (tfreez - 1.e-3))
     swl = np.zeros(smc.size)
 
     # initial guess for swl (frozen content)
     swl[j] = smc[j] - sh2o[j]
+    swl[j] = np.maximum(np.minimum(swl[j], smc[j]-0.02), 0.0)
 
     while nlog < 10 and j.all():
         nlog += 1
@@ -1664,16 +1665,14 @@ def hrt(
 
     qtot = np.append(qtot, -1. * denom * rhsts[1:])
 
-    i = sice & ((np.append(tsurf, tbk[:-1]) < tfreez) | (
-        stc < tfreez) | (tbk < tfreez))
+    i = sice | (np.append(tsurf, tbk[:-1]) < tfreez) | (
+        stc < tfreez) | (tbk < tfreez)
     if itavg:
         tavg = tmpavg(np.append(tsurf, tbk[:-1]), stc, tbk, zsoil, nsoil, i)
     else:
         tavg = np.zeros(nsoil)
         tavg[i] = stc[i]
 
-    i = sice & ((np.append(stc[1:], tbot) < tfreez) | (
-        stc < tfreez) | (tbk < tfreez))
     tsnsr = np.empty(nsoil)
     tsnsr, sh2o = snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
                          qtot, zsoil, shdfac, sh2o)
@@ -1771,7 +1770,6 @@ def hstep(
     ci *= dt
 
     # solve tri-diagonal matrix-equation
-    # TODO: is return rhsts necessary?
     ci, rhsts = rosr12(nsoil, ai, bi, rhsts, ci)
 
     # calc/update the soil temps using matrix solution
@@ -1811,29 +1809,27 @@ def rosr12(nsoil, a, b, d, c):
 def snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
            qtot, zsoil, shdfac, sh2o):
 
-    # TODO: include i
-
     # --- ... subprograms called: frh2o
     # calculates sink/source term of the termal diffusion equation.
 
     dz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
 
     # compute potential or 'equilibrium' unfrozen supercooled free water
-    free = frh2o(tavg, smc, sh2o, smcmax, bexp, psisat)
+    free = frh2o(tavg, smc, sh2o, smcmax, bexp, psisat, i)
 
     # estimate the new amount of liquid water
     dh2o = 1.0000e3
     xh2o = sh2o + qtot*dt / (dh2o*lsubf*dz)
 
     # reduce extent of freezing
-    j1 = (xh2o < sh2o) & (sh2o < free)
-    j2 = (xh2o < free) & (free < sh2o)
+    j1 = i & (xh2o < sh2o) & (sh2o < free)
+    j2 = i & (xh2o < free) & (free <= sh2o)
     xh2o[j1] = sh2o[j1]
     xh2o[j2] = free[j2]
 
     # then reduce extent of thaw
-    j1 = (free < sh2o) & (sh2o < xh2o)
-    j2 = (sh2o < free) & (free < xh2o)
+    j1 = i & (free < sh2o) & (sh2o < xh2o)
+    j2 = i & (sh2o <= free) & (free < xh2o)
     xh2o[j1] = sh2o[j1]
     xh2o[j2] = free[j2]
 

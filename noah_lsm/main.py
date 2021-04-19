@@ -76,10 +76,9 @@ for tile in range(6):
 
     savepoint3 = serializer3.savepoint_list()
 
-
+    ser_count = 0
     isready = False
     for sp in savepoints:
-
         if SELECT_SP is not None:
             if sp.name != SELECT_SP["savepoint"] and \
                sp.name != SELECT_SP["savepoint"].replace("-in-", "-out-"):
@@ -102,10 +101,11 @@ for tile in range(6):
             # ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
 
             # run Python version
-            out_data = noah_lsm.run(in_data, in_data_test, in_data_fpvs)
+            out_data = noah_lsm.run(in_data, in_data_test, in_data_fpvs, tile, ser_count)
             # out_data = noah_lsm.run(in_data, in_data_fpvs, ref_data)
 
             isready = True
+            ser_count += 1
 
         if sp.name.startswith("sfc_drv-out"):
 
