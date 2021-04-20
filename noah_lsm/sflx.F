@@ -47,7 +47,7 @@
              sfcspd, prcp, q2, q2sat, dqsdt2, th2, shdmin, alb, snoalb, &
              bexpp, xlaip
 
-      logical, intent(in) :: lheatstrg, first_iter
+      logical, intent(inout) :: lheatstrg, first_iter
 
       real (kind=kind_phys), intent(inout) :: tbot, cmc, t1, sneqv,     &
              stc(nsoil), smc(nsoil), sh2o(nsoil), ch, cm
@@ -541,19 +541,6 @@
 !  --- ...  call canres to calculate the canopy resistance and convert it
 !           into pc if nonzero greenness fraction
 
-      !$ser mode write
-      !$ser verbatim if (iter == 1) then
-      !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
-      !$ser verbatim else
-      !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
-      !$ser verbatim end if
-
-      !$ser verbatim if (first_iter) then
-      !$ser data sfctmp_ref=sfctmp sfcprs_ref=sfcprs sfcems_ref=sfcems ch_ref=ch t2v_ref=t2v th2_ref=th2 prcp_ref=prcp fdown_ref=fdown
-      !$ser data cpx_ref=cpx cpfac_ref=cpfac ssoil_ref=ssoil q2_ref=q2 q2sat_ref=q2sat dqsdt2_ref=dqsdt2 snowng_ref=snowng frzgra_ref=frzgra
-      !$ser data t24_ref=t24 etp_ref=etp rch_ref=rch epsca_ref=epsca rr_ref=rr flx2_ref=flx2
-      !$ser verbatim end if
-
       if (shdfac > 0.) then
 
 !  --- ...  frozen ground extension: total soil water "smc" was replaced 
@@ -575,7 +562,7 @@
       esnow = 0.0
 
       if (sneqv .eq. 0.0) then
-
+            
         call nopac
 !  ---  inputs:                                                         !
 !          ( nsoil, nroot, etp, prcp, smcmax, smcwlt, smcref,           !
@@ -1683,6 +1670,19 @@
 !           no soil medium for sea-ice or glacial-ice
 
       if (ice == 0) then
+            !$ser mode write
+            !$ser verbatim if (iter == 1) then
+            !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+            !$ser verbatim else
+            !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+            !$ser verbatim end if
+
+            !$ser verbatim if (first_iter) then
+            !$ser data smc_ref=smc sh2o_ref=sh2o
+            !$ser verbatim end if
+
+        first_iter = .false.
+ 
 
         call smflx                                                        &
            ( nsoil, dt, kdt, smcmax, smcwlt, cmcmax, prcp1,               &
@@ -3778,7 +3778,6 @@
             do jj = j+1,ialp1
               k = k * jj
             enddo
-
             sum = sum + (acrt**( cvfrz-j)) / float (k)
           enddo
 

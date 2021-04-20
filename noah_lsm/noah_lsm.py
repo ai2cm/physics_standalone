@@ -132,8 +132,6 @@ def sfc_drv(tile, ser_count,
         if not(flag_iter[i] and land[i]):
             continue
 
-        if i == 1995 and tile == 1:
-            hallo = 0
     # 1. configuration information
         couple = 1
         ffrozp = srflag[i]
@@ -1561,7 +1559,7 @@ def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis, i):
     swl[j] = smc[j] - sh2o[j]
     swl[j] = np.maximum(np.minimum(swl[j], smc[j]-0.02), 0.0)
 
-    while nlog < 10 and j.all():
+    while nlog < 10 and j.any():
         nlog += 1
 
         df = np.log((psis*gs2/lsubf) * ((1.0 + ck*swl[j])**2.0) * (smcmax /
@@ -1577,7 +1575,7 @@ def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis, i):
         dswl = np.abs(swlk - swl[j])
         swl[j] = swlk
 
-        j = j & (dswl <= error)
+        j[j] = j[j] & (dswl > error)
 
     liqwat = smc - swl
 
@@ -1676,11 +1674,11 @@ def hrt(
     tsnsr = np.empty(nsoil)
     tsnsr, sh2o = snksrc(nsoil, i, tavg, smc, smcmax, psisat, bexp, dt,
                          qtot, zsoil, shdfac, sh2o)
-    if sice[0]:
+    if i[0]:
         rhsts[0] -= tsnsr[0] / (zsoil[0] * hcpct[0])
 
-    sice[0] = False
-    rhsts[sice] -= tsnsr[sice] / denom[sice[1:]]
+    i[0] = False
+    rhsts[i] -= tsnsr[i] / denom[i[1:]]
 
     # calc matrix coefs, ai, and bi for this layer.
     ai[1:] = - df1 * ddz / ((zsoil[:-1] - zsoil[1:]) * hcpct[1:])

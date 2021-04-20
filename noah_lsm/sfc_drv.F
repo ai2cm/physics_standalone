@@ -343,11 +343,6 @@ first_iter = .true.
        sldpth(k) = zsoil(i,k-1) - zsoil(i,k)
      enddo
 
-    !$ser verbatim if (first_iter) then
-    !$ser data sldpth_ref=sldpth
-    !$ser verbatim end if
-     
-
 !   2. forcing data (f):
 !      -----------------
 !    lwdn    - lw dw radiation flux (w/m2)
@@ -563,7 +558,7 @@ first_iter = .true.
 !              (volumetric)
 !    nroot   - number of root layers, a function of veg type, determined
 !              in subroutine redprm.
-    if (first_iter) first_iter = .false.
+    !if (first_iter) first_iter = .false.
    endif   ! flag_iter and flag
  enddo   ! end do_i_loop
 
@@ -607,7 +602,14 @@ first_iter = .true.
    endif     ! flag
 
  enddo
-!
+
+! !$ser mode write
+! !$ser verbatim if (iter == 1) then
+! !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+! !$ser verbatim else
+! !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+! !$ser verbatim end if
+! ! !$ser data _ref=smc
  return
 !...................................
  end subroutine sfc_drv
