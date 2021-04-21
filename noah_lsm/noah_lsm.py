@@ -9,7 +9,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
             "smcwlt2", "smcref2", "wet1"]
 
 
-def run(in_dict, in_dict2, in_new, tile, i):
+def run(in_dict, in_dict2, tile, i):
     """run function"""
 
     # setup output
@@ -18,7 +18,7 @@ def run(in_dict, in_dict2, in_new, tile, i):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
-    sfc_drv(tile, i, **in_dict, **in_dict2, **in_new, **out_dict)
+    sfc_drv(tile, i, **in_dict, **in_dict2, **out_dict)
     # sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
 
     return out_dict
