@@ -47,7 +47,6 @@ def sfc_drv(tile, ser_count,
     # --- ... subprograms called: ppfbet, sflx
 
     # Fortran starts with one, python with zero
-    # TODO: check how to implement this fix nicely
     vegtype -= 1
     soiltyp -= 1
 
@@ -117,7 +116,6 @@ def sfc_drv(tile, ser_count,
     # q1=specific humidity at level 1 (kg/kg)
     q0[i] = np.maximum(q1[i], 1.e-8)
     # adiabatic temp at level 1 (k)
-    # TODO: what happens when i is false?
     theta1[i] = t1[i] * prslki[i]
     rho[i] = prsl1[i] / (rd*t1[i]*(1.0+rvrdm1*q0[i]))
     qs1[i] = fpvs(c1xpvs, c2xpvs, tbpvs, t1[i])
@@ -191,7 +189,6 @@ def sfc_drv(tile, ser_count,
         sneqv = weasd[i] * 0.001         # convert from mm to m
         if ((sneqv != 0.) and (snowh == 0.)):
             # not called
-            # TODO: remove?
             snowh = 10.0 * sneqv
 
         chx = ch[i] * wind[i]              # compute conductance
@@ -309,10 +306,6 @@ def sflx(
     shdfac, snowh
 ):
     # --- ... subprograms called: redprm, snow_new, csnow, snfrac, alcalc, tdfcnd, snowz0, sfcdif, penman, canres, nopac, snopac.
-
-    # parameters for heat storage parametrization
-    z0min = 0.2
-    z0max = 1.0
 
     # initialization
     runoff1 = 0.
@@ -2144,8 +2137,6 @@ def init_array(shape, mode):
         arr[:] = np.nan
     return arr
 
-
-# TODO: check iff correct, this is copied from seaice
 # TODO - this should be moved into a shared physics functions module
 def fpvs(c1xpvs, c2xpvs, tbpvs, t):
     nxpvs = 7501.
