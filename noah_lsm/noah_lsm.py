@@ -339,7 +339,7 @@ def sflx(
 
         cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt,\
             sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope,\
-            snup, salp, bexp, dksat, dwsat, smcmax, smcwlt,\
+            snup, bexp, dksat, dwsat, smcmax, smcwlt,\
             smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
             czil, xlai, csoil = redprm(
                 nsoil, vegtyp, soiltyp, slopetyp, sldpth, zsoil, shdfac)
@@ -885,7 +885,7 @@ def redprm(
 
     return cfactr, cmcmax, rsmin, rsmax, topt, refkdt, kdt, \
         sbeta, shdfac, rgl, hs, zbot, frzx, psisat, slope, \
-        snup, salp, bexp, dksat, dwsat, smcmax, smcwlt, \
+        snup, bexp, dksat, dwsat, smcmax, smcwlt, \
         smcref, smcdry, f1, quartz, fxexp, rtdis, nroot, \
         czil, xlai, csoil \
 
@@ -1599,7 +1599,6 @@ def hrt(
         csoil_loc = 3.0e6*(1.-shdfac)+csoil*shdfac
 
     #  initialize logical for soil layer temperature averaging.
-    # TODO: can itavg be removed?
     itavg = True
 
     # calc the heat capacity of the top soil layer
