@@ -49,12 +49,12 @@ def gt4py_to_numpy_storage(arr, backend):
 
 
 def numpy_table_to_gt4py_storage(arr, index_arr, backend):
-    new_arr = np.empty(index_arr.size)
+    new_arr = np.empty(index_arr.size, dtype=np.int32)
     for i in range(arr.size):
         new_arr[np.where(index_arr == i)] = arr[i]
 
     data = np.reshape(arr, (arr.shape[0], 1, 1))
-    if data.dtype == "bool":
+    if data.dtype == "bool" or data.dtype == "int64":
         data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
@@ -179,13 +179,6 @@ def tdfcnd_fn(smc, qz, smcmax, sh2o):
     # dry thermal conductivity in w.m-1.k-1
     thkdry = (0.135*gammd + 64.7) / (2700.0 - 0.947*gammd)
 
-    # if sh2o.size > 1:
-    #     ake = np.empty(len(sh2o))
-    #     ake[sh2o+0.0005 < smc] = satratio[sh2o+0.0005 < smc]   # frozen
-    #     ake[(sh2o+0.0005 >= smc) & (satratio > 0.1)] = np.log10(satratio[(sh2o +
-    #                                                                       0.0005 >= smc) & (satratio > 0.1)]) + 1.0   # kersten number
-    #     ake[(sh2o+0.0005 >= smc) & (satratio <= 0.1)] = 0.0
-    # else:
     if sh2o+0.0005 < smc:    # frozen
         ake = satratio
     elif satratio > 0.1:
@@ -319,51 +312,28 @@ def redprm_fn(vegtyp, dksat, smcmax, smcref, nroot, sldpth0, sldpth1, sldpth2, s
               zsoil0, zsoil1, zsoil2, zsoil3, shdfac):
     # --- ... subprograms called: none
 
-    # set-up soil parameters
-    # bexp = bb[soiltyp]
-    # dksat = satdk[soiltyp]
-    # dwsat = satdw[soiltyp]
-    # f1 = f11[soiltyp]
     kdt = refkdt * dksat / refdk
-
-    # psisat = satpsi[soiltyp]
-    # quartz = qtz[soiltyp]
-    # smcdry = drysmc[soiltyp]
-    # smcmax = maxsmc[soiltyp]
-    # smcref = refsmc[soiltyp]
-    # smcwlt = wltsmc[soiltyp]
 
     frzfact = (smcmax / smcref) * (0.412 / 0.468)
 
     # to adjust frzk parameter to actual soil type: frzk * frzfact
     frzx = frzk * frzfact
 
-    # set-up vegetation parameters
-    # nroot = nroot_data[vegtyp]
-    # snup = snupx[vegtyp]
-    # rsmin = rsmtbl[vegtyp]
-    # rgl = rgltbl[vegtyp]
-    # hs = hstbl[vegtyp]
-    # xlai = lai_data[vegtyp]
-
     if vegtyp + 1 == bare:
         shdfac = 0.0
 
-    # if nroot > nsoil:
-    #     print("warning: too many root layers")
-
     # calculate root distribution.  present version assumes uniform
     # distribution based on soil layer depths.
-    # TODO: find better solution
+
     zsoil = zsoil3
     if nroot <= 3:
-        rtdis3 = 0
+        rtdis3 = 0.
         zsoil = zsoil2
     else:
         rtdis3 = - sldpth3 / zsoil
 
     if nroot <= 2:
-        rtdis2 = 0
+        rtdis2 = 0.
         zsoil = zsoil1
     else:
         rtdis2 = - sldpth2 / zsoil
@@ -380,7 +350,7 @@ def redprm_fn(vegtyp, dksat, smcmax, smcref, nroot, sldpth0, sldpth1, sldpth2, s
     else:
         rtdis0 = - sldpth0 / zsoil
 
-    return kdt, shdfac, frzx, salp, rtdis0, rtdis1, rtdis2, rtdis3
+    return kdt, shdfac, frzx, rtdis0, rtdis1, rtdis2, rtdis3
 
 
 @gtscript.function
@@ -1251,7 +1221,7 @@ def sfc_drv_defs(
     canopy: DT_F, trans: DT_F, tsurf: DT_F, zorl: DT_F,
     sncovr1: DT_F, qsurf: DT_F, gflux: DT_F, drain: DT_F, evap: DT_F, hflx: DT_F, ep: DT_F, runoff: DT_F,
     cmm: DT_F, chh: DT_F, evbs: DT_F, evcw: DT_F, sbsno: DT_F, snowc: DT_F, stm: DT_F, snohf: DT_F,
-    smcwlt2: DT_F, smcref2: DT_F, wet1: DT_F, delt: float, lheatstrg: float, ivegsrc: float,
+    smcwlt2: DT_F, smcref2: DT_F, wet1: DT_F, delt: float, lheatstrg: int, ivegsrc: int,
     bexp: DT_F, dksat: DT_F, dwsat: DT_F, f1: DT_F, psisat: DT_F, quartz: DT_F, smcdry: DT_F, smcmax: DT_F, smcref: DT_F, smcwlt: DT_F,
     nroot: DT_I, snup: DT_F, rsmin: DT_F, rgl: DT_F, hs: DT_F, xlai: DT_F, slope: DT_F
 ):
@@ -1277,9 +1247,8 @@ def sfc_drv_defs(
         # Fortran starts with one, python with zero
         vegtype -= 1
         soiltyp -= 1
-
         # save land-related prognostic fields for guess run
-        if land & flag_guess:
+        if land and flag_guess:
             weasd_old = weasd
             snwdph_old = snwdph
             tskin_old = tskin
@@ -1299,7 +1268,7 @@ def sfc_drv_defs(
             slc_old2 = slc2
             slc_old3 = slc3
 
-        if flag_iter & land:
+        if flag_iter and land:
             # initialization block
             ep = 0.0
             evap = 0.0
@@ -1331,15 +1300,12 @@ def sfc_drv_defs(
             prcp = rhoh2o * tprcp / delt
             dqsdt2 = qs1 * a23m4 / (t1 - a4)**2
 
-            # canopy characteristics
-            ptu = 0.0
-
             # history variables
             cmc = canopy * 0.001
             snowh = snwdph * 0.001
             sneqv = weasd * 0.001
 
-            if((sneqv != 0.) & (snowh == 0.)):
+            if((sneqv != 0.) and (snowh == 0.)):
                 snowh = 10.0 * sneqv
 
             chx = ch * wind
@@ -1350,20 +1316,7 @@ def sfc_drv_defs(
             z0 = zorl / 100.
 
             ### ************* START SFLX ALGORITHM ************* ###
-            couple, ice, ffrozp, dt, zlvl, sldpth0, sldpth1, sldpth2, sldpth3, \
-                swdn, swnet, lwdn, sfcems, sfcprs, sfctmp, \
-                sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,\
-                vegtyp, soiltyp, slopetyp, shdmin, alb, snoalb, \
-                bexpp, xlaip, lheatstrg, \
-                tbot, cmc, t1, stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, \
-                sh2o0, sh2o1, sh2o2, sh2o3, sneqv, ch, cm, z0, \
-                shdfac, snowh = couple, ice, srflag, delt, zf, zsoil_noah0, zsoil_noah1, zsoil_noah2, zsoil_noah3,
-            dswsfc, snet, dlwflx, sfcemis, prsl1, t1,
-            wind, prcp, q0, qs1, dqsdt2, theta1, ivegsrc,
-            vegtype, soiltyp, slopetyp, shdmin, sfalb, snoalb,
-            bexppert, xlaipert, lheatstrg,
-            tg3, cmc, tsurf, stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3,
-            slc0, slc1, slc2, slc3, sneqv, chx, cmx, z0, sigmaf, snowh
+
             # initialization
             runoff1 = 0.
             runoff2 = 0.
@@ -1372,601 +1325,591 @@ def sfc_drv_defs(
 
             pc = 0.
 
-            shdfac0 = shdfac
+            shdfac0 = sigmaf
 
-            if ivegsrc == 2 and vegtyp == 12:
+            if ivegsrc == 2 and vegtype == 12:
                 # not called
                 ice = -1
-                shdfac = 0.0
+                sigmaf = 0.0
 
-            if ivegsrc == 1 and vegtyp == 14:
+            if ivegsrc == 1 and vegtype == 14:
                 ice = -1
-                shdfac = 0.0
+                sigmaf = 0.0
 
             # calculate depth (negative) below ground
-            zsoil0 = - sldpth0
-            zsoil1 = zsoil0 - sldpth1
-            zsoil2 = zsoil1 - sldpth2
-            zsoil3 = zsoil2 - sldpth3
-
-            kdt, shdfac, frzx, salp, rtdis0, rtdis1, rtdis2, rtdis3 = redprm_fn(vegtyp, vegtyp, dksat, smcmax, smcref, nroot,
-                                                                                sldpth0, sldpth1, sldpth2, sldpth3,
-                                                                                zsoil0, zsoil1, zsoil2, zsoil3, shdfac)
-
-            if ivegsrc == 1 and vegtyp == 12:
-                rsmin = 400.0 * (1 - shdfac0) + 40.0 * shdfac0
-                shdfac = shdfac0
-                smcmax = 0.45 * (1 - shdfac0) + smcmax * shdfac0
-                smcref = 0.42 * (1 - shdfac0) + smcref * shdfac0
-                smcwlt = 0.40 * (1 - shdfac0) + smcwlt * shdfac0
-                smcdry = 0.40 * (1 - shdfac0) + smcdry * shdfac0
-
-            bexp = bexp * min(1. + bexpp, 2.)
-
-            xlai = xlai * (1.+xlaip)
-            xlai = max(xlai, .75)
-
-            # over sea-ice or glacial-ice, if s.w.e. (sneqv) below threshold
-            # lower bound (0.01 m for sea-ice, 0.10 m for glacial-ice), then
-            # set at lower bound and store the source increment in subsurface
-            # runoff/baseflow (runoff2).
-            if (ice == -1) and (sneqv < 0.10):
-                # TODO: check if it is called
-                sneqv = 0.10
-                snowh = 1.00
-
-            # for sea-ice and glacial-ice cases, set smc and sh2o values = 1
-            # as a flag for non-soil medium
-            if ice != 0:
-                smc0 = 1.
-                smc1 = 1.
-                smc2 = 1.
-                smc3 = 1.
-                sh2o0 = 1.
-                sh2o1 = 1.
-                sh2o2 = 1.
-                sh2o3 = 1.
-
-            # if input snowpack is nonzero, then compute snow density "sndens"
-            # and snow thermal conductivity "sncond" (note that csnow is a function subroutine)
-            if sneqv == 0.:
-                sndens = 0.
-                snowh = 0.
-                sncond = 1.
-            else:
-                sndens = sneqv / snowh
-                sndens = max(0.0, min(1.0, sndens))
-                # TODO: sncond is that necessary? is it later overwritten without using before?
-                sncond = csnow_fn(sndens)
-
-            # determine if it's precipitating and what kind of precip it is.
-            # if it's prcping and the air temp is colder than 0 c, it's snowing!
-            # if it's prcping and the air temp is warmer than 0 c, but the grnd
-            # temp is colder than 0 c, freezing rain is presumed to be falling.
-            snowng = (prcp > 0.) & (srflag > 0.)
-            frzgra = (prcp > 0.) & (srflag <= 0.) & (t1 <= tfreez)
-
-            # if either prcp flag is set, determine new snowfall (converting
-            # prcp rate from kg m-2 s-1 to a liquid equiv snow depth in meters)
-            # and add it to the existing snowpack.
-
-            # snowfall
-            if snowng:
-                sn_new = srflag * prcp * delt * 0.001
-                sneqv = sneqv + sn_new
-                prcp1 = (1.-srflag) * prcp
-
-            # freezing rain
-            if frzgra:
-                sn_new = prcp * delt * 0.001
-                sneqv = sneqv + sn_new
-                prcp1 = 0.0
-
-            if snowng or frzgra:
-
-                # update snow density based on new snowfall, using old and new
-                # snow.  update snow thermal conductivity
-                snowh, sndens = snow_new_fn(sfctmp, sn_new, snowh, sndens)
-                sncond = csnow_fn(sndens)
-
-            else:
-                # precip is liquid (rain), hence save in the precip variable
-                # that later can wholely or partially infiltrate the soil (along
-                # with any canopy "drip" added to this later)
-                prcp1 = prcp
-
-            # determine snowcover fraction and albedo fraction over land.
-            if ice != 0:
-                sncovr = 1.0
-                albedo = 0.65    # albedo over sea-ice, glacial- ice
-
-            else:
-                # non-glacial land
-                # if snow depth=0, set snowcover fraction=0, albedo=snow free albedo.
-                if sneqv == 0.:
-                    sncovr = 0.
-                    albedo = alb
-
-                else:
-                    # determine snow fraction cover.
-                    # determine surface albedo modification due to snowdepth state.
-                    sncovr = snfrac_fn(sneqv, snup, salp)
-                    albedo = alcalc_fn(alb, snoalb, sncovr)
-
-            # thermal conductivity for sea-ice case, glacial-ice case
-            if ice != 0:
-                df1 = 2.2
-
-            else:
-                # calculate the subsurface heat flux, which first requires calculation
-                # of the thermal diffusivity.
-                df1 = tdfcnd_fn(smc0, quartz, smcmax, sh2o0)
-                if ivegsrc == 1 and vegtyp == 12:
-                    df1 = 3.24 * (1. - shdfac) + shdfac * \
-                        df1 * exp(sbeta*shdfac)
-                else:
-                    df1 = df1 * exp(sbeta * shdfac)
-
-            dsoil = -0.5 * zsoil0
-
-            if sneqv == 0.0:
-                ssoil = df1 * (t1 - stc0) / dsoil
-            else:
-                dtot = snowh + dsoil
-                frcsno = snowh / dtot
-                frcsoi = dsoil / dtot
-
-                # arithmetic mean (parallel flow)
-                df1a = frcsno*sncond + frcsoi*df1
-
-                # geometric mean (intermediate between harmonic and arithmetic mean)
-                df1 = df1a*sncovr + df1 * (1.0 - sncovr)
-
-                # calculate subsurface heat flux
-                ssoil = df1 * (t1 - stc0) / dtot
-
-            # calc virtual temps and virtual potential temps needed by
-            # subroutines sfcdif and penman.
-            t2v = sfctmp * (1.0 + 0.61 * q2)
-
-            # surface exchange coefficients computed externally and passed in,
-            # hence subroutine sfcdif not called.
-            fdown = swnet + lwdn
-
-            # enhance cp as a function of z0 to mimic heat storage
-            cpx = cp
-            cpx1 = cp1
-            cpfac = 1.0
-
-            # call penman subroutine to calculate potential evaporation (etp),
-            # and other partial products and sums save in common/rite for later
-            # calculations.
-            t24, etp, rch, epsca, rr, flx2 = penman_fn(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
-                                                       cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra, srflag)
-
-            # call canres to calculate the canopy resistance and convert it
-            # into pc if nonzero greenness fraction
-
-            # TODO: check what happens to rc when shdfac <= 0.
-            rc = 0.
-            rcs = 0.
-            rct = 0.
-            rcq = 0.
-            rcsoil = 0.
-
-            if shdfac > 0.:
-
-                # frozen ground extension: total soil water "smc" was replaced
-                # by unfrozen soil water "sh2o" in call to canres below
-                rc, pc, rcs, rct, rcq, rcsoil = canres_fn(nroot, swdn, ch, q2, q2sat, dqsdt2, sfctmp,
-                                                          cpx1, sfcprs, sfcems, sh2o0, sh2o1, sh2o2, sh2o3,
-                                                          smcwlt, smcref, zsoil0, zsoil1, zsoil2, zsoil3, rsmin,
-                                                          rsmax, topt, rgl, hs, xlai)
-
-            # now decide major pathway branch to take depending on whether
-            # snowpack exists or not:
-            esnow = 0.
-
-            if sneqv == 0.:
-                # convert etp from kg m-2 s-1 to ms-1 and initialize dew.
-                prcp1 = prcp * 0.001
-                etp1 = etp * 0.001
-                dew = 0.0
-                edir = 0.0
-                edir1 = 0.0
-                ec = 0.0
-                ec1 = 0.0
-
-                ett = 0.
-                ett1 = 0.
-
-                et1_0, et1_1, et1_2, et1_3, = 0, 0, 0, 0
-
-                if etp > 0.:
-                    eta1, edir1, ec1, et1_0, et1_1, et1_2, et1_3, ett1 = evapo_fn(nroot, cmc, cmcmax, etp1, dt,
-                                                                                  sh2o0, sh2o1, sh2o2, sh2o3, smcmax, smcwlt, smcref, smcdry, pc,
-                                                                                  shdfac, cfactr, rtdis0, rtdis1, rtdis2, rtdis3, fxexp)
-
-                    cmc, sh2o0, sh2o1, sh2o2, sh2o3, smc0, smc1, smc2, smc3, runoff1, runoff2, runoff3, drip = smflx_fn(dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
-                                                                                                                        zsoil0, zsoil1, zsoil2, zsoil3, slope,
-                                                                                                                        frzx, bexp, dksat, dwsat, shdfac, edir1, ec1,
-                                                                                                                        et1_0, et1_1, et1_2, et1_3, cmc, sh2o0, sh2o1,
-                                                                                                                        sh2o2, sh2o3, smc0, smc1, smc2, smc3)
-
-                else:
-                    # if etp < 0, assume dew forms
-                    eta1 = 0.0
-                    dew = -etp1
-                    prcp1 += dew
-
-                    cmc, sh2o0, sh2o1, sh2o2, sh2o3, smc0, smc1, smc2, smc3, runoff1, runoff2, runoff3, drip = smflx_fn(dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
-                                                                                                                        zsoil0, zsoil1, zsoil2, zsoil3, slope,
-                                                                                                                        frzx, bexp, dksat, dwsat, shdfac, edir1, ec1,
-                                                                                                                        et1_0, et1_1, et1_2, et1_3, cmc, sh2o0, sh2o1,
-                                                                                                                        sh2o2, sh2o3, smc0, smc1, smc2, smc3)
-
-                # convert modeled evapotranspiration fm  m s-1  to  kg m-2 s-1
-                eta = eta1 * 1000.0
-                edir = edir1 * 1000.0
-                ec = ec1 * 1000.0
-                et_0 = et1_0 * 1000.0
-                et_1 = et1_1 * 1000.0
-                et_2 = et1_2 * 1000.0
-                et_3 = et1_3 * 1000.0
-                ett = ett1 * 1000.0
-
-                # based on etp and e values, determine beta
-                if etp < 0.0:
-                    beta = 1.0
-                elif etp == 0.0:
-                    beta = 0.0
-                else:
-                    beta = eta / etp
-
-                # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
-                df1 = tdfcnd_fn(smc0, quartz, smcmax, sh2o0)
-
-                if (ivegsrc == 1) and (vegtyp == 12):
-                    df1 = 3.24*(1.-shdfac) + shdfac*df1*exp(sbeta*shdfac)
-                else:
-                    df1 *= exp(sbeta*shdfac)
-
-                # compute intermediate terms passed to routine hrt
-                yynum = fdown - sfcems*sigma1*t24
-                yy = sfctmp + (yynum/rch + th2 - sfctmp - beta*epsca)/rr
-                zz1 = df1/(-0.5*zsoil0*rch*rr) + 1.0
-
-                ssoil, stc0, stc1, stc2, stc3, t1, tbot, sh2o0, sh2o1, sh2o2, sh2o3 = shflx_fn(smc0, smc1, smc2, smc3, smcmax, dt, yy, zz1,
-                                                                                               zsoil0, zsoil1, zsoil2, zsoil3, zbot, psisat, bexp,
-                                                                                               df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
-                                                                                               stc0, stc1, stc2, stc3, t1, tbot, sh2o0, sh2o1, sh2o2, sh2o3)
-
-                flx1 = 0.0
-                flx3 = 0.0
-
-            else:
-                ### *************** snopac *************** ###
-
-                # calculates soil moisture and heat flux values and
-                # update soil moisture content and soil heat content values for the
-                # case when a snow pack is present.
-
-                snoexp = 2.0
-                esdmin = 1.e-6
-
-                prcp1 = prcp1 * 0.001
-                edir = 0.0
-                edir1 = 0.0
-
-                ec = 0.0
-                ec1 = 0.0
-
-                runoff1 = 0.0
-                runoff2 = 0.0
-                runoff3 = 0.0
-
-                drip = 0.0
-
-                # et = np.zeros(nsoil)
-                # et1 = np.zeros(nsoil)
-
-                ett = 0.0
-                ett1 = 0.0
-                etns = 0.0
-                etns1 = 0.0
-                esnow = 0.0
-                esnow1 = 0.0
-                esnow2 = 0.0
-
-                dew = 0.0
-                etp1 = etp * 0.001
-
-                if etp < 0.0:
-                    # dewfall (=frostfall in this case).
-                    dew = -etp1
-                    esnow2 = etp1 * dt
-                    etanrg = etp * ((1.0-sncovr)*lsubc + sncovr*lsubs)
-
-                else:
-                    # upward moisture flux
-                    if ice != 0:
-                        # for sea-ice and glacial-ice case
-                        esnow = etp
-                        esnow1 = esnow * 0.001
-                        esnow2 = esnow1 * dt
-                        etanrg = esnow * lsubs
-
-                    else:
-                        # for non-glacial land case
-                        if sncovr < 1.0:
-                            eta1, edir1, ec1, et1_0, et1_1, et1_2, et1_3, ett1 = evapo_fn(nroot, cmc, cmcmax, etp1, dt,
-                                                                                          sh2o0, sh2o1, sh2o2, sh2o3, smcmax, smcwlt, smcref, smcdry, pc,
-                                                                                          shdfac, cfactr, rtdis0, rtdis1, rtdis2, rtdis3, fxexp)
-
-                            edir1 *= 1.0 - sncovr
-                            ec1 *= 1.0 - sncovr
-                            et1_0 *= 1.0 - sncovr
-                            et1_1 *= 1.0 - sncovr
-                            et1_2 *= 1.0 - sncovr
-                            et1_3 *= 1.0 - sncovr
-                            ett1 *= 1.0 - sncovr
-                            etns1 *= 1.0 - sncovr
-
-                            edir = edir1 * 1000.0
-                            ec = ec1 * 1000.0
-                            et0 = et1_0 * 1000.0
-                            et1 = et1_1 * 1000.0
-                            et2 = et1_2 * 1000.0
-                            et3 = et1_3 * 1000.0
-                            ett = ett1 * 1000.0
-                            etns = etns1 * 1000.0
-
-                        esnow = etp * sncovr
-                        esnow1 = esnow * 0.001
-                        esnow2 = esnow1 * dt
-                        etanrg = esnow*lsubs + etns*lsubc
-
-                # if precip is falling, calculate heat flux from snow sfc to newly accumulating precip
-                flx1 = 0.0
-                if snowng:
-                    # fractional snowfall/rainfall
-                    flx1 = (cpice * ffrozp + cph2o1*(1.-ffrozp)) * \
-                        prcp * (t1 - sfctmp)
-
-                elif prcp > 0.0:
-                    flx1 = cph2o1 * prcp * (t1 - sfctmp)
-
-                # calculate an 'effective snow-grnd sfc temp' based on heat fluxes between
-                # the snow pack and the soil and on net radiation.
-                dsoil = -0.5 * zsoil0
-                dtot = snowh + dsoil
-                denom = 1.0 + df1 / (dtot * rr * rch)
-                t12a = ((fdown - flx1 - flx2 - sfcems*sigma1*t24) /
-                        rch + th2 - sfctmp - etanrg / rch) / rr
-                t12b = df1 * stc0 / (dtot * rr * rch)
-                t12 = (sfctmp + t12a + t12b) / denom
-
-                if t12 <= tfreez:    # no snow melt will occur.
-
-                    # set the skin temp to this effective temp
-                    t1 = t12
-                    # update soil heat flux
-                    ssoil = df1 * (t1 - stc0) / dtot
-                    # update depth of snowpack
-                    sneqv = max(0.0, sneqv-esnow2)
-                    flx3 = 0.0
-                    ex = 0.0
-                    snomlt = 0.0
-
-                else:    # snow melt will occur.
-                    t1 = tfreez * max(0.01, sncovr**snoexp) + t12 * \
-                        (1.0 - max(0.01, sncovr**snoexp))
-                    ssoil = df1 * (t1 - stc0) / dtot
-
-                    if sneqv - esnow2 <= esdmin:
-                        # snowpack has sublimated away, set depth to zero.
-                        sneqv = 0.0
-                        ex = 0.0
-                        snomlt = 0.0
-                        flx3 = 0.0
-
-                    else:
-                        # potential evap (sublimation) less than depth of snowpack
-                        sneqv -= esnow2
-                        seh = rch * (t1 - th2)
-
-                        t14 = t1 * t1
-                        t14 = t14 * t14
-
-                        flx3 = fdown - flx1 - flx2 - sfcems*sigma1*t14 - ssoil - seh - etanrg
-                        if flx3 <= 0.0:
-                            flx3 = 0.0
-
-                        ex = flx3 * 0.001 / lsubf
-
-                        # snowmelt reduction
-                        snomlt = ex * dt
-
-                        if sneqv - snomlt >= esdmin:
-                            # retain snowpack
-                            sneqv -= snomlt
-                        else:
-                            # snowmelt exceeds snow depth
-                            ex = sneqv / dt
-                            flx3 = ex * 1000.0 * lsubf
-                            snomlt = sneqv
-                            sneqv = 0.0
-
-                    if ice == 0:
-                        prcp1 += ex
-
-                if ice == 0:
-                    # smflx returns updated soil moisture values for non-glacial land.
-                    cmc, sh2o0, sh2o1, sh2o2, sh2o3, smc0, smc1, smc2, smc3, runoff1, runoff2, runoff3, drip = smflx_fn(dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
-                                                                                                                        zsoil0, zsoil1, zsoil2, zsoil3, slope,
-                                                                                                                        frzx, bexp, dksat, dwsat, shdfac, edir1, ec1,
-                                                                                                                        et1_0, et1_1, et1_2, et1_3, cmc, sh2o0, sh2o1,
-                                                                                                                        sh2o2, sh2o3, smc0, smc1, smc2, smc3)
-                zz1 = 1.0
-                yy = stc0 - 0.5 * ssoil * zsoil0 * zz1 / df1
-                t11 = t1
-
-                # shflx will calc/update the soil temps.
-                ssoil, stc0, stc1, stc2, stc3, t1, tbot, sh2o0, sh2o1, sh2o2, sh2o3 = shflx_fn(smc0, smc1, smc2, smc3, smcmax, dt, yy, zz1,
-                                                                                               zsoil0, zsoil1, zsoil2, zsoil3, zbot, psisat, bexp,
-                                                                                               df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
-                                                                                               stc0, stc1, stc2, stc3, t11, tbot, sh2o0, sh2o1, sh2o2, sh2o3)
-
-                # snow depth and density adjustment based on snow compaction.
-                if ice == 0:
-                    if sneqv > 0.0:
-                        snowh, sndens = snowpack_fn(
-                            sneqv, dt, t1, yy, snowh, sndens)
-
-                    else:
-                        sneqv = 0.0
-                        snowh = 0.0
-                        sndens = 0.0
-                        sncovr = 0.0
-
-                elif ice == 1:
-                    if sneqv >= 0.01:
-                        snowh, sndens = snowpack_fn(
-                            sneqv, dt, t1, yy, snowh, sndens)
-                    else:
-                        sneqv = 0.01
-                        snowh = 0.05
-                        sncovr = 1.0
-                else:
-                    if sneqv >= 0.10:
-                        snowh, sndens = snowpack_fn(
-                            sneqv, dt, t1, yy, snowh, sndens)
-                    else:
-                        sneqv = 0.10
-                        snowh = 0.50
-                        sncovr = 1.0
-
-                ### ********************* END snopac ********************* ###
-
-            # prepare sensible heat (h) for return to parent model
-            sheat = -(ch*cp1*sfcprs) / (rd1*t2v) * (th2 - t1)
-
-            # convert units and/or sign of total evap (eta), potential evap (etp),
-            # subsurface heat flux (s), and runoffs for what parent model expects
-            # convert eta from kg m-2 s-1 to w m-2
-            edir = edir * lsubc
-            ec = ec * lsubc
-            et = et * lsubc
-
-            ett = ett * lsubc
-            esnow = esnow * lsubs
-            etp = etp * ((1.0 - sncovr)*lsubc + sncovr*lsubs)
-
-            if etp > 0.:
-                eta = edir + ec + ett + esnow
-            else:
-                eta = etp
-
-            beta = eta / etp
-
-            # convert the sign of soil heat flux so that:
-            # ssoil>0: warm the surface  (night time)
-            # ssoil<0: cool the surface  (day time)
-            ssoil = -1.0 * ssoil
-
-            if ice == 0:
-                # for the case of land (but not glacial-ice):
-                # convert runoff3 (internal layer runoff from supersat) from m
-                # to m s-1 and add to subsurface runoff/baseflow (runoff2).
-                # runoff2 is already a rate at this point.
-                runoff3 = runoff3 / delt
-                runoff2 = runoff2 + runoff3
-
-            else:
-                # for the case of sea-ice (ice=1) or glacial-ice (ice=-1), add any
-                # snowmelt directly to surface runoff (runoff1) since there is no
-                # soil medium, and thus no call to subroutine smflx (for soil
-                # moisture tendency).
-                runoff1 = snomlt / delt
-
-            # total column soil moisture in meters (soilm) and root-zone
-            # soil moisture availability (fraction) relative to porosity/saturation
-            soilm = - smc0 * zsoil0 + smc1 * \
-                (zsoil0 - zsoil1) + smc2 * \
-                (zsoil1 - zsoil2) + smc3 * (zsoil2 - zsoil3)
-            soilwm = - (smcmax-smcwlt) * zsoil3
-            soilww = - (smc0 - smcwlt) * zsoil0 + (smc1 - smcwlt) * (zsoil0 - zsoil1) + \
-                (smc2 - smcwlt) * (zsoil1 - zsoil2) + \
-                (smc3 - smcwlt) * (zsoil2 - zsoil3)
-            soilw = soilww / soilwm
-
-            # tg3, cmc, tsurf, stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, \
-            #     slc0, slc1, slc2, slc3, sneqv, chx, cmx, z0, sigmaf, snowh, \
-            #     evap, hflx, evcw, evbs, trans, sbsno, ep, gflux, \
-            #     flx1, flx2, flx3, runoff1, runoff2, snowc, \
-            #     soilm, smcwlt, smcref, smcmax = sflx_fn(  # inputs
-            #         couple, ice, srflag, delt, zf, zsoil_noah0, zsoil_noah1, zsoil_noah2, zsoil_noah3,
-            #         dswsfc, snet, dlwflx, sfcemis, prsl1, t1,
-            #         wind, prcp, q0, qs1, dqsdt2, theta1, ivegsrc,
-            #         vegtype, soiltyp, slopetyp, shdmin, sfalb, snoalb,
-            #         bexppert, xlaipert, lheatstrg,
-            #         tg3, cmc, tsurf, stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3,
-            #         slc0, slc1, slc2, slc3, sneqv, chx, cmx, z0, sigmaf, snowh
-            #     )
-
-            tg3, cmc, tsurf, stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, \
-                slc0, slc1, slc2, slc3, sneqv, chx, cmx, z0, sigmaf, snowh, \
-                evap, hflx, evcw, evbs, trans, sbsno, ep, gflux, \
-                flx1, flx2, flx3, runoff1, runoff2, snowc, \
-                soilm, smcwlt, smcref, smcmax = tbot, cmc, t1, stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, \
-                sh2o0, sh2o1, sh2o2, sh2o3, sneqv, ch, cm, z0, shdfac, snowh, \
-                nroot, albedo, eta, sheat, ec, \
-                edir, et, ett, esnow, drip, dew, beta, etp, ssoil, \
-                flx1, flx2, flx3, runoff1, runoff2, runoff3, \
-                snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq, \
-                rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax
-
-            ### ************* END SFLX ALGORITHM ************* ###
-
-            # output
-            stm = soilm * 1000.0
-            snohf = flx1 + flx2 + flx3
-            wet1 = smc0 / smcmax
-            runoff = runoff1 * 1000.0
-            drain = runoff2 * 1000.0
-            canopy = cmc * 1000.0
-            snwdph = snowh * 1000.0
-            weasd = sneqv * 1000.0
-            sncovr1 = snowc
-            zorl = z0 * 100.
-
-            # compute qsurf
-            rch = rho * cp * ch * wind
-            qsurf = q1 * evap / (elocp * rch)
-            tem = 1.0 / rho
-            hflx = hflx * tem * cpinv
-            evap = evap * tem * hvapi
-
-        # restore land-related prognostic fields for guess run
-        if land & flag_guess:
-            weasd = weasd_old
-            snwdph = snwdph_old
-            tskin = tskin_old
-            canopy = canopy_old
-            tprcp = tprcp_old
-            srflag = srflag_old
-            smc0 = smc_old0
-            smc1 = smc_old1
-            smc2 = smc_old2
-            smc3 = smc_old3
-            stc0 = stc_old0
-            stc1 = stc_old1
-            stc2 = stc_old2
-            stc3 = stc_old3
-            slc0 = slc_old0
-            slc1 = slc_old1
-            slc2 = slc_old2
-            slc3 = slc_old3
-        elif land:
-            tskin = tsurf
+            zsoil0 = - zsoil_noah0
+            zsoil1 = zsoil0 - zsoil_noah1
+            zsoil2 = zsoil1 - zsoil_noah2
+            zsoil3 = zsoil2 - zsoil_noah3
+
+            kdt, sigmaf, frzx, rtdis0, rtdis1, rtdis2, rtdis3 = redprm_fn(vegtype, dksat, smcmax, smcref, nroot,
+                                                                                zsoil_noah0, zsoil_noah1, zsoil_noah2, zsoil_noah3,
+                                                                                zsoil0, zsoil1, zsoil2, zsoil3, sigmaf)
+
+        #     if ivegsrc == 1 and vegtype == 12:
+        #         rsmin = 400.0 * (1 - shdfac0) + 40.0 * shdfac0
+        #         sigmaf = shdfac0
+        #         smcmax = 0.45 * (1 - shdfac0) + smcmax * shdfac0
+        #         smcref = 0.42 * (1 - shdfac0) + smcref * shdfac0
+        #         smcwlt = 0.40 * (1 - shdfac0) + smcwlt * shdfac0
+        #         smcdry = 0.40 * (1 - shdfac0) + smcdry * shdfac0
+
+        #     bexp = bexp * min(1. + bexppert, 2.)
+
+        #     xlai = xlai * (1.+xlaipert)
+        #     xlai = max(xlai, .75)
+
+        #     # over sea-ice or glacial-ice, if s.w.e. (sneqv) below threshold
+        #     # lower bound (0.01 m for sea-ice, 0.10 m for glacial-ice), then
+        #     # set at lower bound and store the source increment in subsurface
+        #     # runoff/baseflow (runoff2).
+        #     if (ice == -1) and (sneqv < 0.10):
+        #         # TODO: check if it is called
+        #         sneqv = 0.10
+        #         snowh = 1.00
+
+        #     # for sea-ice and glacial-ice cases, set smc and slc values = 1
+        #     # as a flag for non-soil medium
+        #     if ice != 0:
+        #         smc0 = 1.
+        #         smc1 = 1.
+        #         smc2 = 1.
+        #         smc3 = 1.
+        #         slc0 = 1.
+        #         slc1 = 1.
+        #         slc2 = 1.
+        #         slc3 = 1.
+
+        #     # if input snowpack is nonzero, then compute snow density "sndens"
+        #     # and snow thermal conductivity "sncond" (note that csnow is a function subroutine)
+        #     if sneqv == 0.:
+        #         sndens = 0.
+        #         snowh = 0.
+        #         sncond = 1.
+        #     else:
+        #         sndens = sneqv / snowh
+        #         sndens = max(0.0, min(1.0, sndens))
+        #         # TODO: sncond is that necessary? is it later overwritten without using before?
+        #         sncond = csnow_fn(sndens)
+
+        #     # determine if it's precipitating and what kind of precip it is.
+        #     # if it's prcping and the air temp is colder than 0 c, it's snowing!
+        #     # if it's prcping and the air temp is warmer than 0 c, but the grnd
+        #     # temp is colder than 0 c, freezing rain is presumed to be falling.
+        #     snowng = (prcp > 0.) and (srflag > 0.)
+        #     frzgra = (prcp > 0.) and (srflag <= 0.) and (tsurf <= tfreez)
+
+        #     # if either prcp flag is set, determine new snowfall (converting
+        #     # prcp rate from kg m-2 s-1 to a liquid equiv snow depth in meters)
+        #     # and add it to the existing snowpack.
+
+        #     # snowfall
+        #     if snowng:
+        #         sn_new = srflag * prcp * delt * 0.001
+        #         sneqv = sneqv + sn_new
+        #         prcp1 = (1.-srflag) * prcp
+
+        #     # freezing rain
+        #     if frzgra:
+        #         sn_new = prcp * delt * 0.001
+        #         sneqv = sneqv + sn_new
+        #         prcp1 = 0.0
+
+        #     if snowng or frzgra:
+
+        #         # update snow density based on new snowfall, using old and new
+        #         # snow.  update snow thermal conductivity
+        #         snowh, sndens = snow_new_fn(t1, sn_new, snowh, sndens)
+        #         sncond = csnow_fn(sndens)
+
+        #     else:
+        #         # precip is liquid (rain), hence save in the precip variable
+        #         # that later can wholely or partially infiltrate the soil (along
+        #         # with any canopy "drip" added to this later)
+        #         prcp1 = prcp
+
+        #     # determine snowcover fraction and albedo fraction over land.
+        #     if ice != 0:
+        #         sncovr = 1.0
+        #         albedo = 0.65    # albedo over sea-ice, glacial- ice
+
+        #     else:
+        #         # non-glacial land
+        #         # if snow depth=0, set snowcover fraction=0, albedo=snow free albedo.
+        #         if sneqv == 0.:
+        #             sncovr = 0.
+        #             albedo = sfalb
+
+        #         else:
+        #             # determine snow fraction cover.
+        #             # determine surface albedo modification due to snowdepth state.
+        #             sncovr = snfrac_fn(sneqv, snup, salp)
+        #             albedo = alcalc_fn(sfalb, snoalb, sncovr)
+
+        #     # thermal conductivity for sea-ice case, glacial-ice case
+        #     if ice != 0:
+        #         df1 = 2.2
+
+        #     else:
+        #         # calculate the subsurface heat flux, which first requires calculation
+        #         # of the thermal diffusivity.
+        #         df1 = tdfcnd_fn(smc0, quartz, smcmax, slc0)
+        #         if ivegsrc == 1 and vegtype == 12:
+        #             df1 = 3.24 * (1. - sigmaf) + sigmaf * \
+        #                 df1 * exp(sbeta*sigmaf)
+        #         else:
+        #             df1 = df1 * exp(sbeta * sigmaf)
+
+        #     dsoil = -0.5 * zsoil0
+
+        #     if sneqv == 0.0:
+        #         ssoil = df1 * (tsurf - stc0) / dsoil
+        #     else:
+        #         dtot = snowh + dsoil
+        #         frcsno = snowh / dtot
+        #         frcsoi = dsoil / dtot
+
+        #         # arithmetic mean (parallel flow)
+        #         df1a = frcsno*sncond + frcsoi*df1
+
+        #         # geometric mean (intermediate between harmonic and arithmetic mean)
+        #         df1 = df1a*sncovr + df1 * (1.0 - sncovr)
+
+        #         # calculate subsurface heat flux
+        #         ssoil = df1 * (tsurf - stc0) / dtot
+
+        #     # calc virtual temps and virtual potential temps needed by
+        #     # subroutines sfcdif and penman.
+        #     t2v = t1 * (1.0 + 0.61 * q0)
+
+        #     # surface exchange coefficients computed externally and passed in,
+        #     # hence subroutine sfcdif not called.
+        #     fdown = snet + dlwflx
+
+        #     # enhance cp as a function of z0 to mimic heat storage
+        #     cpx = cp
+        #     cpx1 = cp1
+        #     cpfac = 1.0
+
+        #     # call penman subroutine to calculate potential evaporation (etp),
+        #     # and other partial products and sums save in common/rite for later
+        #     # calculations.
+        #     t24, etp, rch, epsca, rr, flx2 = penman_fn(t1, prsl1, sfcemis, chx, t2v, theta1, prcp, fdown,
+        #                                                cpx, cpfac, ssoil, q0, qs1, dqsdt2, snowng, frzgra, srflag)
+
+        #     # call canres to calculate the canopy resistance and convert it
+        #     # into pc if nonzero greenness fraction
+
+        #     # TODO: check what happens to rc when sigmaf <= 0.
+        #     rc = 0.
+        #     rcs = 0.
+        #     rct = 0.
+        #     rcq = 0.
+        #     rcsoil = 0.
+
+        #     if sigmaf > 0.:
+
+        #         # frozen ground extension: total soil water "smc" was replaced
+        #         # by unfrozen soil water "slc" in call to canres below
+        #         rc, pc, rcs, rct, rcq, rcsoil = canres_fn(nroot, dswsfc, chx, q0, qs1, dqsdt2, tsurf,
+        #                                                   cpx1, prsl1, sfcemis, slc0, slc1, slc2, slc3,
+        #                                                   smcwlt, smcref, zsoil0, zsoil1, zsoil2, zsoil3, rsmin,
+        #                                                   rsmax, topt, rgl, hs, xlai)
+
+        #     # now decide major pathway branch to take depending on whether
+        #     # snowpack exists or not:
+        #     esnow = 0.
+
+        #     if sneqv == 0.:
+        #         # convert etp from kg m-2 s-1 to ms-1 and initialize dew.
+        #         prcp1 = prcp * 0.001
+        #         etp1 = etp * 0.001
+        #         dew = 0.0
+        #         edir = 0.0
+        #         edir1 = 0.0
+        #         ec = 0.0
+        #         ec1 = 0.0
+
+        #         ett = 0.
+        #         ett1 = 0.
+
+        #         et1_0, et1_1, et1_2, et1_3, = 0, 0, 0, 0
+
+        #         if etp > 0.:
+        #             eta1, edir1, ec1, et1_0, et1_1, et1_2, et1_3, ett1 = evapo_fn(nroot, cmc, cmcmax, etp1,  delt,
+        #                                                                           slc0, slc1, slc2, slc3, smcmax, smcwlt, smcref, smcdry, pc,
+        #                                                                           sigmaf, cfactr, rtdis0, rtdis1, rtdis2, rtdis3, fxexp)
+
+        #             cmc, slc0, slc1, slc2, slc3, smc0, smc1, smc2, smc3, runoff1, runoff2, runoff3, drip = smflx_fn( delt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+        #                                                                                                                 zsoil0, zsoil1, zsoil2, zsoil3, slope,
+        #                                                                                                                 frzx, bexp, dksat, dwsat, sigmaf, edir1, ec1,
+        #                                                                                                                 et1_0, et1_1, et1_2, et1_3, cmc, slc0, slc1,
+        #                                                                                                                 slc2, slc3, smc0, smc1, smc2, smc3)
+
+        #         else:
+        #             # if etp < 0, assume dew forms
+        #             eta1 = 0.0
+        #             dew = -etp1
+        #             prcp1 += dew
+
+        #             cmc, slc0, slc1, slc2, slc3, smc0, smc1, smc2, smc3, runoff1, runoff2, runoff3, drip = smflx_fn( delt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+        #                                                                                                                 zsoil0, zsoil1, zsoil2, zsoil3, slope,
+        #                                                                                                                 frzx, bexp, dksat, dwsat, sigmaf, edir1, ec1,
+        #                                                                                                                 et1_0, et1_1, et1_2, et1_3, cmc, slc0, slc1,
+        #                                                                                                                 slc2, slc3, smc0, smc1, smc2, smc3)
+
+        #         # convert modeled evapotranspiration fm  m s-1  to  kg m-2 s-1
+        #         eta = eta1 * 1000.0
+        #         edir = edir1 * 1000.0
+        #         ec = ec1 * 1000.0
+        #         et_0 = et1_0 * 1000.0
+        #         et_1 = et1_1 * 1000.0
+        #         et_2 = et1_2 * 1000.0
+        #         et_3 = et1_3 * 1000.0
+        #         ett = ett1 * 1000.0
+
+        #         # based on etp and e values, determine beta
+        #         if etp < 0.0:
+        #             beta = 1.0
+        #         elif etp == 0.0:
+        #             beta = 0.0
+        #         else:
+        #             beta = eta / etp
+
+        #         # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
+        #         df1 = tdfcnd_fn(smc0, quartz, smcmax, slc0)
+
+        #         if (ivegsrc == 1) and (vegtype == 12):
+        #             df1 = 3.24*(1.-sigmaf) + sigmaf*df1*exp(sbeta*sigmaf)
+        #         else:
+        #             df1 *= exp(sbeta*sigmaf)
+
+        #         # compute intermediate terms passed to routine hrt
+        #         yynum = fdown - sfcemis*sigma1*t24
+        #         yy = t1 + (yynum/rch + theta1 - t1 - beta*epsca)/rr
+        #         zz1 = df1/(-0.5*zsoil0*rch*rr) + 1.0
+
+        #         ssoil, stc0, stc1, stc2, stc3, tsurf, tg3, slc0, slc1, slc2, slc3 = shflx_fn(smc0, smc1, smc2, smc3, smcmax,  delt, yy, zz1,
+        #                                                                                        zsoil0, zsoil1, zsoil2, zsoil3, zbot, psisat, bexp,
+        #                                                                                        df1, ice, quartz, csoil, ivegsrc, vegtype, sigmaf,
+        #                                                                                        stc0, stc1, stc2, stc3, tsurf, tg3, slc0, slc1, slc2, slc3)
+
+        #         flx1 = 0.0
+        #         flx3 = 0.0
+
+        #     else:
+        #         ### *************** snopac *************** ###
+
+        #         # calculates soil moisture and heat flux values and
+        #         # update soil moisture content and soil heat content values for the
+        #         # case when a snow pack is present.
+
+        #         snoexp = 2.0
+        #         esdmin = 1.e-6
+
+        #         prcp1 = prcp1 * 0.001
+        #         edir = 0.0
+        #         edir1 = 0.0
+
+        #         ec = 0.0
+        #         ec1 = 0.0
+
+        #         runoff1 = 0.0
+        #         runoff2 = 0.0
+        #         runoff3 = 0.0
+
+        #         drip = 0.0
+
+        #         # et = np.zeros(nsoil)
+        #         # et1 = np.zeros(nsoil)
+
+        #         ett = 0.0
+        #         ett1 = 0.0
+        #         etns = 0.0
+        #         etns1 = 0.0
+        #         esnow = 0.0
+        #         esnow1 = 0.0
+        #         esnow2 = 0.0
+
+        #         dew = 0.0
+        #         etp1 = etp * 0.001
+
+        #         if etp < 0.0:
+        #             # dewfall (=frostfall in this case).
+        #             dew = -etp1
+        #             esnow2 = etp1 *  delt
+        #             etanrg = etp * ((1.0-sncovr)*lsubc + sncovr*lsubs)
+
+        #         else:
+        #             # upward moisture flux
+        #             if ice != 0:
+        #                 # for sea-ice and glacial-ice case
+        #                 esnow = etp
+        #                 esnow1 = esnow * 0.001
+        #                 esnow2 = esnow1 *  delt
+        #                 etanrg = esnow * lsubs
+
+        #             else:
+        #                 # for non-glacial land case
+        #                 if sncovr < 1.0:
+        #                     eta1, edir1, ec1, et1_0, et1_1, et1_2, et1_3, ett1 = evapo_fn(nroot, cmc, cmcmax, etp1,  delt,
+        #                                                                                   slc0, slc1, slc2, slc3, smcmax, smcwlt, smcref, smcdry, pc,
+        #                                                                                   sigmaf, cfactr, rtdis0, rtdis1, rtdis2, rtdis3, fxexp)
+
+        #                     edir1 *= 1.0 - sncovr
+        #                     ec1 *= 1.0 - sncovr
+        #                     et1_0 *= 1.0 - sncovr
+        #                     et1_1 *= 1.0 - sncovr
+        #                     et1_2 *= 1.0 - sncovr
+        #                     et1_3 *= 1.0 - sncovr
+        #                     ett1 *= 1.0 - sncovr
+        #                     etns1 *= 1.0 - sncovr
+
+        #                     edir = edir1 * 1000.0
+        #                     ec = ec1 * 1000.0
+        #                     et0 = et1_0 * 1000.0
+        #                     et1 = et1_1 * 1000.0
+        #                     et2 = et1_2 * 1000.0
+        #                     et3 = et1_3 * 1000.0
+        #                     ett = ett1 * 1000.0
+        #                     etns = etns1 * 1000.0
+
+        #                 esnow = etp * sncovr
+        #                 esnow1 = esnow * 0.001
+        #                 esnow2 = esnow1 *  delt
+        #                 etanrg = esnow*lsubs + etns*lsubc
+
+        #         # if precip is falling, calculate heat flux from snow sfc to newly accumulating precip
+        #         flx1 = 0.0
+        #         if snowng:
+        #             # fractional snowfall/rainfall
+        #             flx1 = (cpice * srflag + cph2o1*(1.-srflag)) * \
+        #                 prcp * (tsurf - t1)
+
+        #         elif prcp > 0.0:
+        #             flx1 = cph2o1 * prcp * (t1 - tsurf)
+
+        #         # calculate an 'effective snow-grnd sfc temp' based on heat fluxes between
+        #         # the snow pack and the soil and on net radiation.
+        #         dsoil = -0.5 * zsoil0
+        #         dtot = snowh + dsoil
+        #         denom = 1.0 + df1 / (dtot * rr * rch)
+        #         t12a = ((fdown - flx1 - flx2 - sfcemis*sigma1*t24) /
+        #                 rch + theta1 - t1 - etanrg / rch) / rr
+        #         t12b = df1 * stc0 / (dtot * rr * rch)
+        #         t12 = (t1 + t12a + t12b) / denom
+
+        #         if t12 <= tfreez:    # no snow melt will occur.
+
+        #             # set the skin temp to this effective temp
+        #             tsurf = t12
+        #             # update soil heat flux
+        #             ssoil = df1 * (tsurf - stc0) / dtot
+        #             # update depth of snowpack
+        #             sneqv = max(0.0, sneqv-esnow2)
+        #             flx3 = 0.0
+        #             ex = 0.0
+        #             snomlt = 0.0
+
+        #         else:    # snow melt will occur.
+        #             tsurf = tfreez * max(0.01, sncovr**snoexp) + t12 * \
+        #                 (1.0 - max(0.01, sncovr**snoexp))
+        #             ssoil = df1 * (tsurf - stc0) / dtot
+
+        #             if sneqv - esnow2 <= esdmin:
+        #                 # snowpack has sublimated away, set depth to zero.
+        #                 sneqv = 0.0
+        #                 ex = 0.0
+        #                 snomlt = 0.0
+        #                 flx3 = 0.0
+
+        #             else:
+        #                 # potential evap (sublimation) less than depth of snowpack
+        #                 sneqv -= esnow2
+        #                 seh = rch * (tsurf - theta1)
+
+        #                 t14 = tsurf * tsurf
+        #                 t14 = t14 * t14
+
+        #                 flx3 = fdown - flx1 - flx2 - sfcemis*sigma1*t14 - ssoil - seh - etanrg
+        #                 if flx3 <= 0.0:
+        #                     flx3 = 0.0
+
+        #                 ex = flx3 * 0.001 / lsubf
+
+        #                 # snowmelt reduction
+        #                 snomlt = ex *  delt
+
+        #                 if sneqv - snomlt >= esdmin:
+        #                     # retain snowpack
+        #                     sneqv -= snomlt
+        #                 else:
+        #                     # snowmelt exceeds snow depth
+        #                     ex = sneqv /  delt
+        #                     flx3 = ex * 1000.0 * lsubf
+        #                     snomlt = sneqv
+        #                     sneqv = 0.0
+
+        #             if ice == 0:
+        #                 prcp1 += ex
+
+        #         if ice == 0:
+        #             # smflx returns updated soil moisture values for non-glacial land.
+        #             cmc, slc0, slc1, slc2, slc3, smc0, smc1, smc2, smc3, runoff1, runoff2, runoff3, drip = smflx_fn( delt, kdt, smcmax, smcwlt, cmcmax, prcp1,
+        #                                                                                                                 zsoil0, zsoil1, zsoil2, zsoil3, slope,
+        #                                                                                                                 frzx, bexp, dksat, dwsat, sigmaf, edir1, ec1,
+        #                                                                                                                 et1_0, et1_1, et1_2, et1_3, cmc, slc0, slc1,
+        #                                                                                                                 slc2, slc3, smc0, smc1, smc2, smc3)
+        #         zz1 = 1.0
+        #         yy = stc0 - 0.5 * ssoil * zsoil0 * zz1 / df1
+        #         t11 = tsurf
+
+        #         # shflx will calc/update the soil temps.
+        #         ssoil, stc0, stc1, stc2, stc3, t11, tg3, slc0, slc1, slc2, slc3 = shflx_fn(smc0, smc1, smc2, smc3, smcmax,  delt, yy, zz1,
+        #                                                                                        zsoil0, zsoil1, zsoil2, zsoil3, zbot, psisat, bexp,
+        #                                                                                        df1, ice, quartz, csoil, ivegsrc, vegtype, sigmaf,
+        #                                                                                        stc0, stc1, stc2, stc3, t11, tg3, slc0, slc1, slc2, slc3)
+
+        #         # snow depth and density adjustment based on snow compaction.
+        #         if ice == 0:
+        #             if sneqv > 0.0:
+        #                 snowh, sndens = snowpack_fn(
+        #                     sneqv,  delt, tsurf, yy, snowh, sndens)
+
+        #             else:
+        #                 sneqv = 0.0
+        #                 snowh = 0.0
+        #                 sndens = 0.0
+        #                 sncovr = 0.0
+
+        #         elif ice == 1:
+        #             if sneqv >= 0.01:
+        #                 snowh, sndens = snowpack_fn(
+        #                     sneqv,  delt, tsurf, yy, snowh, sndens)
+        #             else:
+        #                 sneqv = 0.01
+        #                 snowh = 0.05
+        #                 sncovr = 1.0
+        #         else:
+        #             if sneqv >= 0.10:
+        #                 snowh, sndens = snowpack_fn(
+        #                     sneqv,  delt, tsurf, yy, snowh, sndens)
+        #             else:
+        #                 sneqv = 0.10
+        #                 snowh = 0.50
+        #                 sncovr = 1.0
+
+        #         ### ********************* END snopac ********************* ###
+
+        #     # prepare sensible heat (h) for return to parent model
+        #     sheat = -(chx*cp1*prsl1) / (rd1*t2v) * (theta1 - tsurf)
+
+        #     # convert units and/or sign of total evap (eta), potential evap (etp),
+        #     # subsurface heat flux (s), and runoffs for what parent model expects
+        #     # convert eta from kg m-2 s-1 to w m-2
+        #     edir = edir * lsubc
+        #     ec = ec * lsubc
+        #     et = et * lsubc
+
+        #     ett = ett * lsubc
+        #     esnow = esnow * lsubs
+        #     etp = etp * ((1.0 - sncovr)*lsubc + sncovr*lsubs)
+
+        #     if etp > 0.:
+        #         eta = edir + ec + ett + esnow
+        #     else:
+        #         eta = etp
+
+        #     beta = eta / etp
+
+        #     # convert the sign of soil heat flux so that:
+        #     # ssoil>0: warm the surface  (night time)
+        #     # ssoil<0: cool the surface  (day time)
+        #     ssoil = -1.0 * ssoil
+
+        #     if ice == 0:
+        #         # for the case of land (but not glacial-ice):
+        #         # convert runoff3 (internal layer runoff from supersat) from m
+        #         # to m s-1 and add to subsurface runoff/baseflow (runoff2).
+        #         # runoff2 is already a rate at this point.
+        #         runoff3 = runoff3 / delt
+        #         runoff2 = runoff2 + runoff3
+
+        #     else:
+        #         # for the case of sea-ice (ice=1) or glacial-ice (ice=-1), add any
+        #         # snowmelt directly to surface runoff (runoff1) since there is no
+        #         # soil medium, and thus no call to subroutine smflx (for soil
+        #         # moisture tendency).
+        #         runoff1 = snomlt / delt
+
+        #     # total column soil moisture in meters (soilm) and root-zone
+        #     # soil moisture availability (fraction) relative to porosity/saturation
+        #     soilm = - smc0 * zsoil0 + smc1 * \
+        #         (zsoil0 - zsoil1) + smc2 * \
+        #         (zsoil1 - zsoil2) + smc3 * (zsoil2 - zsoil3)
+        #     soilwm = - (smcmax-smcwlt) * zsoil3
+        #     soilww = - (smc0 - smcwlt) * zsoil0 + (smc1 - smcwlt) * (zsoil0 - zsoil1) + \
+        #         (smc2 - smcwlt) * (zsoil1 - zsoil2) + \
+        #         (smc3 - smcwlt) * (zsoil2 - zsoil3)
+        #     soilw = soilww / soilwm
+
+        #     ### ************* END SFLX ALGORITHM ************* ###
+
+        #     # output
+        #     evap = eta
+        #     hflx = sheat
+        #     gflux = ssoil
+
+        #     evbs = edir
+        #     evcw = ec
+        #     trans = ett
+        #     sbsno = esnow
+        #     snowc = sncovr
+        #     stm = soilm * 1000.0
+        #     snohf = flx1 + flx2 + flx3
+
+        #     smcwlt2 = smcwlt
+        #     smcref2 = smcref
+
+        #     ep = etp
+        #     wet1 = smc0 / smcmax
+
+        #     runoff = runoff1 * 1000.0
+        #     drain = runoff2 * 1000.0
+
+        #     canopy = cmc * 1000.0
+        #     snwdph = snowh * 1000.0
+        #     weasd = sneqv * 1000.0
+        #     sncovr1 = sncovr
+        #     zorl = z0 * 100.
+
+        #     # compute qsurf
+        #     rch = rho * cp * ch * wind
+        #     qsurf = q1 * evap / (elocp * rch)
+        #     tem = 1.0 / rho
+        #     hflx = hflx * tem * cpinv
+        #     evap = evap * tem * hvapi
+
+        # # restore land-related prognostic fields for guess run
+        # if land and flag_guess:
+        #     weasd = weasd_old
+        #     snwdph = snwdph_old
+        #     tskin = tskin_old
+        #     canopy = canopy_old
+        #     tprcp = tprcp_old
+        #     srflag = srflag_old
+        #     smc0 = smc_old0
+        #     smc1 = smc_old1
+        #     smc2 = smc_old2
+        #     smc3 = smc_old3
+        #     stc0 = stc_old0
+        #     stc1 = stc_old1
+        #     stc2 = stc_old2
+        #     stc3 = stc_old3
+        #     slc0 = slc_old0
+        #     slc1 = slc_old1
+        #     slc2 = slc_old2
+        #     slc3 = slc_old3
+        # elif land:
+        #     tskin = tsurf
 
