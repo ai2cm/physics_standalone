@@ -3,8 +3,6 @@ program test
     use machine, only : kind_phys
     use funcphys, only : gfuncphys
     use module_sfc_sice, only : sfc_sice
-    implicit none
-
     integer :: im, km, ipr
     integer, dimension(:), allocatable :: islimsk, ones
 

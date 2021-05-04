@@ -1,4 +1,4 @@
-from utility import *
+# from utility import *
 from utility.serialization import *
 
 if STENCILS == "merged":
@@ -44,6 +44,10 @@ timings = {
     "main_loop_call": [0.0],
     "main_loop_run": [0.0],
     "driver": [0.0],
+    "fields_ini_call": 0.0,
+    "fields_ini_run": 0.0,
+    "fields_update_call": 0.0,
+    "fields_update_run": 0.0,
     "tot": 0.0,
 }
 i_e = None
@@ -52,13 +56,14 @@ ser_count = 0
 for tile in range(1):
     # Read serialized data
     input_data = read_data("../data", tile, ser_count, True)
-
+    # input_data = input_to_full3D(input_data)
     # Get original iie and kke
     i_e = input_data["iie"]
     k_e = input_data["kke"]
 
     for n in range(REPS + 1):
         # Scale the dataset gridsize
+        # scaled_data = scale_dataset_to_N_by_N(input_data, CN)
         scaled_data = scale_dataset_to_N(input_data, CN)
         scaled_data = numpy_dict_to_gt4py_dict(scaled_data)
 
@@ -100,7 +105,7 @@ output_file = open(
     "./out/timings_benchmark_{}_{}_C{}.dat".format(BACKEND, STENCILS, CN), "w"
 )
 for var in timings:
-    if var != "tot":
+    if type(timings[var]) != float:
         timings[var][0] /= REPS
 if STENCILS != "merged":
     timings["main_loop_call"][0] = (

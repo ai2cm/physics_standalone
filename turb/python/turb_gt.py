@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#  pylint: disable=W0511
+# pylint: disable=W0511
 # pylint: disable=C0326
 # pylint: disable=C0103
 
@@ -100,7 +100,7 @@ OUT_VARS = [
 backend = "gtx86"
 F_TYPE = np.float64
 I_TYPE = np.int32
-B_TYPE = np.bool
+B_TYPE = bool
 
 # def run(in_dict, compare_dict, region_timings):
 def run(in_dict, compare_dict):
@@ -635,7 +635,7 @@ def satmedmfvdif_gt(
 
     mask_init(mask=mask)
 
-    # ts = perf_counter()
+    ts = perf_counter()
 
     init(
         bf=bf,
@@ -739,11 +739,11 @@ def satmedmfvdif_gt(
         domain=(im, 1, km + 1),
     )
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[0] += te-ts
 
-    # print("Region 1 Time : " + str(te-ts))
+    print("Region 1 Time : " + str(te - ts))
 
     # print("Past init...")
     # part2(bf=bf,
@@ -844,7 +844,7 @@ def satmedmfvdif_gt(
 
     # print("Past part3a...")
 
-    ## te = perf_counter()
+    # te = perf_counter()
 
     # print("Region 1 Time : " + str(te-ts))
 
@@ -852,7 +852,7 @@ def satmedmfvdif_gt(
 
     zl_0[:, 0, 0] = zl[:, 0, 0].reshape((im))
 
-    # # ts = perf_counter()
+    ts = perf_counter()
 
     part3a1(
         crb=crb,
@@ -985,7 +985,7 @@ def satmedmfvdif_gt(
 
     # print("Past part3e...")
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[1] += te-ts
 
@@ -993,7 +993,7 @@ def satmedmfvdif_gt(
 
     q1_gt[:, :-1, :] = q1[:, :, :]
 
-    # ts = perf_counter()
+    ts = perf_counter()
 
     part4(
         pcnvflg=pcnvflg,
@@ -1012,7 +1012,7 @@ def satmedmfvdif_gt(
         qcko=qcko,
     )
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[2] += te-ts
 
@@ -1023,7 +1023,7 @@ def satmedmfvdif_gt(
     pcnvflg_v2[:, :, 0] = pcnvflg[:, 0, :]
     scuflg_v2[:, :, 0] = scuflg[:, 0, :]
 
-    # ts = perf_counter()
+    ts = perf_counter()
 
     part4a(
         pcnvflg_v2=pcnvflg_v2,
@@ -1034,7 +1034,7 @@ def satmedmfvdif_gt(
         domain=(im, km, ntrac1),
     )
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[3] += te-ts
 
@@ -1202,9 +1202,9 @@ def satmedmfvdif_gt(
             ele[i, 0, k] = max(ele[i, 0, k], tem1)
             ele[i, 0, k] = min(ele[i, 0, k], elmx)
 
-    # print("Past python stencil...")
+    print("Past python stencil...")
 
-    ## ts = perf_counter()
+    # ts = perf_counter()
 
     part6(
         bf=bf,
@@ -1309,7 +1309,7 @@ def satmedmfvdif_gt(
     for n in range(kk):
         part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, domain=(im, 1, km1))
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[4] += te-ts
 
@@ -1320,7 +1320,7 @@ def satmedmfvdif_gt(
     qcko_ntke[:, :, :] = qcko[:, :, ntke - 1].reshape((im, 1, km + 1))
     qcdo_ntke[:, :, :] = qcdo[:, :, ntke - 1].reshape((im, 1, km + 1))
 
-    # ts = perf_counter()
+    ts = perf_counter()
 
     part9(
         pcnvflg=pcnvflg,
@@ -1388,7 +1388,7 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[5] += te-ts
 
@@ -1398,7 +1398,7 @@ def satmedmfvdif_gt(
 
     au, f1 = tridit(im, km, 1, al, ad, au, f1, au, f1, compare_dict)
 
-    # print("Past tridit...")
+    print("Past tridit...")
 
     qtend = (f1[:, 0, :-1] - q1[:, :, ntke - 1]) * rdt
     rtg[:, :, ntke - 1] = rtg[:, :, ntke - 1] + qtend
@@ -1418,9 +1418,9 @@ def satmedmfvdif_gt(
     qcdo_0[:, :, :] = qcdo[:, :, 0].reshape((im, 1, km + 1))
     qcko_0[:, :, :] = qcko[:, :, 0].reshape((im, 1, km + 1))
 
-    # print("Past python stencil...")
+    print("Past python stencil...")
 
-    # ts = perf_counter()
+    ts = perf_counter()
 
     part13(
         ad=ad,
@@ -1454,7 +1454,7 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[6] += te-ts
 
@@ -1499,11 +1499,11 @@ def satmedmfvdif_gt(
                             f2[i, 0, k + 1 + is_] - (tem1 - tem2) * ptem2
                         )
 
-    # print("Past python stencil...")
+    print("Past python stencil...")
 
     au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2, compare_dict)
 
-    # print("Past tridin...")
+    print("Past tridin...")
 
     for k in range(km):
         ttend = (f1[:, 0, k] - t1[:, 0, k]) * rdt
@@ -1524,9 +1524,9 @@ def satmedmfvdif_gt(
     tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
     f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
 
-    # print("Past python stencil...")
+    print("Past python stencil...")
 
-    # ts = perf_counter()
+    ts = perf_counter()
 
     part14(
         ad=ad,
@@ -1595,7 +1595,7 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    # te = perf_counter()
+    te = perf_counter()
 
     # region_timings[7] += te-ts
 

@@ -70,17 +70,17 @@ contains
       integer lcld(im),kcld(im),krad(im),mrad(im)
       integer kx1(im), kpblx(im)
 !
-      real(kind=kind_phys) tke(im,km),  tkeh(im,km-1)
+      real(kind=kind_phys), dimension(:, :), allocatable:: tke,  tkeh
+!     
+      real(kind=kind_phys), dimension(:, :), allocatable:: theta,thvx,  thlvx, &
+     &                     qlx,  thetae,thlx, &
+     &                     slx,  svx,   qtx, &
+     &                     tvx,  pix,   radx, &
+     &                     dku,dkt, dkq, &
+     &                     cku,ckt
 !
-      real(kind=kind_phys) theta(im,km),thvx(im,km),  thlvx(im,km), &
-     &                     qlx(im,km),  thetae(im,km),thlx(im,km), &
-     &                     slx(im,km),  svx(im,km),   qtx(im,km), &
-     &                     tvx(im,km),  pix(im,km),   radx(im,km-1), &
-     &                     dku(im,km-1),dkt(im,km-1), dkq(im,km-1), &
-     &                     cku(im,km-1),ckt(im,km-1)
-!
-      real(kind=kind_phys) plyr(im,km), rhly(im,km),  cfly(im,km), &
-     &                     qstl(im,km)
+      real(kind=kind_phys), dimension(:, :), allocatable:: plyr, rhly,  cfly, &
+     &                     qstl
 !
       real(kind=kind_phys) dtdz1(im), gdx(im), &
      &                     phih(im),  phim(im),    prn(im,km-1), &
@@ -93,34 +93,35 @@ contains
      &                     zol(im),   sflux(im),   radj(im), &
      &                     tx1(im),   tx2(im)
 !
-      real(kind=kind_phys) radmin(im)
+      real(kind=kind_phys) radmin(im), xkzm_hx(im),  xkzm_mx(im)
 !
-      real(kind=kind_phys) zi(im,km+1),  zl(im,km),   zm(im,km), &
-     &                     xkzo(im,km-1),xkzmo(im,km-1), &
-     &                     xkzm_hx(im),  xkzm_mx(im), &
-     &                     rdzt(im,km-1), &
-     &                     al(im,km-1),  ad(im,km),   au(im,km-1), &
-     &                     f1(im,km),    f2(im,km*(ntrac-1))
+      real(kind=kind_phys), dimension(:, :), allocatable:: zi,  zl,   zm, &
+     &                     xkzo,xkzmo, &
+     &                     rdzt, &
+     &                     al,  ad,   au, &
+     &                     f1,    f2
 !
-      real(kind=kind_phys) elm(im,km),   ele(im,km),  rle(im,km-1), &
-     &                     ckz(im,km),   chz(im,km), &
-     &                     diss(im,km-1),prod(im,km-1), &
-     &                     bf(im,km-1),  shr2(im,km-1), &
-     &                     xlamue(im,km-1), xlamde(im,km-1), &
-     &                     gotvx(im,km), rlam(im,km-1)
+      real(kind=kind_phys), dimension(:, :), allocatable:: elm,   ele,  rle, &
+     &                     ckz,   chz, &
+     &                     diss,prod, &
+     &                     bf,  shr2, &
+     &                     xlamue, xlamde, &
+     &                     gotvx, rlam
 !
 !   variables for updrafts (thermals)
 !
-      real(kind=kind_phys) tcko(im,km),  qcko(im,km,ntrac), &
-     &                     ucko(im,km),  vcko(im,km), &
-     &                     buou(im,km),  xmf(im,km)
+      real(kind=kind_phys), dimension(:, :), allocatable:: tcko,  &
+     &                     ucko,  vcko, &
+     &                     buou,  xmf
 !
 !   variables for stratocumulus-top induced downdrafts
 !
-      real(kind=kind_phys) tcdo(im,km),  qcdo(im,km,ntrac), &
-     &                     ucdo(im,km),  vcdo(im,km), &
-     &                     buod(im,km),  xmfd(im,km)
+      real(kind=kind_phys), dimension(:, :), allocatable:: tcdo, &
+     &                     ucdo,  vcdo, &
+     &                     buod,  xmfd
 !
+      real(kind=kind_phys), dimension(:, :, :), allocatable:: qcko, qcdo
+
       logical  pblflg(im), sfcflg(im), flg(im)
       logical  scuflg(im), pcnvflg(im)
       logical  mlenflg
@@ -184,6 +185,31 @@ contains
       parameter(ck0=0.4,ck1=0.15,ch0=0.4,ch1=0.15,ce0=0.4)
       parameter(rchck=1.5,cdtn=25.)
 !
+      allocate(tke(im,km),  tkeh(im,km-1), theta(im,km),thvx(im,km),  thlvx(im,km), &
+      &                     qlx(im,km),  thetae(im,km),thlx(im,km), &
+      &                     slx(im,km),  svx(im,km),   qtx(im,km), &
+      &                     tvx(im,km),  pix(im,km),   radx(im,km-1), &
+      &                     dku(im,km-1),dkt(im,km-1), dkq(im,km-1), &
+      &                     cku(im,km-1),ckt(im,km-1), &
+      &                     plyr(im,km), rhly(im,km),  cfly(im,km), &
+      &                     qstl(im,km), &
+      &                     zi(im,km+1),  zl(im,km),   zm(im,km), &
+      &                     xkzo(im,km-1),xkzmo(im,km-1), &
+      &                     rdzt(im,km-1), &
+      &                     al(im,km-1),  ad(im,km),   au(im,km-1), &
+      &                     f1(im,km),    f2(im,km*(ntrac-1)), &
+      &                     elm(im,km),   ele(im,km),  rle(im,km-1), &
+      &                     ckz(im,km),   chz(im,km), &
+      &                     diss(im,km-1),prod(im,km-1), &
+      &                     bf(im,km-1),  shr2(im,km-1), &
+      &                     xlamue(im,km-1), xlamde(im,km-1), &
+      &                     gotvx(im,km), rlam(im,km-1), &
+      &                     tcko(im,km),  qcko(im,km,ntrac), &
+      &                     ucko(im,km),  vcko(im,km), &
+      &                     buou(im,km),  xmf(im,km), &
+      &                     tcdo(im,km),  qcdo(im,km,ntrac), &
+      &                     ucdo(im,km),  vcdo(im,km), &
+      &                     buod(im,km),  xmfd(im,km))
 !************************************************************************
       dt2  = delt
       rdt = 1. / dt2
@@ -1359,6 +1385,31 @@ contains
       enddo
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      deallocate(tke,  tkeh, theta,thvx,  thlvx, &
+      &                     qlx,  thetae,thlx, &
+      &                     slx,  svx,   qtx, &
+      &                     tvx,  pix,   radx, &
+      &                     dku,dkt, dkq, &
+      &                     cku,ckt, &
+      &                     plyr, rhly,  cfly, &
+      &                     qstl, &
+      &                     zi,  zl,   zm, &
+      &                     xkzo,xkzmo, &
+      &                     rdzt, &
+      &                     al,  ad,   au, &
+      &                     f1,    f2, &
+      &                     elm,   ele,  rle, &
+      &                     ckz,   chz, &
+      &                     diss,prod, &
+      &                     bf,  shr2, &
+      &                     xlamue, xlamde, &
+      &                     gotvx, rlam, &
+      &                     tcko,  qcko, &
+      &                     ucko,  vcko, &
+      &                     buou,  xmf, &
+      &                     tcdo,  qcdo, &
+      &                     ucdo,  vcdo, &
+      &                     buod,  xmfd)
       return
       end subroutine satmedmfvdif
 !

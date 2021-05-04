@@ -218,3 +218,52 @@ def scale_dataset_to_N(data, CN):
                 scaled_data[var] = data[var]
 
     return scaled_data
+
+
+def scale_dataset_to_N_by_N(data, CN):
+
+    scaled_data = {}
+    orig = DTYPE_INT(data["iie"])
+    CN2 = CN * CN
+    multiplier = DTYPE_INT(np.ceil(CN2 / orig))
+
+    for var in data:
+
+        data_var = data[var]
+        ndim = data_var.ndim
+
+        if ndim == 3:
+
+            scaled_data[var] = np.tile(data_var, (multiplier, multiplier, 1))[
+                0:CN, 0:CN, :
+            ]
+
+        elif ndim == 2:
+
+            scaled_data[var] = np.tile(data_var, (multiplier, multiplier))[0:CN, 0:CN]
+
+        elif ndim == 0:
+
+            if var == "iie":
+                scaled_data[var] = DTYPE_INT(CN2)
+            else:
+                scaled_data[var] = data[var]
+
+    return scaled_data
+
+
+def input_to_full3D(input_data):
+    output_data = {}
+    for var in input_data:
+        data_var = input_data[var]
+        ndim = data_var.ndim
+        if ndim == 3:
+            x = int(np.sqrt(data_var.shape[0]))
+            k = data_var.shape[-1]
+            output_data[var] = np.reshape(data_var, (x, x, k))
+        elif ndim == 2:
+            x = int(np.sqrt(data_var.shape[0]))
+            output_data[var] = np.reshape(data_var, (x, x))
+        else:
+            output_data[var] = data_var
+    return output_data

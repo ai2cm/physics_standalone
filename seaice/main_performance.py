@@ -4,7 +4,6 @@ import os
 import pickle
 import numpy as np
 import sea_ice_timer as si_py
-import sea_ice_gt4py as si_gt4py
 
 # import matplotlib
 
