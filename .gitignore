@@ -2,3 +2,5 @@ serialbox
 __pycache__
 .vscode
 **.gt_cache/
+*.dat
+*.log
