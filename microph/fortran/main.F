@@ -38,7 +38,7 @@ program test
     character(len=100) :: nml_file
     character(len=6) :: ser_count_str
     real :: C_orig, CN
-    real :: timings(7, 1)
+    real :: timings(10, 1)
     real :: t_driver_start, t_driver_end, &
             t_tot_start, t_tot_end
     logical :: VALIDATION=.false.
@@ -192,8 +192,8 @@ program test
 
     end do
 
-    call MPI_REDUCE(timings(1:4, :), timings(1:4, :), 4, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
-    call MPI_REDUCE(timings(6, :), timings(6, :), 1, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
+    if (BENCHMARK) call MPI_REDUCE(timings(1:6, :), timings(1:6, :), 6*factors_size, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
+    if (BENCHMARK) call MPI_REDUCE(timings(8:10, :), timings(8:10, :), 3*factors_size, MPI_REAL8, MPI_MAX, 0, MPI_COMM_WORLD, ierror)
     if (rank_idx .eq. 0) then
         
         call cpu_time(t_tot_end)
@@ -203,6 +203,7 @@ program test
         write(file_id, '(i0)') int(CN)
         open(1, file='./out/timings_benchmark_fortran_normal_C'//trim(adjustl(file_id))//'.dat')
         timings(1:6, :) = timings(1:6, :) / REPS
+        timings(8:10, :) = timings(8:10, :) / REPS
         timings(5, 1) = timings(1, 1) + timings(2, 1) + timings(3, 1) + timings(4, 1)
         write(*,*) ""
         write(*,'(a, I5, a, I2, a)') "For gridsize ", INT(CN*CN), "x1x", kke, ":"
@@ -214,7 +215,8 @@ program test
         write(*,'(a, F7.3, a)') "> Whole driver                   => ", timings(6, 1), " seconds"
         write(1, *) timings(1, 1), 0., timings(2, 1), &
                             timings(3, 1), timings(4, 1), &
-                            timings(5, 1), timings(6, 1)
+                            timings(5, 1), timings(6, 1), &
+                            timings(8, 1), timings(9, 1), timings(10, 1)
         close(1)
         write(*,*) ""
         write(*,'(a, F7.3, a)') ">> Total elapsed time: ", timings(7, 1), " seconds"
