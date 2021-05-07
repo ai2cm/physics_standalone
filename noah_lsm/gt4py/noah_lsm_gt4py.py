@@ -674,26 +674,8 @@ def snksrc_fn(psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz):
 def rosr12_fn(ai1, ai2, ai3, bi0, bi1, bi2, bi3, ci0, ci1, ci2, ci3, d0, d1, d2, d3):
     # solve the tri-diagonal matrix
 
-    # ci0 = -0.0171224413128633
-    # ci1 = -0.0018450040769246924
-    # ci2 = -0.000591467211162423
-    # ci3 = 0.0
     ci3 = 0.
 
-    # ai0 =0.0
-    # ai1 = -0.005707480437621098
-    # ai2 = -0.0009225020384623464
-    # ai3 = -0.0003548803266974537
-
-    # bi0 = 1.0171224413128632
-    # bi1 = 1.0075524845145458
-    # bi2 = 1.0015139692496249
-    # bi3 = 1.0003548803266975
-
-    # d0 = -0.0002918216991522001
-    # d1 = 0.00010677783517774704
-    # d2 = -1.4255701931482241e-06
-    # d3 = -9.127294836027172e-06
     # solve the coefs for the 1st soil layer
     
     p0 = -ci0/bi0
@@ -829,8 +811,8 @@ def hrt_fn(stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, smcmax, zsoil0, zsoil
         dz = -zsoil0
         tavg = tmpavg_fn(tsurf, stc0, tbk, dz)
         ### ************ snksrc *********** ###
-        tsnsr, sh2o1 = snksrc_fn(
-            psisat, bexp, tavg, smc1, sh2o1, smcmax, qtot, dt, dz)
+        tsnsr, sh2o0 = snksrc_fn(
+            psisat, bexp, tavg, smc0, sh2o0, smcmax, qtot, dt, dz)
         ### ************ END snksrc *********** ###
 
         rhsts0 -= tsnsr / (zsoil0 * hcpct)
@@ -1002,31 +984,7 @@ def shflx_fn(
     if ice != 0:  # sea-ice or glacial ice case
         tbot, rhsts0, rhsts1, rhsts2, rhsts3, ai0, ai1, ai2, ai3, bi0, bi1, bi2, bi3, ci0, ci1, ci2, ci3 = hrtice_fn(
             stc0, stc1, stc2, stc3, zsoil0, zsoil1, zsoil2, zsoil3, yy, zz1, df1, ice, tbot)
-        
-        # stc0 = 288.8129696661988
-        # stc1 = 285.9660633974068
-        # stc2 = 287.35122475679236
-        # stc3 = 289.249796996688
 
-        # ai0 = 0.
-        # ai1 = -0.0006369524357775406
-        # ai2 = -0.00014020288551623848
-        # ai3 = -4.6410075949695966e-05
-
-        # bi0 = 2.936329401078109e-05
-        # bi1 = 6.409425115353001e-06
-        # bi2 = 1.627447424170281e-06
-        # bi3 = 2.0626700422087095e-07
-
-        # ci0 = -0.0018672283887148726
-        # ci1 = -0.0008051682151768847
-        # ci2 = -0.00022597278492207478
-        # ci3 = 0.0
-
-        # rhsts0 = 0.0027098023274942182
-        # rhsts1 = 0.002931237012818815
-        # rhsts2 = -0.00012452344378477526
-        # rhsts3 = -0.00023352596741464869
         stc0, stc1, stc2, stc3 = hstep_fn(stc0, stc1, stc2, stc3, dt, rhsts0, rhsts1,
                                           rhsts2, rhsts3, ai0, ai1, ai2, ai3, bi0, bi1, bi2, bi3, ci0, ci1, ci2, ci3)
 
@@ -1037,10 +995,6 @@ def shflx_fn(
         stc0, stc1, stc2, stc3 = hstep_fn(stc0, stc1, stc2, stc3, dt, rhsts0, rhsts1,
                                           rhsts2, rhsts3, ai0, ai1, ai2, ai3, bi0, bi1, bi2, bi3, ci0, ci1, ci2, ci3)
 
-    # stc0 = 288.8129696661988
-    # stc1 = 285.9660633974068
-    # stc2 = 287.35122475679236
-    # stc3 = 289.249796996688
 
 
     # update the grnd (skin) temperature in the no snowpack case
@@ -1404,18 +1358,6 @@ def nopac_fn(nroot, etp, prcp, smcmax, smcwlt, smcref,
     et1_0, et1_1, et1_2, et1_3, = 0., 0., 0., 0.
     et_0, et_1, et_2, et_3, = 0., 0., 0., 0.
 
-    # cmc = 0.00027562040090560913
-    # cmcmax=0.0005
-    # etp1=4.7481329872649946e-08
-    # dt=225.0
-    # smcmax=0.439
-    # smcwlt=0.06567887261064033
-    # smcref=0.3014137893497851
-    # smcdry=0.01
-    # pc=0.04695921359106214
-    # shdfac=0.6097737617384724
-    # cfactr=0.5
-    fxexp=2.0
 
     if etp > 0.:
         eta1, edir1, ec1, et1_0, et1_1, et1_2, et1_3, ett1 = evapo_fn(nroot, cmc, cmcmax, etp1,  dt,

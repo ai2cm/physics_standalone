@@ -56,11 +56,8 @@ def compare_data(exp_data, ref_data):
         if ind.size > 0:
             i = tuple(ind[:, 0])
             fails = ind.size
-            if  ind.size > 1:
-                j =  tuple(ind[:, 1])
-                print("FAIL at ", key, i, j, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
-            else:
-                print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
+
+            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
 
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
