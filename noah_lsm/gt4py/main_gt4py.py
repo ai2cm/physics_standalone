@@ -33,7 +33,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
 
-BACKEND = "gtx86"
+BACKEND = "numpy"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -55,7 +55,13 @@ def compare_data(exp_data, ref_data):
         ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
         if ind.size > 0:
             i = tuple(ind[:, 0])
-            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i])
+            fails = ind.size
+            if  ind.size > 1:
+                j =  tuple(ind[:, 1])
+                print("FAIL at ", key, i, j, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
+            else:
+                print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
+
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
 
