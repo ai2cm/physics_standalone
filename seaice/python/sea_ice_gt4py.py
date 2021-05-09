@@ -6,9 +6,8 @@ import timeit
 import gt4py as gt
 import numpy as np
 from gt4py import gtscript
-
-DT_F = gtscript.Field[np.float64]
-DT_I = gtscript.Field[np.int32]
+from gt4py.gtscript import PARALLEL, BACKWARD, FORWARD, computation, interval
+from config import *
 
 SCALAR_VARS = ["delt", "cimin"]
 
@@ -99,8 +98,8 @@ def gt4py_to_numpy_storage(arr, backend):
     return np.reshape(data, (data.shape[0]))
 
 
-def run(in_dict, backend):
-    """Run function for GFS thermodynamics surface ice model 
+def run(in_dict):
+    """Run function for GFS thermodynamics surface ice model
 
     With this function, the GFS thermodynamics surface ice model can be run
     as a standalone parameterization.
@@ -114,17 +113,16 @@ def run(in_dict, backend):
 
     # setup storages
     scalar_dict = {k: in_dict[k] for k in SCALAR_VARS}
-    out_dict = {k: numpy_to_gt4py_storage(in_dict[k].copy(), backend=backend) for k in OUT_VARS}
-    in_dict = {k: numpy_to_gt4py_storage(in_dict[k], backend=backend) for k in IN_VARS}
-
-    # compile stencil
-    sfc_sice = gtscript.stencil(definition=sfc_sice_defs, backend=backend, externals={})
+    out_dict = {
+        k: numpy_to_gt4py_storage(in_dict[k].copy(), backend=BACKEND) for k in OUT_VARS
+    }
+    in_dict = {k: numpy_to_gt4py_storage(in_dict[k], backend=BACKEND) for k in IN_VARS}
 
     # set timer
     tic = timeit.default_timer()
 
     # call sea-ice parametrization
-    sfc_sice(**in_dict, **out_dict, **scalar_dict)
+    sfc_sice_defs(**in_dict, **out_dict, **scalar_dict)
 
     # set timer
     toc = timeit.default_timer()
@@ -133,7 +131,9 @@ def run(in_dict, backend):
     elapsed_time = toc - tic
 
     # convert back to numpy for validation
-    out_dict = {k: gt4py_to_numpy_storage(out_dict[k], backend=backend) for k in OUT_VARS}
+    out_dict = {
+        k: gt4py_to_numpy_storage(out_dict[k], backend=BACKEND) for k in OUT_VARS
+    }
 
     # TODO - remove this one we have high-dimensional fields
     # special handling of stc
@@ -147,7 +147,7 @@ def run(in_dict, backend):
 @gtscript.function
 def fpvs_generic_fn(tr, A, B):
     """Compute saturation vapor pressure using generic formula
-       t: Temperature scaled by triple point
+    t: Temperature scaled by triple point
     """
     return PSAT * (tr ** A) * exp(B * (1.0 - tr))
 
@@ -155,7 +155,7 @@ def fpvs_generic_fn(tr, A, B):
 @gtscript.function
 def fpvsl_fn(tr):
     """Compute saturation vapor pressure over liquid
-       t: Temperature scaled by triple point
+    t: Temperature scaled by triple point
     """
     # constants
     A = -(CVAP - CLIQ) / RV
@@ -167,7 +167,7 @@ def fpvsl_fn(tr):
 @gtscript.function
 def fpvsi_fn(tr):
     """Compute saturation vapor pressure over ice
-       t: Temperature scaled by triple point
+    t: Temperature scaled by triple point
     """
     # constants
     A = -(CVAP - CSOL) / RV
@@ -191,15 +191,31 @@ def fpvs_fn(t):
 
     # computed weighted value of saturation vapor pressure
     if w >= 1.0:
-        return fpvsl_fn(tr)
+        out = fpvsl_fn(tr)
     elif w < 0.0:
-        return fpvsi_fn(tr)
+        out = fpvsi_fn(tr)
     else:
-        return w * fpvsl_fn(tr) + (1.0 - w) * fpvsi_fn(tr)
+        out = w * fpvsl_fn(tr) + (1.0 - w) * fpvsi_fn(tr)
+    return out
 
 
 @gtscript.function
-def ice3lay(fice, hfi, hfd, sneti, focn, delt, snowd, hice, stc0, stc1, tice, snof, snowmt, gflux):
+def ice3lay(
+    fice,
+    hfi,
+    hfd,
+    sneti,
+    focn,
+    delt,
+    snowd,
+    hice,
+    stc0,
+    stc1,
+    tice,
+    snof,
+    snowmt,
+    gflux,
+):
     """three-layer sea ice vertical thermodynamics
                                                                            *
     based on:  m. winton, "a reformulated three-layer sea ice model",      *
@@ -233,8 +249,8 @@ def ice3lay(fice, hfi, hfd, sneti, focn, delt, snowd, hice, stc0, stc1, tice, sn
     input/outputs:                                                         *
        snowd    - real, surface pressure                              im   *
        hice     - real, sea-ice thickness                             im   *
-       stc0     - real, temp @ midpt of ice levels (deg c), 1st layer im   *     
-       stc1     - real, temp @ midpt of ice levels (deg c), 2nd layer im   *     
+       stc0     - real, temp @ midpt of ice levels (deg c), 1st layer im   *
+       stc1     - real, temp @ midpt of ice levels (deg c), 2nd layer im   *
        tice     - real, surface temperature     (deg c)               im   *
        snof     - real, snowfall rate           (m/sec)               im   *
                                                                            *
@@ -366,7 +382,10 @@ def ice3lay(fice, hfi, hfd, sneti, focn, delt, snowd, hice, stc0, stc1, tice, sn
     else:
         snowd = (
             snowd
-            + (h1 * (CI * (stc0 - TFI) - LI * (1.0 - TFI / stc0)) + h2 * (CI * (stc1 - TFI) - LI))
+            + (
+                h1 * (CI * (stc0 - TFI) - LI * (1.0 - TFI / stc0))
+                + h2 * (CI * (stc1 - TFI) - LI)
+            )
             / LI
         )
         hice = snowd * DSDI if snowd * DSDI < 0.0 else 0.0
@@ -385,73 +404,74 @@ def ice3lay(fice, hfi, hfd, sneti, focn, delt, snowd, hice, stc0, stc1, tice, sn
     return snowd, hice, stc0, stc1, tice, snof, snowmt, gflux
 
 
+@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
 def sfc_sice_defs(
-    ps: DT_F,
-    t1: DT_F,
-    q1: DT_F,
-    sfcemis: DT_F,
-    dlwflx: DT_F,
-    sfcnsw: DT_F,
-    sfcdsw: DT_F,
-    srflag: DT_F,
-    cm: DT_F,
-    ch: DT_F,
-    prsl1: DT_F,
-    prslki: DT_F,
-    islimsk: DT_I,
-    wind: DT_F,
-    flag_iter: DT_I,
-    hice: DT_F,
-    fice: DT_F,
-    tice: DT_F,
-    weasd: DT_F,
-    tskin: DT_F,
-    tprcp: DT_F,
-    stc0: DT_F,
-    stc1: DT_F,
-    ep: DT_F,
-    snwdph: DT_F,
-    qsurf: DT_F,
-    cmm: DT_F,
-    chh: DT_F,
-    evap: DT_F,
-    hflx: DT_F,
-    gflux: DT_F,
-    snowmt: DT_F,
+    ps: FIELD_FLT,
+    t1: FIELD_FLT,
+    q1: FIELD_FLT,
+    sfcemis: FIELD_FLT,
+    dlwflx: FIELD_FLT,
+    sfcnsw: FIELD_FLT,
+    sfcdsw: FIELD_FLT,
+    srflag: FIELD_FLT,
+    cm: FIELD_FLT,
+    ch: FIELD_FLT,
+    prsl1: FIELD_FLT,
+    prslki: FIELD_FLT,
+    islimsk: FIELD_INT,
+    wind: FIELD_FLT,
+    flag_iter: FIELD_INT,
+    hice: FIELD_FLT,
+    fice: FIELD_FLT,
+    tice: FIELD_FLT,
+    weasd: FIELD_FLT,
+    tskin: FIELD_FLT,
+    tprcp: FIELD_FLT,
+    stc0: FIELD_FLT,
+    stc1: FIELD_FLT,
+    ep: FIELD_FLT,
+    snwdph: FIELD_FLT,
+    qsurf: FIELD_FLT,
+    cmm: FIELD_FLT,
+    chh: FIELD_FLT,
+    evap: FIELD_FLT,
+    hflx: FIELD_FLT,
+    gflux: FIELD_FLT,
+    snowmt: FIELD_FLT,
     *,
     delt: float,
     cimin: float
 ):
     """This file contains the GFS thermodynamics surface ice model.
-   
+
     =====================================================================
-    description:                                                        
-   
-    usage:                                                              
-   
-   
-    program history log:                                                
-           2005  --  xingren wu created  from original progtm and added 
-                       two-layer ice model                              
-           200x  -- sarah lu    added flag_iter                         
-      oct  2006  -- h. wei      added cmm and chh to output             
-           2007  -- x. wu modified for mom4 coupling (i.e. cpldice)     
-                                      (not used anymore)                
-           2007  -- s. moorthi micellaneous changes                     
-      may  2009  -- y.-t. hou   modified to include surface emissivity  
-                       effect on lw radiation. replaced the confusing   
+    description:
+
+    usage:
+
+
+    program history log:
+           2005  --  xingren wu created  from original progtm and added
+                       two-layer ice model
+           200x  -- sarah lu    added flag_iter
+      oct  2006  -- h. wei      added cmm and chh to output
+           2007  -- x. wu modified for mom4 coupling (i.e. cpldice)
+                                      (not used anymore)
+           2007  -- s. moorthi micellaneous changes
+      may  2009  -- y.-t. hou   modified to include surface emissivity
+                       effect on lw radiation. replaced the confusing
                        slrad with sfc net sw sfcnsw (dn-up). reformatted
-                       the code and add program documentation block.    
-      sep  2009 -- s. moorthi removed rcl, changed pressure units and   
-                       further optimized                                
-      jan  2015 -- x. wu change "cimin = 0.15" for both                 
-                       uncoupled and coupled case                       
+                       the code and add program documentation block.
+      sep  2009 -- s. moorthi removed rcl, changed pressure units and
+                       further optimized
+      jan  2015 -- x. wu change "cimin = 0.15" for both
+                       uncoupled and coupled case
       jul  2020 -- ETH-students port to gt4py
-   
-   
-    ====================  definition of variables  ==================== 
-   
-    inputs:                                                       size  
+
+
+    ====================  definition of variables  ====================
+
+    inputs:                                                       size
        ps       - real, surface pressure                            im
        t1       - real, surface layer mean temperature ( k )        im
        q1       - real, surface layer mean specific humidity        im
@@ -487,14 +507,12 @@ def sfc_sice_defs(
        snowmt   - real, snow melt (m)                               im
        gflux    - real, soil heat flux (w/m**2)                     im
        cmm      - real, surface exchange coeff for momentum(m/s)    im
-       chh      - real, surface exchange coeff heat&moisture (m/s)  im  
-       evap     - real, evaperation from latent heat flux           im  
-       hflx     - real, sensible heat flux                          im  
-                                                                        
+       chh      - real, surface exchange coeff heat&moisture (m/s)  im
+       evap     - real, evaperation from latent heat flux           im
+       hflx     - real, sensible heat flux                          im
+
     =====================================================================
     """
-
-    from __gtscript__ import PARALLEL, computation, interval
 
     with computation(PARALLEL), interval(...):
 
@@ -662,4 +680,3 @@ def sfc_sice_defs(
 
             hflx = hflx / rho * 1.0 / CP
             evap = evap / rho * 1.0 / HVAP
-

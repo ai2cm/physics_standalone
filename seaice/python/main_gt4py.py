@@ -8,8 +8,8 @@ import numpy as np
 np.seterr(divide="ignore", invalid="ignore")
 import sea_ice_gt4py as si
 
-SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
-# SERIALBOX_DIR = "/usr/local/serialbox/"
+# SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
@@ -72,10 +72,10 @@ OUT_VARS = [
     "hflx",
 ]
 
-SELECT_SP = None
-# SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
+# SELECT_SP = None
+SELECT_SP = {"tile": 2, "savepoint": "sfc_sice-in-iter2-000000"}
 
-BACKEND = "gtx86"
+BACKEND = "numpy"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -94,7 +94,9 @@ def compare_data(exp_data, ref_data):
         ref_data.keys()
     ), "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
-        ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
+        ind = np.array(
+            np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True))
+        )
         if ind.size > 0:
             i = tuple(ind[:, 0])
             print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i])
@@ -109,7 +111,9 @@ for tile in range(6):
         if tile != SELECT_SP["tile"]:
             continue
 
-    serializer = ser.Serializer(ser.OpenModeKind.Read, "./data", "Generator_rank" + str(tile))
+    serializer = ser.Serializer(
+        ser.OpenModeKind.Read, "../data", "Generator_rank" + str(tile)
+    )
 
     savepoints = serializer.savepoint_list()
 
@@ -117,9 +121,9 @@ for tile in range(6):
     for sp in savepoints:
 
         if SELECT_SP is not None:
-            if sp.name != SELECT_SP["savepoint"] and sp.name != SELECT_SP["savepoint"].replace(
-                "-in-", "-out-"
-            ):
+            if sp.name != SELECT_SP["savepoint"] and sp.name != SELECT_SP[
+                "savepoint"
+            ].replace("-in-", "-out-"):
                 continue
 
         if sp.name.startswith("sfc_sice-in"):
