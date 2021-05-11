@@ -195,9 +195,7 @@ def tdfcnd_fn(smc, qz, smcmax, sh2o):
 
 
 @gtscript.function
-def alcalc_fn(
-    alb, snoalb, sncovr
-):
+def alcalc_fn(alb, snoalb, sncovr):
     # --- ... subprograms called: none
 
     # calculates albedo using snow effect
@@ -212,8 +210,7 @@ def alcalc_fn(
 @gtscript.function
 def canres_fn(nroot, swdn, ch, q2, q2sat, dqsdt2, sfctmp,
               cpx1, sfcprs, sfcems, sh2o0, sh2o1, sh2o2, sh2o3, smcwlt, smcref, zsoil0, zsoil1, zsoil2, zsoil3, rsmin,
-              rsmax, topt, rgl, hs, xlai
-              ):
+              rsmax, topt, rgl, hs, xlai):
     # --- ... subprograms called: none
 
     # calculates canopy resistance
@@ -386,12 +383,7 @@ def snfrac_fn(sneqv, snup, salp):
 
 
 @gtscript.function
-def snow_new_fn(
-    # inputs
-    sfctmp, sn_new,
-    # in/outs
-    snowh, sndens
-):
+def snow_new_fn(sfctmp, sn_new, snowh, sndens):
     # --- ... subprograms called: none
 
     # conversion into simulation units
@@ -486,8 +478,7 @@ def transp_fn(nroot, etp1, smc0, smc1, smc2, smc3, smcwlt, smcref,
 def evapo_fn(nroot, cmc, cmcmax, etp1, dt,
              sh2o0, sh2o1, sh2o2, sh2o3,
              smcmax, smcwlt, smcref, smcdry, pc,
-             shdfac, cfactr, rtdis0, rtdis1, rtdis2, rtdis3, fxexp
-             ):
+             shdfac, cfactr, rtdis0, rtdis1, rtdis2, rtdis3, fxexp):
     # --- ... subprograms called: devap, transp
 
     ec1 = 0.0
@@ -961,12 +952,10 @@ def hstep_fn(stc0, stc1, stc2, stc3, dt, rhsts0, rhsts1, rhsts2, rhsts3, ai0, ai
 
 
 @gtscript.function
-def shflx_fn(
-    smc0, smc1, smc2, smc3, smcmax, dt, yy, zz1,
+def shflx_fn(smc0, smc1, smc2, smc3, smcmax, dt, yy, zz1,
     zsoil0, zsoil1, zsoil2, zsoil3, zbot, psisat, bexp,
     df1, ice, quartz, csoil, ivegsrc, vegtyp, shdfac,
-    stc0, stc1, stc2, stc3, t1, tbot, sh2o0, sh2o1, sh2o2, sh2o3
-):
+    stc0, stc1, stc2, stc3, t1, tbot, sh2o0, sh2o1, sh2o2, sh2o3):
     # --- ... subprograms called: hstep, hrtice, hrt
 
     # updates the temperature state of the soil column
@@ -1241,9 +1230,7 @@ def sstep_fn(sh2o0, sh2o1, sh2o2, sh2o3, rhsct, dt, smcmax, cmcmax,
 def smflx_fn(dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
              zsoil0, zsoil1, zsoil2, zsoil3, slope, frzx, bexp, dksat, dwsat, shdfac,
              edir1, ec1, et1_0, et1_1, et1_2, et1_3,
-             # in/outs
-             cmc, sh2o0, sh2o1, sh2o2, sh2o3, smc0, smc1, smc2, smc3
-             ):
+             cmc, sh2o0, sh2o1, sh2o2, sh2o3, smc0, smc1, smc2, smc3):
     # compute the right hand side of the canopy eqn term
     rhsct = shdfac*prcp1 - ec1
 
@@ -1275,12 +1262,7 @@ def smflx_fn(dt, kdt, smcmax, smcwlt, cmcmax, prcp1,
 
 
 @gtscript.function
-def snowpack_fn(
-    # inputs
-    esd, dtsec, tsnow, tsoil,
-    # in/outs
-    snowh, sndens
-):
+def snowpack_fn(esd, dtsec, tsnow, tsoil, snowh, sndens):
     # --- ... subprograms called: none
 
     # calculates compaction of snowpack under conditions of
@@ -1874,7 +1856,6 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
                                                              bexp, pc, rch, rr, cfactr, slope, kdt, frzx, psisat,
                                                              zsoil0, zsoil1, zsoil2, zsoil3, dwsat, dksat, zbot, shdfac, ice, rtdis0, rtdis1, rtdis2, rtdis3, quartz,
                                                              fxexp, csoil, flx2, snowng, ffrozp, ivegsrc, vegtyp,
-                                                             # in/outs
                                                              prcp1, cmc, t1, stc0, stc1, stc2, stc3, sncovr, sneqv, sndens, snowh,
                                                              sh2o0, sh2o1, sh2o2, sh2o3, tbot, smc0, smc1, smc2, smc3)
 
