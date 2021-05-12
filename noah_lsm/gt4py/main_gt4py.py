@@ -33,7 +33,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
 
-BACKEND = "numpy"
+BACKEND = "gtx86"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
