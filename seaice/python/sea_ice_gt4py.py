@@ -98,7 +98,7 @@ def gt4py_to_numpy_storage(arr, backend):
     return np.reshape(data, (data.shape[0]))
 
 
-def run(in_dict):
+def run(in_dict, timings):
     """Run function for GFS thermodynamics surface ice model
 
     With this function, the GFS thermodynamics surface ice model can be run
@@ -122,13 +122,15 @@ def run(in_dict):
     tic = timeit.default_timer()
 
     # call sea-ice parametrization
-    sfc_sice_defs(**in_dict, **out_dict, **scalar_dict)
+    exec_info = {}
+    sfc_sice_defs(**in_dict, **out_dict, **scalar_dict, exec_info=exec_info)
 
     # set timer
     toc = timeit.default_timer()
 
     # calculate elapsed time
-    elapsed_time = toc - tic
+    timings["elapsed_time"] += toc - tic
+    timings["run_time"] += exec_info["run_end_time"] - exec_info["run_start_time"]
 
     # convert back to numpy for validation
     out_dict = {
@@ -141,7 +143,7 @@ def run(in_dict):
     stc[:, 1] = out_dict.pop("stc1")[:]
     out_dict["stc"] = stc
 
-    return out_dict, elapsed_time
+    return out_dict
 
 
 @gtscript.function

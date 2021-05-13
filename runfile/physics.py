@@ -87,6 +87,11 @@ if __name__ == "__main__":
         sys.path.append(SEAICE_DIR)
         import sea_ice_gt4py as phy
         from config import *
+    elif args.which_physics == "shalconv":
+        SHALCONV_DIR = "../shalconv/python/"
+        sys.path.append(SHALCONV_DIR)
+        import shalconv.samfshalcnv as phy
+        from shalconv.config import *
 
     sys.path.append(SERIALBOX_DIR + "/python")
     import serialbox as ser
@@ -95,7 +100,7 @@ if __name__ == "__main__":
         SELECT_SP = {"tile": int(args.select_tile), "savepoint": args.select_sp}
     else:
         SELECT_SP = None
-
+    timings = {"elapsed_time": 0, "run_time": 0}
     for tile in range(6):
         if SELECT_SP is not None:
             if tile != SELECT_SP["tile"]:
@@ -126,7 +131,7 @@ if __name__ == "__main__":
                 # read serialized input data
                 in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
                 # run Python version
-                out_data, elapsed_time = phy.run(in_data)
+                out_data = phy.run(in_data, timings)
 
                 isready = True
 
