@@ -149,3 +149,9 @@ if __name__ == "__main__":
                 compare_data(out_data, ref_data)
 
                 isready = False
+    if (args.select_tile == "None") and (args.select_sp == "None"):
+        timings["elapsed_time"] = timings["elapsed_time"] / (6 * len(savepoints))
+        timings["run_time"] = timings["run_time"] / (6 * len(savepoints))
+    output_file = open("timings_{}_{}.dat".format(args.which_physics, BACKEND), "w")
+    output_file.write(str(timings["elapsed_time"]) + " " + str(timings["run_time"]))
+    output_file.close()
