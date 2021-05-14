@@ -1,0 +1,18 @@
+module load daint-gpu
+module swap PrgEnv-cray PrgEnv-gnu
+#module swap gcc gcc/7.3.0
+module load cray-netcdf
+module load cray-python
+module load CMake
+module load cray-mpich/7.7.16
+export IS_DOCKER=False
+export SERIALBOX_DIR=/project/c14/install/daint/serialbox2_master/gnu_debug
+export NETCDF_LIB=${NETCDF_DIR}/lib
+
+# Setup for gt4py
+module load Boost
+module load cudatoolkit
+NVCC_PATH=$(which nvcc)
+CUDA_PATH=$(echo $NVCC_PATH | sed -e "s/\/bin\/nvcc//g")
+export CUDA_HOME=$CUDA_PATH
+export LD_LIBRARY_PATH=$CUDA_PATH/lib64:$LD_LIBRARY_PATH

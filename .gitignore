@@ -4,3 +4,10 @@ __pycache__
 **.gt_cache/
 *.dat
 *.log
+*.env
+*.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
