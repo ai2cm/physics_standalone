@@ -55,12 +55,17 @@ def compare_data(exp_data, ref_data):
         ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
         if ind.size > 0:
             i = tuple(ind[:, 0])
+            # for j in range(ind[0,:].size):
+            #     if tuple(ind[:, j])[0] == 139:
+            #         i = tuple(ind[:, j])
+
             fails = ind.size
 
             print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
 
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
+    # assert False, "done"
 
 
 for tile in range(6):
@@ -112,6 +117,7 @@ for tile in range(6):
             ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
 
             # check result
+            # if tile == 1:
             compare_data(out_data, ref_data)
 
             isready = False

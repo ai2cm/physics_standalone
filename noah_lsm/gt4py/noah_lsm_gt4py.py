@@ -342,25 +342,25 @@ def redprm_fn(vegtyp, dksat, smcmax, smcref, nroot, sldpth0, sldpth1, sldpth2, s
 
     zsoil = zsoil3
     if nroot <= 3:
-        rtdis3 = 0.
+        rtdis3 = 0.0
         zsoil = zsoil2
     else:
         rtdis3 = - sldpth3 / zsoil
 
     if nroot <= 2:
-        rtdis2 = 0.
+        rtdis2 = 0.0
         zsoil = zsoil1
     else:
         rtdis2 = - sldpth2 / zsoil
 
     if nroot <= 1:
-        rtdis1 = 0
+        rtdis1 = 0.0
         zsoil = zsoil0
     else:
         rtdis1 = - sldpth1 / zsoil
 
     if nroot <= 0:
-        rtdis0 = 0
+        rtdis0 = 0.0
         zsoil = zsoil1
     else:
         rtdis0 = - sldpth0 / zsoil
@@ -457,10 +457,16 @@ def transp_fn(nroot, etp1, smc0, smc1, smc2, smc3, smcwlt, smcref,
 
     sgx = (gx0 + gx1 + gx2 + gx3) / nroot
 
-    gx0 *= max(rtdis0 + gx0 - sgx, 0.0)
-    gx1 *= max(rtdis1 + gx1 - sgx, 0.0)
-    gx2 *= max(rtdis2 + gx2 - sgx, 0.0)
-    gx3 *= max(rtdis3 + gx3 - sgx, 0.0)
+    rtx0 = rtdis0 + gx0 - sgx
+    rtx1 = rtdis1 + gx1 - sgx
+    rtx2 = rtdis2 + gx2 - sgx
+    rtx3 = rtdis3 + gx3 - sgx
+
+    gx0 *= max(rtx0, 0.0)
+    gx1 *= max(rtx1, 0.0)
+    gx2 *= max(rtx2, 0.0)
+    gx3 *= max(rtx3, 0.0)
+
     denom = gx0 + gx1 + gx2 + gx3
 
     if denom <= 0.0:
@@ -1090,7 +1096,7 @@ def srt_fn(edir, et_0, et_1, et_2, et_3, sh2o0, sh2o1, sh2o2, sh2o3, pcpdrp, zso
     ci0 = -bi0
 
     # calc rhstt for the top layer
-    dsmdz = (sh2o0 - sh2o1) / (-.5*zsoil1)
+    dsmdz = (sh2o0 - sh2o1) / (-0.5*zsoil1)
     rhstt0 = (wdf0*dsmdz + wcnd0 - pddum + edir + et_0) / zsoil0
 
     # 2. Layer
@@ -1174,7 +1180,7 @@ def sstep_fn(sh2o0, sh2o1, sh2o2, sh2o3, rhsct, dt, smcmax, cmcmax,
     if stot > smcmax:
         wplus = (stot-smcmax)*ddz0
     else:
-        wplus = 0.
+        wplus = 0.0
 
     smc0 = max(min(stot, smcmax), 0.02)
     sh2o0 = max(smc0-sice0, 0.0)
@@ -1859,6 +1865,10 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
                                                              prcp1, cmc, t1, stc0, stc1, stc2, stc3, sncovr, sneqv, sndens, snowh,
                                                              sh2o0, sh2o1, sh2o2, sh2o3, tbot, smc0, smc1, smc2, smc3)
 
+    # smc0 = 0.20746074932843878
+    # smc1 = 0.21060230357323534
+    # smc2 = 0.18727096089314488
+    # smc3 = 0.10291351732165224
     # prepare sensible heat (h) for return to parent model
     sheat = -(ch*cp1*sfcprs) / (rd1*t2v) * (th2 - t1)
 
@@ -1927,7 +1937,7 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
         rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax
 
 
-@gtscript.stencil(backend="numpy")
+@gtscript.stencil(backend="gtx86")
 def sfc_drv_defs(
     ps: DT_F, t1: DT_F, q1: DT_F, soiltyp: DT_I, vegtype: DT_I, sigmaf: DT_F,
     sfcemis: DT_F, dlwflx: DT_F, dswsfc: DT_F, snet: DT_F, tg3: DT_F, cm: DT_F, ch: DT_F,
