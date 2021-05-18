@@ -107,7 +107,7 @@ def compare_data(exp_data, ref_data):
         )
 
 
-for tile in range(1):
+for tile in range(6):
 
     if SELECT_SP is not None:
         if tile != SELECT_SP["tile"]:
@@ -126,7 +126,7 @@ for tile in range(1):
     # savepoints_custom = serializer_custom.savepoint_list()
 
     isready = False
-    for sp in [savepoints[-1]]:
+    for sp in savepoints:
 
         if SELECT_SP is not None:
             if sp.name != SELECT_SP["savepoint"] and sp.name != SELECT_SP[
