@@ -2,7 +2,14 @@ import gt4py as gt
 from gt4py import gtscript
 from gt4py.gtscript import PARALLEL, FORWARD, BACKWARD, interval, computation
 import numpy as np
-from shalconv import BACKEND, REBUILD, FIELD_INT, FIELD_FLOAT, DTYPE_INT, DTYPE_FLOAT
+from shalconv.config import (
+    BACKEND,
+    REBUILD,
+    FIELD_INT,
+    FIELD_FLOAT,
+    DTYPE_INT,
+    DTYPE_FLOAT,
+)
 
 ########################### USEFUL FUNCTIONS ###########################
 # These should be moved in a separate file to avoid cluttering and be

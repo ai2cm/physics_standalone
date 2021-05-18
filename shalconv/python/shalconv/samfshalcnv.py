@@ -1,5 +1,6 @@
 import gt4py as gt
 from gt4py import gtscript
+import timeit
 
 # import sys
 # sys.path.append("..")
@@ -11,6 +12,7 @@ from shalconv.serialization import (
     compare_data,
     OUT_VARS,
     numpy_dict_to_gt4py_dict,
+    view_gt4pystorage,
 )
 from shalconv import *
 from shalconv.physcons import (
@@ -29,7 +31,7 @@ from shalconv.physcons import (
 )
 
 
-def samfshalcnv_func(data_dict):
+def run(data_dict, timings):
     """
     Scale-Aware Mass-Flux Shallow Convection
 
@@ -38,6 +40,7 @@ def samfshalcnv_func(data_dict):
     """
 
     ############################ INITIALIZATION ############################
+    data_dict = numpy_dict_to_gt4py_dict(data_dict)
 
     ### Input variables and arrays ###
     im = data_dict["im"]
@@ -251,6 +254,7 @@ def samfshalcnv_func(data_dict):
 
     km1 = km - 1
 
+    tic = timeit.default_timer()
     ### Initialize storages (simple initializations already done above with gt4py functionalities) ###
 
     # Initialize column-integrated and other single-value-per-column
@@ -750,4 +754,27 @@ def samfshalcnv_func(data_dict):
 
         qtr[:, :, ntk - 1] = qtr_ntk[0, :, :]
 
-    return kcnv, kbot, ktop, q1, t1, u1, v1, rn, cnvw, cnvc, ud_mf, dt_mf, qtr
+    exp_data = view_gt4pystorage(
+        {
+            "kcnv": kcnv[0, :, 0],
+            "kbot": kbot[0, :, 0],
+            "ktop": ktop[0, :, 0],
+            "q1": q1[0, :, :],
+            "t1": t1[0, :, :],
+            "u1": u1[0, :, :],
+            "v1": v1[0, :, :],
+            "rn": rn[0, :, 0],
+            "cnvw": cnvw[0, :, :],
+            "cnvc": cnvc[0, :, :],
+            "ud_mf": ud_mf[0, :, :],
+            "dt_mf": dt_mf[0, :, :],
+            "qtr": qtr[:, :, :],
+        }
+    )
+
+    toc = timeit.default_timer()
+
+    # calculate elapsed time
+    timings["elapsed_time"] += toc - tic
+    # return kcnv, kbot, ktop, q1, t1, u1, v1, rn, cnvw, cnvc, ud_mf, dt_mf, qtr
+    return exp_data
