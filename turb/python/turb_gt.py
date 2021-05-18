@@ -96,10 +96,6 @@ OUT_VARS = [
 ]
 
 backend = "gtx86"
-F_TYPE = np.float64
-I_TYPE = np.int32
-B_TYPE = bool
-
 def run(in_dict, timings):
     """run function"""
 
@@ -627,8 +623,6 @@ def satmedmfvdif_gt(
 
     mask_init(mask=mask)
 
-    ts = perf_counter()
-
     init(
         bf=bf,
         cfly=cfly,
@@ -749,8 +743,6 @@ def satmedmfvdif_gt(
     )
 
     zl_0[:, 0, 0] = zl[:, 0, 0].reshape((im))
-
-    ts = perf_counter()
 
     part3a1(
         crb=crb,
@@ -1254,11 +1246,18 @@ def satmedmfvdif_gt(
         diss=diss,
         dku=dku,
         dtdz1=dtdz1,
+        du=du,
+        dusfc=dusfc,
+        dv=dv,
+        dvsfc=dvsfc,
         f1=f1,
         f1_p1=f1_p1,
         f2=f2_km,
         f2_p1=f2_p1,
+        hpbl=hpbl,
+        hpblx=hpblx,
         kpbl=kpbl,
+        kpblx=kpblx,
         krad=krad,
         mask=mask,
         mrad=mrad,
@@ -1277,36 +1276,13 @@ def satmedmfvdif_gt(
         vcko=vcko,
         xmf=xmf,
         xmfd=xmfd,
+        conw=conw,
         dspheat=dspheat,
         dt2=dt2,
-        domain=(im, 1, km),
-    )
-
-    tridi2_s0(
-        a1=f1, a2=f2_km, au=au, cl=al, cm=ad, cu=au, r1=f1, r2=f2_km, domain=(im, 1, km)
-    )
-
-    part15(
-        del_=del_,
-        du=du,
-        dusfc=dusfc,
-        dv=dv,
-        dvsfc=dvsfc,
-        f1=f1,
-        f2=f2_km,
-        hpbl=hpbl,
-        hpblx=hpblx,
-        kpbl=kpbl,
-        kpblx=kpblx,
-        mask=mask,
-        u1=u1,
-        v1=v1,
-        conw=conw,
         rdt=rdt,
         domain=(im, 1, km),
     )
 
-    te = perf_counter()
     dv = storage_to_numpy(dv, (im, km))
     du = storage_to_numpy(du, (im, km))
     tdt = storage_to_numpy(tdt, (im, km))
@@ -2734,11 +2710,28 @@ def part14(
     diss: FIELD_FLT,
     dku: FIELD_FLT,
     dtdz1: FIELD_FLT,
+
+    du: FIELD_FLT,
+
+    dusfc: FIELD_FLT,
+
+    dv: FIELD_FLT,
+
+    dvsfc: FIELD_FLT,
+
     f1: FIELD_FLT,
     f1_p1: FIELD_FLT,
     f2: FIELD_FLT,
     f2_p1: FIELD_FLT,
+
+    hpbl: FIELD_FLT,
+    
+    hpblx: FIELD_FLT,
+
     kpbl: FIELD_INT,
+
+    kpblx: FIELD_INT,
+
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
@@ -2758,8 +2751,12 @@ def part14(
     xmf: FIELD_FLT,
     xmfd: FIELD_FLT,
     *,
+    conw: float,
+
     dspheat: bool,
-    dt2: float
+    dt2: float,
+
+    rdt: float
 ):
 
     with computation(PARALLEL):
@@ -2822,6 +2819,43 @@ def part14(
             f1 = f1_p1[0, 0, -1]
             f2 = f2_p1[0, 0, -1]
             ad = ad_p1[0, 0, -1]
+
+    with computation(PARALLEL), interval(0, 1):
+        fk = 1 / ad[0, 0, 0]
+        au = fk * au[0, 0, 0]
+        f1 = fk * f1[0, 0, 0]
+        f2 = fk * f2[0, 0, 0]
+
+    with computation(FORWARD):
+        with interval(1, -1):
+            fk = 1.0 / (ad[0, 0, 0] - al[0, 0, -1] * au[0, 0, -1])
+            au = fk * au[0, 0, 0]
+            f1 = fk * (f1[0, 0, 0] - al[0, 0, -1] * f1[0, 0, -1])
+            f2 = fk * (f2[0, 0, 0] - al[0, 0, -1] * f2[0, 0, -1])
+        with interval(-1, None):
+            fk = 1.0 / (ad[0, 0, 0] - al[0, 0, -1] * au[0, 0, -1])
+            f1 = fk * (f1[0, 0, 0] - al[0, 0, -1] * f1[0, 0, -1])
+            f2 = fk * (f2[0, 0, 0] - al[0, 0, -1] * f2[0, 0, -1])
+
+    with computation(BACKWARD), interval(0, -1):
+        f1 = f1[0, 0, 0] - au[0, 0, 0] * f1[0, 0, 1]
+        f2 = f2[0, 0, 0] - au[0, 0, 0] * f2[0, 0, 1]
+
+    with computation(PARALLEL), interval(...):
+        utend = (f1[0, 0, 0] - u1[0, 0, 0]) * rdt
+        vtend = (f2[0, 0, 0] - v1[0, 0, 0]) * rdt
+        du = du[0, 0, 0] + utend
+        dv = dv[0, 0, 0] + vtend
+        dusfc = dusfc[0, 0, 0] + conw * del_[0, 0, 0] * utend
+        dvsfc = dvsfc[0, 0, 0] + conw * del_[0, 0, 0] * vtend
+
+    with computation(BACKWARD), interval(0, -1):
+        dusfc = dusfc[0, 0, 0] + dusfc[0, 0, 1]
+        dvsfc = dvsfc[0, 0, 0] + dvsfc[0, 0, 1]
+
+    with computation(PARALLEL), interval(0, 1):
+        hpbl = hpblx[0, 0, 0]
+        kpbl = kpblx[0, 0, 0]
 
 
 @gtscript.stencil(backend=backend)
@@ -2915,65 +2949,65 @@ def mfpblt(
     epsm1 = eps - 1.0
 
     wu2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamuem = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kpblx = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kpbly = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rbup = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rbdn = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     flg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     hpblx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamavg = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sumx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sigma = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     scaldfunc = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     qcko_1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcko_ntcw = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcko_track = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     totflag = True
@@ -3554,70 +3588,70 @@ def mfscu(
     fv = 4.6150e2 / 2.8705e2 - 1.0
 
     wd2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     hrad = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     krad1 = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thld = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlvd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ra1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ra2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     radj = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     flg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamdem = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     mradx = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     mrady = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sumx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamavg = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xmfd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sigma = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     scaldfunc = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_ntcw = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_track = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     totflg = True
@@ -4370,10 +4404,10 @@ def mfscu_s4(
 def tridit(l, n, nt, cl, cm, cu, rt, au, at):
 
     fk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
     fkk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
 
     tridit_s0(au=au, cm=cm, cl=cl, cu=cu, fk=fk, fkk=fkk, domain=(l, 1, n))
@@ -4441,10 +4475,10 @@ def tridit_s1(
 
 def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
     fk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
     fkk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
 
     fk[:, 0, 0] = 1.0 / cm[:, 0, 0]
@@ -4487,45 +4521,3 @@ def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
             a2[:, 0, k + is_] = a2[:, 0, k + is_] - au[:, 0, k] * a2[:, 0, k + is_ + 1]
 
     return au, a1, a2
-
-
-# tridi2(im,km,al,ad,au,f1,f2,au,f1,f2...)
-def tridi2(l, n, cl, cm, cu, r1, r2, au, a1, a2):
-
-    tridi2_s0(a1=a1, a2=a2, au=au, cl=cl, cm=cm, cu=cu, r1=r1, r2=r2, domain=(l, 1, n))
-
-    return 0
-
-
-@gtscript.stencil(backend=backend)
-def tridi2_s0(
-    a1: FIELD_FLT,
-    a2: FIELD_FLT,
-    au: FIELD_FLT,
-    cl: FIELD_FLT,
-    cm: FIELD_FLT,
-    cu: FIELD_FLT,
-    r1: FIELD_FLT,
-    r2: FIELD_FLT,
-):
-
-    with computation(PARALLEL), interval(0, 1):
-        fk = 1 / cm[0, 0, 0]
-        au = fk * cu[0, 0, 0]
-        a1 = fk * r1[0, 0, 0]
-        a2 = fk * r2[0, 0, 0]
-
-    with computation(FORWARD):
-        with interval(1, -1):
-            fk = 1.0 / (cm[0, 0, 0] - cl[0, 0, -1] * au[0, 0, -1])
-            au = fk * cu[0, 0, 0]
-            a1 = fk * (r1[0, 0, 0] - cl[0, 0, -1] * a1[0, 0, -1])
-            a2 = fk * (r2[0, 0, 0] - cl[0, 0, -1] * a2[0, 0, -1])
-        with interval(-1, None):
-            fk = 1.0 / (cm[0, 0, 0] - cl[0, 0, -1] * au[0, 0, -1])
-            a1 = fk * (r1[0, 0, 0] - cl[0, 0, -1] * a1[0, 0, -1])
-            a2 = fk * (r2[0, 0, 0] - cl[0, 0, -1] * a2[0, 0, -1])
-
-    with computation(BACKWARD), interval(0, -1):
-        a1 = a1[0, 0, 0] - au[0, 0, 0] * a1[0, 0, 1]
-        a2 = a2[0, 0, 0] - au[0, 0, 0] * a2[0, 0, 1]
