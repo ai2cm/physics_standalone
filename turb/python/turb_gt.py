@@ -9,6 +9,7 @@ import math
 import gt4py
 import gt4py.gtscript as gtscript
 import gt4py.storage as gt_storage
+import timeit
 
 from config import *
 from time import perf_counter
@@ -99,6 +100,8 @@ backend = "gtx86"
 def run(in_dict, timings):
     """run function"""
 
+    tic = timeit.default_timer()
+
     dv, du, tdt, rtg, kpbl, dusfc, dvsfc, dtsfc, dqsfc, hpbl = satmedmfvdif_gt(
         in_dict["im"],
         in_dict["ix"],
@@ -149,8 +152,11 @@ def run(in_dict, timings):
         in_dict["xkzm_m"],
         in_dict["xkzm_h"],
         in_dict["xkzm_s"],
-        timings,
     )
+
+    toc = timeit.default_timer()
+    timings["elapsed_time"] += toc - tic
+    #timings["run_time"] += exec_info["run_end_time"] - exec_info["run_start_time"]
 
     # setup output
     out_dict = {}
@@ -221,7 +227,6 @@ def satmedmfvdif_gt(
     xkzm_m,
     xkzm_h,
     xkzm_s,
-    timings,
 ):
     fv = rv / rd - 1.0
     eps = rd / rv
