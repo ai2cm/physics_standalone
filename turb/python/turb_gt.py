@@ -479,11 +479,6 @@ def satmedmfvdif_gt(
     zol = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
-
-    zol_2D = gt_storage.zeros(
-        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0, 0, 0)
-    )
-
     phim = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
