@@ -93,6 +93,12 @@ if __name__ == "__main__":
         import shalconv.samfshalcnv as phy
         from shalconv.config import *
 
+    elif args.which_physics == "turb":
+        TURB_DIR = "../turb/python/"
+        sys.path.append(TURB_DIR)
+        import turb_gt as phy
+        from config import *
+
     sys.path.append(SERIALBOX_DIR + "/python")
     import serialbox as ser
 
