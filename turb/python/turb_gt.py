@@ -548,22 +548,21 @@ def satmedmfvdif_gt(
     zol = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
+
+    zol_2D = gt_storage.zeros(
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0, 0, 0)
+    )
+
     phim = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     phih = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
-    wscale = gt_storage.zeros(
-        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
-    )
     vpert = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     radj = gt_storage.zeros(
-        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
-    )
-    zl_0 = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
@@ -742,8 +741,6 @@ def satmedmfvdif_gt(
         domain=(im, 1, kmpbl),
     )
 
-    zl_0[:, 0, 0] = zl[:, 0, 0].reshape((im))
-
     part3a1(
         crb=crb,
         evap=evap,
@@ -770,10 +767,8 @@ def satmedmfvdif_gt(
         theta=theta,
         ustar=ustar,
         vpert=vpert,
-        wscale=wscale,
         zi=zi,
         zl=zl,
-        zl_0=zl_0,
         zol=zol,
         fv=fv,
         domain=(im, 1, km),
@@ -1763,10 +1758,8 @@ def part3a1(
     theta: FIELD_FLT,
     ustar: FIELD_FLT,
     vpert: FIELD_FLT,
-    wscale: FIELD_FLT,
     zi: FIELD_FLT,
     zl: FIELD_FLT,
-    zl_0: FIELD_FLT,
     zol: FIELD_FLT,
     *,
     fv: float
@@ -1776,7 +1769,6 @@ def part3a1(
         if mask[0, 0, 0] > 0:
             kpblx = kpblx[0, 0, -1]
             hpblx = hpblx[0, 0, -1]
-            zl_0 = zl_0[0, 0, -1]
             kpbl = kpbl[0, 0, -1]
             hpbl = hpbl[0, 0, -1]
             kpbl = kpbl[0, 0, -1]
@@ -1837,19 +1829,17 @@ def part3a1(
         wst3 = gotvx[0, 0, 0] * sflux[0, 0, 0] * hpbl[0, 0, 0]
         ust3 = ustar[0, 0, 0] ** 3.0
 
+        wscale = 0.0
         if pblflg[0, 0, 0]:
             wscale = max(
                 (ust3 + wfac * vk * wst3 * sfcfrac) ** h1, ustar[0, 0, 0] / aphi5
             )
 
-        hgamt = heat[0, 0, 0] / wscale[0, 0, 0]
-        hgamq = evap[0, 0, 0] / wscale[0, 0, 0]
-
-        if pcnvflg[0, 0, 0]:
-            vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
-
         flg = 1
         if pcnvflg[0, 0, 0]:
+            hgamt = heat[0, 0, 0] / wscale
+            hgamq = evap[0, 0, 0] / wscale
+            vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
             thermal = thermal[0, 0, 0] + min(cfac * vpert[0, 0, 0], gamcrt)
             flg = 0
             rbup = rbsoil[0, 0, 0]
@@ -2147,9 +2137,9 @@ def part5(
         ptem = -3.0 * (tem1 ** 2.0) / (hpbl[0, 0, 0] ** 2.0)
         if mask[0, 0, 0] < kpbl[0, 0, 0]:
             if pcnvflg[0, 0, 0]:
-                prn = 1.0 + ((phih[0, 0, 0] / phim[0, 0, 0]) - 1.0) * exp(ptem)
+                prn = 1.0 + ((phih / phim) - 1.0) * exp(ptem)
             else:
-                prn = phih[0, 0, 0] / phim[0, 0, 0]
+                prn = phih / phim
 
         if mask[0, 0, 0] < kpbl[0, 0, 0]:
             prn = max(min(prn[0, 0, 0], prmax), prmin)
@@ -3612,9 +3602,6 @@ def mfscu(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ra2 = gt_storage.zeros(
-        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
-    )
-    radj = gt_storage.zeros(
         backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     flg = gt_storage.zeros(
