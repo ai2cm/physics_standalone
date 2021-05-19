@@ -9,104 +9,24 @@ import math
 import gt4py
 import gt4py.gtscript as gtscript
 import gt4py.storage as gt_storage
+import timeit
 
-from time import perf_counter
+from config import *
 from gt4py.gtscript import (
     __INLINED,
     PARALLEL,
     computation,
-    external_assert,
-    horizontal,
     interval,
-    region,
 )
 
-# Physics Constants used from physcon module
-
-grav = 9.80665e0
-rd = 2.87050e2
-cp = 1.00460e3
-rv = 4.61500e2
-hvap = 2.50000e6
-hfus = 3.33580e5
-wfac = 7.0
-cfac = 4.5
-gamcrt = 3.0
-sfcfrac = 0.1
-vk = 0.4
-rimin = -100.0
-rbcr = 0.25
-zolcru = -0.02
-tdzmin = 1.0e-3
-rlmn = 30.0
-rlmx = 500.0
-elmx = 500.0
-prmin = 0.25
-prmax = 4.0
-prtke = 1.0
-prscu = 0.67
-f0 = 1.0e-4
-crbmin = 0.15
-crbmax = 0.35
-tkmin = 1.0e-9
-dspfac = 0.5
-qmin = 1.0e-8
-qlmin = 1.0e-12
-zfmin = 1.0e-8
-aphi5 = 5.0
-aphi16 = 16.0
-elmfac = 1.0
-elefac = 1.0
-cql = 100.0
-dw2min = 1.0e-4
-dkmax = 1000.0
-xkgdx = 25000.0
-qlcr = 3.5e-5
-zstblmax = 2500.0
-xkzinv = 0.15
-h1 = 0.33333333
-ck0 = 0.4
-ck1 = 0.15
-ch0 = 0.4
-ch1 = 0.15
-ce0 = 0.4
-rchck = 1.5
-cdtn = 25.0
-xmin = 180.0
-xmax = 330.0
-
-con_ttp = 2.7316e2
-con_cvap = 1.8460e3
-con_cliq = 4.1855e3
-con_hvap = 2.5000e6
-con_rv = 4.6150e2
-con_csol = 2.1060e3
-con_hfus = 3.3358e5
-con_psat = 6.1078e2
-
-OUT_VARS = [
-    "dv",
-    "du",
-    "tdt",
-    "rtg",
-    "kpbl",
-    "dusfc",
-    "dvsfc",
-    "dtsfc",
-    "dqsfc",
-    "hpbl",
-]
-
 backend = "gtx86"
-F_TYPE = np.float64
-I_TYPE = np.int32
-B_TYPE = bool
-
-# def run(in_dict, compare_dict, region_timings):
-def run(in_dict, compare_dict):
+def run(in_dict, timings):
     """run function"""
 
-    # compare_dict = []
+    if len(timings) == 0:
+        timings = {"elapsed_time": 0, "run_time": 0}
+
+    tic = timeit.default_timer()
 
     dv, du, tdt, rtg, kpbl, dusfc, dvsfc, dtsfc, dqsfc, hpbl = satmedmfvdif_gt(
         in_dict["im"],
@@ -158,9 +78,11 @@ def run(in_dict, compare_dict):
         in_dict["xkzm_m"],
         in_dict["xkzm_h"],
         in_dict["xkzm_s"],
-        compare_dict,
     )
-    # compare_dict, region_timings)
+
+    toc = timeit.default_timer()
+    timings["elapsed_time"] += toc - tic
+    #timings["run_time"] += exec_info["run_end_time"] - exec_info["run_start_time"]
 
     # setup output
     out_dict = {}
@@ -231,10 +153,7 @@ def satmedmfvdif_gt(
     xkzm_m,
     xkzm_h,
     xkzm_s,
-    compare_dict,
 ):
-    # compare_dict, region_timings):
-
     fv = rv / rd - 1.0
     eps = rd / rv
     epsm1 = rd / rv - 1.0
@@ -258,37 +177,37 @@ def satmedmfvdif_gt(
     # 3D GT storage
     qcko = gt_storage.zeros(
         backend=backend,
-        dtype=F_TYPE,
+        dtype=DTYPE_FLT,
         shape=(im, km + 1, ntrac),
         default_origin=(0, 0, 0),
     )
     qcdo = gt_storage.zeros(
         backend=backend,
-        dtype=F_TYPE,
+        dtype=DTYPE_FLT,
         shape=(im, km + 1, ntrac),
         default_origin=(0, 0, 0),
     )
     f2 = gt_storage.zeros(
         backend=backend,
-        dtype=F_TYPE,
+        dtype=DTYPE_FLT,
         shape=(im, 1, km * (ntrac - 1)),
         default_origin=(0, 0, 0),
     )
     pcnvflg_v2 = gt_storage.zeros(
         backend=backend,
-        dtype=B_TYPE,
+        dtype=DTYPE_BOOL,
         shape=(im, km + 1, ntrac),
         default_origin=(0, 0, 0),
     )
     scuflg_v2 = gt_storage.zeros(
         backend=backend,
-        dtype=B_TYPE,
+        dtype=DTYPE_BOOL,
         shape=(im, km + 1, ntrac),
         default_origin=(0, 0, 0),
     )
     q1_gt = gt_storage.zeros(
         backend=backend,
-        dtype=F_TYPE,
+        dtype=DTYPE_FLT,
         shape=(im, km + 1, ntrac),
         default_origin=(0, 0, 0),
     )
@@ -298,290 +217,284 @@ def satmedmfvdif_gt(
     #        the largest "2D" array that will be examined.  There is a 1 in the 2nd dimension
     #        since GT4py establishes update policies that iterate over the "j" or "z" dimension
     zi = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     zl = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     zm = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ckz = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     chz = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     tke = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rdzt = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     prn = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xkzo = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xkzmo = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     pix = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     theta = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qlx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     slx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thvx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlvx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlvx_0 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     svx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thetae = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     gotvx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     plyr = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     cfly = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     bf = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     dku = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     dkt = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     dkq = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     radx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     shr2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     tcko = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     tcdo = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ucko = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ucdo = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     vcko = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     vcdo = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcko_0 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcko_ntke = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_0 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_ntke = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     buou = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xmf = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamue = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rhly = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qstl = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     buod = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xmfd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamde = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rlam = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ele = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     elm = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     prod = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rle = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     diss = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ad = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ad_p1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     f1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     f1_p1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     al = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     au = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     f2_km = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     f2_p1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     # 1D GT storages extended into 3D
     gdx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xkzm_hx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xkzm_mx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kx1 = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     z0 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kpblx = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     hpblx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     pblflg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sfcflg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     pcnvflg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     scuflg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     radmin = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     mrad = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     krad = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     lcld = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kcld = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     flg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rbup = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rbdn = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     sflux = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     thermal = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     crb = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     dtdz1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     ustar = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     zol = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     phim = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     phih = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
-    )
-    wscale = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     vpert = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1), mask=(True, True, False), default_origin=(0,0,0)
     )
     radj = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
-    )
-    zl_0 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     # Mask/Index Array
     mask = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     garea = numpy_to_gt4py_storage_1D(garea, backend, km + 1)
@@ -634,8 +547,6 @@ def satmedmfvdif_gt(
     prsl = numpy_to_gt4py_storage_2D(prsl, backend, km + 1)
 
     mask_init(mask=mask)
-
-    ts = perf_counter()
 
     init(
         bf=bf,
@@ -739,92 +650,6 @@ def satmedmfvdif_gt(
         domain=(im, 1, km + 1),
     )
 
-    te = perf_counter()
-
-    # region_timings[0] += te-ts
-
-    print("Region 1 Time : " + str(te - ts))
-
-    # print("Past init...")
-    # part2(bf=bf,
-    #       cfly=cfly,
-    #       elocp=elocp,
-    #       el2orc=el2orc,
-    #       fv=fv,
-    #       g=g,
-    #       plyr=plyr,
-    #       qlx=qlx,
-    #       qstl=qstl,
-    #       qtx=qtx,
-    #       rdzt=rdzt,
-    #       rhly=rhly,
-    #       slx=slx,
-    #       svx=svx,
-    #       t1=t1,
-    #       zi=zi,
-    #       radx=radx,
-    #       swh=swh,
-    #       xmu=xmu,
-    #       hlw=hlw,
-    #       sflux=sflux,
-    #       theta=theta,
-    #       evap=evap,
-    #       heat=heat,
-    #       pblflg=pblflg,
-    #       sfcflg=sfcflg,
-    #       thermal=thermal,
-    #       crb=crb,
-    #       dtdz1=dtdz1,
-    #       ustar=ustar,
-    #       thlvx=thlvx,
-    #       tsea=tsea,
-    #       q1=q1_0,
-    #       u10m=u10m,
-    #       z0=z0,
-    #       v10m=v10m,
-    #       stress=stress,
-    #       dt2=dt2,
-    #       rbsoil=rbsoil,
-    #       rbup=rbup,
-    #       shr2=shr2,
-    #       u1=u1,
-    #       v1=v1)
-
-    # print("Past part2...")
-
-    # part2a(sflux=sflux,
-    #        theta=theta,
-    #        evap=evap,
-    #        fv=fv,
-    #        heat=heat,
-    #        pblflg=pblflg,
-    #        sfcflg=sfcflg,
-    #        thermal=thermal,
-    #        crb=crb,
-    #        dtdz1=dtdz1,
-    #        ustar=ustar,
-    #        thlvx=thlvx,
-    #        tsea=tsea,
-    #        q1=q1_0,
-    #        u10m=u10m,
-    #        z0=z0,
-    #        v10m=v10m,
-    #        zi=zi,
-    #        dt2=dt2,
-    #        stress=stress,
-    #        domain=(im,1,km))
-
-    # print("Past part2a...")
-
-    # part3(rbsoil=rbsoil,
-    #       rbup=rbup,
-    #       rdzt=rdzt,
-    #       shr2=shr2,
-    #       u1=u1,
-    #       v1=v1)
-
-    # print("Past part3...")
-
     part3a(
         crb=crb,
         flg=flg,
@@ -841,18 +666,6 @@ def satmedmfvdif_gt(
         zl=zl,
         domain=(im, 1, kmpbl),
     )
-
-    # print("Past part3a...")
-
-    # te = perf_counter()
-
-    # print("Region 1 Time : " + str(te-ts))
-
-    # region_timings[0] += te-ts
-
-    zl_0[:, 0, 0] = zl[:, 0, 0].reshape((im))
-
-    ts = perf_counter()
 
     part3a1(
         crb=crb,
@@ -880,47 +693,12 @@ def satmedmfvdif_gt(
         theta=theta,
         ustar=ustar,
         vpert=vpert,
-        wscale=wscale,
         zi=zi,
         zl=zl,
-        zl_0=zl_0,
         zol=zol,
         fv=fv,
         domain=(im, 1, km),
     )
-
-    # print("Past part3a1...")
-    # part3b(crb=crb,
-    #        evap=evap,
-    #        fh=fh,
-    #        flg=flg,
-    #        fm=fm,
-    #        fv=fv,
-    #        gotvx=gotvx,
-    #        heat=heat,
-    #        hpbl=hpbl,
-    #        hpblx=hpblx,
-    #        kpbl=kpbl,
-    #        kpblx=kpblx,
-    #        phih=phih,
-    #        phim=phim,
-    #        pblflg=pblflg,
-    #        pcnvflg=pcnvflg,
-    #        rbdn=rbdn,
-    #        rbsoil=rbsoil,
-    #        rbup=rbup,
-    #        sfcflg=sfcflg,
-    #        sflux=sflux,
-    #        thermal=thermal,
-    #        theta=theta,
-    #        ustar=ustar,
-    #        vpert=vpert,
-    #        wscale=wscale,
-    #        zl=zl,
-    #        zol=zol,
-    #        domain=(im,1,1))
-
-    # print("Past part3b...")
 
     part3c(
         crb=crb,
@@ -939,8 +717,6 @@ def satmedmfvdif_gt(
         domain=(im, 1, kmpbl),
     )
 
-    # print("Past part3c...")
-
     part3c1(
         crb=crb,
         flg=flg,
@@ -958,17 +734,6 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    # print("Past part3c1...")
-
-    # part3d(flg=flg,
-    #        lcld=lcld,
-    #        mask=mask,
-    #        scuflg=scuflg,
-    #        zl=zl,
-    #        domain=(im,1,km1))
-
-    # print("Past part3d...")
-
     part3e(
         flg=flg,
         kcld=kcld,
@@ -983,17 +748,7 @@ def satmedmfvdif_gt(
         domain=(im, 1, kmscu),
     )
 
-    # print("Past part3e...")
-
-    te = perf_counter()
-
-    # region_timings[1] += te-ts
-
-    # print("Region 2 Time : ", str(te-ts))
-
     q1_gt[:, :-1, :] = q1[:, :, :]
-
-    ts = perf_counter()
 
     part4(
         pcnvflg=pcnvflg,
@@ -1012,18 +767,8 @@ def satmedmfvdif_gt(
         qcko=qcko,
     )
 
-    te = perf_counter()
-
-    # region_timings[2] += te-ts
-
-    # print("Region 3 Time : ", str(te-ts))
-
-    # print("Past part4...")
-
     pcnvflg_v2[:, :, 0] = pcnvflg[:, 0, :]
     scuflg_v2[:, :, 0] = scuflg[:, 0, :]
-
-    ts = perf_counter()
 
     part4a(
         pcnvflg_v2=pcnvflg_v2,
@@ -1033,14 +778,6 @@ def satmedmfvdif_gt(
         scuflg_v2=scuflg_v2,
         domain=(im, km, ntrac1),
     )
-
-    te = perf_counter()
-
-    # region_timings[3] += te-ts
-
-    # print("Region 4 Time : ", str(te-ts))
-
-    # print("Past part4a...")
 
     kpbl, hpbl, buou, xmf, tcko, qcko, ucko, vcko, xlamue = mfpblt(
         im,
@@ -1078,11 +815,8 @@ def satmedmfvdif_gt(
         gocp,
         elocp,
         el2orc,
-        mask,
-        compare_dict,
+        mask,        
     )
-
-    # print("Past mfpblt...")
 
     radj, mrad, buod, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde = mfscu(
         im,
@@ -1124,10 +858,7 @@ def satmedmfvdif_gt(
         elocp,
         el2orc,
         mask,
-        compare_dict,
     )
-
-    # print("Past mfscu...")
 
     part5(
         chz=chz,
@@ -1142,8 +873,6 @@ def satmedmfvdif_gt(
         zi=zi,
         domain=(im, 1, kmpbl),
     )
-
-    # print("Past part5...")
 
     for k in range(km1):
         for i in range(im):
@@ -1202,10 +931,6 @@ def satmedmfvdif_gt(
             ele[i, 0, k] = max(ele[i, 0, k], tem1)
             ele[i, 0, k] = min(ele[i, 0, k], elmx)
 
-    print("Past python stencil...")
-
-    # ts = perf_counter()
-
     part6(
         bf=bf,
         buod=buod,
@@ -1254,73 +979,14 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    # print("Past part6...")
-
-    # part6a(bf=bf,
-    #        dkq=dkq,
-    #        dkt=dkt,
-    #        dku=dku,
-    #        gotvx=gotvx,
-    #        krad=krad,
-    #        mask=mask,
-    #        radj=radj,
-    #        scuflg=scuflg,
-    #        domain=(im,1,km))
-
-    # print("Past python stencil...")
-
-    # part7(bf=bf,
-    #       buod=buod,
-    #       buou=buou,
-    #       dkt=dkt,
-    #       dku=dku,
-    #       ele=ele,
-    #       gotvx=gotvx,
-    #       krad=krad,
-    #       kpbl=kpbl,
-    #       mask=mask,
-    #       mrad=mrad,
-    #       pcnvflg=pcnvflg,
-    #       phim=phim,
-    #       prod=prod,
-    #       rdzt=rdzt,
-    #       rle=rle,
-    #       scuflg=scuflg,
-    #       sflux=sflux,
-    #       shr2=shr2,
-    #       stress=stress,
-    #       u1=u1,
-    #       ucdo=ucdo,
-    #       ucko=ucko,
-    #       ustar=ustar,
-    #       v1=v1,
-    #       vcdo=vcdo,
-    #       vcko=vcko,
-    #       xmf=xmf,
-    #       xmfd=xmfd,
-    #       zl=zl,
-    #       domain=(im,1,km1))
-
-    # print("Past part7...")
-
     kk = max(round(dt2 / cdtn), 1)
     dtn = dt2 / kk
 
     for n in range(kk):
         part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, domain=(im, 1, km1))
 
-    te = perf_counter()
-
-    # region_timings[4] += te-ts
-
-    # print("Region 5 Time : ", str(te-ts))
-
-    # print("Past part8...")
-
     qcko_ntke[:, :, :] = qcko[:, :, ntke - 1].reshape((im, 1, km + 1))
     qcdo_ntke[:, :, :] = qcdo[:, :, ntke - 1].reshape((im, 1, km + 1))
-
-    ts = perf_counter()
 
     part9(
         pcnvflg=pcnvflg,
@@ -1330,8 +996,6 @@ def satmedmfvdif_gt(
         tke=tke,
         domain=(im, 1, km),
     )
-
-    # print("Past part9...")
 
     part10(
         kpbl=kpbl,
@@ -1343,8 +1007,6 @@ def satmedmfvdif_gt(
         zl=zl,
         domain=(im, 1, kmpbl),
     )
-
-    # print("Past part10...")
 
     part11(
         ad=ad,
@@ -1359,8 +1021,6 @@ def satmedmfvdif_gt(
         zl=zl,
         domain=(im, 1, kmscu),
     )
-
-    # print("Past part11...")
 
     part12(
         ad=ad,
@@ -1388,25 +1048,15 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    te = perf_counter()
-
-    # region_timings[5] += te-ts
-
-    # print("Region 6 Time : ", str(te-ts))
-
-    # print("Past part12...")
-
-    au, f1 = tridit(im, km, 1, al, ad, au, f1, au, f1, compare_dict)
-
-    print("Past tridit...")
+    au, f1 = tridit(im, km, 1, al, ad, au, f1, au, f1)
 
     qtend = (f1[:, 0, :-1] - q1[:, :, ntke - 1]) * rdt
     rtg[:, :, ntke - 1] = rtg[:, :, ntke - 1] + qtend
 
     for i in range(im):
         ad[i, 0, 0] = 1.0
-        f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0, 0]
-        f2[i, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0, 0]
+        f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0] * heat[i, 0, 0]
+        f2[i, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0] * evap[i, 0, 0]
 
     if ntrac1 >= 2:
         for kk in range(1, ntrac1):
@@ -1417,10 +1067,6 @@ def satmedmfvdif_gt(
     f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
     qcdo_0[:, :, :] = qcdo[:, :, 0].reshape((im, 1, km + 1))
     qcko_0[:, :, :] = qcko[:, :, 0].reshape((im, 1, km + 1))
-
-    print("Past python stencil...")
-
-    ts = perf_counter()
 
     part13(
         ad=ad,
@@ -1453,14 +1099,6 @@ def satmedmfvdif_gt(
         gocp=gocp,
         domain=(im, 1, km),
     )
-
-    te = perf_counter()
-
-    # region_timings[6] += te-ts
-
-    # print("Region 7 Time : ", str(te-ts))
-
-    # print("Past part13...")
 
     f2[:, 0, 0:km] = f2_km[:, 0, 0:km]
 
@@ -1499,11 +1137,7 @@ def satmedmfvdif_gt(
                             f2[i, 0, k + 1 + is_] - (tem1 - tem2) * ptem2
                         )
 
-    print("Past python stencil...")
-
-    au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2, compare_dict)
-
-    print("Past tridin...")
+    au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2)
 
     for k in range(km):
         ttend = (f1[:, 0, k] - t1[:, 0, k]) * rdt
@@ -1524,10 +1158,6 @@ def satmedmfvdif_gt(
     tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
     f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
 
-    print("Past python stencil...")
-
-    ts = perf_counter()
-
     part14(
         ad=ad,
         ad_p1=ad_p1,
@@ -1537,11 +1167,18 @@ def satmedmfvdif_gt(
         diss=diss,
         dku=dku,
         dtdz1=dtdz1,
+        du=du,
+        dusfc=dusfc,
+        dv=dv,
+        dvsfc=dvsfc,
         f1=f1,
         f1_p1=f1_p1,
         f2=f2_km,
         f2_p1=f2_p1,
+        hpbl=hpbl,
+        hpblx=hpblx,
         kpbl=kpbl,
+        kpblx=kpblx,
         krad=krad,
         mask=mask,
         mrad=mrad,
@@ -1560,49 +1197,12 @@ def satmedmfvdif_gt(
         vcko=vcko,
         xmf=xmf,
         xmfd=xmfd,
+        conw=conw,
         dspheat=dspheat,
         dt2=dt2,
-        domain=(im, 1, km),
-    )
-
-    # print("Past part14...")
-
-    # tridi2(im, km, al, ad, au, f1, f2_km, au, f1, f2_km, compare_dict)
-
-    tridi2_s0(
-        a1=f1, a2=f2_km, au=au, cl=al, cm=ad, cu=au, r1=f1, r2=f2_km, domain=(im, 1, km)
-    )
-
-    # print("Past tridi2...")
-
-    part15(
-        del_=del_,
-        du=du,
-        dusfc=dusfc,
-        dv=dv,
-        dvsfc=dvsfc,
-        f1=f1,
-        f2=f2_km,
-        hpbl=hpbl,
-        hpblx=hpblx,
-        kpbl=kpbl,
-        kpblx=kpblx,
-        mask=mask,
-        u1=u1,
-        v1=v1,
-        conw=conw,
         rdt=rdt,
         domain=(im, 1, km),
     )
-
-    te = perf_counter()
-
-    # region_timings[7] += te-ts
-
-    # print("Region 8 Time : ", str(te-ts))
-
-    # Increment counter
-    # region_timings[8] += 1
 
     dv = storage_to_numpy(dv, (im, km))
     du = storage_to_numpy(du, (im, km))
@@ -1733,98 +1333,98 @@ def fpvs(t):
 
 
 @gtscript.stencil(backend=backend)
-def mask_init(mask: gtscript.Field[I_TYPE]):
+def mask_init(mask: FIELD_INT):
     with computation(FORWARD), interval(1, None):
         mask = mask[0, 0, -1] + 1
 
 
 @gtscript.stencil(backend=backend)
 def init(
-    zi: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
-    phii: gtscript.Field[F_TYPE],
-    phil: gtscript.Field[F_TYPE],
-    chz: gtscript.Field[F_TYPE],
-    ckz: gtscript.Field[F_TYPE],
-    garea: gtscript.Field[F_TYPE],
-    gdx: gtscript.Field[F_TYPE],
-    tke: gtscript.Field[F_TYPE],
-    q1_ntke: gtscript.Field[F_TYPE],
-    q1_0: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    prn: gtscript.Field[F_TYPE],
-    kx1: gtscript.Field[I_TYPE],
-    prsi: gtscript.Field[F_TYPE],
-    xkzm_hx: gtscript.Field[F_TYPE],
-    xkzm_mx: gtscript.Field[F_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    kinver: gtscript.Field[I_TYPE],
-    tx1: gtscript.Field[F_TYPE],
-    tx2: gtscript.Field[F_TYPE],
-    xkzo: gtscript.Field[F_TYPE],
-    xkzmo: gtscript.Field[F_TYPE],
-    z0: gtscript.Field[F_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    hpblx: gtscript.Field[F_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    sfcflg: gtscript.Field[B_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    zorl: gtscript.Field[F_TYPE],
-    dusfc: gtscript.Field[F_TYPE],
-    dvsfc: gtscript.Field[F_TYPE],
-    dtsfc: gtscript.Field[F_TYPE],
-    dqsfc: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    rbsoil: gtscript.Field[F_TYPE],
-    radmin: gtscript.Field[F_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    lcld: gtscript.Field[I_TYPE],
-    kcld: gtscript.Field[I_TYPE],
-    theta: gtscript.Field[F_TYPE],
-    prslk: gtscript.Field[F_TYPE],
-    psk: gtscript.Field[F_TYPE],
-    t1: gtscript.Field[F_TYPE],
-    pix: gtscript.Field[F_TYPE],
-    q1_ntcw: gtscript.Field[F_TYPE],
-    q1_ntiw: gtscript.Field[F_TYPE],
-    qlx: gtscript.Field[F_TYPE],
-    slx: gtscript.Field[F_TYPE],
-    thvx: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
-    svx: gtscript.Field[F_TYPE],
-    thetae: gtscript.Field[F_TYPE],
-    gotvx: gtscript.Field[F_TYPE],
-    prsl: gtscript.Field[F_TYPE],
-    plyr: gtscript.Field[F_TYPE],
-    rhly: gtscript.Field[F_TYPE],
-    qstl: gtscript.Field[F_TYPE],
-    bf: gtscript.Field[F_TYPE],
-    cfly: gtscript.Field[F_TYPE],
-    crb: gtscript.Field[F_TYPE],
-    dtdz1: gtscript.Field[F_TYPE],
-    evap: gtscript.Field[F_TYPE],
-    heat: gtscript.Field[F_TYPE],
-    hlw: gtscript.Field[F_TYPE],
-    radx: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    shr2: gtscript.Field[F_TYPE],
-    stress: gtscript.Field[F_TYPE],
-    swh: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    tsea: gtscript.Field[F_TYPE],
-    u10m: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    v10m: gtscript.Field[F_TYPE],
-    xmu: gtscript.Field[F_TYPE],
+    zi: FIELD_FLT,
+    zl: FIELD_FLT,
+    zm: FIELD_FLT,
+    phii: FIELD_FLT,
+    phil: FIELD_FLT,
+    chz: FIELD_FLT,
+    ckz: FIELD_FLT,
+    garea: FIELD_FLT,
+    gdx: FIELD_FLT,
+    tke: FIELD_FLT,
+    q1_ntke: FIELD_FLT,
+    q1_0: FIELD_FLT,
+    rdzt: FIELD_FLT,
+    prn: FIELD_FLT,
+    kx1: FIELD_INT,
+    prsi: FIELD_FLT,
+    xkzm_hx: FIELD_FLT,
+    xkzm_mx: FIELD_FLT,
+    mask: FIELD_INT,
+    kinver: FIELD_INT,
+    tx1: FIELD_FLT,
+    tx2: FIELD_FLT,
+    xkzo: FIELD_FLT,
+    xkzmo: FIELD_FLT,
+    z0: FIELD_FLT,
+    kpblx: FIELD_INT,
+    hpblx: FIELD_FLT,
+    pblflg: FIELD_BOOL,
+    sfcflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL,
+    scuflg: FIELD_BOOL,
+    zorl: FIELD_FLT,
+    dusfc: FIELD_FLT,
+    dvsfc: FIELD_FLT,
+    dtsfc: FIELD_FLT,
+    dqsfc: FIELD_FLT,
+    kpbl: FIELD_INT,
+    hpbl: FIELD_FLT,
+    rbsoil: FIELD_FLT,
+    radmin: FIELD_FLT,
+    mrad: FIELD_INT,
+    krad: FIELD_INT,
+    lcld: FIELD_INT,
+    kcld: FIELD_INT,
+    theta: FIELD_FLT,
+    prslk: FIELD_FLT,
+    psk: FIELD_FLT,
+    t1: FIELD_FLT,
+    pix: FIELD_FLT,
+    q1_ntcw: FIELD_FLT,
+    q1_ntiw: FIELD_FLT,
+    qlx: FIELD_FLT,
+    slx: FIELD_FLT,
+    thvx: FIELD_FLT,
+    qtx: FIELD_FLT,
+    thlx: FIELD_FLT,
+    thlvx: FIELD_FLT,
+    svx: FIELD_FLT,
+    thetae: FIELD_FLT,
+    gotvx: FIELD_FLT,
+    prsl: FIELD_FLT,
+    plyr: FIELD_FLT,
+    rhly: FIELD_FLT,
+    qstl: FIELD_FLT,
+    bf: FIELD_FLT,
+    cfly: FIELD_FLT,
+    crb: FIELD_FLT_IJ,
+    dtdz1: FIELD_FLT_IJ,
+    evap: FIELD_FLT,
+    heat: FIELD_FLT,
+    hlw: FIELD_FLT,
+    radx: FIELD_FLT,
+    rbup: FIELD_FLT,
+    sflux: FIELD_FLT_IJ,
+    shr2: FIELD_FLT,
+    stress: FIELD_FLT,
+    swh: FIELD_FLT,
+    thermal: FIELD_FLT_IJ,
+    tsea: FIELD_FLT,
+    u10m: FIELD_FLT,
+    ustar: FIELD_FLT_IJ,
+    u1: FIELD_FLT,
+    v1: FIELD_FLT,
+    v10m: FIELD_FLT,
+    xmu: FIELD_FLT,
     *,
     gravi: float,
     dt2: float,
@@ -1971,10 +1571,10 @@ def init(
                 swh[0, 0, 0] * xmu[0, 0, 0] + hlw[0, 0, 0]
             )
 
-        with interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
             sflux = heat[0, 0, 0] + evap[0, 0, 0] * fv * theta[0, 0, 0]
 
-            if sfcflg[0, 0, 0] == 0 or sflux[0, 0, 0] <= 0.0:
+            if sfcflg[0, 0, 0] == 0 or sflux[0, 0] <= 0.0:
                 pblflg = 0
 
             if pblflg[0, 0, 0]:
@@ -1991,172 +1591,6 @@ def init(
             dtdz1 = dt2 / (zi[0, 0, 1] - zi[0, 0, 0])
             ustar = sqrt(stress[0, 0, 0])
 
-        with interval(0, -2):
-            dw2 = (u1[0, 0, 0] - u1[0, 0, 1]) ** 2 + (v1[0, 0, 0] - v1[0, 0, 1]) ** 2
-            shr2 = max(dw2, dw2min) * rdzt[0, 0, 0] * rdzt[0, 0, 0]
-
-        with interval(...):
-            rbup = rbsoil[0, 0, 0]
-
-
-@gtscript.stencil(backend=backend)
-def part2(
-    bf: gtscript.Field[F_TYPE],
-    cfly: gtscript.Field[F_TYPE],
-    hlw: gtscript.Field[F_TYPE],
-    plyr: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    slx: gtscript.Field[F_TYPE],
-    svx: gtscript.Field[F_TYPE],
-    swh: gtscript.Field[F_TYPE],
-    qlx: gtscript.Field[F_TYPE],
-    qstl: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    radx: gtscript.Field[F_TYPE],
-    rhly: gtscript.Field[F_TYPE],
-    t1: gtscript.Field[F_TYPE],
-    xmu: gtscript.Field[F_TYPE],
-    zi: gtscript.Field[F_TYPE],
-    crb: gtscript.Field[F_TYPE],
-    dtdz1: gtscript.Field[F_TYPE],
-    evap: gtscript.Field[F_TYPE],
-    heat: gtscript.Field[F_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    sfcflg: gtscript.Field[B_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    stress: gtscript.Field[F_TYPE],
-    tsea: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    theta: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
-    u10m: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    v10m: gtscript.Field[F_TYPE],
-    q1: gtscript.Field[F_TYPE],
-    z0: gtscript.Field[F_TYPE],
-    rbsoil: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    shr2: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    *,
-    dt2: float,
-    elocp: float,
-    el2orc: float,
-    fv: float,
-    g: float
-):
-
-    with computation(PARALLEL):
-        with interval(...):
-            cfly = 0.0
-            clwt = 1.0e-6 * (plyr[0, 0, 0] * 0.001)
-            if qlx[0, 0, 0] > clwt:
-                onemrh = max(1.0e-10, 1.0 - rhly[0, 0, 0])
-                tem1 = cql / min(max((onemrh * qstl[0, 0, 0]) ** 0.49, 0.0001), 1.0)
-                val = max(min(tem1 * qlx[0, 0, 0], 50.0), 0.0)
-                cfly = min(max(sqrt(sqrt(rhly[0, 0, 0])) * (1.0 - exp(-val)), 0.0), 1.0)
-
-        with interval(0, -2):
-            tem1 = 0.5 * (t1[0, 0, 0] + t1[0, 0, 1])
-            cfh = min(cfly[0, 0, 1], 0.5 * (cfly[0, 0, 0] + cfly[0, 0, 1]))
-            alp = g / (0.5 * (svx[0, 0, 0] + svx[0, 0, 1]))
-            gamma = el2orc * (0.5 * (qstl[0, 0, 0] + qstl[0, 0, 1])) / (tem1 ** 2)
-            epsi = tem1 / elocp
-            beta = (1.0 + gamma * epsi * (1.0 + fv)) / (1.0 + gamma)
-            chx = cfh * alp * beta + (1.0 - cfh) * alp
-            cqx = cfh * alp * hvap * (beta - epsi)
-            cqx = cqx + (1.0 - cfh) * fv * g
-            bf = chx * ((slx[0, 0, 1] - slx[0, 0, 0]) * rdzt[0, 0, 0]) + cqx * (
-                (qtx[0, 0, 1] - qtx[0, 0, 0]) * rdzt[0, 0, 0]
-            )
-            radx = (zi[0, 0, 1] - zi[0, 0, 0]) * (
-                swh[0, 0, 0] * xmu[0, 0, 0] + hlw[0, 0, 0]
-            )
-
-        with interval(0, 1):
-            sflux = heat[0, 0, 0] + evap[0, 0, 0] * fv * theta[0, 0, 0]
-
-            if sfcflg[0, 0, 0] == 0 or sflux[0, 0, 0] <= 0.0:
-                pblflg = 0
-
-            if pblflg[0, 0, 0]:
-                thermal = thlvx[0, 0, 0]
-                crb = rbcr
-            else:
-                tem1 = 1e-7 * (
-                    max(sqrt(u10m[0, 0, 0] ** 2 + v10m[0, 0, 0] ** 2), 1.0)
-                    / (f0 * z0[0, 0, 0])
-                )
-                thermal = tsea[0, 0, 0] * (1.0 + fv * max(q1[0, 0, 0], qmin))
-                crb = max(min(0.16 * (tem1 ** (-0.18)), crbmax), crbmin)
-
-            dtdz1 = dt2 / (zi[0, 0, 1] - zi[0, 0, 0])
-            ustar = sqrt(stress[0, 0, 0])
-
-        with interval(0, -2):
-            dw2 = (u1[0, 0, 0] - u1[0, 0, 1]) ** 2 + (v1[0, 0, 0] - v1[0, 0, 1]) ** 2
-            shr2 = max(dw2, dw2min) * rdzt[0, 0, 0] * rdzt[0, 0, 0]
-
-        with interval(...):
-            rbup = rbsoil[0, 0, 0]
-
-
-@gtscript.stencil(backend=backend)
-def part2a(
-    crb: gtscript.Field[F_TYPE],
-    dtdz1: gtscript.Field[F_TYPE],
-    evap: gtscript.Field[F_TYPE],
-    heat: gtscript.Field[F_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    sfcflg: gtscript.Field[B_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    stress: gtscript.Field[F_TYPE],
-    tsea: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    theta: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
-    u10m: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    v10m: gtscript.Field[F_TYPE],
-    q1: gtscript.Field[F_TYPE],
-    z0: gtscript.Field[F_TYPE],
-    zi: gtscript.Field[F_TYPE],
-    *,
-    dt2: float,
-    fv: float
-):
-    with computation(PARALLEL), interval(0, 1):
-        sflux = heat[0, 0, 0] + evap[0, 0, 0] * fv * theta[0, 0, 0]
-
-        if sfcflg[0, 0, 0] == 0 or sflux[0, 0, 0] <= 0.0:
-            pblflg = 0
-
-        if pblflg[0, 0, 0]:
-            thermal = thlvx[0, 0, 0]
-            crb = rbcr
-        else:
-            tem1 = 1e-7 * (
-                max(sqrt(u10m[0, 0, 0] ** 2 + v10m[0, 0, 0] ** 2), 1.0)
-                / (f0 * z0[0, 0, 0])
-            )
-            thermal = tsea[0, 0, 0] * (1.0 + fv * max(q1[0, 0, 0], qmin))
-            crb = max(min(0.16 * (tem1 ** (-0.18)), crbmax), crbmin)
-
-        dtdz1 = dt2 / (zi[0, 0, 1] - zi[0, 0, 0])
-        ustar = sqrt(stress[0, 0, 0])
-
-
-@gtscript.stencil(backend=backend)
-def part3(
-    rbsoil: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    shr2: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-):
-
     with computation(PARALLEL):
         with interval(0, -2):
             dw2 = (u1[0, 0, 0] - u1[0, 0, 1]) ** 2 + (v1[0, 0, 0] - v1[0, 0, 1]) ** 2
@@ -2164,22 +1598,21 @@ def part3(
 
         with interval(...):
             rbup = rbsoil[0, 0, 0]
-
 
 @gtscript.stencil(backend=backend)
 def part3a(
-    crb: gtscript.Field[F_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
-    thlvx_0: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    crb: FIELD_FLT_IJ,
+    flg: FIELD_BOOL,
+    kpblx: FIELD_INT,
+    mask: FIELD_INT,
+    rbdn: FIELD_FLT_IJ,
+    rbup: FIELD_FLT,
+    thermal: FIELD_FLT_IJ,
+    thlvx: FIELD_FLT,
+    thlvx_0: FIELD_FLT,
+    u1: FIELD_FLT,
+    v1: FIELD_FLT,
+    zl: FIELD_FLT,
     *,
     g: float
 ):
@@ -2191,35 +1624,35 @@ def part3a(
             if flg[0, 0, 0] == 0:
                 rbdn = rbup[0, 0, 0]
                 rbup = (
-                    (thlvx[0, 0, 0] - thermal[0, 0, 0])
+                    (thlvx[0, 0, 0] - thermal[0, 0])
                     * (g * zl[0, 0, 0] / thlvx_0[0, 0, 0])
                     / max(u1[0, 0, 0] ** 2 + v1[0, 0, 0] ** 2, 1.0)
                 )
                 kpblx = mask[0, 0, 0]
-                flg = rbup[0, 0, 0] > crb[0, 0, 0]
+                flg = rbup[0, 0, 0] > crb[0, 0]
 
         with interval(1, None):
             thlvx_0 = thlvx_0[0, 0, -1]
-            crb = crb[0, 0, -1]
-            thermal = thermal[0, 0, -1]
+            #crb = crb[0, 0, -1]
+            #thermal = thermal[0, 0, -1]
 
             if flg[0, 0, -1] == 0:
                 rbdn = rbup[0, 0, -1]
                 rbup = (
-                    (thlvx[0, 0, 0] - thermal[0, 0, 0])
+                    (thlvx[0, 0, 0] - thermal[0, 0])
                     * (g * zl[0, 0, 0] / thlvx_0[0, 0, 0])
                     / max(u1[0, 0, 0] ** 2 + v1[0, 0, 0] ** 2, 1.0)
                 )
                 kpblx = mask[0, 0, 0]
-                flg = rbup[0, 0, 0] > crb[0, 0, 0]
+                flg = rbup[0, 0, 0] > crb[0, 0]
             else:
-                rbdn = rbdn[0, 0, -1]
+                #rbdn = rbdn[0, 0, -1]
                 rbup = rbup[0, 0, -1]
                 kpblx = kpblx[0, 0, -1]
                 flg = flg[0, 0, -1]
 
     with computation(BACKWARD), interval(0, -1):
-        rbdn = rbdn[0, 0, 1]
+        #rbdn = rbdn[0, 0, 1]
         rbup = rbup[0, 0, 1]
         kpblx = kpblx[0, 0, 1]
         flg = flg[0, 0, 1]
@@ -2227,36 +1660,34 @@ def part3a(
 
 @gtscript.stencil(backend=backend)
 def part3a1(
-    crb: gtscript.Field[F_TYPE],
-    evap: gtscript.Field[F_TYPE],
-    fh: gtscript.Field[F_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    fm: gtscript.Field[F_TYPE],
-    gotvx: gtscript.Field[F_TYPE],
-    heat: gtscript.Field[F_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    hpblx: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    phih: gtscript.Field[F_TYPE],
-    phim: gtscript.Field[F_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    rbsoil: gtscript.Field[F_TYPE],
-    sfcflg: gtscript.Field[B_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    theta: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    vpert: gtscript.Field[F_TYPE],
-    wscale: gtscript.Field[F_TYPE],
-    zi: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-    zl_0: gtscript.Field[F_TYPE],
-    zol: gtscript.Field[F_TYPE],
+    crb: FIELD_FLT_IJ,
+    evap: FIELD_FLT,
+    fh: FIELD_FLT,
+    flg: FIELD_BOOL,
+    fm: FIELD_FLT,
+    gotvx: FIELD_FLT,
+    heat: FIELD_FLT,
+    hpbl: FIELD_FLT,
+    hpblx: FIELD_FLT,
+    kpbl: FIELD_INT,
+    kpblx: FIELD_INT,
+    mask: FIELD_INT,
+    pblflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL,
+    phih: FIELD_FLT_IJ,
+    phim: FIELD_FLT_IJ,
+    rbdn: FIELD_FLT_IJ,
+    rbup: FIELD_FLT,
+    rbsoil: FIELD_FLT,
+    sfcflg: FIELD_BOOL,
+    sflux: FIELD_FLT_IJ,
+    thermal: FIELD_FLT_IJ,
+    theta: FIELD_FLT,
+    ustar: FIELD_FLT_IJ,
+    vpert: FIELD_FLT_IJ,
+    zi: FIELD_FLT,
+    zl: FIELD_FLT,
+    zol: FIELD_FLT_IJ,
     *,
     fv: float
 ):
@@ -2265,24 +1696,23 @@ def part3a1(
         if mask[0, 0, 0] > 0:
             kpblx = kpblx[0, 0, -1]
             hpblx = hpblx[0, 0, -1]
-            zl_0 = zl_0[0, 0, -1]
             kpbl = kpbl[0, 0, -1]
             hpbl = hpbl[0, 0, -1]
             kpbl = kpbl[0, 0, -1]
             pblflg = pblflg[0, 0, -1]
-            crb = crb[0, 0, -1]
+            #crb = crb[0, 0, -1]
             rbup = rbup[0, 0, -1]
-            rbdn = rbdn[0, 0, -1]
+            #rbdn = rbdn[0, 0, -1]
 
         if mask[0, 0, 0] == kpblx[0, 0, 0]:
             if kpblx[0, 0, 0] > 0:
-                if rbdn[0, 0, 0] >= crb[0, 0, 0]:
+                if rbdn[0, 0] >= crb[0, 0]:
                     rbint = 0.0
-                elif rbup[0, 0, 0] <= crb[0, 0, 0]:
+                elif rbup[0, 0, 0] <= crb[0, 0]:
                     rbint = 1.0
                 else:
-                    rbint = (crb[0, 0, 0] - rbdn[0, 0, 0]) / (
-                        rbup[0, 0, 0] - rbdn[0, 0, 0]
+                    rbint = (crb[0, 0] - rbdn[0, 0]) / (
+                        rbup[0, 0, 0] - rbdn[0, 0]
                     )
                 hpblx = zl[0, 0, -1] + rbint * (zl[0, 0, 0] - zl[0, 0, -1])
 
@@ -2305,131 +1735,56 @@ def part3a1(
         hpbl = hpbl[0, 0, 1]
         pblflg = pblflg[0, 0, 1]
 
-    with computation(PARALLEL), interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
         zol = max(rbsoil[0, 0, 0] * fm[0, 0, 0] * fm[0, 0, 0] / fh[0, 0, 0], rimin)
         if sfcflg[0, 0, 0]:
-            zol = min(zol[0, 0, 0], -zfmin)
+            zol = min(zol[0, 0], -zfmin)
         else:
-            zol = max(zol[0, 0, 0], zfmin)
+            zol = max(zol[0, 0], zfmin)
 
-        zol1 = zol[0, 0, 0] * sfcfrac * hpbl[0, 0, 0] / zl[0, 0, 0]
+        zol1 = zol[0, 0] * sfcfrac * hpbl[0, 0, 0] / zl[0, 0, 0]
 
         if sfcflg[0, 0, 0]:
             phih = sqrt(1.0 / (1.0 - aphi16 * zol1))
-            phim = sqrt(phih[0, 0, 0])
+            phim = sqrt(phih[0, 0])
         else:
             phim = 1.0 + aphi5 * zol1
-            phih = phim[0, 0, 0]
+            phih = phim[0, 0]
 
-        pcnvflg = pblflg[0, 0, 0] and (zol[0, 0, 0] < zolcru)
+        pcnvflg = pblflg[0, 0, 0] and (zol[0, 0] < zolcru)
 
-        wst3 = gotvx[0, 0, 0] * sflux[0, 0, 0] * hpbl[0, 0, 0]
-        ust3 = ustar[0, 0, 0] ** 3.0
+        wst3 = gotvx[0, 0, 0] * sflux[0, 0] * hpbl[0, 0, 0]
+        ust3 = ustar[0, 0] ** 3.0
 
+        wscale = 0.0
         if pblflg[0, 0, 0]:
             wscale = max(
-                (ust3 + wfac * vk * wst3 * sfcfrac) ** h1, ustar[0, 0, 0] / aphi5
+                (ust3 + wfac * vk * wst3 * sfcfrac) ** h1, ustar[0, 0] / aphi5
             )
-
-        hgamt = heat[0, 0, 0] / wscale[0, 0, 0]
-        hgamq = evap[0, 0, 0] / wscale[0, 0, 0]
-
-        if pcnvflg[0, 0, 0]:
-            vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
 
         flg = 1
         if pcnvflg[0, 0, 0]:
-            thermal = thermal[0, 0, 0] + min(cfac * vpert[0, 0, 0], gamcrt)
-            flg = 0
-            rbup = rbsoil[0, 0, 0]
-
-
-@gtscript.stencil(backend=backend)
-def part3b(
-    crb: gtscript.Field[F_TYPE],
-    evap: gtscript.Field[F_TYPE],
-    fh: gtscript.Field[F_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    fm: gtscript.Field[F_TYPE],
-    gotvx: gtscript.Field[F_TYPE],
-    heat: gtscript.Field[F_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    hpblx: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[F_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    phih: gtscript.Field[F_TYPE],
-    phim: gtscript.Field[F_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbsoil: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    sfcflg: gtscript.Field[B_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    theta: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    vpert: gtscript.Field[F_TYPE],
-    wscale: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-    zol: gtscript.Field[F_TYPE],
-    *,
-    fv: float
-):
-
-    with computation(PARALLEL), interval(0, 1):
-        zol = max(rbsoil[0, 0, 0] * fm[0, 0, 0] * fm[0, 0, 0] / fh[0, 0, 0], rimin)
-        if sfcflg[0, 0, 0]:
-            zol = min(zol[0, 0, 0], -zfmin)
-        else:
-            zol = max(zol[0, 0, 0], zfmin)
-
-        zol1 = zol[0, 0, 0] * sfcfrac * hpbl[0, 0, 0] / zl[0, 0, 0]
-
-        if sfcflg[0, 0, 0]:
-            phih = sqrt(1.0 / (1.0 - aphi16 * zol1))
-            phim = sqrt(phih[0, 0, 0])
-        else:
-            phim = 1.0 + aphi5 * zol1
-            phih = phim[0, 0, 0]
-
-        pcnvflg = pblflg[0, 0, 0] and (zol[0, 0, 0] < zolcru)
-
-        wst3 = gotvx[0, 0, 0] * sflux[0, 0, 0] * hpbl[0, 0, 0]
-        ust3 = ustar[0, 0, 0] ** 3.0
-
-        if pblflg[0, 0, 0]:
-            wscale = max(
-                (ust3 + wfac * vk * wst3 * sfcfrac) ** h1, ustar[0, 0, 0] / aphi5
-            )
-
-        hgamt = heat[0, 0, 0] / wscale[0, 0, 0]
-        hgamq = evap[0, 0, 0] / wscale[0, 0, 0]
-
-        if pcnvflg[0, 0, 0]:
+            hgamt = heat[0, 0, 0] / wscale
+            hgamq = evap[0, 0, 0] / wscale
             vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
-
-        flg = 1
-        if pcnvflg[0, 0, 0]:
-            thermal = thermal[0, 0, 0] + min(cfac * vpert[0, 0, 0], gamcrt)
+            thermal = thermal[0, 0] + min(cfac * vpert[0, 0], gamcrt)
             flg = 0
             rbup = rbsoil[0, 0, 0]
-
 
 @gtscript.stencil(backend=backend)
 def part3c(
-    crb: gtscript.Field[F_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    thermal: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
-    thlvx_0: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    crb: FIELD_FLT_IJ,
+    flg: FIELD_BOOL,
+    kpblx: FIELD_INT,
+    mask: FIELD_INT,
+    rbdn: FIELD_FLT_IJ,
+    rbup: FIELD_FLT,
+    thermal: FIELD_FLT_IJ,
+    thlvx: FIELD_FLT,
+    thlvx_0: FIELD_FLT,
+    u1: FIELD_FLT,
+    v1: FIELD_FLT,
+    zl: FIELD_FLT,
     *,
     g: float
 ):
@@ -2440,45 +1795,45 @@ def part3c(
 
         with interval(1, 2):
             thlvx_0 = thlvx_0[0, 0, -1]
-            crb = crb[0, 0, -1]
-            thermal = thermal[0, 0, -1]
+            #crb = crb[0, 0, -1]
+            #thermal = thermal[0, 0, -1]
             rbup = rbup[0, 0, -1]
             flg = flg[0, 0, -1]
             kpblx = kpblx[0, 0, -1]
             if flg[0, 0, 0] == 0:
                 rbdn = rbup[0, 0, 0]
                 rbup = (
-                    (thlvx[0, 0, 0] - thermal[0, 0, 0])
+                    (thlvx[0, 0, 0] - thermal[0, 0])
                     * (g * zl[0, 0, 0] / thlvx_0[0, 0, 0])
                     / max(u1[0, 0, 0] ** 2 + v1[0, 0, 0] ** 2, 1.0)
                 )
                 kpblx = mask[0, 0, 0]
-                flg = rbup[0, 0, 0] > crb[0, 0, 0]
+                flg = rbup[0, 0, 0] > crb[0, 0]
 
         with interval(2, None):
             thlvx_0 = thlvx_0[0, 0, -1]
-            crb = crb[0, 0, -1]
-            thermal = thermal[0, 0, -1]
+            #crb = crb[0, 0, -1]
+            #thermal = thermal[0, 0, -1]
             rbup = rbup[0, 0, -1]
             flg = flg[0, 0, -1]
             kpblx = kpblx[0, 0, -1]
             if flg[0, 0, -1] == 0:
                 rbdn = rbup[0, 0, -1]
                 rbup = (
-                    (thlvx[0, 0, 0] - thermal[0, 0, 0])
+                    (thlvx[0, 0, 0] - thermal[0, 0])
                     * (g * zl[0, 0, 0] / thlvx_0[0, 0, 0])
                     / max(u1[0, 0, 0] ** 2 + v1[0, 0, 0] ** 2, 1.0)
                 )
                 kpblx = mask[0, 0, 0]
-                flg = rbup[0, 0, 0] > crb[0, 0, 0]
+                flg = rbup[0, 0, 0] > crb[0, 0]
             else:
-                rbdn = rbdn[0, 0, -1]
+                #rbdn = rbdn[0, 0, -1]
                 rbup = rbup[0, 0, -1]
                 kpblx = kpblx[0, 0, -1]
                 flg = flg[0, 0, -1]
 
     with computation(BACKWARD), interval(0, -1):
-        rbdn = rbdn[0, 0, 1]
+        #rbdn = rbdn[0, 0, 1]
         rbup = rbup[0, 0, 1]
         kpblx = kpblx[0, 0, 1]
         flg = flg[0, 0, 1]
@@ -2486,38 +1841,38 @@ def part3c(
 
 @gtscript.stencil(backend=backend)
 def part3c1(
-    crb: gtscript.Field[F_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    lcld: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    zi: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    crb: FIELD_FLT_IJ,
+    flg: FIELD_BOOL,
+    hpbl: FIELD_FLT,
+    kpbl: FIELD_INT,
+    lcld: FIELD_INT,
+    mask: FIELD_INT,
+    pblflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL,
+    rbdn: FIELD_FLT_IJ,
+    rbup: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    zi: FIELD_FLT,
+    zl: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(...):
         if mask[0, 0, 0] > 0:
-            crb = crb[0, 0, -1]
+            #crb = crb[0, 0, -1]
             hpbl = hpbl[0, 0, -1]
             kpbl = kpbl[0, 0, -1]
             pblflg = pblflg[0, 0, -1]
             pcnvflg = pcnvflg[0, 0, -1]
-            rbdn = rbdn[0, 0, -1]
+            #rbdn = rbdn[0, 0, -1]
             rbup = rbup[0, 0, -1]
 
         if pcnvflg[0, 0, 0] and kpbl[0, 0, 0] == mask[0, 0, 0]:
-            if rbdn[0, 0, 0] >= crb[0, 0, 0]:
+            if rbdn[0, 0] >= crb[0, 0]:
                 rbint = 0.0
-            elif rbup[0, 0, 0] <= crb[0, 0, 0]:
+            elif rbup[0, 0, 0] <= crb[0, 0]:
                 rbint = 1.0
             else:
-                rbint = (crb[0, 0, 0] - rbdn[0, 0, 0]) / (rbup[0, 0, 0] - rbdn[0, 0, 0])
+                rbint = (crb[0, 0] - rbdn[0, 0]) / (rbup[0, 0, 0] - rbdn[0, 0])
 
             hpbl[0, 0, 0] = zl[0, 0, -1] + rbint * (zl[0, 0, 0] - zl[0, 0, -1])
 
@@ -2551,45 +1906,17 @@ def part3c1(
         lcld = lcld[0, 0, 1]
         flg = flg[0, 0, 1]
 
-
-@gtscript.stencil(backend=backend)
-def part3d(
-    flg: gtscript.Field[B_TYPE],
-    lcld: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    zl: gtscript.Field[F_TYPE],
-):
-
-    with computation(FORWARD):
-        with interval(0, 1):
-            flg = scuflg[0, 0, 0]
-            if flg[0, 0, 0] and (zl[0, 0, 0] >= zstblmax):
-                lcld = mask[0, 0, 0]
-                flg = 0
-        with interval(1, None):
-            lcld = lcld[0, 0, -1]
-            flg = flg[0, 0, -1]
-            if flg[0, 0, 0] and (zl[0, 0, 0] >= zstblmax):
-                lcld = mask[0, 0, 0]
-                flg = 0
-
-    with computation(BACKWARD), interval(0, -1):
-        lcld = lcld[0, 0, 1]
-        flg = flg[0, 0, 1]
-
-
 @gtscript.stencil(backend=backend)
 def part3e(
-    flg: gtscript.Field[B_TYPE],
-    kcld: gtscript.Field[I_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    lcld: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    radmin: gtscript.Field[F_TYPE],
-    radx: gtscript.Field[F_TYPE],
-    qlx: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
+    flg: FIELD_BOOL,
+    kcld: FIELD_INT,
+    krad: FIELD_INT,
+    lcld: FIELD_INT,
+    mask: FIELD_INT,
+    radmin: FIELD_FLT,
+    radx: FIELD_FLT,
+    qlx: FIELD_FLT,
+    scuflg: FIELD_BOOL,
     *,
     km1: int
 ):
@@ -2663,20 +1990,20 @@ def part3e(
 
 @gtscript.stencil(backend=backend)
 def part4(
-    pcnvflg: gtscript.Field[B_TYPE],
-    q1: gtscript.Field[F_TYPE],
-    qcko: gtscript.Field[F_TYPE],
-    qcdo: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    t1: gtscript.Field[F_TYPE],
-    tcdo: gtscript.Field[F_TYPE],
-    tcko: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    ucdo: gtscript.Field[F_TYPE],
-    ucko: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    vcdo: gtscript.Field[F_TYPE],
-    vcko: gtscript.Field[F_TYPE],
+    pcnvflg: FIELD_BOOL,
+    q1: FIELD_FLT,
+    qcko: FIELD_FLT,
+    qcdo: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    t1: FIELD_FLT,
+    tcdo: FIELD_FLT,
+    tcko: FIELD_FLT,
+    u1: FIELD_FLT,
+    ucdo: FIELD_FLT,
+    ucko: FIELD_FLT,
+    v1: FIELD_FLT,
+    vcdo: FIELD_FLT,
+    vcko: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(1, None):
@@ -2696,11 +2023,11 @@ def part4(
 
 @gtscript.stencil(backend=backend)
 def part4a(
-    pcnvflg_v2: gtscript.Field[B_TYPE],
-    q1: gtscript.Field[F_TYPE],
-    qcdo: gtscript.Field[F_TYPE],
-    qcko: gtscript.Field[F_TYPE],
-    scuflg_v2: gtscript.Field[B_TYPE],
+    pcnvflg_v2: FIELD_BOOL,
+    q1: FIELD_FLT,
+    qcdo: FIELD_FLT,
+    qcko: FIELD_FLT,
+    scuflg_v2: FIELD_BOOL,
 ):
 
     with computation(FORWARD), interval(1, None):
@@ -2716,30 +2043,30 @@ def part4a(
 
 @gtscript.stencil(backend=backend)
 def part5(
-    chz: gtscript.Field[F_TYPE],
-    ckz: gtscript.Field[F_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    phih: gtscript.Field[F_TYPE],
-    phim: gtscript.Field[F_TYPE],
-    prn: gtscript.Field[F_TYPE],
-    zi: gtscript.Field[F_TYPE],
+    chz: FIELD_FLT,
+    ckz: FIELD_FLT,
+    hpbl: FIELD_FLT,
+    kpbl: FIELD_INT,
+    mask: FIELD_INT,
+    pcnvflg: FIELD_BOOL,
+    phih: FIELD_FLT_IJ,
+    phim: FIELD_FLT_IJ,
+    prn: FIELD_FLT,
+    zi: FIELD_FLT,
 ):
 
-    with computation(FORWARD), interval(1, None):
-        phih = phih[0, 0, -1]
-        phim = phim[0, 0, -1]
+    #with computation(FORWARD), interval(1, None):
+        #phih = phih[0, 0, -1]
+        #phim = phim[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         tem1 = max(zi[0, 0, 1] - sfcfrac * hpbl[0, 0, 0], 0.0)
         ptem = -3.0 * (tem1 ** 2.0) / (hpbl[0, 0, 0] ** 2.0)
         if mask[0, 0, 0] < kpbl[0, 0, 0]:
             if pcnvflg[0, 0, 0]:
-                prn = 1.0 + ((phih[0, 0, 0] / phim[0, 0, 0]) - 1.0) * exp(ptem)
+                prn = 1.0 + ((phih / phim) - 1.0) * exp(ptem)
             else:
-                prn = phih[0, 0, 0] / phim[0, 0, 0]
+                prn = phih / phim
 
         if mask[0, 0, 0] < kpbl[0, 0, 0]:
             prn = max(min(prn[0, 0, 0], prmax), prmin)
@@ -2749,65 +2076,65 @@ def part5(
 
 @gtscript.stencil(backend=backend)
 def part6(
-    bf: gtscript.Field[F_TYPE],
-    buod: gtscript.Field[F_TYPE],
-    buou: gtscript.Field[F_TYPE],
-    chz: gtscript.Field[F_TYPE],
-    ckz: gtscript.Field[F_TYPE],
-    dku: gtscript.Field[F_TYPE],
-    dkt: gtscript.Field[F_TYPE],
-    dkq: gtscript.Field[F_TYPE],
-    ele: gtscript.Field[F_TYPE],
-    elm: gtscript.Field[F_TYPE],
-    gdx: gtscript.Field[F_TYPE],
-    gotvx: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    pblflg: gtscript.Field[B_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    phim: gtscript.Field[F_TYPE],
-    prn: gtscript.Field[F_TYPE],
-    prod: gtscript.Field[F_TYPE],
-    radj: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    rlam: gtscript.Field[F_TYPE],
-    rle: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    shr2: gtscript.Field[F_TYPE],
-    stress: gtscript.Field[F_TYPE],
-    tke: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    ucdo: gtscript.Field[F_TYPE],
-    ucko: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    vcdo: gtscript.Field[F_TYPE],
-    vcko: gtscript.Field[F_TYPE],
-    xkzo: gtscript.Field[F_TYPE],
-    xkzmo: gtscript.Field[F_TYPE],
-    xmf: gtscript.Field[F_TYPE],
-    xmfd: gtscript.Field[F_TYPE],
-    zi: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-    zol: gtscript.Field[F_TYPE],
+    bf: FIELD_FLT,
+    buod: FIELD_FLT,
+    buou: FIELD_FLT,
+    chz: FIELD_FLT,
+    ckz: FIELD_FLT,
+    dku: FIELD_FLT,
+    dkt: FIELD_FLT,
+    dkq: FIELD_FLT,
+    ele: FIELD_FLT,
+    elm: FIELD_FLT,
+    gdx: FIELD_FLT,
+    gotvx: FIELD_FLT,
+    kpbl: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    krad: FIELD_INT,
+    pblflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL,
+    phim: FIELD_FLT_IJ,
+    prn: FIELD_FLT,
+    prod: FIELD_FLT,
+    radj: FIELD_FLT,
+    rdzt: FIELD_FLT,
+    rlam: FIELD_FLT,
+    rle: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    sflux: FIELD_FLT_IJ,
+    shr2: FIELD_FLT,
+    stress: FIELD_FLT,
+    tke: FIELD_FLT,
+    u1: FIELD_FLT,
+    ucdo: FIELD_FLT,
+    ucko: FIELD_FLT,
+    ustar: FIELD_FLT_IJ,
+    v1: FIELD_FLT,
+    vcdo: FIELD_FLT,
+    vcko: FIELD_FLT,
+    xkzo: FIELD_FLT,
+    xkzmo: FIELD_FLT,
+    xmf: FIELD_FLT,
+    xmfd: FIELD_FLT,
+    zi: FIELD_FLT,
+    zl: FIELD_FLT,
+    zol: FIELD_FLT_IJ,
 ):
 
     with computation(FORWARD), interval(1, None):
-        zol = zol[0, 0, -1]
+        #zol = zol[0, 0, -1]
         pblflg = pblflg[0, 0, -1]
         scuflg = scuflg[0, 0, -1]
 
     with computation(PARALLEL):
         with interval(0, -1):
-            if zol[0, 0, 0] < 0.0:
-                zk = vk * zl[0, 0, 0] * (1.0 - 100.0 * zol[0, 0, 0]) ** 0.2
-            elif zol[0, 0, 0] >= 1.0:
+            if zol[0, 0] < 0.0:
+                zk = vk * zl[0, 0, 0] * (1.0 - 100.0 * zol[0, 0]) ** 0.2
+            elif zol[0, 0] >= 1.0:
                 zk = vk * zl[0, 0, 0] / 3.7
             else:
-                zk = vk * zl[0, 0, 0] / (1.0 + 2.7 * zol[0, 0, 0])
+                zk = vk * zl[0, 0, 0] / (1.0 + 2.7 * zol[0, 0])
 
             elm = zk * rlam[0, 0, 0] / (rlam[0, 0, 0] + zk)
 
@@ -2871,9 +2198,9 @@ def part6(
                 dkq = dkq[0, 0, 0] + ptem
 
     with computation(FORWARD), interval(1, -1):
-        sflux = sflux[0, 0, -1]
-        ustar = ustar[0, 0, -1]
-        phim = phim[0, 0, -1]
+        #sflux = sflux[0, 0, -1]
+        #ustar = ustar[0, 0, -1]
+        #phim = phim[0, 0, -1]
         kpbl = kpbl[0, 0, -1]
         scuflg = scuflg[0, 0, -1]
         pcnvflg = pcnvflg[0, 0, -1]
@@ -2889,7 +2216,7 @@ def part6(
                 ptem = 0.0
 
             buop = 0.5 * (
-                gotvx[0, 0, 0] * sflux[0, 0, 0] + (-dkt[0, 0, 0] * bf[0, 0, 0] + ptem)
+                gotvx[0, 0, 0] * sflux[0, 0] + (-dkt[0, 0, 0] * bf[0, 0, 0] + ptem)
             )
 
             if scuflg[0, 0, 0] and mrad[0, 0, 0] == 0:
@@ -2920,8 +2247,8 @@ def part6(
                 + ptem2
                 + (
                     stress[0, 0, 0]
-                    * ustar[0, 0, 0]
-                    * phim[0, 0, 0]
+                    * ustar[0, 0]
+                    * phim[0, 0]
                     / (vk * zl[0, 0, 0])
                 )
             )
@@ -3009,212 +2336,12 @@ def part6(
     with computation(PARALLEL), interval(0, -1):
         rle = ce0 / ele[0, 0, 0]
 
-
-@gtscript.stencil(backend=backend)
-def part6a(
-    bf: gtscript.Field[F_TYPE],
-    dkq: gtscript.Field[F_TYPE],
-    dkt: gtscript.Field[F_TYPE],
-    dku: gtscript.Field[F_TYPE],
-    gotvx: gtscript.Field[F_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    radj: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-):
-
-    with computation(FORWARD), interval(...):
-        if mask[0, 0, 0] == krad[0, 0, 0]:
-            if scuflg[0, 0, 0]:
-                tem1 = bf[0, 0, 0] / gotvx[0, 0, 0]
-                if tem1 < tdzmin:
-                    tem1 = tdzmin
-                ptem = radj[0, 0, 0] / tem1
-                dkt = dkt[0, 0, 0] + ptem
-                dku = dku[0, 0, 0] + ptem
-                dkq = dkq[0, 0, 0] + ptem
-
-
-@gtscript.stencil(backend=backend)
-def part7(
-    bf: gtscript.Field[F_TYPE],
-    buod: gtscript.Field[F_TYPE],
-    buou: gtscript.Field[F_TYPE],
-    ele: gtscript.Field[F_TYPE],
-    dkt: gtscript.Field[F_TYPE],
-    dku: gtscript.Field[F_TYPE],
-    gotvx: gtscript.Field[F_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    phim: gtscript.Field[F_TYPE],
-    prod: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    rle: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    sflux: gtscript.Field[F_TYPE],
-    shr2: gtscript.Field[F_TYPE],
-    stress: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    ucdo: gtscript.Field[F_TYPE],
-    ucko: gtscript.Field[F_TYPE],
-    ustar: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    vcdo: gtscript.Field[F_TYPE],
-    vcko: gtscript.Field[F_TYPE],
-    xmf: gtscript.Field[F_TYPE],
-    xmfd: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-):
-
-    with computation(FORWARD), interval(1, None):
-        sflux = sflux[0, 0, -1]
-        ustar = ustar[0, 0, -1]
-        phim = phim[0, 0, -1]
-        kpbl = kpbl[0, 0, -1]
-        scuflg = scuflg[0, 0, -1]
-        pcnvflg = pcnvflg[0, 0, -1]
-        stress = stress[0, 0, -1]
-        mrad = mrad[0, 0, -1]
-        krad = krad[0, 0, -1]
-
-    with computation(PARALLEL):
-        with interval(0, 1):
-            if scuflg[0, 0, 0] and mrad[0, 0, 0] == 0:
-                ptem = xmfd[0, 0, 0] * buod[0, 0, 0]
-            else:
-                ptem = 0.0
-
-            buop = 0.5 * (
-                gotvx[0, 0, 0] * sflux[0, 0, 0] + (-dkt[0, 0, 0] * bf[0, 0, 0] + ptem)
-            )
-
-            if scuflg[0, 0, 0] and mrad[0, 0, 0] == 0:
-                ptem1 = (
-                    0.5
-                    * (u1[0, 0, 1] - u1[0, 0, 0])
-                    * rdzt[0, 0, 0]
-                    * xmfd[0, 0, 0]
-                    * (ucdo[0, 0, 0] + ucdo[0, 0, 1] - u1[0, 0, 0] - u1[0, 0, 1])
-                )
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0, 0] and mrad[0, 0, 0] == 0:
-                ptem2 = (
-                    0.5
-                    * (v1[0, 0, 1] - v1[0, 0, 0])
-                    * rdzt[0, 0, 0]
-                    * xmfd[0, 0, 0]
-                    * (vcdo[0, 0, 0] + vcdo[0, 0, 1] - v1[0, 0, 0] - v1[0, 0, 1])
-                )
-            else:
-                ptem2 = 0.0
-
-            shrp = 0.5 * (
-                dku[0, 0, 0] * shr2[0, 0, 0]
-                + ptem1
-                + ptem2
-                + (
-                    stress[0, 0, 0]
-                    * ustar[0, 0, 0]
-                    * phim[0, 0, 0]
-                    / (vk * zl[0, 0, 0])
-                )
-            )
-
-            prod = buop + shrp
-
-        with interval(1, None):
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
-                ptem1 = 0.5 * (xmf[0, 0, -1] + xmf[0, 0, 0]) * buou[0, 0, 0]
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0, 0]:
-                if mask[0, 0, 0] >= mrad[0, 0, 0] and mask[0, 0, 0] < krad[0, 0, 0]:
-                    ptem2 = 0.5 * (xmfd[0, 0, -1] + xmfd[0, 0, 0]) * buod[0, 0, 0]
-                else:
-                    ptem2 = 0.0
-            else:
-                ptem2 = 0.0
-
-            buop = (
-                0.5 * ((-dkt[0, 0, -1] * bf[0, 0, -1]) + (-dkt[0, 0, 0] * bf[0, 0, 0]))
-                + ptem1
-                + ptem2
-            )
-
-            tem1 = (u1[0, 0, 1] - u1[0, 0, 0]) * rdzt[0, 0, 0]
-            tem2 = (u1[0, 0, 0] - u1[0, 0, -1]) * rdzt[0, 0, -1]
-
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
-                ptem1 = (
-                    0.5
-                    * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
-                    * (u1[0, 0, 0] - ucko[0, 0, 0])
-                )
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0, 0]:
-                if mask[0, 0, 0] >= mrad[0, 0, 0] and mask[0, 0, 0] < krad[0, 0, 0]:
-                    ptem2 = (
-                        0.5
-                        * (xmfd[0, 0, 0] * tem1 + xmfd[0, 0, -1] * tem2)
-                        * (ucdo[0, 0, 0] - u1[0, 0, 0])
-                    )
-                else:
-                    ptem2 = 0.0
-            else:
-                ptem2 = 0.0
-
-            shrp = (
-                0.5
-                * ((dku[0, 0, -1] * shr2[0, 0, -1]) + (dku[0, 0, 0] * shr2[0, 0, 0]))
-                + ptem1
-                + ptem2
-            )
-            tem1 = (v1[0, 0, 1] - v1[0, 0, 0]) * rdzt[0, 0, 0]
-            tem2 = (v1[0, 0, 0] - v1[0, 0, -1]) * rdzt[0, 0, -1]
-
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
-                ptem1 = (
-                    0.5
-                    * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
-                    * (v1[0, 0, 0] - vcko[0, 0, 0])
-                )
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0, 0]:
-                if mask[0, 0, 0] >= mrad[0, 0, 0] and mask[0, 0, 0] < krad[0, 0, 0]:
-                    ptem2 = (
-                        0.5
-                        * (xmfd[0, 0, 0] * tem1 + xmfd[0, 0, -1] * tem2)
-                        * (vcdo[0, 0, 0] - v1[0, 0, 0])
-                    )
-                else:
-                    ptem2 = 0.0
-            else:
-                ptem2 = 0.0
-
-            shrp = shrp + ptem1 + ptem2
-
-            prod = buop + shrp
-
-    with computation(PARALLEL), interval(...):
-        rle = ce0 / ele[0, 0, 0]
-
-
 @gtscript.stencil(backend=backend)
 def part8(
-    diss: gtscript.Field[F_TYPE],
-    prod: gtscript.Field[F_TYPE],
-    rle: gtscript.Field[F_TYPE],
-    tke: gtscript.Field[F_TYPE],
+    diss: FIELD_FLT,
+    prod: FIELD_FLT,
+    rle: FIELD_FLT,
+    tke: FIELD_FLT,
     *,
     dtn: float
 ):
@@ -3231,11 +2358,11 @@ def part8(
 
 @gtscript.stencil(backend=backend)
 def part9(
-    pcnvflg: gtscript.Field[B_TYPE],
-    qcdo_ntke: gtscript.Field[F_TYPE],
-    qcko_ntke: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    tke: gtscript.Field[F_TYPE],
+    pcnvflg: FIELD_BOOL,
+    qcdo_ntke: FIELD_FLT,
+    qcko_ntke: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    tke: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(1, None):
@@ -3251,13 +2378,13 @@ def part9(
 
 @gtscript.stencil(backend=backend)
 def part10(
-    kpbl: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    qcko_ntke: gtscript.Field[F_TYPE],
-    tke: gtscript.Field[F_TYPE],
-    xlamue: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    kpbl: FIELD_INT,
+    mask: FIELD_INT,
+    pcnvflg: FIELD_BOOL,
+    qcko_ntke: FIELD_FLT,
+    tke: FIELD_FLT,
+    xlamue: FIELD_FLT,
+    zl: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(1, None):
@@ -3270,16 +2397,16 @@ def part10(
 
 @gtscript.stencil(backend=backend)
 def part11(
-    ad: gtscript.Field[F_TYPE],
-    f1: gtscript.Field[F_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    qcdo_ntke: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    tke: gtscript.Field[F_TYPE],
-    xlamde: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    ad: FIELD_FLT,
+    f1: FIELD_FLT,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    qcdo_ntke: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    tke: FIELD_FLT,
+    xlamde: FIELD_FLT,
+    zl: FIELD_FLT,
 ):
     with computation(BACKWARD), interval(...):
         tem = 0.5 * xlamde[0, 0, 0] * (zl[0, 0, 1] - zl[0, 0, 0])
@@ -3299,27 +2426,27 @@ def part11(
 
 @gtscript.stencil(backend=backend)
 def part12(
-    ad: gtscript.Field[F_TYPE],
-    ad_p1: gtscript.Field[F_TYPE],
-    al: gtscript.Field[F_TYPE],
-    au: gtscript.Field[F_TYPE],
-    del_: gtscript.Field[F_TYPE],
-    dkq: gtscript.Field[F_TYPE],
-    f1: gtscript.Field[F_TYPE],
-    f1_p1: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    prsl: gtscript.Field[F_TYPE],
-    qcdo_ntke: gtscript.Field[F_TYPE],
-    qcko_ntke: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    tke: gtscript.Field[F_TYPE],
-    xmf: gtscript.Field[F_TYPE],
-    xmfd: gtscript.Field[F_TYPE],
+    ad: FIELD_FLT,
+    ad_p1: FIELD_FLT,
+    al: FIELD_FLT,
+    au: FIELD_FLT,
+    del_: FIELD_FLT,
+    dkq: FIELD_FLT,
+    f1: FIELD_FLT,
+    f1_p1: FIELD_FLT,
+    kpbl: FIELD_INT,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    pcnvflg: FIELD_BOOL,
+    prsl: FIELD_FLT,
+    qcdo_ntke: FIELD_FLT,
+    qcko_ntke: FIELD_FLT,
+    rdzt: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    tke: FIELD_FLT,
+    xmf: FIELD_FLT,
+    xmfd: FIELD_FLT,
     *,
     dt2: float
 ):
@@ -3405,32 +2532,32 @@ def part12(
 
 @gtscript.stencil(backend=backend)
 def part13(
-    ad: gtscript.Field[F_TYPE],
-    ad_p1: gtscript.Field[F_TYPE],
-    al: gtscript.Field[F_TYPE],
-    au: gtscript.Field[F_TYPE],
-    del_: gtscript.Field[F_TYPE],
-    dkt: gtscript.Field[F_TYPE],
-    f1: gtscript.Field[F_TYPE],
-    f1_p1: gtscript.Field[F_TYPE],
-    f2: gtscript.Field[F_TYPE],
-    f2_p1: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    prsl: gtscript.Field[F_TYPE],
-    q1: gtscript.Field[F_TYPE],  # q1(:,:,1)
-    qcdo: gtscript.Field[F_TYPE],  # qcdo(:,:,1)
-    qcko: gtscript.Field[F_TYPE],  # qcko(:,:,1)
-    rdzt: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    tcdo: gtscript.Field[F_TYPE],
-    tcko: gtscript.Field[F_TYPE],
-    t1: gtscript.Field[F_TYPE],
-    xmf: gtscript.Field[F_TYPE],
-    xmfd: gtscript.Field[F_TYPE],
+    ad: FIELD_FLT,
+    ad_p1: FIELD_FLT,
+    al: FIELD_FLT,
+    au: FIELD_FLT,
+    del_: FIELD_FLT,
+    dkt: FIELD_FLT,
+    f1: FIELD_FLT,
+    f1_p1: FIELD_FLT,
+    f2: FIELD_FLT,
+    f2_p1: FIELD_FLT,
+    kpbl: FIELD_INT,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    pcnvflg: FIELD_BOOL,
+    prsl: FIELD_FLT,
+    q1: FIELD_FLT,  # q1(:,:,1)
+    qcdo: FIELD_FLT,  # qcdo(:,:,1)
+    qcko: FIELD_FLT,  # qcko(:,:,1)
+    rdzt: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    tcdo: FIELD_FLT,
+    tcko: FIELD_FLT,
+    t1: FIELD_FLT,
+    xmf: FIELD_FLT,
+    xmfd: FIELD_FLT,
     *,
     dt2: float,
     gocp: float
@@ -3492,40 +2619,61 @@ def part13(
 
 @gtscript.stencil(backend=backend)
 def part14(
-    ad: gtscript.Field[F_TYPE],
-    ad_p1: gtscript.Field[F_TYPE],
-    al: gtscript.Field[F_TYPE],
-    au: gtscript.Field[F_TYPE],
-    del_: gtscript.Field[F_TYPE],
-    diss: gtscript.Field[F_TYPE],
-    dku: gtscript.Field[F_TYPE],
-    dtdz1: gtscript.Field[F_TYPE],
-    f1: gtscript.Field[F_TYPE],
-    f1_p1: gtscript.Field[F_TYPE],
-    f2: gtscript.Field[F_TYPE],
-    f2_p1: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    pcnvflg: gtscript.Field[B_TYPE],
-    prsl: gtscript.Field[F_TYPE],
-    rdzt: gtscript.Field[F_TYPE],
-    scuflg: gtscript.Field[B_TYPE],
-    spd1: gtscript.Field[F_TYPE],
-    stress: gtscript.Field[F_TYPE],
-    tdt: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    ucdo: gtscript.Field[F_TYPE],
-    ucko: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    vcdo: gtscript.Field[F_TYPE],
-    vcko: gtscript.Field[F_TYPE],
-    xmf: gtscript.Field[F_TYPE],
-    xmfd: gtscript.Field[F_TYPE],
+    ad: FIELD_FLT,
+    ad_p1: FIELD_FLT,
+    al: FIELD_FLT,
+    au: FIELD_FLT,
+    del_: FIELD_FLT,
+    diss: FIELD_FLT,
+    dku: FIELD_FLT,
+    dtdz1: FIELD_FLT_IJ,
+
+    du: FIELD_FLT,
+
+    dusfc: FIELD_FLT,
+
+    dv: FIELD_FLT,
+
+    dvsfc: FIELD_FLT,
+
+    f1: FIELD_FLT,
+    f1_p1: FIELD_FLT,
+    f2: FIELD_FLT,
+    f2_p1: FIELD_FLT,
+
+    hpbl: FIELD_FLT,
+    
+    hpblx: FIELD_FLT,
+
+    kpbl: FIELD_INT,
+
+    kpblx: FIELD_INT,
+
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    pcnvflg: FIELD_BOOL,
+    prsl: FIELD_FLT,
+    rdzt: FIELD_FLT,
+    scuflg: FIELD_BOOL,
+    spd1: FIELD_FLT,
+    stress: FIELD_FLT,
+    tdt: FIELD_FLT,
+    u1: FIELD_FLT,
+    ucdo: FIELD_FLT,
+    ucko: FIELD_FLT,
+    v1: FIELD_FLT,
+    vcdo: FIELD_FLT,
+    vcko: FIELD_FLT,
+    xmf: FIELD_FLT,
+    xmfd: FIELD_FLT,
     *,
+    conw: float,
+
     dspheat: bool,
-    dt2: float
+    dt2: float,
+
+    rdt: float
 ):
 
     with computation(PARALLEL):
@@ -3534,7 +2682,7 @@ def part14(
                 tdt = tdt[0, 0, 0] + dspfac * (diss[0, 0, 0] / cp)
 
         with interval(0, 1):
-            ad = 1.0 + dtdz1[0, 0, 0] * stress[0, 0, 0] / spd1[0, 0, 0]
+            ad = 1.0 + dtdz1[0, 0] * stress[0, 0, 0] / spd1[0, 0, 0]
             f1 = u1[0, 0, 0]
             f2 = v1[0, 0, 0]
 
@@ -3589,23 +2737,60 @@ def part14(
             f2 = f2_p1[0, 0, -1]
             ad = ad_p1[0, 0, -1]
 
+    with computation(PARALLEL), interval(0, 1):
+        fk = 1 / ad[0, 0, 0]
+        au = fk * au[0, 0, 0]
+        f1 = fk * f1[0, 0, 0]
+        f2 = fk * f2[0, 0, 0]
+
+    with computation(FORWARD):
+        with interval(1, -1):
+            fk = 1.0 / (ad[0, 0, 0] - al[0, 0, -1] * au[0, 0, -1])
+            au = fk * au[0, 0, 0]
+            f1 = fk * (f1[0, 0, 0] - al[0, 0, -1] * f1[0, 0, -1])
+            f2 = fk * (f2[0, 0, 0] - al[0, 0, -1] * f2[0, 0, -1])
+        with interval(-1, None):
+            fk = 1.0 / (ad[0, 0, 0] - al[0, 0, -1] * au[0, 0, -1])
+            f1 = fk * (f1[0, 0, 0] - al[0, 0, -1] * f1[0, 0, -1])
+            f2 = fk * (f2[0, 0, 0] - al[0, 0, -1] * f2[0, 0, -1])
+
+    with computation(BACKWARD), interval(0, -1):
+        f1 = f1[0, 0, 0] - au[0, 0, 0] * f1[0, 0, 1]
+        f2 = f2[0, 0, 0] - au[0, 0, 0] * f2[0, 0, 1]
+
+    with computation(PARALLEL), interval(...):
+        utend = (f1[0, 0, 0] - u1[0, 0, 0]) * rdt
+        vtend = (f2[0, 0, 0] - v1[0, 0, 0]) * rdt
+        du = du[0, 0, 0] + utend
+        dv = dv[0, 0, 0] + vtend
+        dusfc = dusfc[0, 0, 0] + conw * del_[0, 0, 0] * utend
+        dvsfc = dvsfc[0, 0, 0] + conw * del_[0, 0, 0] * vtend
+
+    with computation(BACKWARD), interval(0, -1):
+        dusfc = dusfc[0, 0, 0] + dusfc[0, 0, 1]
+        dvsfc = dvsfc[0, 0, 0] + dvsfc[0, 0, 1]
+
+    with computation(PARALLEL), interval(0, 1):
+        hpbl = hpblx[0, 0, 0]
+        kpbl = kpblx[0, 0, 0]
+
 
 @gtscript.stencil(backend=backend)
 def part15(
-    del_: gtscript.Field[F_TYPE],
-    du: gtscript.Field[F_TYPE],
-    dusfc: gtscript.Field[F_TYPE],
-    dv: gtscript.Field[F_TYPE],
-    dvsfc: gtscript.Field[F_TYPE],
-    f1: gtscript.Field[F_TYPE],
-    f2: gtscript.Field[F_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    hpblx: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
+    del_: FIELD_FLT,
+    du: FIELD_FLT,
+    dusfc: FIELD_FLT,
+    dv: FIELD_FLT,
+    dvsfc: FIELD_FLT,
+    f1: FIELD_FLT,
+    f2: FIELD_FLT,
+    hpbl: FIELD_FLT,
+    hpblx: FIELD_FLT,
+    kpbl: FIELD_INT,
+    kpblx: FIELD_INT,
+    mask: FIELD_INT,
+    u1: FIELD_FLT,
+    v1: FIELD_FLT,
     *,
     conw: float,
     rdt: float
@@ -3665,7 +2850,6 @@ def mfpblt(
     elocp,
     el2orc,
     mask,
-    compare_dict,
 ):
 
     ce0 = 0.4
@@ -3682,65 +2866,65 @@ def mfpblt(
     epsm1 = eps - 1.0
 
     wu2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamuem = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlu = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kpblx = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     kpbly = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rbup = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     rbdn = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     flg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     hpblx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamavg = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sumx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sigma = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     scaldfunc = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     qcko_1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcko_ntcw = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcko_track = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     totflag = True
@@ -3899,19 +3083,19 @@ def mfpblt(
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s0(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    q1_0: gtscript.Field[F_TYPE],
-    q1_ntcw: gtscript.Field[F_TYPE],
-    qtu: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    thlu: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    thvx: gtscript.Field[F_TYPE],
-    vpert: gtscript.Field[F_TYPE],
-    wu2: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    hpbl: FIELD_FLT,
+    kpbl: FIELD_INT,
+    q1_0: FIELD_FLT,
+    q1_ntcw: FIELD_FLT,
+    qtu: FIELD_FLT,
+    qtx: FIELD_FLT,
+    thlu: FIELD_FLT,
+    thlx: FIELD_FLT,
+    thvx: FIELD_FLT,
+    vpert: FIELD_FLT_IJ,
+    wu2: FIELD_FLT,
     *,
     alp: float,
     g: float
@@ -3925,7 +3109,7 @@ def mfpblt_s0(
 
     with computation(PARALLEL), interval(0, 1):
         if cnvflg[0, 0, 0]:
-            ptem = min(alp * vpert[0, 0, 0], 3.0)
+            ptem = min(alp * vpert[0, 0], 3.0)
             thlu = thlx[0, 0, 0] + ptem
             qtu = qtx[0, 0, 0]
             buo = g * ptem / thvx[0, 0, 0]
@@ -3939,28 +3123,28 @@ def mfpblt_s0(
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s1(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    kpbly: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pix: gtscript.Field[F_TYPE],
-    plyr: gtscript.Field[F_TYPE],
-    qtu: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    thlu: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    thvx: gtscript.Field[F_TYPE],
-    wu2: gtscript.Field[F_TYPE],
-    xlamue: gtscript.Field[F_TYPE],
-    xlamuem: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    flg: FIELD_BOOL,
+    hpbl: FIELD_FLT,
+    kpbl: FIELD_INT,
+    kpblx: FIELD_INT,
+    kpbly: FIELD_INT,
+    mask: FIELD_INT,
+    pix: FIELD_FLT,
+    plyr: FIELD_FLT,
+    qtu: FIELD_FLT,
+    qtx: FIELD_FLT,
+    rbdn: FIELD_FLT,
+    rbup: FIELD_FLT,
+    thlu: FIELD_FLT,
+    thlx: FIELD_FLT,
+    thvx: FIELD_FLT,
+    wu2: FIELD_FLT,
+    xlamue: FIELD_FLT,
+    xlamuem: FIELD_FLT,
+    zl: FIELD_FLT,
+    zm: FIELD_FLT,
     *,
     ce0: float,
     cm: float,
@@ -4053,13 +3237,13 @@ def mfpblt_s1(
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s1a(
-    cnvflg: gtscript.Field[B_TYPE],
-    hpblx: gtscript.Field[F_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    rbdn: gtscript.Field[F_TYPE],
-    rbup: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
+    cnvflg: FIELD_BOOL,
+    hpblx: FIELD_FLT,
+    kpblx: FIELD_INT,
+    mask: FIELD_INT,
+    rbdn: FIELD_FLT,
+    rbup: FIELD_FLT,
+    zm: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(...):
@@ -4088,38 +3272,38 @@ def mfpblt_s1a(
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s2(
-    cnvflg: gtscript.Field[B_TYPE],
-    gdx: gtscript.Field[F_TYPE],
-    hpbl: gtscript.Field[F_TYPE],
-    hpblx: gtscript.Field[F_TYPE],
-    kpbl: gtscript.Field[I_TYPE],
-    kpblx: gtscript.Field[I_TYPE],
-    kpbly: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pix: gtscript.Field[F_TYPE],
-    plyr: gtscript.Field[F_TYPE],
-    qcko_1: gtscript.Field[F_TYPE],
-    qcko_ntcw: gtscript.Field[F_TYPE],
-    qcko_track: gtscript.Field[I_TYPE],
-    qtu: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    scaldfunc: gtscript.Field[F_TYPE],
-    sigma: gtscript.Field[F_TYPE],
-    sumx: gtscript.Field[F_TYPE],
-    tcko: gtscript.Field[F_TYPE],
-    thlu: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    ucko: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    vcko: gtscript.Field[F_TYPE],
-    xmf: gtscript.Field[F_TYPE],
-    xlamavg: gtscript.Field[F_TYPE],
-    xlamue: gtscript.Field[F_TYPE],
-    xlamuem: gtscript.Field[F_TYPE],
-    wu2: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
+    cnvflg: FIELD_BOOL,
+    gdx: FIELD_FLT,
+    hpbl: FIELD_FLT,
+    hpblx: FIELD_FLT,
+    kpbl: FIELD_INT,
+    kpblx: FIELD_INT,
+    kpbly: FIELD_INT,
+    mask: FIELD_INT,
+    pix: FIELD_FLT,
+    plyr: FIELD_FLT,
+    qcko_1: FIELD_FLT,
+    qcko_ntcw: FIELD_FLT,
+    qcko_track: FIELD_INT,
+    qtu: FIELD_FLT,
+    qtx: FIELD_FLT,
+    scaldfunc: FIELD_FLT,
+    sigma: FIELD_FLT,
+    sumx: FIELD_FLT,
+    tcko: FIELD_FLT,
+    thlu: FIELD_FLT,
+    thlx: FIELD_FLT,
+    u1: FIELD_FLT,
+    ucko: FIELD_FLT,
+    v1: FIELD_FLT,
+    vcko: FIELD_FLT,
+    xmf: FIELD_FLT,
+    xlamavg: FIELD_FLT,
+    xlamue: FIELD_FLT,
+    xlamuem: FIELD_FLT,
+    wu2: FIELD_FLT,
+    zl: FIELD_FLT,
+    zm: FIELD_FLT,
     *,
     a1: float,
     dt2: float,
@@ -4299,7 +3483,6 @@ def mfscu(
     elocp,
     el2orc,
     mask,
-    compare_dict,
 ):
 
     ce0 = 0.4
@@ -4322,70 +3505,67 @@ def mfscu(
     fv = 4.6150e2 / 2.8705e2 - 1.0
 
     wd2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     hrad = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     krad1 = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thld = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qtd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     thlvd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ra1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     ra2 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
-    )
-    radj = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     flg = gt_storage.zeros(
-        backend=backend, dtype=B_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_BOOL, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamdem = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     mradx = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     mrady = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sumx = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xlamavg = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     xmfd = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     sigma = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     scaldfunc = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_1 = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_ntcw = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
     qcdo_track = gt_storage.zeros(
-        backend=backend, dtype=I_TYPE, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_INT, shape=(im, 1, km + 1), default_origin=(0, 0, 0)
     )
 
     totflg = True
@@ -4653,12 +3833,12 @@ def mfscu(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    q1_1: gtscript.Field[F_TYPE],
-    q1_ntcw: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    wd2: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    q1_1: FIELD_FLT,
+    q1_ntcw: FIELD_FLT,
+    qtx: FIELD_FLT,
+    wd2: FIELD_FLT,
 ):
 
     with computation(PARALLEL), interval(...):
@@ -4670,30 +3850,30 @@ def mfscu_s0(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0a(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    hrad: gtscript.Field[F_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    krad1: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    q1_1: gtscript.Field[F_TYPE],
-    q1_ntcw: gtscript.Field[F_TYPE],
-    qtd: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    ra1: gtscript.Field[F_TYPE],
-    ra2: gtscript.Field[F_TYPE],
-    radmin: gtscript.Field[F_TYPE],
-    radj: gtscript.Field[F_TYPE],
-    thetae: gtscript.Field[F_TYPE],
-    thld: gtscript.Field[F_TYPE],
-    thlvd: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    thvx: gtscript.Field[F_TYPE],
-    wd2: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    flg: FIELD_BOOL,
+    hrad: FIELD_FLT,
+    krad: FIELD_INT,
+    krad1: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    q1_1: FIELD_FLT,
+    q1_ntcw: FIELD_FLT,
+    qtd: FIELD_FLT,
+    qtx: FIELD_FLT,
+    ra1: FIELD_FLT,
+    ra2: FIELD_FLT,
+    radmin: FIELD_FLT,
+    radj: FIELD_FLT,
+    thetae: FIELD_FLT,
+    thld: FIELD_FLT,
+    thlvd: FIELD_FLT,
+    thlvx: FIELD_FLT,
+    thlx: FIELD_FLT,
+    thvx: FIELD_FLT,
+    wd2: FIELD_FLT,
+    zm: FIELD_FLT,
     *,
     a1: float,
     a11: float,
@@ -4764,13 +3944,13 @@ def mfscu_s0a(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0b(
-    cnvflg: gtscript.Field[B_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    thlvd: gtscript.Field[F_TYPE],
-    thlvx: gtscript.Field[F_TYPE],
+    cnvflg: FIELD_BOOL,
+    flg: FIELD_BOOL,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    thlvd: FIELD_FLT,
+    thlvx: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(1, None):
@@ -4803,20 +3983,20 @@ def mfscu_s0b(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s1(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    pix: gtscript.Field[F_TYPE],
-    plyr: gtscript.Field[F_TYPE],
-    radmin: gtscript.Field[F_TYPE],
-    thld: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    thvx: gtscript.Field[F_TYPE],
-    qtd: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    xlamde: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    pix: FIELD_FLT,
+    plyr: FIELD_FLT,
+    radmin: FIELD_FLT,
+    thld: FIELD_FLT,
+    thlx: FIELD_FLT,
+    thvx: FIELD_FLT,
+    qtd: FIELD_FLT,
+    qtx: FIELD_FLT,
+    xlamde: FIELD_FLT,
+    zl: FIELD_FLT,
     *,
     el2orc: float,
     elocp: float,
@@ -4860,13 +4040,13 @@ def mfscu_s1(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s1a(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    krad1: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    wd2: gtscript.Field[F_TYPE],
-    xlamde: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    krad1: FIELD_INT,
+    mask: FIELD_INT,
+    wd2: FIELD_FLT,
+    xlamde: FIELD_FLT,
+    zm: FIELD_FLT,
     *,
     bb1: float,
     bb2: float
@@ -4883,18 +4063,18 @@ def mfscu_s1a(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s2(
-    buo: gtscript.Field[F_TYPE],
-    cnvflg: gtscript.Field[B_TYPE],
-    flg: gtscript.Field[B_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    krad1: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    mradx: gtscript.Field[I_TYPE],
-    mrady: gtscript.Field[I_TYPE],
-    xlamde: gtscript.Field[F_TYPE],
-    wd2: gtscript.Field[F_TYPE],
-    zm: gtscript.Field[F_TYPE],
+    buo: FIELD_FLT,
+    cnvflg: FIELD_BOOL,
+    flg: FIELD_BOOL,
+    krad: FIELD_INT,
+    krad1: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    mradx: FIELD_INT,
+    mrady: FIELD_INT,
+    xlamde: FIELD_FLT,
+    wd2: FIELD_FLT,
+    zm: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(1, None):
@@ -4945,20 +4125,20 @@ def mfscu_s2(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s3(
-    cnvflg: gtscript.Field[B_TYPE],
-    gdx: gtscript.Field[F_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    ra1: gtscript.Field[F_TYPE],
-    scaldfunc: gtscript.Field[F_TYPE],
-    sigma: gtscript.Field[F_TYPE],
-    sumx: gtscript.Field[F_TYPE],
-    wd2: gtscript.Field[F_TYPE],
-    xlamde: gtscript.Field[F_TYPE],
-    xlamavg: gtscript.Field[F_TYPE],
-    xmfd: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    cnvflg: FIELD_BOOL,
+    gdx: FIELD_FLT,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    ra1: FIELD_FLT,
+    scaldfunc: FIELD_FLT,
+    sigma: FIELD_FLT,
+    sumx: FIELD_FLT,
+    wd2: FIELD_FLT,
+    xlamde: FIELD_FLT,
+    xlamavg: FIELD_FLT,
+    xmfd: FIELD_FLT,
+    zl: FIELD_FLT,
     *,
     dt2: float
 ):
@@ -5035,11 +4215,11 @@ def mfscu_s3(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s3a(
-    cnvflg: gtscript.Field[B_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    thld: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
+    cnvflg: FIELD_BOOL,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    thld: FIELD_FLT,
+    thlx: FIELD_FLT,
 ):
 
     with computation(FORWARD), interval(...):
@@ -5050,27 +4230,27 @@ def mfscu_s3a(
 
 @gtscript.stencil(backend=backend)
 def mfscu_s4(
-    cnvflg: gtscript.Field[B_TYPE],
-    krad: gtscript.Field[I_TYPE],
-    mask: gtscript.Field[I_TYPE],
-    mrad: gtscript.Field[I_TYPE],
-    pix: gtscript.Field[F_TYPE],
-    plyr: gtscript.Field[F_TYPE],
-    qcdo_1: gtscript.Field[F_TYPE],
-    qcdo_ntcw: gtscript.Field[F_TYPE],
-    qcdo_track: gtscript.Field[I_TYPE],
-    qtd: gtscript.Field[F_TYPE],
-    qtx: gtscript.Field[F_TYPE],
-    tcdo: gtscript.Field[F_TYPE],
-    thld: gtscript.Field[F_TYPE],
-    thlx: gtscript.Field[F_TYPE],
-    u1: gtscript.Field[F_TYPE],
-    ucdo: gtscript.Field[F_TYPE],
-    v1: gtscript.Field[F_TYPE],
-    vcdo: gtscript.Field[F_TYPE],
-    xlamde: gtscript.Field[F_TYPE],
-    xlamdem: gtscript.Field[F_TYPE],
-    zl: gtscript.Field[F_TYPE],
+    cnvflg: FIELD_BOOL,
+    krad: FIELD_INT,
+    mask: FIELD_INT,
+    mrad: FIELD_INT,
+    pix: FIELD_FLT,
+    plyr: FIELD_FLT,
+    qcdo_1: FIELD_FLT,
+    qcdo_ntcw: FIELD_FLT,
+    qcdo_track: FIELD_INT,
+    qtd: FIELD_FLT,
+    qtx: FIELD_FLT,
+    tcdo: FIELD_FLT,
+    thld: FIELD_FLT,
+    thlx: FIELD_FLT,
+    u1: FIELD_FLT,
+    ucdo: FIELD_FLT,
+    v1: FIELD_FLT,
+    vcdo: FIELD_FLT,
+    xlamde: FIELD_FLT,
+    xlamdem: FIELD_FLT,
+    zl: FIELD_FLT,
     *,
     el2orc: float,
     elocp: float,
@@ -5135,13 +4315,13 @@ def mfscu_s4(
             ) / factor
 
 
-def tridit(l, n, nt, cl, cm, cu, rt, au, at, compare_dict):
+def tridit(l, n, nt, cl, cm, cu, rt, au, at):
 
     fk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
     fkk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
 
     tridit_s0(au=au, cm=cm, cl=cl, cu=cu, fk=fk, fkk=fkk, domain=(l, 1, n))
@@ -5178,12 +4358,12 @@ def tridit(l, n, nt, cl, cm, cu, rt, au, at, compare_dict):
 
 @gtscript.stencil(backend=backend)
 def tridit_s0(
-    au: gtscript.Field[F_TYPE],
-    cm: gtscript.Field[F_TYPE],
-    cl: gtscript.Field[F_TYPE],
-    cu: gtscript.Field[F_TYPE],
-    fk: gtscript.Field[F_TYPE],
-    fkk: gtscript.Field[F_TYPE],
+    au: FIELD_FLT,
+    cm: FIELD_FLT,
+    cl: FIELD_FLT,
+    cu: FIELD_FLT,
+    fk: FIELD_FLT,
+    fkk: FIELD_FLT,
 ):
     with computation(PARALLEL), interval(0, 1):
         fk = 1.0 / cm[0, 0, 0]
@@ -5196,23 +4376,23 @@ def tridit_s0(
 
 @gtscript.stencil(backend=backend)
 def tridit_s1(
-    au: gtscript.Field[F_TYPE],
-    cm: gtscript.Field[F_TYPE],
-    cl: gtscript.Field[F_TYPE],
-    cu: gtscript.Field[F_TYPE],
-    fk: gtscript.Field[F_TYPE],
+    au: FIELD_FLT,
+    cm: FIELD_FLT,
+    cl: FIELD_FLT,
+    cu: FIELD_FLT,
+    fk: FIELD_FLT,
 ):
 
     with computation(PARALLEL), interval(-1, None):
         fk = 1.0 / (cm[0, 0, 0] - cl[0, 0, -1] * au[0, 0, -1])
 
 
-def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2, compare_dict):
+def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
     fk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
     fkk = gt_storage.zeros(
-        backend=backend, dtype=F_TYPE, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
     )
 
     fk[:, 0, 0] = 1.0 / cm[:, 0, 0]
@@ -5255,45 +4435,3 @@ def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2, compare_dict):
             a2[:, 0, k + is_] = a2[:, 0, k + is_] - au[:, 0, k] * a2[:, 0, k + is_ + 1]
 
     return au, a1, a2
-
-
-# tridi2(im,km,al,ad,au,f1,f2,au,f1,f2...)
-def tridi2(l, n, cl, cm, cu, r1, r2, au, a1, a2, compare_dict):
-
-    tridi2_s0(a1=a1, a2=a2, au=au, cl=cl, cm=cm, cu=cu, r1=r1, r2=r2, domain=(l, 1, n))
-
-    return 0
-
-
-@gtscript.stencil(backend=backend)
-def tridi2_s0(
-    a1: gtscript.Field[F_TYPE],
-    a2: gtscript.Field[F_TYPE],
-    au: gtscript.Field[F_TYPE],
-    cl: gtscript.Field[F_TYPE],
-    cm: gtscript.Field[F_TYPE],
-    cu: gtscript.Field[F_TYPE],
-    r1: gtscript.Field[F_TYPE],
-    r2: gtscript.Field[F_TYPE],
-):
-
-    with computation(PARALLEL), interval(0, 1):
-        fk = 1 / cm[0, 0, 0]
-        au = fk * cu[0, 0, 0]
-        a1 = fk * r1[0, 0, 0]
-        a2 = fk * r2[0, 0, 0]
-
-    with computation(FORWARD):
-        with interval(1, -1):
-            fk = 1.0 / (cm[0, 0, 0] - cl[0, 0, -1] * au[0, 0, -1])
-            au = fk * cu[0, 0, 0]
-            a1 = fk * (r1[0, 0, 0] - cl[0, 0, -1] * a1[0, 0, -1])
-            a2 = fk * (r2[0, 0, 0] - cl[0, 0, -1] * a2[0, 0, -1])
-        with interval(-1, None):
-            fk = 1.0 / (cm[0, 0, 0] - cl[0, 0, -1] * au[0, 0, -1])
-            a1 = fk * (r1[0, 0, 0] - cl[0, 0, -1] * a1[0, 0, -1])
-            a2 = fk * (r2[0, 0, 0] - cl[0, 0, -1] * a2[0, 0, -1])
-
-    with computation(BACKWARD), interval(0, -1):
-        a1 = a1[0, 0, 0] - au[0, 0, 0] * a1[0, 0, 1]
-        a2 = a2[0, 0, 0] - au[0, 0, 0] * a2[0, 0, 1]
