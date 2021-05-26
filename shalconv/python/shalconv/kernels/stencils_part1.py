@@ -209,7 +209,7 @@ def init_final( kbm   : FIELD_INT,
                 *,
                 km    : DTYPE_INT ):
                     
-    with computation(PARALLEL), interval(...):
+    with computation(FORWARD), interval(...):
         
         # Calculate hydrostatic height at layer centers assuming a flat 
         # surface (no terrain) from the geopotential
