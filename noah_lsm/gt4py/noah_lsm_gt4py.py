@@ -1865,10 +1865,6 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
                                                              prcp1, cmc, t1, stc0, stc1, stc2, stc3, sncovr, sneqv, sndens, snowh,
                                                              sh2o0, sh2o1, sh2o2, sh2o3, tbot, smc0, smc1, smc2, smc3)
 
-    # smc0 = 0.20746074932843878
-    # smc1 = 0.21060230357323534
-    # smc2 = 0.18727096089314488
-    # smc3 = 0.10291351732165224
     # prepare sensible heat (h) for return to parent model
     sheat = -(ch*cp1*sfcprs) / (rd1*t2v) * (th2 - t1)
 
