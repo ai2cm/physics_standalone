@@ -361,7 +361,6 @@ def redprm_fn(vegtyp, dksat, smcmax, smcref, nroot, sldpth0, sldpth1, sldpth2, s
 
     if nroot <= 0:
         rtdis0 = 0.0
-        zsoil = zsoil1
     else:
         rtdis0 = - sldpth0 / zsoil
 
@@ -1646,8 +1645,6 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
     pc = 0.
 
     shdfac0 = shdfac
-    # vegtyp = 13
-    # ivegsrc = 1
 
     # is not called
     if ivegsrc == 2 and vegtyp == 12:
