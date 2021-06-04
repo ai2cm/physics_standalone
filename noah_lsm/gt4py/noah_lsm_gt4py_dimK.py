@@ -37,6 +37,16 @@ SOIL_VARS_NAMES = ["bexp", "dksat", "dwsat", "f1", "psisat",
                    "quartz", "smcdry", "smcmax", "smcref", "smcwlt"]
 VEG_VARS_NAMES = ["nroot", "snup", "rsmin", "rgl", "hs", "xlai"]
 
+PREPARE_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",
+    "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
+    "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
+    "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
+    "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old", "canopy_old"]
+
+PREPARE_VARS_2D = ["sldpth", "rtdis", "smc_old", "stc_old", "slc_old"]
+CANRES_VARS = ["rc", "pc", "rcs", "rct", "rcq", "rcsoil"]
+
+
 
 def numpy_to_gt4py_storage(arr, backend):
     """convert numpy storage to gt4py storage"""
@@ -75,6 +85,13 @@ def numpy_table_to_gt4py_storage(arr, index_arr, backend):
     if data.dtype == "bool" or data.dtype == "int64":
         data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=backend, shape=(new_arr.shape[0], 1), mask=(True,True,False), default_origin=(0, 0, 0))
+
+def initialize_gt4py_storage(dim1, dim2, type):
+    if dim2 != 1:
+        return gt.storage.zeros(backend=BACKEND, dtype=type, shape=(dim1,1,dim2), default_origin=(0,0,0))
+    else:
+        return gt.storage.zeros(backend=BACKEND, dtype=type, shape=(dim1,3), mask=(True,True,False), default_origin=(0,0,0))
+
 
 
 def fpvs_fn(c1xpvs, c2xpvs, tbpvs, t):
@@ -125,10 +142,10 @@ def run(in_dict, in_dict2, backend):
     tic = timeit.default_timer()
 
     # prepare for sflx
-    zsoil_root = gt.storage.zeros(backend=BACKEND, dtype=np.float64, shape=(im,1), mask=(True,True,False), default_origin=(0,0,0))
-    q0 = gt.storage.zeros(backend=BACKEND, dtype=np.float64, shape=(im,1), mask=(True,True,False), default_origin=(0,0,0))
+    prepare_dict1 = {k: initialize_gt4py_storage(im, 1, np.float64) for k in PREPARE_VARS_1D}
+    prepare_dict2 = {k: initialize_gt4py_storage(im, km, np.float64) for k in PREPARE_VARS_2D}
 
-    prepare_sflx(zsoil, km, zsoil_root, q0, **in_dict, **out_dict, **scalar_dict, **table_dict)
+    prepare_sflx(zsoil, km, **prepare_dict1, **prepare_dict2, **in_dict, **out_dict, **scalar_dict, **table_dict)
 
     # prepare_sflx(in_dict["t1"], in_dict["q1"], in_dict["cm"], in_dict["ch"], in_dict["prsl1"],
     #              in_dict["prslki"], in_dict["zf"], in_dict["land"], in_dict["wind"], in_dict["flag_iter"], 
@@ -141,7 +158,11 @@ def run(in_dict, in_dict2, backend):
     #              table_dict["dksat"], table_dict["smcmax"], table_dict["smcref"], table_dict["smcwlt"], table_dict["smcdry"],table_dict["bexp"], table_dict["xlai"], table_dict["quartz"], zsoil_root, q0)
 
     # run sflx algorithm 
-    # TODO
+    canres_dict = {k: initialize_gt4py_storage(im, 1, np.float64) for k in CANRES_VARS}
+    canres(table_dict["nroot"], in_dict["dswsfc"], prepare_dict1["chx"], prepare_dict1["q0"], prepare_dict1["qs1"], prepare_dict1["dqsdt2"], in_dict["t1"],
+              prepare_dict1["cpx1"], in_dict["prsl1"], in_dict["sfcemis"], out_dict["slc"], table_dict["smcwlt"], table_dict["smcref"], zsoil, table_dict["rsmin"],
+              table_dict["rgl"], table_dict["hs"], table_dict["xlai"], in_dict["flag_iter"], in_dict["land"], prepare_dict1["zsoil_root"], in_dict["sigmaf"],
+              **canres_dict)
 
     # post sflx data handling
     # TODO: handling of smc0
@@ -329,8 +350,10 @@ def prepare_sflx(
     prcp: DT_F, dqsdt2: DT_F, snowh: DT_F, sneqv: DT_F, chx: DT_F, cmx: DT_F, z0: DT_F,
     shdfac: DT_F, kdt: DT_F, frzx: DT_F, sndens: DT_F, snowng: DT_F, prcp1: DT_F,
     sncovr: DT_F, df1: DT_F, ssoil: DT_F, t2v: DT_F, fdown: DT_F, cpx1: DT_F, 
+    weasd_old: DT_F, snwdph_old: DT_F, tskin_old: DT_F, tprcp_old: DT_F, srflag_old: DT_F, 
+    canopy_old: DT_F,
     # output 2D
-    sldpth: DT_F2, rtdis: DT_F2, 
+    sldpth: DT_F2, rtdis: DT_F2, smc_old: DT_F2, stc_old: DT_F2, slc_old: DT_F2,
     # input output
     ps: DT_F, t1: DT_F, q1: DT_F, soiltyp: DT_I, vegtype: DT_I, sigmaf: DT_F,
     sfcemis: DT_F, dlwflx: DT_F, dswsfc: DT_F, snet: DT_F, tg3: DT_F, cm: DT_F, ch: DT_F,
@@ -344,11 +367,6 @@ def prepare_sflx(
     smcwlt2: DT_F, smcref2: DT_F, wet1: DT_F, delt: float, lheatstrg: int, ivegsrc: int,
     bexp: DT_F, dksat: DT_F, dwsat: DT_F, f1: DT_F, psisat: DT_F, quartz: DT_F, smcdry: DT_F, smcmax: DT_F, smcref: DT_F, smcwlt: DT_F,
     nroot: DT_I, snup: DT_F, rsmin: DT_F, rgl: DT_F, hs: DT_F, xlai: DT_F, slope: DT_F,
-    #  old output
-    weasd_old: DT_F, snwdph_old: DT_F, tskin_old: DT_F, tprcp_old: DT_F, srflag_old: DT_F, 
-    canopy_old: DT_F, smc_old: DT_F2, stc_old: DT_F2, slc_old: DT_F2,
-    
-
 ):
     from __gtscript__ import BACKWARD, computation, interval
 
@@ -652,9 +670,9 @@ def prepare_sflx(
 
                 
 @gtscript.stencil(backend=BACKEND)
-def canres(nroot: DT_I, dswsfc: DT_F, ch: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: DT_F, sfctmp: DT_F,
-              cpx1: DT_F, sfcprs: DT_F, sfcems: DT_F, sh2o: DT_F2, smcwlt: DT_F, smcref: DT_F, zsoil: DT_F, rsmin: DT_F,
-              rsmax: DT_F, topt: DT_F, rgl: DT_F, hs: DT_F, xlai: DT_F, flag_iter:DT_I, land:DT_I, zsoil_root: DT_F, shdfac: DT_F,
+def canres(nroot: DT_I, dswsfc: DT_F, chx: DT_F, q0: DT_F, qs1: DT_F, dqsdt2: DT_F, t1: DT_F,
+              cpx1: DT_F, prsl1: DT_F, sfcemis: DT_F, slc: DT_F2, smcwlt: DT_F, smcref: DT_F, zsoil: DT_FK, rsmin: DT_F,
+              rgl: DT_F, hs: DT_F, xlai: DT_F, flag_iter:DT_I, land:DT_I, zsoil_root: DT_F, sigmaf: DT_F,
               # output
               rc: DT_F, pc: DT_F, rcs: DT_F, rct: DT_F, rcq: DT_F, rcsoil: DT_F):
     from __gtscript__ import FORWARD, computation, interval
@@ -662,6 +680,14 @@ def canres(nroot: DT_I, dswsfc: DT_F, ch: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: D
     with computation(FORWARD):
         with interval(0,1):
             if flag_iter and land:
+                sfcprs = prsl1
+                q2sat = qs1
+                shdfac = sigmaf
+                ch = chx
+                sh2o = slc
+                sfctmp = t1
+                q2 = q0
+                
                 rc = 0.0
                 rcs = 0.0
                 rct = 0.0
@@ -681,12 +707,13 @@ def canres(nroot: DT_I, dswsfc: DT_F, ch: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: D
         with interval (1, None):
             if flag_iter and land:
                 if shdfac > 0.0:
+                    sh2o = slc
                     count = count[0, 0, -1] + 1
 
                     if nroot > count:
                         gx = max(0.0, min(1.0, (sh2o-smcwlt)/(smcref - smcwlt)))
                     
-                    sum += (zsoil[0,0] - zsoil[0,-1]) * gx / zsoil_root
+                    sum = sum[0, 0, -1] + (zsoil[0,0] - zsoil[0,-1]) * gx / zsoil_root
 
         with interval(-1, None):
             if flag_iter and land:
@@ -708,10 +735,11 @@ def canres(nroot: DT_I, dswsfc: DT_F, ch: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: D
 
                     # determine canopy resistance due to all factors
                     rc = rsmin / (xlai*rcs*rct*rcq*rcsoil)
-                    rr = (4.0*sfcems*sigma1*rd1/cpx1) * (sfctmp**4.0)/(sfcprs*ch) + 1.0
+                    rr = (4.0*sfcemis*sigma1*rd1/cpx1) * (sfctmp**4.0)/(sfcprs*ch) + 1.0
                     delta = (lsubc/cpx1) * dqsdt2
 
                     pc = (rr + delta) / (rr*(1.0 + rc*ch) + delta)
+
 
 
 
