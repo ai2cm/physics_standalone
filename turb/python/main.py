@@ -114,7 +114,7 @@ for tile in range(6):
             continue
 
     serializer = ser.Serializer(
-        ser.OpenModeKind.Read, "../fortran/data", "Generator_rank" + str(tile)
+        ser.OpenModeKind.Read, "../data", "Generator_rank" + str(tile)
     )
 
     # serializer_custom = ser.Serializer(
