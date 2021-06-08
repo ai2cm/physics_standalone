@@ -1,24 +1,10 @@
-from utility import *
-
 from microphys.phys_const import *
 
-if STENCILS == "normal":
-    from microphys.stencils.stencils_normal import *
-elif STENCILS == "fused_comp":
-    from microphys.stencils.stencils_fused_comp import *
-elif STENCILS == "no_funcs":
-    from microphys.stencils.stencils_no_funcs import *
-elif STENCILS == "no_funcs_opt":
-    from microphys.stencils.stencils_no_funcs_opt import *
-elif STENCILS == "merged":
-    from microphys.stencils.stencils_merged import *
-elif STENCILS == "optimal":
-    from microphys.stencils.stencils_optimal import *
-
+from microphys.stencils.stencils_normal import *
 import numpy as np
 import gt4py as gt
 import math as mt
-
+from utility.serialization import *
 
 # Global variables for microphysics
 c_air = None
@@ -51,12 +37,34 @@ do_setup = True  # Setup constants and parameters
 p_nonhydro = 0  # Perform hydrosatic adjustment on air density
 use_ccn = 1  # Must be true when prog_ccn is false
 
+# Cast a dictionary of gt4py storages into dictionary of numpy arrays
+def view_gt4py_storage(gt4py_dict):
+
+    np_dict = {}
+
+    for var in gt4py_dict:
+
+        data = gt4py_dict[var]
+
+        # ~ if not isinstance(data, np.ndarray): data.synchronize()
+        if BACKEND == "gtcuda":
+            data.synchronize()
+
+        np_dict[var] = data.view(np.ndarray)
+
+    return np_dict
+
 
 # Execute the full GFDL cloud microphysics (split stencils version)
-def gfdl_cloud_microphys_driver_split(
-    input_data, hydrostatic, phys_hydrostatic, kks, ktop, timings, n_iter, not_first_rep
-):
-
+def run(input_data, timings):
+    gfdl_cloud_microphys_init()
+    input_data = scale_dataset(input_data, (1.0, 1))
+    if BACKEND == "gtx86" or BACKEND == "gtcuda":
+        input_data = numpy_dict_to_gt4py_dict(input_data)
+    hydrostatic = False
+    phys_hydrostatic = True
+    kks = 0
+    ktop = 0
     # Scalar input values (-1 for indices, since ported from Fortran)
     kke = input_data["kke"] - 1  # End of vertical dimension
     kbot = input_data["kbot"] - 1  # Bottom of vertical compute domain
@@ -258,13 +266,6 @@ def gfdl_cloud_microphys_driver_split(
         cpaut,
         exec_info=exec_info,
     )
-    if BENCHMARK:
-        timings["fields_ini_call"][n_iter] += (
-            exec_info["call_end_time"] - exec_info["call_start_time"]
-        )
-        timings["fields_ini_run"][n_iter] += (
-            exec_info["run_end_time"] - exec_info["run_start_time"]
-        )
 
     so3 = 7.0 / 3.0
 
@@ -336,14 +337,6 @@ def gfdl_cloud_microphys_driver_split(
             exec_info=exec_info,
         )
 
-        if BENCHMARK and not_first_rep:
-            timings["warm_rain_1_call"][n_iter] += (
-                exec_info["call_end_time"] - exec_info["call_start_time"]
-            )
-            timings["warm_rain_1_run"][n_iter] += (
-                exec_info["run_end_time"] - exec_info["run_start_time"]
-            )
-
         exec_info = {}
 
         # Sedimentation of cloud ice, snow, and graupel
@@ -377,14 +370,6 @@ def gfdl_cloud_microphys_driver_split(
             fac_imlt,
             exec_info=exec_info,
         )
-
-        if BENCHMARK and not_first_rep:
-            timings["sedimentation_call"][n_iter] += (
-                exec_info["call_end_time"] - exec_info["call_start_time"]
-            )
-            timings["sedimentation_run"][n_iter] += (
-                exec_info["run_end_time"] - exec_info["run_start_time"]
-            )
 
         exec_info = {}
 
@@ -435,14 +420,6 @@ def gfdl_cloud_microphys_driver_split(
             zs,
             exec_info=exec_info,
         )
-
-        if BENCHMARK and not_first_rep:
-            timings["warm_rain_2_call"][n_iter] += (
-                exec_info["call_end_time"] - exec_info["call_start_time"]
-            )
-            timings["warm_rain_2_run"][n_iter] += (
-                exec_info["run_end_time"] - exec_info["run_start_time"]
-            )
 
         exec_info = {}
 
@@ -519,14 +496,6 @@ def gfdl_cloud_microphys_driver_split(
             fac_l2v,
             exec_info=exec_info,
         )
-
-        if BENCHMARK and not_first_rep:
-            timings["icloud_call"][n_iter] += (
-                exec_info["call_end_time"] - exec_info["call_start_time"]
-            )
-            timings["icloud_run"][n_iter] += (
-                exec_info["run_end_time"] - exec_info["run_start_time"]
-            )
     exec_info = {}
     fields_update(
         graupel,
@@ -574,38 +543,34 @@ def gfdl_cloud_microphys_driver_split(
         rdt,
         exec_info=exec_info,
     )
-    if BENCHMARK:
-        timings["fields_update_call"][n_iter] += (
-            exec_info["call_end_time"] - exec_info["call_start_time"]
-        )
-        timings["fields_update_run"][n_iter] += (
-            exec_info["run_end_time"] - exec_info["run_start_time"]
-        )
 
     """
     NOTE: Radar part missing (never executed since lradar is false)
     """
 
-    return (
-        qi,
-        qs,
-        qv_dt,
-        ql_dt,
-        qr_dt,
-        qi_dt,
-        qs_dt,
-        qg_dt,
-        qa_dt,
-        pt_dt,
-        w,
-        udt,
-        vdt,
-        rain,
-        snow,
-        ice,
-        graupel,
-        refl_10cm,
+    output = view_gt4py_storage(
+        {
+            "qi": qi[:, :, :],
+            "qs": qs[:, :, :],
+            "qv_dt": qv_dt[:, :, :],
+            "ql_dt": ql_dt[:, :, :],
+            "qr_dt": qr_dt[:, :, :],
+            "qi_dt": qi_dt[:, :, :],
+            "qs_dt": qs_dt[:, :, :],
+            "qg_dt": qg_dt[:, :, :],
+            "qa_dt": qa_dt[:, :, :],
+            "pt_dt": pt_dt[:, :, :],
+            "w": w[:, :, :],
+            "udt": udt[:, :, :],
+            "vdt": vdt[:, :, :],
+            "rain": rain[:, :, 0],
+            "snow": snow[:, :, 0],
+            "ice": ice[:, :, 0],
+            "graupel": graupel[:, :, 0],
+            "refl_10cm": refl_10cm[:, :, :],
+        }
     )
+    return output
 
 
 # Execute the full GFDL cloud microphysics (merged stencils version)
@@ -923,14 +888,6 @@ def gfdl_cloud_microphys_driver_merged(
             fac_l2v,
             exec_info=exec_info,
         )
-
-        if BENCHMARK and not_first_rep:
-            timings["main_loop_call"][n_iter] += (
-                exec_info["call_end_time"] - exec_info["call_start_time"]
-            )
-            timings["main_loop_run"][n_iter] += (
-                exec_info["run_end_time"] - exec_info["run_start_time"]
-            )
 
     fields_update(
         graupel,

@@ -69,7 +69,10 @@ def numpy_dict_to_gt4py_dict(np_dict):
     for var in np_dict:
 
         data = np_dict[var]
-        ndim = data.ndim
+        if isinstance(data, np.ndarray):
+            ndim = data.ndim
+        else:
+            ndim = 0
 
         if (ndim > 0) and (ndim <= 3) and (data.size >= 2):
 
@@ -142,7 +145,6 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
 
 # Scale the input dataset for benchmarks
 def scale_dataset(data, factor):
-
     divider = factor[0]
     multiplier = factor[1]
 
@@ -153,7 +155,10 @@ def scale_dataset(data, factor):
     for var in data:
 
         data_var = data[var]
-        ndim = data_var.ndim
+        if isinstance(data_var, np.ndarray):
+            ndim = data_var.ndim
+        else:
+            ndim = 0
 
         if ndim == 3:
 
@@ -181,7 +186,12 @@ def scale_dataset(data, factor):
             if var == "iie":
                 scaled_data[var] = DTYPE_INT(data[var] * multiplier * divider)
             else:
-                scaled_data[var] = data[var]
+                if var in INT_VARS:
+                    scaled_data[var] = DTYPE_INT(data[var])
+                elif var in FLT_VARS:
+                    scaled_data[var] = DTYPE_FLT(data[var])
+                else:
+                    scaled_data[var] = data[var]
 
     return scaled_data
 
