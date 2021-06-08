@@ -114,7 +114,7 @@ def tdfcnd_fn(smc, qz, smcmax, sh2o):
 
 
 @gtscript.function
-def penman_fn(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
+def penman_fn(sfctmp, sfcprs, sfcemis, ch, t2v, th2, prcp, fdown,
               cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra, ffrozp):
     # --- ... subprograms called: none
 
@@ -136,7 +136,7 @@ def penman_fn(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
         rr += (cpice*ffrozp+cph2o1*(1.-ffrozp))*prcp/rch
 
     # ssoil = 13.753581783277639
-    fnet = fdown - sfcems*sigma1*t24 - ssoil
+    fnet = fdown - sfcemis*sigma1*t24 - ssoil
 
     # include the latent heat effects of frzng rain converting to ice
     # on impact in the calculation of flx2 and fnet.
@@ -475,6 +475,18 @@ def rosr12_first_fn(ai, bi, ci, d, p, delta):
 
 
 @gtscript.function
+def rosr12_second_lowerboundary_fn(p, delta):
+    p = delta
+    return p
+
+
+@gtscript.function
+def rosr12_second_fn(p, delta):
+    p = p[0, 0, 0] * p[0, 0, +1] + delta
+    return p
+
+
+@gtscript.function
 def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, sldpth):
     
     wplus = 0.
@@ -592,4 +604,470 @@ def smflx_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, d
     p, delta = rosr12_first_fn(ai, bi, ci, rhstt, p, delta)
 
     return rhstt, ci, runoff2, p, delta
+
+
+@gtscript.function
+def hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice):
+    # calculates the right hand side of the time tendency
+    # term of the soil thermal diffusion equation for sea-ice or glacial-ice
+
+    # set a nominal universal value of specific heat capacity
+    if ice == 1:        # sea-ice
+        hcpct = 1.72396e+6
+    else:               # glacial-ice
+        hcpct = 1.89000e+6
+
+    # 1. Layer
+    # calc the matrix coefficients ai, bi, and ci for the top layer
+    ddz = 1.0 / (-0.5*zsoil[0,+1])
+    ai = 0.0
+    ci = (df1*ddz) / (zsoil*hcpct)
+    bi = -ci + df1 / (0.5*zsoil*zsoil*hcpct*zz1)
+
+    # calc the vertical soil temp gradient btwn the top and 2nd soil
+    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / (-0.5*zsoil[0,+1])
+    ssoil = df1 * (stc - yy) / (0.5*zsoil*zz1)
+    rhsts = (df1*dtsdz - ssoil) / (zsoil*hcpct)
+
+    return rhsts, ai, bi, ci, dtsdz, ddz, hcpct
+
+
+@gtscript.function
+def hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz):
+    # calculates the right hand side of the time tendency
+    # term of the soil thermal diffusion equation for sea-ice or glacial-ice
+
+    denom = 0.5 * (zsoil[0,-1] - zsoil[0,+1])
+    dtsdz = (stc[0,0,0] - stc[0,0,1])/denom
+    ddz = 2.0 / (zsoil[0,-1] - zsoil[0,+1])
+    ci = - df1 * ddz / ((zsoil[0,-1] - zsoil[0,0])*hcpct)
+
+    denom = ((zsoil[0,0] - zsoil[0,-1])*hcpct)
+    rhsts = (df1*dtsdz - df1*dtsdz[0,0,-1]) / denom
+
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0])*hcpct)
+    bi = -(ai + ci)
+
+    return rhsts, ai, bi, ci, dtsdz, ddz
+
+
+@gtscript.function
+def hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot):
+    # calculates the right hand side of the time tendency
+    # term of the soil thermal diffusion equation for sea-ice or glacial-ice
+
+    # set ice pack depth
+    if ice == 1:
+        zbot = zsoil
+        tbot = 271.16
+    else:
+        zbot = -25.0
+
+    dtsdz = (stc[0,0,0] - tbot)/(0.5 * (zsoil[0,-1] - zsoil[0,0]) - zbot)
+    ci = 0.0
+
+    denom = (zsoil[0,0] - zsoil[0,-1])*hcpct
+    rhsts = (df1*dtsdz - df1*dtsdz[0,0,-1]) / denom
+
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0])*hcpct)
+    bi = -(ai + ci)
+
+    return rhsts, ai, bi, ci, tbot
+
+
+@gtscript.function
+def tmpavg_fn(tup, tm, tdn, dz):
+
+    dzh = dz * 0.5
+
+    if tup < tfreez:
+        if tm < tfreez:
+            if tdn < tfreez:
+                tavg = (tup + 2.0*tm + tdn) / 4.0
+            else:
+                x0 = (tfreez - tm) * dzh / (tdn - tm)
+                tavg = 0.5*(tup*dzh + tm*(dzh+x0) +
+                            tfreez*(2.*dzh-x0)) / dz
+        else:
+            if tdn < tfreez:
+                xup = (tfreez-tup) * dzh / (tm-tup)
+                xdn = dzh - (tfreez-tm) * dzh / (tdn-tm)
+                tavg = 0.5*(tup*xup + tfreez *
+                            (2.*dz-xup-xdn)+tdn*xdn) / dz
+            else:
+                xup = (tfreez-tup) * dzh / (tm-tup)
+                tavg = 0.5*(tup*xup + tfreez*(2.*dz-xup)) / dz
+    else:
+        if tm < tfreez:
+            if tdn < tfreez:
+                xup = dzh - (tfreez-tup) * dzh / (tm-tup)
+                tavg = 0.5*(tfreez*(dz-xup) + tm *
+                            (dzh+xup)+tdn*dzh) / dz
+            else:
+                xup = dzh - (tfreez-tup) * dzh / (tm-tup)
+                xdn = (tfreez-tm) * dzh / (tdn-tm)
+                tavg = 0.5 * (tfreez*(2.*dz-xup-xdn) +
+                              tm*(xup+xdn)) / dz
+        else:
+            if tdn < tfreez:
+                xdn = dzh - (tfreez-tm) * dzh / (tdn-tm)
+                tavg = (tfreez*(dz-xdn) + 0.5*(tfreez+tdn)*xdn) / dz
+            else:
+                tavg = (tup + 2.0*tm + tdn) / 4.0
+    return tavg
+
+
+@gtscript.function
+def frh2o_loop_fn(psisat, ck, swl, smcmax, smc, bx, tavg, error):
+    df = log((psisat*gs2/lsubf) * ((1.0 + ck*swl)**2.0) *
+             (smcmax / (smc - swl))**bx) - log(-(tavg - tfreez) / tavg)
+
+    denom = 2.0*ck/(1.0 + ck*swl) + bx/(smc - swl)
+    swlk = swl - df / denom
+
+    # bounds useful for mathematical solution.
+    swlk = max(min(swlk, smc-0.02), 0.0)
+
+    # mathematical solution bounds applied.
+    dswl = abs(swlk - swl)
+    swl = swlk
+
+    if dswl <= error:
+        kcount = False
+
+    free = smc - swl
+
+    return kcount, free, swl
+
+
+@gtscript.function
+def frh2o_fn(psis, bexp, tavg, smc, sh2o, smcmax):
+    ### ************ frh2o *********** ###
+    # constant parameters
+    ck = 8.0
+    blim = 5.5
+    error = 0.005
+    bx = min(bexp, blim)
+
+    kcount = True
+
+    if tavg <= (tfreez - 1.e-3):
+        swl = smc - sh2o
+        swl = max(min(swl, smc-0.02), 0.0)
+
+        kcount, free, swl = frh2o_loop_fn(
+            psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+        if kcount:
+            kcount, free, swl = frh2o_loop_fn(
+                psis, ck, swl, smcmax, smc, bx, tavg, error)
+
+    else:
+        free = smc
+
+    return free
+
+
+@gtscript.function
+def snksrc_fn(free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz):
+
+    # estimate the new amount of liquid water
+    dh2o = 1.0000e3
+    xh2o = sh2o + qtot*dt / (dh2o*lsubf*dz)
+
+    if xh2o < sh2o and xh2o < free:
+        if free > sh2o:
+            xh2o = sh2o
+        else:
+            xh2o = free
+    if xh2o > sh2o and xh2o > free:
+        if free < sh2o:
+            xh2o = sh2o
+        else:
+            xh2o = free
+
+    xh2o = max(min(xh2o, smc), 0.0)
+    tsnsr = -dh2o * lsubf * dz * (xh2o - sh2o) / dt
+    sh2o = xh2o
+
+    return tsnsr, sh2o
+
+
+
+@gtscript.function
+def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
+                         csoil, ivegsrc, vegtype, shdfac, sh2o):
+ 
+    csoil_loc = csoil
+
+    if ivegsrc == 1 and vegtype == 12:
+        csoil_loc = 3.0e6*(1.-shdfac)+csoil*shdfac
+
+    # calc the heat capacity of the top soil layer
+    hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+        (smcmax - smc)*cp2 + (smc - sh2o)*cpice1
+
+    # calc the matrix coefficients ai, bi, and ci for the top layer
+    ddz = 1.0 / (-0.5*zsoil[0,+1])
+    ai = 0.0
+    ci = (df1*ddz) / (zsoil[0,0]*hcpct)
+    bi = -ci + df1 / (0.5*zsoil*zsoil*hcpct*zz1)
+
+    # calc the vertical soil temp gradient btwn the top and 2nd soil
+    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / (-0.5*zsoil[0,+1])
+    ssoil = df1 * (stc[0,0,0] - yy) / (0.5*zsoil[0,0]*zz1)
+    rhsts = (df1*dtsdz - ssoil) / (zsoil[0,0]*hcpct)
+
+    # capture the vertical difference of the heat flux at top and
+    # bottom of first soil layer
+    qtot = ssoil - df1 * dtsdz
+
+    tsurf = (yy + (zz1-1)*stc[0,0,0]) / zz1
+
+    # linear interpolation between the average layer temperatures
+    tbk = stc[0,0,0] + (stc[0,0,+1]-stc[0,0,0])*zsoil[0,0]/zsoil[0,+1]
+    # calculate frozen water content in 1st soil layer.
+    sice = smc[0,0,0] - sh2o[0,0,0]
+
+    df1k = df1
+
+    if sice > 0 or tsurf < tfreez or stc[0,0,0] < tfreez or tbk < tfreez:
+        ### ************ tmpavg *********** ###
+        dz = -zsoil[0,0]
+        tavg = tmpavg_fn(tsurf, stc[0,0,0], tbk, dz)
+        ### ************ snksrc *********** ###
+        free = frh2o_fn(psisat, bexp, tavg, smc, sh2o, smcmax)
+        tsnsr, sh2o = snksrc_fn(
+            free, psisat, bexp, tavg, smc[0,0,0], sh2o[0,0,0], smcmax, qtot, dt, dz)
+        ### ************ END snksrc *********** ###
+
+        rhsts -= tsnsr / (zsoil[0,0] * hcpct)
+
+    return sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz
+
+
+@gtscript.function
+def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+            tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc):
+
+    hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+        (smcmax - smc)*cp2 + (smc - sh2o)*cpice1
+
+    # calculate thermal diffusivity for each layer
+    df1k = tdfcnd_fn(smc, quartz, smcmax, sh2o)
+
+    if ivegsrc == 1 and vegtype == 12:
+        df1k = 3.24*(1.-shdfac) + shdfac*df1k
+
+    tbk = stc[0,0,+1] + (stc[0,0,+1]-stc[0,0,0])*(zsoil[0,-1] - zsoil[0,0])/(zsoil[0,-1] - zsoil[0,+1])
+    # calc the vertical soil temp gradient thru each layer
+    denom = 0.5 * (zsoil[0,-1] - zsoil[0,+1])
+    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / denom
+    ddz = 2.0 / (zsoil[0,-1] - zsoil[0,+1])
+
+    ci = - df1k*ddz / ((zsoil[0,-1] - zsoil[0,0]) * hcpct)
+
+    # calculate rhsts
+    denom = (zsoil[0,0] - zsoil[0,-1])*hcpct
+    rhsts = (df1k*dtsdz[0,0,0] - df1k[0,0,-1]*dtsdz[0,0,-1])/denom
+
+    qtot = -1. * denom * rhsts
+    sice = smc - sh2o
+
+    if sice > 0 or tbk[0,0,-1] < tfreez or stc < tfreez or tbk[0,0,0] < tfreez:
+        ### ************ tmpavg *********** ###
+        dz = zsoil[0,-1] - zsoil[0,0]
+        tavg = tmpavg_fn(tbk[0,0,-1], stc, tbk[0,0,0], dz)
+        ### ************ snksrc *********** ###
+        tsnsr, sh2o = snksrc_fn(
+            free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
+        ### ************ END snksrc *********** ###
+        rhsts -= tsnsr / denom
+
+    # calc matrix coefs, ai, and bi for this layer.
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0]) * hcpct)
+    bi = - (ai + ci)
+
+    return sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz
+
+
+@gtscript.function
+def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+            tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot):
+
+    hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+        (smcmax - smc)*cp2 + (smc - sh2o)*cpice1
+
+    # calculate thermal diffusivity for each layer
+    df1k = tdfcnd_fn(smc, quartz, smcmax, sh2o)
+
+    if ivegsrc == 1 and vegtype == 12:
+        df1k = 3.24*(1.-shdfac) + shdfac*df1k
+
+    tbk = stc[0,0,0] + (tbot-stc[0,0,0])*(zsoil[0,-1] - zsoil[0,0])/(zsoil[0,-1] + zsoil[0,0] - 2. * zbot)
+    # calc the vertical soil temp gradient thru each layer
+    denom = 0.5 * (zsoil[0,-1] + zsoil[0,0]) - zbot
+    dtsdz = (stc[0,0,0] - tbot) / denom
+
+    ci = 0.0
+
+    # calculate rhsts
+    denom = (zsoil[0,0] - zsoil[0,-1])*hcpct
+    rhsts = (df1k*dtsdz[0,0,0] - df1k[0,0,-1]*dtsdz[0,0,-1])/denom
+
+    qtot = -1. * denom * rhsts
+    sice = smc - sh2o
+
+    if sice > 0 or tbk[0,0,-1] < tfreez or stc < tfreez or tbk[0,0,0] < tfreez:
+        ### ************ tmpavg *********** ###
+        dz = zsoil[0,-1] - zsoil[0,0]
+        tavg = tmpavg_fn(tbk[0,0,-1], stc, tbk[0,0,0], dz)
+        ### ************ snksrc *********** ###
+        tsnsr, sh2o = snksrc_fn(
+            free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
+        ### ************ END snksrc *********** ###
+        rhsts -= tsnsr / denom
+
+    # calc matrix coefs, ai, and bi for this layer.
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0]) * hcpct)
+    bi = - (ai + ci)
+
+    return sh2o, rhsts, ai, bi, ci
+
+
+@gtscript.function
+def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
+    zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o):
+
+    stsoil = stc
+
+    if ice != 0:  # sea-ice or glacial ice case
+        rhsts, ai, bi, ci, dtsdz, ddz, hcpct = hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice)
+
+    else:
+        sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz = hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
+                         csoil, ivegsrc, vegtype, shdfac, sh2o)
+
+    ai *= dt
+    bi = dt*bi + 1.
+    ci *= dt
+    rhsts *= dt
+
+    p, delta = rosr12_first_upperboundary_fn(ai, bi, ci, rhsts)
+
+    return stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz
+
+
+@gtscript.function
+def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
+                    hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta):
+
+    stsoil = stc
+
+    if ice != 0:  # sea-ice or glacial ice case
+        rhsts, ai, bi, ci, dtsdz, ddz = hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz)
+
+    else:
+        sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz = hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+            tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc)
+    ai *= dt
+    bi = dt*bi + 1.
+    ci *= dt
+    rhsts *= dt
+
+    p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta)
+
+    return stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz   
+
+ 
+@gtscript.function
+def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
+                    hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta):
+
+    stsoil = stc
+
+    if ice != 0:  # sea-ice or glacial ice case
+        rhsts, ai, bi, ci, tbot = hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot)
+
+    else:
+        sh2o, rhsts, ai, bi, ci = hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+            tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot)
+    ai *= dt
+    bi = dt*bi + 1.
+    ci *= dt
+    rhsts *= dt
+
+    p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta)
+
+    return stsoil, sh2o, p, delta, tbot
+
+
+
+@gtscript.function
+def shflx_second_lowerboundary_fn(p, delta, stc, stsoil):
+    ci = rosr12_second_lowerboundary_fn(p, delta)
+    stc += ci
+
+    ctfil1 = 0.5
+    ctfil2 = 1.0 - ctfil1
+
+    stc = ctfil1*stc + ctfil2*stsoil
+
+    return stc
+
+
+@gtscript.function
+def shflx_second_fn(p, delta, stc, stsoil):
+    ci = rosr12_second_fn(p, delta)
+    stc += ci
+
+    ctfil1 = 0.5
+    ctfil2 = 1.0 - ctfil1
+
+    stc = ctfil1*stc + ctfil2*stsoil
+
+    return stc
+
+@gtscript.function
+def shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil):
+    ci = rosr12_second_fn(p, delta)
+    stc += ci
+
+    ctfil1 = 0.5
+    ctfil2 = 1.0 - ctfil1
+
+    oldt1 = t1
+    t1 = (yy + (zz1 - 1.0)*stc) / zz1
+    t1 = ctfil1*t1 + ctfil2*oldt1
+
+    stc = ctfil1*stc + ctfil2*stsoil
+    
+    # calculate surface soil heat flux
+    ssoil = df1*(stc - t1) / (0.5*zsoil)
+
+    return ssoil, stc, t1
+
 

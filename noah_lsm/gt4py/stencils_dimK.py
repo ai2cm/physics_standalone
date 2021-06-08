@@ -11,6 +11,7 @@ DT_I = gtscript.Field[gtscript.IJ, np.int32]
 DT_FK = gtscript.Field[gtscript.IK, np.float64]
 BACKEND = "numpy"
 
+
 @gtscript.stencil(backend=BACKEND)
 def prepare_sflx(
     zsoil: DT_FK, km: int,
@@ -20,7 +21,7 @@ def prepare_sflx(
     shdfac: DT_F, kdt: DT_F, frzx: DT_F, sndens: DT_F, snowng: DT_F, prcp1: DT_F,
     sncovr: DT_F, df1: DT_F, ssoil: DT_F, t2v: DT_F, fdown: DT_F, cpx1: DT_F,
     weasd_old: DT_F, snwdph_old: DT_F, tskin_old: DT_F, tprcp_old: DT_F, srflag_old: DT_F,
-    canopy_old: DT_F, etp: DT_F,
+    canopy_old: DT_F, etp: DT_F, t24: DT_F, rch: DT_F, epsca: DT_F, rr: DT_F, flx2: DT_F,
     # output 2D
     sldpth: DT_F2, rtdis: DT_F2, smc_old: DT_F2, stc_old: DT_F2, slc_old: DT_F2,
     # input output
@@ -35,7 +36,7 @@ def prepare_sflx(
     cmm: DT_F, chh: DT_F, evbs: DT_F, evcw: DT_F, sbsno: DT_F, snowc: DT_F, stm: DT_F, snohf: DT_F,
     smcwlt2: DT_F, smcref2: DT_F, wet1: DT_F, delt: float, lheatstrg: int, ivegsrc: int,
     bexp: DT_F, dksat: DT_F, dwsat: DT_F, f1: DT_F, psisat: DT_F, quartz: DT_F, smcdry: DT_F, smcmax: DT_F, smcref: DT_F, smcwlt: DT_F,
-    nroot: DT_I, snup: DT_F, rsmin: DT_F, rgl: DT_F, hs: DT_F, xlai: DT_F, slope: DT_F,
+    nroot: DT_I, snup: DT_F, rsmin: DT_F, rgl: DT_F, hs: DT_F, xlai: DT_F, slope: DT_F
 ):
     from __gtscript__ import BACKWARD, computation, interval
 
@@ -166,7 +167,7 @@ def prepare_sflx(
                 dt = delt
                 sfctmp = t1
                 q2 = q0
-                sfcems = sfcemis
+                sfcemis = sfcemis
                 sfcprs = prsl1
                 th2 = theta1
                 q2sat = qs1
@@ -331,9 +332,8 @@ def prepare_sflx(
                 cpx1 = cp1
                 cpfac = 1.0
 
-                t24, etp, rch, epsca, rr, flx2 = penman_fn(sfctmp, sfcprs, sfcems, ch, t2v, th2, prcp, fdown,
+                t24, etp, rch, epsca, rr, flx2 = penman_fn(sfctmp, sfcprs, sfcemis, ch, t2v, th2, prcp, fdown,
                                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra, ffrozp)
-
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -502,10 +502,10 @@ def nopac_evapo_third(etp: DT_F, sigmaf: DT_F, slc: DT_F2, flag_iter: DT_I, land
                     ett = ett1 * 1000.0
 
 
-
 @gtscript.stencil(backend=BACKEND)
 def nopac_smflx_first(dt: float, smcmax: DT_F, smcwlt: DT_F, prcp: DT_F, prcp1: DT_F, zsoil: DT_FK, shdfac: DT_F, ec1: DT_F,
                       cmc: DT_F, sh2o: DT_F2, smc: DT_F2, flag_iter: DT_I, land: DT_I, etp: DT_F, sneqv: DT_F,
+                      # output
                       sicemax: DT_F, dd: DT_F, dice: DT_F, pcpdrp: DT_F, rhsct: DT_F, drip: DT_F, sice: DT_F2, dew: DT_F):
     from __gtscript__ import FORWARD, computation, interval
 
@@ -527,7 +527,7 @@ def nopac_smflx_first(dt: float, smcmax: DT_F, smcwlt: DT_F, prcp: DT_F, prcp1: 
             if flag_iter and land:
                 if sneqv == 0.0:
                     sicemax, dd, dice, sice = smflx_first_fn(smcmax, smcwlt, zsoil, sh2o, smc, pcpdrp, sicemax,
-                                                                dd, dice)
+                                                             dd, dice)
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -557,7 +557,7 @@ def nopac_smflx_second(etp: DT_F, smcmax: DT_F, dt: float, bexp: DT_F, kdt: DT_F
                 if sneqv == 0.0:
                     if etp > 0.0:
                         rhstt, ci, runoff2, p, delta = smflx_second_lowerboundary_fn(et1, sh2o, zsoil, dwsat, dksat, smcmax, bexp, dt, sicemax, slope,
-                                  rhstt, ci, runoff2, dsmdz, ddz, wdf, wcnd, p, delta)
+                                                                                     rhstt, ci, runoff2, dsmdz, ddz, wdf, wcnd, p, delta)
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -573,23 +573,25 @@ def rosr12_second(p: DT_F2, delta: DT_F2, flag_iter: DT_I, land: DT_I, ci: DT_F2
         with interval(0, -1):
             if flag_iter and land:
                 ci = p[0, 0, 0] * ci[0, 0, +1] + delta
-        
+
 
 @gtscript.stencil(backend=BACKEND)
 def nopac_smflx_third(smcmax: DT_F, dt: float, flag_iter: DT_I, land: DT_I, sice: DT_F2, sldpth: DT_F2, rhsct: DT_F, ci: DT_F,
-                       # outpus
-                       sh2o: DT_F2, smc: DT_F2, cmc: DT_F, runoff3: DT_F):
+                      # outpus
+                      sh2o: DT_F2, smc: DT_F2, cmc: DT_F, runoff3: DT_F):
     from __gtscript__ import FORWARD, computation, interval
 
     with computation(FORWARD):
         with interval(0, 1):
             if flag_iter and land:
-                wplus, smc, sh2o = sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, sldpth)
-        
+                wplus, smc, sh2o = sstep_upperboundary_fn(
+                    sh2o, smc, smcmax, sice, ci, sldpth)
+
         with interval(1, -1):
             if flag_iter and land:
-                wplus, smc, sh2o = sstep_fn(sh2o, smc, smcmax, sice, ci, sldpth, wplus)
-        
+                wplus, smc, sh2o = sstep_fn(
+                    sh2o, smc, smcmax, sice, ci, sldpth, wplus)
+
         with interval(-1, None):
             if flag_iter and land:
                 runoff3 = wplus
@@ -601,6 +603,77 @@ def nopac_smflx_third(smcmax: DT_F, dt: float, flag_iter: DT_I, land: DT_I, sice
                 cmc = min(cmc, cmcmax)
 
 
+@gtscript.stencil(backend=BACKEND)
+def nopac_shflx_first(flag_iter: DT_I, land: DT_I, sneqv: DT_F, etp: DT_F, eta: DT_F, smc: DT_F2, quartz: DT_F, smcmax: DT_F, ivegsrc: int,
+                      vegtype: DT_I, shdfac: DT_F, fdown: DT_F, sfcemis: DT_F, t24: DT_F, sfctmp: DT_F, rch: DT_F, th2: DT_F, 
+                      epsca: DT_F, rr: DT_F, zsoil: DT_FK, dt: float, psisat: DT_F, bexp: DT_F, ice: DT_F, stc: DT_F2, 
+                      # output
+                      sh2o: DT_F2, stsoil: DT_F2, p: DT_F2, delta: DT_F2, tbot: DT_F, yy: DT_F, zz1: DT_F, df1: DT_F, beta: DT_F):
+    from __gtscript__ import FORWARD, computation, interval
+
+    with computation(FORWARD):
+        with interval(0, 1):
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    # based on etp and e values, determine beta
+                    if etp < 0.0:
+                        beta = 1.0
+                    elif etp == 0.0:
+                        beta = 0.0
+                    else:
+                        beta = eta / etp
+
+                    # get soil thermal diffuxivity/conductivity for top soil lyr, calc.
+                    df1 = tdfcnd_fn(smc, quartz, smcmax, sh2o)
+
+                    if (ivegsrc == 1) and (vegtype == 12):
+                        df1 = 3.24*(1.-shdfac) + shdfac*df1*exp(sbeta*shdfac)
+                    else:
+                        df1 *= exp(sbeta*shdfac)
+
+                    # compute intermediate terms passed to routine hrt
+                    yynum = fdown - sfcemis*sigma1*t24
+                    yy = sfctmp + (yynum/rch + th2 - sfctmp - beta*epsca)/rr
+                    zz1 = df1/(-0.5*zsoil*rch*rr) + 1.0
+
+                    stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
+                                                                                                                                     zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o)
+        
+        with interval(1, -1):
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
+                    hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta)
+        
+        with interval(-1, None):
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    stsoil, sh2o, p, delta, tbot = shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
+                    hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta)
+            
+
+@gtscript.stencil(backend=BACKEND)
+def nopac_shflx_second(flag_iter: DT_I, land: DT_I, sneqv: DT_F, zsoil: DT_FK, stsoil: DT_F2, p: DT_F2, delta: DT_F2, 
+                        yy: DT_F, zz1: DT_F, df1: DT_F,
+                        # output
+                        ssoil: DT_F, t1: DT_F, stc: DT_F2):
+    from __gtscript__ import BACKWARD, computation, interval
+
+    with computation(BACKWARD):
+        with interval(-1, None):
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    stc = shflx_second_lowerboundary_fn(p, delta, stc, stsoil)
+
+        with interval(1, -1):
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    stc = shflx_second_fn(p, delta, stc, stsoil)
+        
+        with interval(0, 1):
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    ssoil, stc, t1 = shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil)
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -665,4 +738,3 @@ def cleanup_sflx(
             slc = slc_old
         elif land:
             tskin = tsurf
-

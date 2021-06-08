@@ -42,7 +42,8 @@ PREPARE_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",
                    "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
                    "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
                    "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
-                   "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old", "canopy_old", "etp"]
+                   "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old", 
+                   "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2"]
 
 PREPARE_VARS_2D = ["sldpth", "rtdis", "smc_old", "stc_old", "slc_old"]
 CANRES_VARS = ["rc", "pc", "rcs", "rct", "rcq", "rcsoil"]
@@ -181,6 +182,7 @@ def run(in_dict, in_dict2, backend):
     general_dict["sh2o"] = general_dict["slc"]
     general_dict["sfctmp"] = general_dict["t1"]
     general_dict["q2"] = general_dict["q0"]
+    general_dict["tbot"] = general_dict["tg3"]
 
     canres(table_dict["nroot"], in_dict["dswsfc"], prepare_dict1["chx"], prepare_dict1["q0"], prepare_dict1["qs1"], prepare_dict1["dqsdt2"], in_dict["t1"],
            prepare_dict1["cpx1"], in_dict["prsl1"], in_dict["sfcemis"], out_dict[
@@ -253,6 +255,18 @@ def run(in_dict, in_dict2, backend):
                        # outpus
                        general_dict["rhstt"], general_dict["ci"], general_dict["runoff1"], general_dict["runoff2"], general_dict["dsmdz"], general_dict["ddz"], general_dict["wdf"], general_dict["wcnd"], general_dict["p"], general_dict["delta"])
 
+    general_dict["stsoil"] = initialize_gt4py_storage(im, km, np.float64)
+    general_dict["yy"] = initialize_gt4py_storage(im, 1, np.float64)
+    general_dict["zz1"] = initialize_gt4py_storage(im, 1, np.float64)
+    general_dict["beta"] = initialize_gt4py_storage(im, 1, np.float64)
+    nopac_shflx_first(general_dict["flag_iter"], general_dict["land"], general_dict["sneqv"], general_dict["etp"], general_dict["eta"], general_dict["smc"], general_dict["quartz"], general_dict["smcmax"], general_dict["ivegsrc"],
+                      general_dict["vegtype"], general_dict["shdfac"], general_dict["fdown"], general_dict["sfcemis"], general_dict["t24"], general_dict["sfctmp"], general_dict["rch"], general_dict["th2"], 
+                      general_dict["epsca"], general_dict["rr"], zsoil, general_dict["dt"], general_dict["psisat"], general_dict["bexp"], general_dict["ice"], general_dict["stc"], 
+                      general_dict["sh2o"], general_dict["stsoil"], general_dict["p"], general_dict["delta"], general_dict["tbot"], general_dict["yy"], general_dict["zz1"], general_dict["df1"], general_dict["beta"])
+
+    nopac_shflx_second(general_dict["flag_iter"], general_dict["land"], general_dict["sneqv"], zsoil, general_dict["stsoil"], general_dict["p"], general_dict["delta"], 
+                        general_dict["yy"], general_dict["zz1"], general_dict["df1"],
+                        general_dict["ssoil"], general_dict["t1"], general_dict["stc"])
     # post sflx data handling
     # TODO: handling of smc0
     # cleanup_sflx(in_dict["flag_iter"], in_dict["land"], eta, sheat, ssoil, edir,
@@ -272,8 +286,8 @@ def run(in_dict, in_dict2, backend):
 
     # convert back to numpy for validation
     out_dict = {**{k: gt4py_to_numpy_storage_onelayer(
-        out_dict[k], backend=backend) for k in INOUT_VARS}, **{k: gt4py_to_numpy_storage_multilayer(
-            out_dict[k], backend=backend) for k in INOUT_MULTI_VARS}}
+        general_dict[k], backend=backend) for k in INOUT_VARS}, **{k: gt4py_to_numpy_storage_multilayer(
+            general_dict[k], backend=backend) for k in INOUT_MULTI_VARS}}
 
     return out_dict
 
