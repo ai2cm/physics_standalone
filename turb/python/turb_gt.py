@@ -19,7 +19,7 @@ from gt4py.gtscript import (
     interval,
 )
 
-backend = "gtcuda"
+backend = BACKEND
 
 
 def run(in_dict, timings):
