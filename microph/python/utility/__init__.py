@@ -60,7 +60,7 @@ FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLT = gtscript.Field[DTYPE_FLT]
 
 # GT4PY parameters
-BACKEND        = str(os.getenv("VERSION")) if ("VERSION" in os.environ) else "gtx86"
+BACKEND        = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "gtx86"
 REBUILD        = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else True
 DEBUG_MODE     = (os.getenv("DEBUG_MODE") == "True") if ("DEBUG_MODE" in os.environ) else False
 DEFAULT_ORIGIN = (0, 0, 0)

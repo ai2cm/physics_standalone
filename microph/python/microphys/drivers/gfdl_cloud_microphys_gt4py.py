@@ -59,7 +59,7 @@ def view_gt4py_storage(gt4py_dict):
 def run(input_data, timings):
     gfdl_cloud_microphys_init()
     input_data = scale_dataset(input_data, (1.0, 1))
-    if BACKEND == "gtx86" or BACKEND == "gtcuda":
+    if BACKEND == "gtx86" or BACKEND == "gtcuda" or BACKEND == "numpy":
         input_data = numpy_dict_to_gt4py_dict(input_data)
     hydrostatic = False
     phys_hydrostatic = True

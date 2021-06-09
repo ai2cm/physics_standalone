@@ -9,7 +9,7 @@ from gt4py import gtscript
 from gt4py.gtscript import PARALLEL, BACKWARD, FORWARD, computation, interval
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, debug_mode=DEBUG_MODE)
+@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
 def fields_init( land   : FIELD_FLT, 
                  area   : FIELD_FLT, 
                  h_var  : FIELD_FLT, 
@@ -271,7 +271,7 @@ def fields_init( land   : FIELD_FLT,
                 qvz = qvz + dq / dp1
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, debug_mode=DEBUG_MODE)
+@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
 def warm_rain( h_var     : FIELD_FLT, 
                rain      : FIELD_FLT, 
                qgz       : FIELD_FLT, 
@@ -724,7 +724,7 @@ def warm_rain( h_var     : FIELD_FLT,
             m1     = m1 + m1_rain + m1_sol
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, debug_mode=DEBUG_MODE)
+@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
 def sedimentation( graupel  : FIELD_FLT, 
                    ice      : FIELD_FLT, 
                    rain     : FIELD_FLT, 
@@ -1558,7 +1558,7 @@ def sedimentation( graupel  : FIELD_FLT,
     '''
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, debug_mode=DEBUG_MODE)
+@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
 def icloud( h_var   : FIELD_FLT, 
             rh_adj  : FIELD_FLT, 
             rh_rain : FIELD_FLT, 
@@ -1767,7 +1767,7 @@ def icloud( h_var   : FIELD_FLT,
     '''
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, debug_mode=DEBUG_MODE)
+@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
 def fields_update( graupel: FIELD_FLT, 
                    ice    : FIELD_FLT, 
                    rain   : FIELD_FLT, 

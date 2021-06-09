@@ -68,7 +68,17 @@ def compare_data(exp_data, ref_data):
         )
         if ind.size > 0:
             i = tuple(ind[:, 0])
-            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i])
+            diff = abs(exp_data[key] - ref_data[key])
+            max_diff_ind = np.unravel_index(np.argmax(diff, axis=None), diff.shape)
+            print(
+                "FAIL at ",
+                key,
+                max_diff_ind,
+                exp_data[key][max_diff_ind],
+                ref_data[key][max_diff_ind],
+                "Number of fails:",
+                ind.shape[1],
+            )
         # assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), (
         #     "Data does not match for field " + key
         # )
