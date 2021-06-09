@@ -39,35 +39,46 @@ SOIL_VARS_NAMES = ["bexp", "dksat", "dwsat", "f1", "psisat",
                    "quartz", "smcdry", "smcmax", "smcref", "smcwlt"]
 VEG_VARS_NAMES = ["nroot", "snup", "rsmin", "rgl", "hs", "xlai"]
 
-TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice", # prepare_sflx
-                   "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
-                   "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
-                   "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
-                   "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old",
-                   "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2",
-                   "rc", "pc", "rcs", "rct", "rcq", "rcsoil"] # canres
+TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",  # prepare_sflx
+                "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
+                "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
+                "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
+                "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old",
+                "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2",
+                "rc", "pc", "rcs", "rct", "rcq", "rcsoil",  # canres
+                "edir1", "ec1", "sgx", "edir", "ec",  # nopac / snopac
+                "ett1", "eta1", "ett", "eta", "etns1", "etns", "denom", "sicemax",
+                "dd", "dice", "pcpdrp", "rhsct", "drip", "runoff1", "runoff2",
+                "runoff3", "dew", "yy", "zz1", "beta", "flx1", "flx2", "flx3",
+                "esnow",
+                ]
 
-TEMP_VARS_2D = ["sldpth", "rtdis", "smc_old", "stc_old", "slc_old"]
+
+TEMP_VARS_2D = ["sldpth", "rtdis", "smc_old", "stc_old", "slc_old",
+                "et1", "et", "rhstt", "ai", "bi", "ci", "dsmdz", "ddz", "gx", 
+                "wdf", "wcnd", "sice", "p", "delta", "stsoil",
+
+                ]
 
 PREPARE_VARS = ["zsoil", "km", "zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",
-                   "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
-                   "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
-                   "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
-                   "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old",
-                   "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2",
-                   "sldpth", "rtdis", "smc_old", "stc_old", "slc_old",
-                    "t1", "q1","vegtype", "sigmaf", "sfcemis", "dlwflx", "snet", "cm",
-                    "ch", "prsl1", "prslki", "land", "wind", "snoalb", "sfalb", 
-                    "flag_iter", "flag_guess", "bexppert", "xlaipert", "fpvs",
-                    "weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc",
-                    "canopy", "zorl", "delt", "ivegsrc", "bexp", "dksat", 
-                   "quartz", "smcdry", "smcmax", "smcref", "smcwlt", "nroot", "snup", "xlai"]
+                "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
+                "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
+                "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
+                "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old",
+                "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2",
+                "sldpth", "rtdis", "smc_old", "stc_old", "slc_old",
+                "t1", "q1", "vegtype", "sigmaf", "sfcemis", "dlwflx", "snet", "cm",
+                "ch", "prsl1", "prslki", "land", "wind", "snoalb", "sfalb",
+                "flag_iter", "flag_guess", "bexppert", "xlaipert", "fpvs",
+                "weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc",
+                "canopy", "zorl", "delt", "ivegsrc", "bexp", "dksat",
+                "quartz", "smcdry", "smcmax", "smcref", "smcwlt", "nroot", "snup", "xlai"]
 
 
 CANRES_VARS = ["dswsfc", "nroot", "ch", "q2", "q2sat", "dqsdt2", "sfctmp",
-           "cpx1", "sfcprs", "sfcemis", "sh2o", "smcwlt", "smcref", "zsoil", "rsmin",
-           "rgl", "hs", "xlai", "flag_iter", "land", "zsoil_root", "shdfac",
-           "rc", "pc", "rcs", "rct", "rcq", "rcsoil"]
+               "cpx1", "sfcprs", "sfcemis", "sh2o", "smcwlt", "smcref", "zsoil", "rsmin",
+               "rgl", "hs", "xlai", "flag_iter", "land", "zsoil_root", "shdfac",
+               "rc", "pc", "rcs", "rct", "rcq", "rcsoil"]
 
 
 def numpy_to_gt4py_storage(arr, backend):
@@ -166,19 +177,21 @@ def run(in_dict, in_dict2, backend):
     # set timer
     tic = timeit.default_timer()
 
-    general_dict = {"zsoil": zsoil, **in_dict, **scalar_dict, **table_dict, **out_dict}
+    general_dict = {"zsoil": zsoil, **in_dict,
+                    **scalar_dict, **table_dict, **out_dict}
+        # counter
+    general_dict["count"] = initialize_gt4py_storage(im, 1, np.int32)
 
- 
+
     # prepare for sflx
     general_dict = {**general_dict, **{k: initialize_gt4py_storage(
         im, 1, np.float64) for k in TEMP_VARS_1D}}
     general_dict = {**general_dict, **{k: initialize_gt4py_storage(
         im, km, np.float64) for k in TEMP_VARS_2D}}
 
-
     prepare_sflx(**{k: general_dict[k] for k in PREPARE_VARS})
 
-    general_dict["cm"] = general_dict["cmx"] 
+    general_dict["cm"] = general_dict["cmx"]
     general_dict["dt"] = general_dict["delt"]
     general_dict["sfcprs"] = general_dict["prsl1"]
     general_dict["q2sat"] = general_dict["qs1"]
@@ -192,14 +205,6 @@ def run(in_dict, in_dict2, backend):
 
     canres(**{k: general_dict[k] for k in CANRES_VARS})
 
-    general_dict["count"] = initialize_gt4py_storage(im, 1, np.int32)
-    general_dict["gx"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["edir1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["ec1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["sgx"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["edir"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["ec"] = initialize_gt4py_storage(im, 1, np.float64)
-
     nopac_evapo_first(general_dict["etp"], table_dict["nroot"], table_dict["smcmax"], table_dict["smcwlt"], table_dict["smcref"],
                       table_dict["smcdry"], scalar_dict["delt"], in_dict["sigmaf"],
                       general_dict["cmc"], general_dict["slc"], general_dict["flag_iter"], general_dict[
@@ -207,48 +212,16 @@ def run(in_dict, in_dict2, backend):
                       # output
                       general_dict["sgx"], general_dict["gx"], general_dict["edir1"], general_dict["ec1"], general_dict["edir"], general_dict["ec"])
 
-    general_dict["denom"] = initialize_gt4py_storage(im, 1, np.float64)
     nopac_evapo_second(general_dict["sigmaf"], general_dict["etp"], general_dict["slc"], general_dict["flag_iter"], general_dict["land"],
                        general_dict["sneqv"], general_dict["count"], general_dict["rtdis"], general_dict["sgx"],
                        # output
                        general_dict["denom"], general_dict["gx"])
-
-    general_dict["et1"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["ett1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["eta1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["et"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["ett"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["eta"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["etns1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["etns"] = initialize_gt4py_storage(im, 1, np.float64)
 
     nopac_evapo_third(general_dict["sigmaf"], general_dict["etp"], general_dict["slc"], general_dict["flag_iter"], general_dict["land"],
                       general_dict["sneqv"], general_dict["count"], general_dict["gx"], general_dict["cmc"], general_dict["pc"],
                       general_dict["denom"], general_dict["edir1"], general_dict["ec1"],
                       # output
                       general_dict["et1"], general_dict["ett1"], general_dict["eta1"], general_dict["et"], general_dict["ett"], general_dict["eta"])
-
-    general_dict["sicemax"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["dd"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["dice"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["pcpdrp"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["rhstt"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["ai"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["bi"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["ci"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["dsmdz"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["ddz"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["wdf"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["wcnd"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["rhsct"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["drip"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["sice"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["runoff1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["runoff2"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["runoff3"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["p"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["delta"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["dew"] = initialize_gt4py_storage(im, 1, np.float64)
 
     nopac_smflx_first(general_dict["smcmax"], general_dict["dt"], general_dict["smcwlt"], general_dict["prcp"], general_dict["prcp1"], zsoil, general_dict["shdfac"], general_dict["ec1"],
                       general_dict["cmc"], general_dict["sh2o"], general_dict["smc"], general_dict["flag_iter"], general_dict["land"], general_dict[
@@ -260,7 +233,7 @@ def run(in_dict, in_dict2, backend):
                        # outpus
                        general_dict["rhstt"], general_dict["ci"], general_dict["runoff1"], general_dict["runoff2"], general_dict["dsmdz"], general_dict["ddz"], general_dict["wdf"], general_dict["wcnd"], general_dict["p"], general_dict["delta"])
 
-    rosr12_second(general_dict["delta"], general_dict["p"], 
+    rosr12_second(general_dict["delta"], general_dict["p"],
                   general_dict["flag_iter"], general_dict["land"], general_dict["ci"])
 
     nopac_smflx_third(general_dict["dt"], general_dict["smcmax"], general_dict["flag_iter"], general_dict["land"], general_dict["sice"], general_dict["sldpth"], general_dict["rhsct"], general_dict["ci"],
@@ -268,10 +241,6 @@ def run(in_dict, in_dict2, backend):
                       # outpus
                       general_dict["sh2o"], general_dict["smc"], general_dict["cmc"], general_dict["runoff3"])
 
-    general_dict["stsoil"] = initialize_gt4py_storage(im, km, np.float64)
-    general_dict["yy"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["zz1"] = initialize_gt4py_storage(im, 1, np.float64)
-    general_dict["beta"] = initialize_gt4py_storage(im, 1, np.float64)
     nopac_shflx_first(general_dict["land"], general_dict["flag_iter"], general_dict["sneqv"], general_dict["etp"], general_dict["eta"], general_dict["smc"], general_dict["quartz"], general_dict["smcmax"], general_dict["ivegsrc"],
                       general_dict["vegtype"], general_dict["shdfac"], general_dict["fdown"], general_dict[
                           "sfcemis"], general_dict["t24"], general_dict["sfctmp"], general_dict["rch"], general_dict["th2"],
@@ -290,9 +259,9 @@ def run(in_dict, in_dict2, backend):
         # output
         general_dict["sgx"], general_dict["gx"], general_dict["edir1"], general_dict["ec1"], general_dict["edir"], general_dict["ec"])
 
-    general_dict["denom"] = initialize_gt4py_storage(im, 1, np.float64)
     snopac_evapo_second(general_dict["shdfac"], general_dict["etp"], general_dict["flag_iter"], general_dict["land"],
-                        general_dict["sneqv"], general_dict["count"], general_dict["rtdis"], general_dict["sgx"], general_dict["ice"], general_dict["sncovr"],
+                        general_dict["sneqv"], general_dict["count"], general_dict[
+                            "rtdis"], general_dict["sgx"], general_dict["ice"], general_dict["sncovr"],
                         general_dict["denom"], general_dict["gx"])
 
     snopac_evapo_third(general_dict["shdfac"], general_dict["etp"], general_dict["flag_iter"], general_dict["land"],
@@ -302,12 +271,16 @@ def run(in_dict, in_dict2, backend):
                        general_dict["et1"], general_dict["ett1"], general_dict["etns1"], general_dict["et"], general_dict["ett"], general_dict["etns"])
 
     snopac_smflx_first(general_dict["smcmax"], general_dict["dt"], general_dict["smcwlt"], general_dict["prcp"], general_dict["prcp1"], general_dict["zsoil"], general_dict["shdfac"], general_dict["ec1"],
-                      general_dict["cmc"], general_dict["sh2o"], general_dict["smc"], general_dict["flag_iter"], general_dict["land"], general_dict["etp"],
-                      general_dict["sncovr"], general_dict["ice"], general_dict["snowng"], general_dict["ffrozp"], general_dict["sfctmp"], general_dict["etns"], general_dict["snowh"],
-                      general_dict["df1"], general_dict["rr"], general_dict["rch"], general_dict["fdown"], general_dict["flx2"], general_dict["sfcemis"], general_dict["t24"], general_dict["th2"], general_dict["stc"], 
-                      # output
-                      general_dict["sicemax"], general_dict["dd"], general_dict["dice"], general_dict["pcpdrp"], general_dict["rhsct"], general_dict["drip"], general_dict["sice"], general_dict["dew"], 
-                      general_dict["t1"], general_dict["sneqv"], general_dict["flx1"], general_dict["flx3"], general_dict["esnow"], general_dict["ssoil"])
+                       general_dict["cmc"], general_dict["sh2o"], general_dict["smc"], general_dict[
+                           "flag_iter"], general_dict["land"], general_dict["etp"],
+                       general_dict["sncovr"], general_dict["ice"], general_dict["snowng"], general_dict[
+                           "ffrozp"], general_dict["sfctmp"], general_dict["etns"], general_dict["snowh"],
+                       general_dict["df1"], general_dict["rr"], general_dict["rch"], general_dict["fdown"], general_dict[
+                           "flx2"], general_dict["sfcemis"], general_dict["t24"], general_dict["th2"], general_dict["stc"],
+                       # output
+                       general_dict["sicemax"], general_dict["dd"], general_dict["dice"], general_dict[
+                           "pcpdrp"], general_dict["rhsct"], general_dict["drip"], general_dict["sice"], general_dict["dew"],
+                       general_dict["t1"], general_dict["sneqv"], general_dict["flx1"], general_dict["flx3"], general_dict["esnow"], general_dict["ssoil"])
 
     snopac_smflx_second(general_dict["smcmax"], general_dict["etp"], general_dict["dt"], general_dict["bexp"], general_dict["kdt"], general_dict["frzx"], general_dict["dksat"], general_dict["dwsat"], general_dict["slope"],
                         zsoil, general_dict["sh2o"], general_dict["flag_iter"], general_dict["land"], general_dict["sneqv"], general_dict[
@@ -315,7 +288,7 @@ def run(in_dict, in_dict2, backend):
                         # outpus
                         general_dict["rhstt"], general_dict["ci"], general_dict["runoff1"], general_dict["runoff2"], general_dict["dsmdz"], general_dict["ddz"], general_dict["wdf"], general_dict["wcnd"], general_dict["p"], general_dict["delta"])
 
-    rosr12_second(general_dict["delta"], general_dict["p"], 
+    rosr12_second(general_dict["delta"], general_dict["p"],
                   general_dict["flag_iter"], general_dict["land"], general_dict["ci"])
 
     snopac_smflx_third(general_dict["dt"], general_dict["smcmax"], general_dict["flag_iter"], general_dict["land"], general_dict["sice"], general_dict["sldpth"], general_dict["rhsct"], general_dict["ci"],
@@ -334,7 +307,6 @@ def run(in_dict, in_dict2, backend):
                         general_dict["yy"], general_dict["zz1"], general_dict["df1"],
                         general_dict["ssoil"], general_dict["t1"], general_dict["stc"])
 
-
     general_dict["cmx"] = general_dict["cm"]
     general_dict["delt"] = general_dict["dt"]
     general_dict["prsl1"] = general_dict["sfcprs"]
@@ -346,7 +318,6 @@ def run(in_dict, in_dict2, backend):
     general_dict["q0"] = general_dict["q2"]
     general_dict["tg3"] = general_dict["tbot"]
     general_dict["srflag"] = general_dict["ffrozp"]
-
 
     # post sflx data handling
     out_dict = {k: general_dict[k] for k in (INOUT_VARS + INOUT_MULTI_VARS)}
