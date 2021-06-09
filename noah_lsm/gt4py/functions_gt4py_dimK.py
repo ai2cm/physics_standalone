@@ -1071,3 +1071,58 @@ def shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil
     return ssoil, stc, t1
 
 
+@gtscript.function
+def snowpack_fn(esd, dtsec, tsnow, tsoil, snowh, sndens):
+    # --- ... subprograms called: none
+
+    # calculates compaction of snowpack under conditions of
+    # increasing snow density.
+
+    c1 = 0.01
+    c2 = 21.0
+
+    # conversion into simulation units
+    snowhc = snowh * 100.0
+    esdc = esd * 100.0
+    dthr = dtsec / 3600.0
+    tsnowc = tsnow - tfreez
+    tsoilc = tsoil - tfreez
+
+    # calculating of average temperature of snow pack
+    tavgc = 0.5 * (tsnowc + tsoilc)
+
+    # calculating of snow depth and density as a result of compaction
+    if esdc > 1.e-2:
+        esdcx = esdc
+    else:
+        esdcx = 1.e-2
+
+    bfac = dthr*c1 * exp(0.08*tavgc - c2*sndens)
+
+    # number of terms of polynomial expansion and its accuracy is governed by iteration limit "ipol".
+    ipol = 4
+    # hardcode loop for ipol = 4
+    pexp = 0.0
+    pexp = (1.0 + pexp)*bfac*esdcx/5.
+    pexp = (1.0 + pexp)*bfac*esdcx/4.
+    pexp = (1.0 + pexp)*bfac*esdcx/3.
+    pexp = (1.0 + pexp)*bfac*esdcx/2.
+    pexp += 1.
+
+    dsx = sndens * pexp
+    # set upper/lower limit on snow density
+    dsx = max(min(dsx, 0.40), 0.05)
+    sndens = dsx
+
+    # update of snow depth and density depending on liquid water during snowmelt.
+    if tsnowc >= 0.0:
+        dw = 0.13 * dthr / 24.0
+        sndens = min(sndens*(1.0 - dw) + dw, 0.40)
+
+    # calculate snow depth (cm) from snow water equivalent and snow density.
+    snowhc = esdc / sndens
+    snowh = snowhc * 0.01
+
+    return snowh, sndens
+
+
