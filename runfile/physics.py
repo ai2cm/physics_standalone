@@ -5,7 +5,7 @@ import sys
 
 
 def parse_args():
-    usage = "usage: python %(prog)s <which_physics> <data_dir> <backend>"
+    usage = "usage: python %(prog)s <which_physics> <data_dir> <backend> <which_tile> <which_savepoint>"
     parser = ArgumentParser(usage=usage)
 
     parser.add_argument(
@@ -79,9 +79,9 @@ def compare_data(exp_data, ref_data):
                 "Number of fails:",
                 ind.shape[1],
             )
-        # assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), (
-        #     "Data does not match for field " + key
-        # )
+        assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), (
+            "Data does not match for field " + key
+        )
 
 
 if __name__ == "__main__":
@@ -173,9 +173,13 @@ if __name__ == "__main__":
                 compare_data(out_data, ref_data)
 
                 isready = False
-    if (args.select_tile == "None") and (args.select_sp == "None"):
-        timings["elapsed_time"] = timings["elapsed_time"] / (6 * len(savepoints))
-        timings["run_time"] = timings["run_time"] / (6 * len(savepoints))
-    output_file = open("timings_{}_{}.dat".format(args.which_physics, BACKEND), "w")
-    output_file.write(str(timings["elapsed_time"]) + " " + str(timings["run_time"]))
-    output_file.close()
+
+    write_benchmark = False
+
+    if write_benchmark:
+        if (args.select_tile == "None") and (args.select_sp == "None"):
+            timings["elapsed_time"] = timings["elapsed_time"] / (6 * len(savepoints))
+            timings["run_time"] = timings["run_time"] / (6 * len(savepoints))
+        output_file = open("timings_{}_{}.dat".format(args.which_physics, BACKEND), "w")
+        output_file.write(str(timings["elapsed_time"]) + " " + str(timings["run_time"]))
+        output_file.close()

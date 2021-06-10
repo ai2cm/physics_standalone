@@ -13,10 +13,23 @@ You need the following things installed if you want to run directly on the host 
 
 ```bash
 ./enter.sh # only if you are running using the Docker environment
-cd XXX
+cd <which_physics>
 ./get_data.sh
-make
-./main.x
+cd ../runfile
+export BACKEND=<backend>
+python physics.py <which_physics> <data_dir> <backend> <which_tile> <which_savepoint>
+```
+
+For example, to validate microphysics using `gtx86` backend for all tiles and savepoints:
+```
+export BACKEND=gtx86
+python physics.py microph ../microph/data $BACKEND None None
+```
+
+To validate tile 0 and savepoint 0:
+```
+export BACKEND=gtx86
+python physics.py microph ../microph/data $BACKEND 0 cloud_mp-in-000000
 ```
 
 Note: You may have to adapt the `Makefile` to point to your serialbox installation if it is not installed under `/usr/local/serialbox`.
