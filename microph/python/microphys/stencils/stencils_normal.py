@@ -649,7 +649,7 @@ def warm_rain( h_var     : FIELD_FLT,
     '''
     
     # With subgrid variability    
-    with computation(PARALLEL):
+    with computation(FORWARD):
         
         with interval(0, 1):
             
@@ -1690,7 +1690,7 @@ def icloud( h_var   : FIELD_FLT,
     '''
         
     # Vertical subgrid variability
-    with computation(PARALLEL):
+    with computation(FORWARD):
         
         with interval(0, 1):
             
