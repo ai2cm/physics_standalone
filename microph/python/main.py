@@ -1,4 +1,4 @@
-from utility import *
+from config import *
 from utility.serialization import *
 
 if USE_GT4PY:
@@ -9,7 +9,7 @@ if USE_GT4PY:
         )
     else:
         from microphys.drivers.gfdl_cloud_microphys_gt4py import (
-            gfdl_cloud_microphys_driver_split as gfdl_cloud_microphys_driver,
+            run as gfdl_cloud_microphys_driver,
         )
 
     from microphys.drivers.gfdl_cloud_microphys_gt4py import gfdl_cloud_microphys_init

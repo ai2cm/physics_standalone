@@ -4,6 +4,7 @@ from microphys.stencils.stencils_normal import *
 import numpy as np
 import gt4py as gt
 import math as mt
+from config import *
 from utility.serialization import *
 
 # Global variables for microphysics
