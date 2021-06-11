@@ -10,7 +10,7 @@ SRC = \
   physcons.F \
   funcphys.F \
   sfc_sice.F \
-  main_performance.F
+  main.F
 
 OBJ = $(SRC:.F=.o)
 PP = $(SRC:.F=.F90)
@@ -51,11 +51,11 @@ pre-process: $(PP)
 
 .PHONY: clean
 clean:
-	/bin/rm -rf *.mod *.o $(PP) data.tar.gz __pycache__ $(TARGET) dump/*
+	/bin/rm -rf *.mod *.o $(PP) __pycache__ $(TARGET) dump/*
 
 .PHONY: distclean
 distclean: clean
-	/bin/rm -rf data dump
+	/bin/rm -rf dump
 
 $(TARGET): $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) -o $(TARGET)

@@ -154,6 +154,7 @@ if __name__ == "__main__":
 
                 # read serialized input data
                 in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
+
                 # run Python version
                 out_data = phy.run(in_data, timings)
 
