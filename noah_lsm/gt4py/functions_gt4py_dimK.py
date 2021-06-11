@@ -341,8 +341,8 @@ def srt_first_fn(sh2o, pcpdrp, zsoil, smcmax, smcwlt, sice, sicemax, dd, dice):
     if pcpdrp != 0:
         # frozen ground version
         smcav = smcmax - smcwlt
-        dd += (zsoil[0, -1] - zsoil[0, 0]) * (smcav - (sh2o + sice - smcwlt))
-        dice += (zsoil[0, -1] - zsoil[0, 0]) * sice
+        dd += (zsoil[0, 0, -1] - zsoil[0, 0, 0]) * (smcav - (sh2o + sice - smcwlt))
+        dice += (zsoil[0, 0, -1] - zsoil[0, 0, 0]) * sice
 
     return sicemax, dd, dice
 
@@ -398,7 +398,7 @@ def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
     wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
 
     # calc the matrix coefficients ai, bi, and ci for the top layer
-    ddz = 1.0 / (-.5*zsoil[0, 1])
+    ddz = 1.0 / (-.5*zsoil[0, 0, 1])
     ai = 0.0
     bi = wdf * ddz / (-zsoil)
     ci = -bi
@@ -418,8 +418,8 @@ def srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax,
     wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
 
     # 2. Layer
-    denom2 = zsoil[0, -1] - zsoil[0, 0]
-    denom = zsoil[0, -1] - zsoil[0, +1]
+    denom2 = zsoil[0, 0, -1] - zsoil[0, 0, 0]
+    denom = zsoil[0, 0, -1] - zsoil[0, 0, +1]
     dsmdz = (sh2o[0, 0, 0] - sh2o[0, 0, +1])/(denom * 0.5)
     ddz = 2.0 / denom
     ci = - wdf * ddz / denom2
@@ -443,7 +443,7 @@ def srt_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sic
     wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
 
     # 2. Layer
-    denom2 = zsoil[0, -1] - zsoil[0, 0]
+    denom2 = zsoil[0, 0, -1] - zsoil[0, 0, 0]
     dsmdz = 0.0
     ci = 0.0
     slopx = slope
@@ -619,13 +619,13 @@ def hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice):
 
     # 1. Layer
     # calc the matrix coefficients ai, bi, and ci for the top layer
-    ddz = 1.0 / (-0.5*zsoil[0,+1])
+    ddz = 1.0 / (-0.5*zsoil[0, 0,+1])
     ai = 0.0
     ci = (df1*ddz) / (zsoil*hcpct)
     bi = -ci + df1 / (0.5*zsoil*zsoil*hcpct*zz1)
 
     # calc the vertical soil temp gradient btwn the top and 2nd soil
-    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / (-0.5*zsoil[0,+1])
+    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / (-0.5*zsoil[0, 0,+1])
     ssoil = df1 * (stc - yy) / (0.5*zsoil*zz1)
     rhsts = (df1*dtsdz - ssoil) / (zsoil*hcpct)
 
@@ -637,15 +637,15 @@ def hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz):
     # calculates the right hand side of the time tendency
     # term of the soil thermal diffusion equation for sea-ice or glacial-ice
 
-    denom = 0.5 * (zsoil[0,-1] - zsoil[0,+1])
+    denom = 0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,+1])
     dtsdz = (stc[0,0,0] - stc[0,0,1])/denom
-    ddz = 2.0 / (zsoil[0,-1] - zsoil[0,+1])
-    ci = - df1 * ddz / ((zsoil[0,-1] - zsoil[0,0])*hcpct)
+    ddz = 2.0 / (zsoil[0, 0,-1] - zsoil[0, 0,+1])
+    ci = - df1 * ddz / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
 
-    denom = ((zsoil[0,0] - zsoil[0,-1])*hcpct)
+    denom = ((zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct)
     rhsts = (df1*dtsdz - df1*dtsdz[0,0,-1]) / denom
 
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0])*hcpct)
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
     bi = -(ai + ci)
 
     return rhsts, ai, bi, ci, dtsdz, ddz
@@ -663,13 +663,13 @@ def hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot):
     else:
         zbot = -25.0
 
-    dtsdz = (stc[0,0,0] - tbot)/(0.5 * (zsoil[0,-1] - zsoil[0,0]) - zbot)
+    dtsdz = (stc[0,0,0] - tbot)/(0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,0]) - zbot)
     ci = 0.0
 
-    denom = (zsoil[0,0] - zsoil[0,-1])*hcpct
+    denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
     rhsts = (df1*dtsdz - df1*dtsdz[0,0,-1]) / denom
 
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0])*hcpct)
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
     bi = -(ai + ci)
 
     return rhsts, ai, bi, ci, tbot
@@ -831,15 +831,15 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
         (smcmax - smc)*cp2 + (smc - sh2o)*cpice1
 
     # calc the matrix coefficients ai, bi, and ci for the top layer
-    ddz = 1.0 / (-0.5*zsoil[0,+1])
+    ddz = 1.0 / (-0.5*zsoil[0, 0,+1])
     ai = 0.0
-    ci = (df1*ddz) / (zsoil[0,0]*hcpct)
+    ci = (df1*ddz) / (zsoil[0, 0,0]*hcpct)
     bi = -ci + df1 / (0.5*zsoil*zsoil*hcpct*zz1)
 
     # calc the vertical soil temp gradient btwn the top and 2nd soil
-    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / (-0.5*zsoil[0,+1])
-    ssoil = df1 * (stc[0,0,0] - yy) / (0.5*zsoil[0,0]*zz1)
-    rhsts = (df1*dtsdz - ssoil) / (zsoil[0,0]*hcpct)
+    dtsdz = (stc[0,0,0] - stc[0,0,+1]) / (-0.5*zsoil[0, 0,+1])
+    ssoil = df1 * (stc[0,0,0] - yy) / (0.5*zsoil[0, 0,0]*zz1)
+    rhsts = (df1*dtsdz - ssoil) / (zsoil[0, 0,0]*hcpct)
 
     # capture the vertical difference of the heat flux at top and
     # bottom of first soil layer
@@ -848,7 +848,7 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
     tsurf = (yy + (zz1-1)*stc[0,0,0]) / zz1
 
     # linear interpolation between the average layer temperatures
-    tbk = stc[0,0,0] + (stc[0,0,+1]-stc[0,0,0])*zsoil[0,0]/zsoil[0,+1]
+    tbk = stc[0,0,0] + (stc[0,0,+1]-stc[0,0,0])*zsoil[0, 0,0]/zsoil[0, 0,+1]
     # calculate frozen water content in 1st soil layer.
     sice = smc[0,0,0] - sh2o[0,0,0]
 
@@ -856,7 +856,7 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
 
     if sice > 0 or tsurf < tfreez or stc[0,0,0] < tfreez or tbk < tfreez:
         ### ************ tmpavg *********** ###
-        dz = -zsoil[0,0]
+        dz = -zsoil[0, 0,0]
         tavg = tmpavg_fn(tsurf, stc[0,0,0], tbk, dz)
         ### ************ snksrc *********** ###
         free = frh2o_fn(psisat, bexp, tavg, smc, sh2o, smcmax)
@@ -864,7 +864,7 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
             free, psisat, bexp, tavg, smc[0,0,0], sh2o[0,0,0], smcmax, qtot, dt, dz)
         ### ************ END snksrc *********** ###
 
-        rhsts -= tsnsr / (zsoil[0,0] * hcpct)
+        rhsts -= tsnsr / (zsoil[0, 0,0] * hcpct)
 
     return sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz
 
@@ -882,16 +882,16 @@ def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
     if ivegsrc == 1 and vegtype == 12:
         df1k = 3.24*(1.-shdfac) + shdfac*df1k
 
-    tbk = stc[0,0,+1] + (stc[0,0,+1]-stc[0,0,0])*(zsoil[0,-1] - zsoil[0,0])/(zsoil[0,-1] - zsoil[0,+1])
+    tbk = stc[0,0,+1] + (stc[0,0,+1]-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
     # calc the vertical soil temp gradient thru each layer
-    denom = 0.5 * (zsoil[0,-1] - zsoil[0,+1])
+    denom = 0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,+1])
     dtsdz = (stc[0,0,0] - stc[0,0,+1]) / denom
-    ddz = 2.0 / (zsoil[0,-1] - zsoil[0,+1])
+    ddz = 2.0 / (zsoil[0, 0,-1] - zsoil[0, 0,+1])
 
-    ci = - df1k*ddz / ((zsoil[0,-1] - zsoil[0,0]) * hcpct)
+    ci = - df1k*ddz / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
 
     # calculate rhsts
-    denom = (zsoil[0,0] - zsoil[0,-1])*hcpct
+    denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
     rhsts = (df1k*dtsdz[0,0,0] - df1k[0,0,-1]*dtsdz[0,0,-1])/denom
 
     qtot = -1. * denom * rhsts
@@ -899,7 +899,7 @@ def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
     if sice > 0 or tbk[0,0,-1] < tfreez or stc < tfreez or tbk[0,0,0] < tfreez:
         ### ************ tmpavg *********** ###
-        dz = zsoil[0,-1] - zsoil[0,0]
+        dz = zsoil[0, 0,-1] - zsoil[0, 0,0]
         tavg = tmpavg_fn(tbk[0,0,-1], stc, tbk[0,0,0], dz)
         ### ************ snksrc *********** ###
         tsnsr, sh2o = snksrc_fn(
@@ -908,7 +908,7 @@ def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
         rhsts -= tsnsr / denom
 
     # calc matrix coefs, ai, and bi for this layer.
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0]) * hcpct)
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
     bi = - (ai + ci)
 
     return sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz
@@ -927,15 +927,15 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
     if ivegsrc == 1 and vegtype == 12:
         df1k = 3.24*(1.-shdfac) + shdfac*df1k
 
-    tbk = stc[0,0,0] + (tbot-stc[0,0,0])*(zsoil[0,-1] - zsoil[0,0])/(zsoil[0,-1] + zsoil[0,0] - 2. * zbot)
+    tbk = stc[0,0,0] + (tbot-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] + zsoil[0, 0,0] - 2. * zbot)
     # calc the vertical soil temp gradient thru each layer
-    denom = 0.5 * (zsoil[0,-1] + zsoil[0,0]) - zbot
+    denom = 0.5 * (zsoil[0, 0,-1] + zsoil[0, 0,0]) - zbot
     dtsdz = (stc[0,0,0] - tbot) / denom
 
     ci = 0.0
 
     # calculate rhsts
-    denom = (zsoil[0,0] - zsoil[0,-1])*hcpct
+    denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
     rhsts = (df1k*dtsdz[0,0,0] - df1k[0,0,-1]*dtsdz[0,0,-1])/denom
 
     qtot = -1. * denom * rhsts
@@ -943,7 +943,7 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
     if sice > 0 or tbk[0,0,-1] < tfreez or stc < tfreez or tbk[0,0,0] < tfreez:
         ### ************ tmpavg *********** ###
-        dz = zsoil[0,-1] - zsoil[0,0]
+        dz = zsoil[0, 0,-1] - zsoil[0, 0,0]
         tavg = tmpavg_fn(tbk[0,0,-1], stc, tbk[0,0,0], dz)
         ### ************ snksrc *********** ###
         tsnsr, sh2o = snksrc_fn(
@@ -952,7 +952,7 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
         rhsts -= tsnsr / denom
 
     # calc matrix coefs, ai, and bi for this layer.
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0,-1] - zsoil[0,0]) * hcpct)
+    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
     bi = - (ai + ci)
 
     return sh2o, rhsts, ai, bi, ci
