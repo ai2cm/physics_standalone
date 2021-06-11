@@ -69,7 +69,24 @@ root=`dirname $0`
 script="${root}/actions/${action}.sh"
 test -f "${script}" || exitError 1301 ${LINENO} "cannot find script ${script}"
 
-${script} ${optarg}
+# load scheduler tools
+. ${envloc}/env/schedulerTools.sh
+scheduler_script="`dirname $0`/env/submit.${host}.${scheduler}"
+
+# if there is a scheduler script, make a copy for this job
+if [ -f ${scheduler_script} ] ; then
+    if [ "${action}" == "setup" ]; then
+	scheduler="none"
+    else
+	cp  ${scheduler_script} job_${action}.sh
+	scheduler_script=job_${action}.sh
+    fi
+fi
+
+module load daint-gpu
+
+${script} ${scheduler_script}
+
 if [ $? -ne 0 ] ; then
   exitError 1510 ${LINENO} "problem while executing script ${script}"
 fi
