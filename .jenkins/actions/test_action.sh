@@ -6,7 +6,7 @@ echo `pip list`
 echo `which python`
 echo `pwd`
 
-sed -i 's|<NAME>|physics_standalone_validation|g'
+sed -i 's|<NAME>|physics_standalone_validation|g' ${scheduler_script}
 sed -i 's|<NTASKS>|12\n#SBATCH \-\-hint=nomultithread|g' ${scheduler_script}
 sed -i 's|00:45:00|00:30:00|g' ${scheduler_script}
 sed -i 's|<OUTFILE>|out.log|g' ${scheduler_script}
