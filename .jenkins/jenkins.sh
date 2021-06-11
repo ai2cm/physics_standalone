@@ -56,6 +56,12 @@ popd > /dev/null
 test -f ${envloc}/env/machineEnvironment.sh || exitError 1201 ${LINENO} "cannot find machineEnvironment.sh script"
 . ${envloc}/env/machineEnvironment.sh
 
+# load machine dependent environment
+if [ ! -f ${envloc}/env/env.${host}.sh ] ; then
+    exitError 1202 ${LINENO} "could not find ${envloc}/env/env.${host}.sh"
+fi
+. ${envloc}/env/env.${host}.sh
+
 # get root directory of where jenkins.sh is sitting
 root=`dirname $0`
 
