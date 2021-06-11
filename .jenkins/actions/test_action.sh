@@ -3,6 +3,15 @@ set -e -x
 scheduler_script=$1
 echo "${JOB_NAME}-${BUILD_NUMBER}"
 
+# check presence of env directory
+pushd `dirname $0` > /dev/null
+envloc=`/bin/pwd`/..
+
+# Download the env
+. ${envloc}/env.sh
+# load scheduler tools
+. ${envloc}/env/schedulerTools.sh
+
 python -m venv venv
 source ./venv/bin/activate
 git clone https://github.com/VulcanClimateModeling/gt4py.git
