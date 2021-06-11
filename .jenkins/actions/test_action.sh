@@ -2,17 +2,30 @@
 set -e -x
 scheduler_script=$1
 echo "${JOB_NAME}-${BUILD_NUMBER}"
-echo `pip list`
+
+python -m venv venv
+source ./venv/bin/activate
+git clone https://github.com/VulcanClimateModeling/gt4py.git
+pip install -e ./gt4py[cuda102]
+python -m gt4py.gt_src_manager install
+
 echo `which python`
-echo `pwd`
-
-sed -i 's|<NAME>|physics_standalone_validation|g' ${scheduler_script}
-sed -i 's|<NTASKS>|12\n#SBATCH \-\-hint=nomultithread|g' ${scheduler_script}
-sed -i 's|00:45:00|00:30:00|g' ${scheduler_script}
-sed -i 's|<OUTFILE>|out.log|g' ${scheduler_script}
-sed -i 's|<NTASKSPERNODE>|1|g' ${scheduler_script}
+echo `pip list`
+backend=numpy
+phy=seaice
 sed -i 's/<CPUSPERTASK>/12/g' ${scheduler_script}
-
-sed -i 's/<G2G>/export BACKEND=numpy/g' ${scheduler_script}
-sed -i 's/<CMD>/python physics.py microph ../microph/data numpy None None/g' ${scheduler_script}
+sed -i -e "s/<which_backend>/${backend}/g" ${scheduler_script}
+sed -i -e "s/<which_physics>/${phy}/g" ${scheduler_script}
+echo "Submitting slurm script:"
 cat ${scheduler_script}
+
+# submit SLURM job
+launch_job ${scheduler_script} 9000
+if [ $? -ne 0 ] ; then
+    exitError 1251 ${LINENO} "problem launching SLURM job ${scheduler_script}"
+fi
+
+# echo output of SLURM job
+OUT="${phy}_${backend}.out"
+cat ${OUT}
+rm ${OUT}

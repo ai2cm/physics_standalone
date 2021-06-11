@@ -71,7 +71,7 @@ test -f "${script}" || exitError 1301 ${LINENO} "cannot find script ${script}"
 
 # load scheduler tools
 . ${envloc}/env/schedulerTools.sh
-scheduler_script="`dirname $0`/env/submit.${host}.${scheduler}"
+scheduler_script="runfile/run.job"
 
 # if there is a scheduler script, make a copy for this job
 if [ -f ${scheduler_script} ] ; then

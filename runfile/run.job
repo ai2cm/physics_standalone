@@ -2,16 +2,15 @@
 #SBATCH --constraint=gpu
 #SBATCH --job-name=phy_validation
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=<CPUSPERTASK>
 #SBATCH --hint=nomultithread
-#SBATCH --output=out.log
+#SBATCH --output=<which_physics>_<which_backend>.out
 #SBATCH --time=00:30:00
 #SBATCH --gres=gpu:1
 #SBATCH --account=s1053
 #SBATCH --partition=cscsci
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export BACKEND="gtx86"
-python physics.py seaice ../seaice/data gtx86 None None
+export BACKEND=<which_backend>
+python runfile/physics.py <which_physics> /project/s1053/physics_standalone_serialized_test_data/c48/<which_physics> $BACKEND None None
