@@ -135,7 +135,6 @@ def penman_fn(sfctmp, sfcprs, sfcemis, ch, t2v, th2, prcp, fdown,
         # fractional snowfall/rainfall
         rr += (cpice*ffrozp+cph2o1*(1.-ffrozp))*prcp/rch
 
-    # ssoil = 13.753581783277639
     fnet = fdown - sfcemis*sigma1*t24 - ssoil
 
     # include the latent heat effects of frzng rain converting to ice
@@ -145,7 +144,6 @@ def penman_fn(sfctmp, sfcprs, sfcemis, ch, t2v, th2, prcp, fdown,
         fnet = fnet - flx2
 
     # finish penman equation calculations.
-
     rad = fnet/rch + th2 - sfctmp
     a = elcp * cpfac * (q2sat - q2)
 
@@ -222,7 +220,6 @@ def evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt,
 
     ec1 = 0.0
     edir1 = 0.0
-
     if etp1 > 0.0:
         # retrieve direct evaporation from soil surface.
         if shdfac < 1.0:

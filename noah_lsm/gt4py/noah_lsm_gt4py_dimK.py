@@ -49,7 +49,7 @@ TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",  # prepar
                 "ett1", "eta1", "ett", "eta", "denom", "sicemax",
                 "dd", "dice", "pcpdrp", "rhsct", "drip", "runoff1", "runoff2",
                 "runoff3", "dew", "yy", "zz1", "beta", "flx1", "flx2", "flx3",
-                "esnow", "csoil", "soilm", "snomlt"
+                "esnow", "csoil", "soilm", "snomlt", "tsea"
                 ]
 
 TEMP_VARS_1D_INT = ["count", "snowng"]
@@ -65,9 +65,9 @@ PREPARE_VARS = ["zsoil", "km", "zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "
                 "shdfac", "kdt", "frzx", "sndens", "snowng", "prcp1",
                 "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
                 "weasd_old", "snwdph_old", "tskin_old", "tprcp_old", "srflag_old",
-                "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2",
+                "canopy_old", "etp", "t24", "rch", "epsca", "rr", "flx2", "tsea",
                 "sldpth", "rtdis", "smc_old", "stc_old", "slc_old",
-                "t1", "q1", "vegtype", "sigmaf", "sfcemis", "dlwflx", "snet", "cm",
+                "tsurf", "t1", "q1", "vegtype", "sigmaf", "sfcemis", "dlwflx", "snet", "cm",
                 "ch", "prsl1", "prslki", "land", "wind", "snoalb", "sfalb",
                 "flag_iter", "flag_guess", "bexppert", "xlaipert", "fpvs",
                 "weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc",
@@ -75,7 +75,7 @@ PREPARE_VARS = ["zsoil", "km", "zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "
                 "quartz", "smcdry", "smcmax", "smcref", "smcwlt", "nroot", "snup", "xlai"]
 
 
-CANRES_VARS = ["dswsfc", "nroot", "ch", "q2", "q2sat", "dqsdt2", "sfctmp",
+CANRES_VARS = ["dswsfc", "nroot", "chx", "q2", "q2sat", "dqsdt2", "sfctmp",
                "cpx1", "sfcprs", "sfcemis", "sh2o", "smcwlt", "smcref", "zsoil", "rsmin",
                "rgl", "hs", "xlai", "flag_iter", "land", "zsoil_root", "shdfac",
                "rc", "pc", "rcs", "rct", "rcq", "rcsoil"]
@@ -110,21 +110,21 @@ NOPAC_VARS7 = ["land", "flag_iter", "sneqv", "etp", "eta", "smc", "quartz", "smc
                "sh2o", "stsoil", "p", "delta", "tbot", "yy", "zz1", "df1", "beta"]
 
 NOPAC_VARS8 = ["land", "flag_iter", "sneqv", "zsoil", "stsoil", "p", "delta",
-               "yy", "zz1", "df1", "ssoil", "t1", "stc"]
+               "yy", "zz1", "df1", "ssoil", "tsea", "stc"]
 
 SNOPAC_VARS1 = ["smcmax", "dt", "smcwlt", "prcp", "prcp1", "zsoil", "shdfac", "ec1",
                 "cmc", "sh2o", "smc", "flag_iter", "land", "etp",
                        "sncovr", "ice", "snowng", "ffrozp", "sfctmp", "eta", "snowh",
                        "df1", "rr", "rch", "fdown", "flx2", "sfcemis", "t24", "th2", "stc",
                        "sicemax", "dd", "dice", "pcpdrp", "rhsct", "drip", "sice", "dew",
-                       "t1", "sneqv", "flx1", "flx3", "esnow", "ssoil", "snomlt"]
+                       "tsea", "sneqv", "flx1", "flx3", "esnow", "ssoil", "snomlt"]
 
 CLEANUP_VARS = ["land", "flag_iter", "eta", "ssoil", "edir", "ec", "ett", "esnow", "sncovr", "soilm",
         "flx1", "flx2", "flx3", "etp", "runoff1", "runoff2", "cmc", "snowh", "sneqv", "z0",
-            "rho", "ch", "wind", "q1", "flag_guess", "weasd_old", "snwdph_old", "tskin_old",
+            "rho", "chx", "wind", "q1", "flag_guess", "weasd_old", "snwdph_old", "tskin_old",
             "canopy_old", "tprcp_old", "srflag_old", "smc_old", "slc_old", "stc_old", "th2",
-            "t1", "et", "ice", "runoff3", "dt", "sfcprs", "t2v", "snomlt",
-            "zsoil", "smcmax", "smcwlt", "smcref"]
+            "tsea", "et", "ice", "runoff3", "dt", "sfcprs", "t2v", "snomlt",
+            "zsoil", "smcmax", "smcwlt", "smcref", "ch"]
 
 
 def numpy_to_gt4py_storage(arr, backend):
@@ -241,7 +241,6 @@ def run(in_dict, in_dict2, backend):
     general_dict["sfcprs"] = general_dict["prsl1"]
     general_dict["q2sat"] = general_dict["qs1"]
     general_dict["shdfac"] = general_dict["sigmaf"]
-    general_dict["ch"] = general_dict["chx"]
     general_dict["sh2o"] = general_dict["slc"]
     general_dict["sfctmp"] = general_dict["t1"]
     general_dict["q2"] = general_dict["q0"]
@@ -300,9 +299,7 @@ def run(in_dict, in_dict2, backend):
     general_dict["prsl1"] = general_dict["sfcprs"]
     general_dict["qs1"] = general_dict["q2sat"]
     general_dict["sigmaf"] = general_dict["shdfac"]
-    general_dict["chx"] = general_dict["ch"]
     general_dict["slc"] = general_dict["sh2o"]
-    general_dict["t1"] = general_dict["sfctmp"]
     general_dict["q0"] = general_dict["q2"]
     general_dict["tg3"] = general_dict["tbot"]
     general_dict["srflag"] = general_dict["ffrozp"]

@@ -20,16 +20,16 @@ def prepare_sflx(
     shdfac: DT_F, kdt: DT_F, frzx: DT_F, sndens: DT_F, snowng: DT_I, prcp1: DT_F,
     sncovr: DT_F, df1: DT_F, ssoil: DT_F, t2v: DT_F, fdown: DT_F, cpx1: DT_F,
     weasd_old: DT_F, snwdph_old: DT_F, tskin_old: DT_F, tprcp_old: DT_F, srflag_old: DT_F,
-    canopy_old: DT_F, etp: DT_F, t24: DT_F, rch: DT_F, epsca: DT_F, rr: DT_F, flx2: DT_F,
+    canopy_old: DT_F, etp: DT_F, t24: DT_F, rch: DT_F, epsca: DT_F, rr: DT_F, flx2: DT_F, tsea: DT_F,
     # output 2D
     sldpth: DT_F2, rtdis: DT_F2, smc_old: DT_F2, stc_old: DT_F2, slc_old: DT_F2,
     # input output
-    t1: DT_F, q1: DT_F, vegtype: DT_I, sigmaf: DT_F,
+    tsurf: DT_F, t1: DT_F, q1: DT_F, vegtype: DT_I, sigmaf: DT_F,
     sfcemis: DT_F, dlwflx: DT_F, snet: DT_F, cm: DT_F, ch: DT_F,
     prsl1: DT_F, prslki: DT_F, land: DT_I, wind: DT_F, snoalb: DT_F, sfalb: DT_F, flag_iter: DT_I, flag_guess: DT_I,
     bexppert: DT_F, xlaipert: DT_F, fpvs: DT_F,
     weasd: DT_F, snwdph: DT_F, tskin: DT_F, tprcp: DT_F, srflag: DT_F, smc: DT_F2, stc: DT_F2, slc: DT_F2,
-    canopy: DT_F, zorl: DT_F, delt: float, ivegsrc: int, bexp: DT_F, dksat: DT_F, quartz: DT_F, smcdry: DT_F, 
+    canopy: DT_F, zorl: DT_F, delt: float, ivegsrc: int, bexp: DT_F, dksat: DT_F, quartz: DT_F, smcdry: DT_F,
     smcmax: DT_F, smcref: DT_F, smcwlt: DT_F, nroot: DT_I, snup: DT_F, xlai: DT_F
 ):
     from __gtscript__ import BACKWARD, computation, interval
@@ -61,7 +61,6 @@ def prepare_sflx(
                 canopy = max(canopy, 0.0)
 
                 q0 = max(q1, 1.e-8)
-                theta1 = t1 * prslki
                 rho = prsl1 / (rd * t1 * (1.0 + rvrdm1 * q0))
                 qs1 = fpvs
                 qs1 = max(eps * qs1 / (prsl1 + epsm1 * qs1), 1.e-8)
@@ -160,10 +159,11 @@ def prepare_sflx(
                 ffrozp = srflag
                 dt = delt
                 sfctmp = t1
+                tsea = tsurf
                 q2 = q0
                 sfcemis = sfcemis
                 sfcprs = prsl1
-                th2 = theta1
+                th2 = t1 * prslki
                 q2sat = qs1
                 shdfac = sigmaf
 
@@ -233,7 +233,7 @@ def prepare_sflx(
                 # if it's prcping and the air temp is warmer than 0 c, but the grnd
                 # temp is colder than 0 c, freezing rain is presumed to be falling.
                 snowng = (prcp > 0.) and (ffrozp > 0.)
-                frzgra = (prcp > 0.) and (ffrozp <= 0.) and (t1 <= tfreez)
+                frzgra = (prcp > 0.) and (ffrozp <= 0.) and (tsea <= tfreez)
 
                 # if either prcp flag is set, determine new snowfall (converting
                 # prcp rate from kg m-2 s-1 to a liquid equiv snow depth in meters)
@@ -298,7 +298,7 @@ def prepare_sflx(
                 dsoil = -0.5 * zsoil
 
                 if sneqv == 0.:
-                    ssoil = df1 * (t1 - stc) / dsoil
+                    ssoil = df1 * (tsea - stc) / dsoil
                 else:
                     dtot = snowh + dsoil
                     frcsno = snowh / dtot
@@ -311,7 +311,7 @@ def prepare_sflx(
                     df1 = df1a*sncovr + df1 * (1.0-sncovr)
 
                     # calculate subsurface heat flux
-                    ssoil = df1 * (t1 - stc) / dtot
+                    ssoil = df1 * (tsea - stc) / dtot
 
                 # calc virtual temps and virtual potential temps needed by
                 # subroutines sfcdif and penman.
@@ -326,12 +326,12 @@ def prepare_sflx(
                 cpx1 = cp1
                 cpfac = 1.0
 
-                t24, etp, rch, epsca, rr, flx2 = penman_fn(sfctmp, sfcprs, sfcemis, ch, t2v, th2, prcp, fdown,
+                t24, etp, rch, epsca, rr, flx2 = penman_fn(sfctmp, sfcprs, sfcemis, chx, t2v, th2, prcp, fdown,
                                                            cpx, cpfac, ssoil, q2, q2sat, dqsdt2, snowng, frzgra, ffrozp)
 
 
 @gtscript.stencil(backend=BACKEND)
-def canres(dswsfc: DT_F, nroot: DT_I, ch: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: DT_F, sfctmp: DT_F,
+def canres(dswsfc: DT_F, nroot: DT_I, chx: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: DT_F, sfctmp: DT_F,
            cpx1: DT_F, sfcprs: DT_F, sfcemis: DT_F, sh2o: DT_F2, smcwlt: DT_F, smcref: DT_F, zsoil: DT_F2, rsmin: DT_F,
            rgl: DT_F, hs: DT_F, xlai: DT_F, flag_iter: DT_I, land: DT_I, zsoil_root: DT_F, shdfac: DT_F,
            rc: DT_F, pc: DT_F, rcs: DT_F, rct: DT_F, rcq: DT_F, rcsoil: DT_F):
@@ -389,10 +389,10 @@ def canres(dswsfc: DT_F, nroot: DT_I, ch: DT_F, q2: DT_F, q2sat: DT_F, dqsdt2: D
                     # determine canopy resistance due to all factors
                     rc = rsmin / (xlai*rcs*rct*rcq*rcsoil)
                     rr = (4.0*sfcemis*sigma1*rd1/cpx1) * \
-                        (sfctmp**4.0)/(sfcprs*ch) + 1.0
+                        (sfctmp**4.0)/(sfcprs*chx) + 1.0
                     delta = (lsubc/cpx1) * dqsdt2
 
-                    pc = (rr + delta) / (rr*(1.0 + rc*ch) + delta)
+                    pc = (rr + delta) / (rr*(1.0 + rc*chx) + delta)
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -413,7 +413,6 @@ def nopac_evapo_first(etp: DT_F, nroot: DT_I,  smcmax: DT_F, smcwlt: DT_F, smcre
                     etp1 = etp * 0.001
                     edir1 = 0.0
                     ec1 = 0.0
-
                     if etp > 0.0:
                         edir1, ec1, sgx, gx = evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt, sh2o, smcmax, smcwlt,
                                                                      smcref, smcdry, shdfac, cfactr, fxexp, count, sgx)
@@ -616,13 +615,11 @@ def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: 
 
                     stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
                                                                                                                                      zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o)
-        
         with interval(1, -1):
             if flag_iter and land:
                 if sneqv == 0.0:
                     stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
                     hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta)
-        
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv == 0.0:
@@ -634,7 +631,7 @@ def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: 
 def nopac_shflx_second(land: DT_I, flag_iter: DT_I, sneqv: DT_F, zsoil: DT_F2, stsoil: DT_F2, p: DT_F2, delta: DT_F2, 
                         yy: DT_F, zz1: DT_F, df1: DT_F,
                         # output
-                        ssoil: DT_F, t1: DT_F, stc: DT_F2):
+                        ssoil: DT_F, tsea: DT_F, stc: DT_F2):
     from __gtscript__ import BACKWARD, computation, interval
 
     with computation(BACKWARD):
@@ -647,16 +644,16 @@ def nopac_shflx_second(land: DT_I, flag_iter: DT_I, sneqv: DT_F, zsoil: DT_F2, s
             if flag_iter and land:
                 if sneqv == 0.0:
                     stc = shflx_second_fn(p, delta, stc, stsoil)
-        
+
         with interval(0, 1):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    ssoil, stc, t1 = shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil)
+                    ssoil, stc, tsea = shflx_second_upperboundary_fn(p, delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
 
 
 @gtscript.stencil(backend=BACKEND)
 def snopac_evapo_first(ice: DT_F, sncovr: DT_F, etp: DT_F, nroot: DT_I, smcmax: DT_F, smcwlt: DT_F, smcref: DT_F,
-                      smcdry: DT_F, dt: float, shdfac: DT_F,cmc: DT_F, sh2o: DT_F2, 
+                      smcdry: DT_F, dt: float, shdfac: DT_F,cmc: DT_F, sh2o: DT_F2,
                       flag_iter: DT_I, land: DT_I, sneqv: DT_F, count: DT_I,
                       # output
                       sgx: DT_F, gx: DT_F2, edir1: DT_F, ec1: DT_F, edir: DT_F, ec: DT_F):
@@ -669,12 +666,12 @@ def snopac_evapo_first(ice: DT_F, sncovr: DT_F, etp: DT_F, nroot: DT_I, smcmax: 
                 if sneqv != 0.0:
                     etp1 = etp * 0.001
                     edir1 = 0.0
-                    ec1 = 0.0 
+                    ec1 = 0.0
 
                     if etp >= 0.0 and ice == 0 and sncovr < 1.0:
                         edir1, ec1, sgx, gx = evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt, sh2o, smcmax, smcwlt,
                                                                      smcref, smcdry, shdfac, cfactr, fxexp, count, sgx)
-                        
+
                         edir1 *= 1.0 - sncovr
                         ec1 *= 1.0 - sncovr
                         edir = edir1 * 1000.0
@@ -693,7 +690,7 @@ def snopac_evapo_first(ice: DT_F, sncovr: DT_F, etp: DT_F, nroot: DT_I, smcmax: 
 
 @gtscript.stencil(backend=BACKEND)
 def snopac_evapo_second(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_iter: DT_I, land: DT_I,
-                       sneqv: DT_F, count: DT_I, rtdis: DT_F2, sgx: DT_F, 
+                       sneqv: DT_F, count: DT_I, rtdis: DT_F2, sgx: DT_F,
                        # output
                        denom: DT_F, gx: DT_F2):
     from __gtscript__ import FORWARD, computation, interval
@@ -707,13 +704,13 @@ def snopac_evapo_second(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_i
                     etp1 = etp * 0.001
                     if etp >= 0.0 and ice == 0 and sncovr < 1.0:
                         denom, gx = evapo_second_fn(etp1, shdfac, rtdis, gx, sgx, denom)
-                count += 1        
+                count += 1
 
 
 @gtscript.stencil(backend=BACKEND)
 def snopac_evapo_third(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_iter: DT_I, land: DT_I,
                       sneqv: DT_F, count: DT_I, gx: DT_F2, cmc: DT_F, pc: DT_F,
-                      denom: DT_F, edir1: DT_F, ec1: DT_F, 
+                      denom: DT_F, edir1: DT_F, ec1: DT_F,
                       # output
                       et1: DT_F2, ett1: DT_F, eta1: DT_F, et: DT_F2, ett: DT_F, eta: DT_F):
     from __gtscript__ import FORWARD, computation, interval
@@ -747,10 +744,10 @@ def snopac_evapo_third(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_it
 def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1: DT_F, zsoil: DT_F2, shdfac: DT_F, ec1: DT_F,
                       cmc: DT_F, sh2o: DT_F2, smc: DT_F2, flag_iter: DT_I, land: DT_I, etp: DT_F,
                       sncovr: DT_F, ice: DT_F, snowng: DT_I, ffrozp: DT_F, sfctmp: DT_F, eta: DT_F, snowh: DT_F,
-                      df1: DT_F, rr: DT_F, rch: DT_F, fdown: DT_F, flx2: DT_F, sfcemis: DT_F, t24: DT_F, th2: DT_F, stc: DT_F2, 
+                      df1: DT_F, rr: DT_F, rch: DT_F, fdown: DT_F, flx2: DT_F, sfcemis: DT_F, t24: DT_F, th2: DT_F, stc: DT_F2,
                       # output
-                      sicemax: DT_F, dd: DT_F, dice: DT_F, pcpdrp: DT_F, rhsct: DT_F, drip: DT_F, sice: DT_F2, dew: DT_F, 
-                      t1: DT_F, sneqv: DT_F, flx1: DT_F, flx3: DT_F, esnow: DT_F, ssoil: DT_F, snomlt: DT_F):
+                      sicemax: DT_F, dd: DT_F, dice: DT_F, pcpdrp: DT_F, rhsct: DT_F, drip: DT_F, sice: DT_F2, dew: DT_F,
+                      tsea: DT_F, sneqv: DT_F, flx1: DT_F, flx3: DT_F, esnow: DT_F, ssoil: DT_F, snomlt: DT_F):
     from __gtscript__ import FORWARD, computation, interval
 
     with computation(FORWARD):
@@ -775,21 +772,21 @@ def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1:
                             esnow1 = esnow * 0.001
                             esnow2 = esnow1 * dt
                             etanrg = esnow * lsubs
-                        else: 
+                        else:
                             esnow = etp * sncovr
                             esnow1 = esnow * 0.001
                             esnow2 = esnow1 * dt
                             etanrg = esnow*lsubs + eta*lsubc
-                    
-                    
-                    # if precip is falling, calculate heat flux from snow sfc to newly accumulating precip                    
+
+
+                    # if precip is falling, calculate heat flux from snow sfc to newly accumulating precip
                     flx1 = 0.0
                     if snowng:
                         # fractional snowfall/rainfall
-                        flx1 = (cpice * ffrozp + cph2o1*(1.-ffrozp)) * prcp * (t1 - sfctmp)
+                        flx1 = (cpice * ffrozp + cph2o1*(1.-ffrozp)) * prcp * (tsea - sfctmp)
 
                     elif prcp > 0.0:
-                        flx1 = cph2o1 * prcp * (t1 - sfctmp)
+                        flx1 = cph2o1 * prcp * (tsea - sfctmp)
 
                     # calculate an 'effective snow-grnd sfc temp' based on heat fluxes between
                     # the snow pack and the soil and on net radiation.
@@ -804,9 +801,9 @@ def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1:
                     if t12 <= tfreez:    # no snow melt will occur.
 
                         # set the skin temp to this effective temp
-                        t1 = t12
+                        tsea = t12
                         # update soil heat flux
-                        ssoil = df1 * (t1 - stc) / dtot
+                        ssoil = df1 * (tsea - stc) / dtot
                         # update depth of snowpack
                         sneqv = max(0.0, sneqv-esnow2)
                         flx3 = 0.0
@@ -814,9 +811,9 @@ def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1:
                         snomlt = 0.0
 
                     else:    # snow melt will occur.
-                        t1 = tfreez * max(0.01, sncovr**snoexp) + t12 * \
+                        tsea = tfreez * max(0.01, sncovr**snoexp) + t12 * \
                             (1.0 - max(0.01, sncovr**snoexp))
-                        ssoil = df1 * (t1 - stc) / dtot
+                        ssoil = df1 * (tsea - stc) / dtot
 
                         if sneqv - esnow2 <= esdmin:
                             # snowpack has sublimated away, set depth to zero.
@@ -828,9 +825,9 @@ def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1:
                         else:
                             # potential evap (sublimation) less than depth of snowpack
                             sneqv -= esnow2
-                            seh = rch * (t1 - th2)
+                            seh = rch * (tsea - th2)
 
-                            t14 = t1 * t1
+                            t14 = tsea * tsea
                             t14 = t14 * t14
 
                             flx3 = fdown - flx1 - flx2 - sfcemis*sigma1*t14 - ssoil - seh - etanrg
@@ -870,7 +867,7 @@ def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1:
 
 @gtscript.stencil(backend=BACKEND)
 def snopac_smflx_second(ice: DT_F, smcmax: DT_F, etp: DT_F, dt: float, bexp: DT_F, kdt: DT_F, frzx: DT_F, dksat: DT_F, dwsat: DT_F, slope: DT_F,
-                       zsoil: DT_F2, sh2o: DT_F2, flag_iter: DT_I, land: DT_I, sneqv: DT_F, sicemax: DT_F, dd: DT_F, dice: DT_F, pcpdrp: DT_F, edir1: DT_F, et1: DT_F2, 
+                       zsoil: DT_F2, sh2o: DT_F2, flag_iter: DT_I, land: DT_I, sneqv: DT_F, sicemax: DT_F, dd: DT_F, dice: DT_F, pcpdrp: DT_F, edir1: DT_F, et1: DT_F2,
                        # outpus
                        rhstt: DT_F2, ci: DT_F2, runoff1: DT_F, runoff2: DT_F, dsmdz: DT_F2, ddz: DT_F2, wdf: DT_F2, wcnd: DT_F2, p: DT_F2, delta: DT_F2):
     from __gtscript__ import FORWARD, computation, interval
@@ -900,8 +897,8 @@ def snopac_smflx_second(ice: DT_F, smcmax: DT_F, etp: DT_F, dt: float, bexp: DT_
 
 
 @gtscript.stencil(backend=BACKEND)
-def snopac_smflx_third(ice: DT_F,  dt: float, smcmax: DT_F, flag_iter: DT_I, land: DT_I, sice: DT_F2, 
-                      sldpth: DT_F2, rhsct: DT_F, ci: DT_F2, sneqv: DT_F, 
+def snopac_smflx_third(ice: DT_F,  dt: float, smcmax: DT_F, flag_iter: DT_I, land: DT_I, sice: DT_F2,
+                      sldpth: DT_F2, rhsct: DT_F, ci: DT_F2, sneqv: DT_F,
                       # outpus
                       sh2o: DT_F2, smc: DT_F2, cmc: DT_F, runoff3: DT_F):
     from __gtscript__ import FORWARD, computation, interval
@@ -926,7 +923,7 @@ def snopac_smflx_third(ice: DT_F,  dt: float, smcmax: DT_F, flag_iter: DT_I, lan
                 if sneqv != 0.0:
                     if ice == 0.0:
                         wplus, smc, sh2o = sstep_fn(
-                            sh2o, smc, smcmax, sice, ci, sldpth, wplus) 
+                            sh2o, smc, smcmax, sice, ci, sldpth, wplus)
 
                         runoff3 = wplus
 
@@ -940,8 +937,8 @@ def snopac_smflx_third(ice: DT_F,  dt: float, smcmax: DT_F, flag_iter: DT_I, lan
 
 @gtscript.stencil(backend=BACKEND)
 def snopac_shflx_first(ssoil: DT_F, csoil: DT_F, land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: DT_F, smc: DT_F2, quartz: DT_F, smcmax: DT_F, ivegsrc: int,
-                      vegtype: DT_I, shdfac: DT_F, fdown: DT_F, sfcemis: DT_F, t24: DT_F, sfctmp: DT_F, rch: DT_F, th2: DT_F, 
-                      epsca: DT_F, rr: DT_F, zsoil: DT_F2, dt: float, psisat: DT_F, bexp: DT_F, ice: DT_F, stc: DT_F2, 
+                      vegtype: DT_I, shdfac: DT_F, fdown: DT_F, sfcemis: DT_F, t24: DT_F, sfctmp: DT_F, rch: DT_F, th2: DT_F,
+                      epsca: DT_F, rr: DT_F, zsoil: DT_F2, dt: float, psisat: DT_F, bexp: DT_F, ice: DT_F, stc: DT_F2,
                       # output
                       sh2o: DT_F2, stsoil: DT_F2, p: DT_F2, delta: DT_F2, tbot: DT_F, yy: DT_F, zz1: DT_F, df1: DT_F, beta: DT_F):
     from __gtscript__ import FORWARD, computation, interval
@@ -956,26 +953,26 @@ def snopac_shflx_first(ssoil: DT_F, csoil: DT_F, land: DT_I, flag_iter: DT_I, sn
 
                     stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
                                                                                                                                      zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o)
-        
+
         with interval(1, -1):
             if flag_iter and land:
                 if sneqv == 0.0:
                     stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
                     hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta)
-        
+
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv == 0.0:
                     stsoil, sh2o, p, delta, tbot = shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
                     hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta)
-            
+
 
 @gtscript.stencil(backend=BACKEND)
-def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: DT_I, flag_iter: DT_I, 
-                        sneqv: DT_F, zsoil: DT_F2, stsoil: DT_F2, p: DT_F2, delta: DT_F2, 
-                        yy: DT_F, zz1: DT_F, df1: DT_F, 
+def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: DT_I, flag_iter: DT_I,
+                        sneqv: DT_F, zsoil: DT_F2, stsoil: DT_F2, p: DT_F2, delta: DT_F2,
+                        yy: DT_F, zz1: DT_F, df1: DT_F,
                         # output
-                        ssoil: DT_F, t1: DT_F, stc: DT_F2):
+                        ssoil: DT_F, tsea: DT_F, stc: DT_F2):
     from __gtscript__ import BACKWARD, computation, interval
 
     with computation(BACKWARD):
@@ -988,18 +985,18 @@ def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: D
             if flag_iter and land:
                 if sneqv != 0.0:
                     stc = shflx_second_fn(p, delta, stc, stsoil)
-        
+
         with interval(0, 1):
             if flag_iter and land:
                 if sneqv != 0.0:
-                    ssoil, stc, t11 = shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil)
+                    ssoil, stc, t11 = shflx_second_upperboundary_fn(p, delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
 
                     # snow depth and density adjustment based on snow compaction.
                     if ice == 0:
                         if sneqv > 0.0:
                             snowh, sndens = snowpack_fn(
-                                sneqv, dt, t1, yy, snowh, sndens)
-                            
+                                sneqv, dt, tsea, yy, snowh, sndens)
+
                         else:
                             sneqv = 0.0
                             snowh = 0.0
@@ -1009,7 +1006,7 @@ def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: D
                     elif ice == 1:
                         if sneqv >= 0.01:
                             snowh, sndens = snowpack_fn(
-                                sneqv, dt, t1, yy, snowh, sndens)
+                                sneqv, dt, tsea, yy, snowh, sndens)
                         else:
                             sneqv = 0.01
                             snowh = 0.05
@@ -1017,7 +1014,7 @@ def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: D
                     else:
                         if sneqv >= 0.10:
                             snowh, sndens = snowpack_fn(
-                                sneqv, dt, t1, yy, snowh, sndens)
+                                sneqv, dt, tsea, yy, snowh, sndens)
                         else:
                             sneqv = 0.10
                             snowh = 0.50
@@ -1028,10 +1025,10 @@ def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: D
 def cleanup_sflx(
     land: DT_I, flag_iter: DT_I, eta: DT_F, ssoil: DT_F, edir: DT_F, ec: DT_F, ett: DT_F, esnow: DT_F, sncovr: DT_F, soilm: DT_F,
     flx1: DT_F, flx2: DT_F, flx3: DT_F, etp: DT_F, runoff1: DT_F, runoff2: DT_F,
-    cmc: DT_F, snowh: DT_F, sneqv: DT_F, z0: DT_F, rho: DT_F, ch: DT_F, wind: DT_F, q1: DT_F, flag_guess: DT_I,
+    cmc: DT_F, snowh: DT_F, sneqv: DT_F, z0: DT_F, rho: DT_F, chx: DT_F, wind: DT_F, q1: DT_F, flag_guess: DT_I,
     weasd_old: DT_F, snwdph_old: DT_F, tskin_old: DT_F, canopy_old: DT_F, tprcp_old: DT_F, srflag_old: DT_F,
-    smc_old: DT_F2, slc_old: DT_F2, stc_old: DT_F2, th2: DT_F, t1: DT_F, et: DT_F2, ice: DT_F, runoff3: DT_F, dt: float,
-    sfcprs: DT_F, t2v: DT_F, snomlt: DT_F, zsoil: DT_F2, smcmax: DT_F, smcwlt: DT_F, smcref: DT_F,
+    smc_old: DT_F2, slc_old: DT_F2, stc_old: DT_F2, th2: DT_F, tsea: DT_F, et: DT_F2, ice: DT_F, runoff3: DT_F, dt: float,
+    sfcprs: DT_F, t2v: DT_F, snomlt: DT_F, zsoil: DT_F2, smcmax: DT_F, smcwlt: DT_F, smcref: DT_F, ch: DT_F,
     # output
     weasd: DT_F, snwdph: DT_F, tskin: DT_F, tprcp: DT_F, srflag: DT_F, smc: DT_F2,
     stc: DT_F2, slc: DT_F2, canopy: DT_F, trans: DT_F, tsurf: DT_F, zorl: DT_F,
@@ -1045,12 +1042,12 @@ def cleanup_sflx(
         with interval(0,1):
             if flag_iter and land:
                 # prepare sensible heat (h) for return to parent model
-                sheat = -(ch*cp1*sfcprs) / (rd1*t2v) * (th2 - t1)
+                sheat = -(chx*cp1*sfcprs) / (rd1*t2v) * (th2 - tsea)
 
                 # convert units and/or sign of total evap (eta), potential evap (etp),
                 # subsurface heat flux (s), and runoffs for what parent model expects
                 # convert eta from kg m-2 s-1 to w m-2
-                
+
                 edir = edir * lsubc
                 ec = ec * lsubc
                 et = et * lsubc
@@ -1086,11 +1083,12 @@ def cleanup_sflx(
                     # soil medium, and thus no call to subroutine smflx (for soil
                     # moisture tendency).
                     runoff1 = snomlt / dt
-                
+
                 soilm = - smc * zsoil
                 soilww = - (smc - smcwlt) * zsoil
 
                 # output
+                tsurf = tsea
                 evap = eta
                 hflx = sheat
                 gflux = ssoil
@@ -1110,7 +1108,6 @@ def cleanup_sflx(
 
                 runoff = runoff1 * 1000.0
                 drain = runoff2 * 1000.0
-                # cmc = 0.00027039003369244615
                 canopy = cmc * 1000.0
                 snwdph = snowh * 1000.0
                 weasd = sneqv * 1000.0
@@ -1137,7 +1134,7 @@ def cleanup_sflx(
                 slc = slc_old
             elif land:
                 tskin = tsurf
-        
+
         with interval(1, -1):
             if flag_iter and land:
                 et = et * lsubc
