@@ -173,7 +173,7 @@ if __name__ == "__main__":
                 compare_data(out_data, ref_data)
 
                 isready = False
-
+    print("SUCCESS")
     write_benchmark = False
 
     if write_benchmark:

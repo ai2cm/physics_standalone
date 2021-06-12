@@ -12,34 +12,48 @@ envloc=`/bin/pwd`/..
 # load scheduler tools
 . ${envloc}/env/schedulerTools.sh
 
-python -m venv venv
-source ./venv/bin/activate
-git clone https://github.com/VulcanClimateModeling/gt4py.git
-pip install -e ./gt4py[cuda102]
-python -m gt4py.gt_src_manager install
-
+if [ -d "venv/bin" ]
+then
+    source ./venv/bin/activate
+    echo "venv already exists, continue without making one"
+else
+    python -m venv venv
+    source ./venv/bin/activate
+    git clone https://github.com/VulcanClimateModeling/gt4py.git
+    pip install -e ./gt4py[cuda102]
+    python -m gt4py.gt_src_manager install
+fi
 cd ../../
 echo `which python`
 echo `pip list`
-backend=numpy
-phy=seaice
+backend=${backend}
+phy=${physics}
 sed -i 's/<CPUSPERTASK>/12/g' ${scheduler_script}
 sed -i -e "s/<which_backend>/${backend}/g" ${scheduler_script}
 sed -i -e "s/<which_physics>/${phy}/g" ${scheduler_script}
 export IS_DOCKER=False
-
 echo "Submitting slurm script:"
 cat ${scheduler_script}
+
 cp ${scheduler_script} runfile/.
 cd runfile
-
-# submit SLURM job
-launch_job ${scheduler_script} 9000
-if [ $? -ne 0 ] ; then
-    exitError 1251 ${LINENO} "problem launching SLURM job ${scheduler_script}"
+OUT="${phy}_${backend}.out"
+set +e
+res=$(sbatch -W -C gpu ${scheduler_script} 2>&1)
+status1=$?
+grep -q SUCCESS ${OUT}
+status2=$?
+set -e
+wait
+echo "DONE WAITING ${status1} ${status2}"
+if [ $status1 -ne 0 -o $status2 -ne 0 ] ; then
+  echo "ERROR: physics validation not successful"
+  exit 1
+else
+  echo "physics validation run successful"
 fi
+
 echo "Job completed!"
 # echo output of SLURM job
-OUT="${phy}_${backend}.out"
 cat ${OUT}
 rm ${OUT}
