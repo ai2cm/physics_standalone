@@ -55,7 +55,7 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	/bin/rm -rf $(TARGET) data data.tar.gz
+	/bin/rm -rf $(TARGET)
 
 $(TARGET): $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) -o $(TARGET)

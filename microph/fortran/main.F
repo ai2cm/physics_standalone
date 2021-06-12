@@ -64,7 +64,7 @@ program test
 
     do tile = 0, 0 ! num_tiles - 1
     
-    !$ser init directory='./data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
+    !$ser init directory='../data' prefix='Serialized' prefix_ref='Generator' mpi_rank=tile
 
     do ser_count = 0, 0 !ser_count_max
         
