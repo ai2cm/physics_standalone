@@ -3,7 +3,7 @@ set -e -x
 scheduler_script=$1
 echo "${JOB_NAME}-${BUILD_NUMBER}"
 
-if [ $backend == 'numpy' ] && [ $physics == 'buildenv' ] && [ -d "venv/bin" ]
+if [ $backend == 'numpy' ] && [ $physics == 'buildenv' ] && [ ! -d "venv/bin" ]
 then
     python -m venv venv
     git clone https://github.com/VulcanClimateModeling/gt4py.git
