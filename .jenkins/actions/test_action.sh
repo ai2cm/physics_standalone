@@ -19,7 +19,12 @@ else
     echo `pip list`
     backend=${backend}
     phy=${physics}
-    sed -i 's/<CPUSPERTASK>/12/g' ${scheduler_script}
+    if [ $backend == 'gtcuda' ]
+    then
+        sed -i 's/<CPUSPERTASK>/1/g' ${scheduler_script}
+    else
+        sed -i 's/<CPUSPERTASK>/12/g' ${scheduler_script}
+    fi
     sed -i -e "s/<which_backend>/${backend}/g" ${scheduler_script}
     sed -i -e "s/<which_physics>/${phy}/g" ${scheduler_script}
     export IS_DOCKER=False
