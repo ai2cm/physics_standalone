@@ -6,6 +6,7 @@ echo "${JOB_NAME}-${BUILD_NUMBER}"
 if [ $backend == 'numpy' ] && [ $physics == 'buildenv' ] && [ ! -d "venv/bin" ]
 then
     python -m venv venv
+    source venv/bin/activate
     git clone https://github.com/VulcanClimateModeling/gt4py.git
     pip install -e ./gt4py[cuda102]
     python -m gt4py.gt_src_manager install
