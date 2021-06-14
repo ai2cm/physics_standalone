@@ -27,6 +27,10 @@ else
     fi
     sed -i -e "s/<which_backend>/${backend}/g" ${scheduler_script}
     sed -i -e "s/<which_physics>/${phy}/g" ${scheduler_script}
+    if [ $physics == 'turb' ]
+    then
+        sed -i -e "s/00:30:00/00:45:00/g" ${scheduler_script}
+    fi
     export IS_DOCKER=False
     echo "Submitting slurm script:"
     cat ${scheduler_script}
