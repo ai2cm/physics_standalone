@@ -2,7 +2,6 @@ serialbox
 __pycache__
 .vscode
 **.gt_cache/
-*.dat
 *.log
 *.env
 *.venv
@@ -11,3 +10,4 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*data*/

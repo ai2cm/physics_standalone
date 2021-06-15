@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 import numpy as np
 import sys
+import os
 
 
 def parse_args():
@@ -16,13 +17,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "data_dir",
-        type=str,
-        action="store",
-        help="directory containing data to run with",
-    )
-
-    parser.add_argument(
         "backend",
         type=str,
         action="store",
@@ -30,18 +24,29 @@ def parse_args():
     )
 
     parser.add_argument(
-        "select_tile",
+        "--data_dir",
         type=str,
         action="store",
-        help="which tile to validate, None for all tiles",
+        help="directory containing data to run with",
     )
 
     parser.add_argument(
-        "select_sp",
+        "--select_tile",
+        type=str,
+        action="store",
+        help="which tile to validate, None for all tiles",
+        default="All",
+    )
+
+    parser.add_argument(
+        "--select_sp",
         type=str,
         action="store",
         help="which savepoint to validate, None for all savepoints",
+        default="All",
     )
+
+    parser.add_argument("--verbose", action="store_true")
 
     return parser.parse_args()
 
@@ -67,7 +72,6 @@ def compare_data(exp_data, ref_data):
             np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True))
         )
         if ind.size > 0:
-            i = tuple(ind[:, 0])
             diff = abs(exp_data[key] - ref_data[key])
             max_diff_ind = np.unravel_index(np.argmax(diff, axis=None), diff.shape)
             print(
@@ -86,13 +90,17 @@ def compare_data(exp_data, ref_data):
 
 if __name__ == "__main__":
     args = parse_args()
-    print(
-        args.which_physics,
-        args.data_dir,
-        args.backend,
-        args.select_tile,
-        args.select_sp,
-    )
+    if args.verbose:
+        print(
+            args.which_physics,
+            args.data_dir,
+            args.backend,
+            args.select_tile,
+            args.select_sp,
+        )
+    os.environ["BACKEND"] = args.backend
+    if args.data_dir is None:
+        args.data_dir = "../" + args.which_physics + "/data"
     if args.which_physics == "seaice":
         SEAICE_DIR = "../seaice/python/"
         sys.path.append(SEAICE_DIR)
@@ -120,14 +128,14 @@ if __name__ == "__main__":
     sys.path.append(SERIALBOX_DIR + "/python")
     import serialbox as ser
 
-    if (args.select_tile != "None") and (args.select_sp != "None"):
-        SELECT_SP = {"tile": int(args.select_tile), "savepoint": args.select_sp}
+    if (args.select_tile != "All") and (args.select_sp != "All"):
+        select_sp = {"tile": int(args.select_tile), "savepoint": args.select_sp}
     else:
-        SELECT_SP = None
+        select_sp = None
     timings = {"elapsed_time": 0, "run_time": 0}
     for tile in range(6):
-        if SELECT_SP is not None:
-            if tile != SELECT_SP["tile"]:
+        if select_sp is not None:
+            if tile != select_sp["tile"]:
                 continue
 
         serializer = ser.Serializer(
@@ -139,8 +147,8 @@ if __name__ == "__main__":
         isready = False
         for sp in savepoints:
 
-            if SELECT_SP is not None:
-                if sp.name != SELECT_SP["savepoint"] and sp.name != SELECT_SP[
+            if select_sp is not None:
+                if sp.name != select_sp["savepoint"] and sp.name != select_sp[
                     "savepoint"
                 ].replace("-in-", "-out-"):
                     continue
@@ -155,7 +163,6 @@ if __name__ == "__main__":
                 # read serialized input data
                 in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-                # run Python version
                 out_data = phy.run(in_data, timings)
 
                 isready = True

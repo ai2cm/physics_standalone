@@ -16,20 +16,19 @@ You need the following things installed if you want to run directly on the host 
 cd <which_physics>
 ./get_data.sh
 cd ../runfile
-export BACKEND=<backend>
-python physics.py <which_physics> <data_dir> <backend> <which_tile> <which_savepoint>
+python physics.py <which_physics> <backend> <--data_dir> <--which_tile> <--which_savepoint>
 ```
+
+By default, `data_dir=../which_physics/data`, `which_tile=All`, and `which_savepoint=All`.
 
 For example, to validate microphysics using `gtx86` backend for all tiles and savepoints:
 ```
-export BACKEND=gtx86
-python physics.py microph ../microph/data $BACKEND None None
+python physics.py microph gtx86
 ```
 
 To validate tile 0 and savepoint 0:
 ```
-export BACKEND=gtx86
-python physics.py microph ../microph/data $BACKEND 0 cloud_mp-in-000000
+python physics.py microph gtx86 --which_tile=0 --which_savepoint=cloud_mp-in-000000
 ```
 
 Note: You may have to adapt the `Makefile` to point to your serialbox installation if it is not installed under `/usr/local/serialbox`.
