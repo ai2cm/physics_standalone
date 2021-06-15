@@ -6,7 +6,7 @@ import os
 
 
 def parse_args():
-    usage = "usage: python %(prog)s <which_physics> <data_dir> <backend> <which_tile> <which_savepoint>"
+    usage = "usage: python %(prog)s <which_physics> <backend> <--data_dir> <--which_tile> <--which_savepoint>"
     parser = ArgumentParser(usage=usage)
 
     parser.add_argument(
