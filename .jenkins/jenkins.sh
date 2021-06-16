@@ -71,22 +71,10 @@ test -f "${script}" || exitError 1301 ${LINENO} "cannot find script ${script}"
 
 # load scheduler tools
 . ${envloc}/env/schedulerTools.sh
-scheduler_script="runfile/run.job"
 
-# if there is a scheduler script, make a copy for this job
-if [ -f ${scheduler_script} ] ; then
-    if [ "${action}" == "setup" ]; then
-	scheduler="none"
-    else
-	cp  ${scheduler_script} job_${action}.sh
-	scheduler_script=job_${action}.sh
-    fi
-fi
-
-module load daint-gpu
-
-${script} ${scheduler_script}
-
+# run the action script
+echo "### Running ${script} ${optarg}"
+${script} ${optarg}
 if [ $? -ne 0 ] ; then
   exitError 1510 ${LINENO} "problem while executing script ${script}"
 fi

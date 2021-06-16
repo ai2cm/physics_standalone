@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+"""physics.py: Validate a parameterization with a specified GT4Py backend"""
+
 from argparse import ArgumentParser
 import numpy as np
 import sys
@@ -6,14 +9,14 @@ import os
 
 
 def parse_args():
-    usage = "usage: python %(prog)s <which_physics> <backend> <--data_dir> <--which_tile> <--which_savepoint>"
+    usage = "usage: python %(prog)s parameterization backend [--data_dir=path] [--which_tile=selection] [--which_savepoint=name]"
     parser = ArgumentParser(usage=usage)
 
     parser.add_argument(
-        "which_physics",
+        "parameterization",
         type=str,
         action="store",
-        help="which physics to run",
+        help="which parameterization to run",
     )
 
     parser.add_argument(
@@ -46,7 +49,11 @@ def parse_args():
         default="All",
     )
 
-    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+    )
 
     return parser.parse_args()
 
@@ -92,7 +99,7 @@ if __name__ == "__main__":
     args = parse_args()
     if args.verbose:
         print(
-            args.which_physics,
+            args.parameterization,
             args.data_dir,
             args.backend,
             args.select_tile,
@@ -100,30 +107,34 @@ if __name__ == "__main__":
         )
     os.environ["BACKEND"] = args.backend
     if args.data_dir is None:
-        args.data_dir = "../" + args.which_physics + "/data"
-    if args.which_physics == "seaice":
+        args.data_dir = "../" + args.parameterization + "/data"
+
+    if args.parameterization == "seaice":
         SEAICE_DIR = "../seaice/python/"
         sys.path.append(SEAICE_DIR)
         from config import *
         import sea_ice_gt4py as phy
 
-    elif args.which_physics == "shalconv":
+    elif args.parameterization == "shalconv":
         SHALCONV_DIR = "../shalconv/python/"
         sys.path.append(SHALCONV_DIR)
         from shalconv.config import *
         import shalconv.samfshalcnv as phy
 
-    elif args.which_physics == "turb":
+    elif args.parameterization == "turb":
         TURB_DIR = "../turb/python/"
         sys.path.append(TURB_DIR)
         from config import *
         import turb_gt as phy
 
-    elif args.which_physics == "microph":
+    elif args.parameterization == "microph":
         MPH_DIR = "../microph/python/"
         sys.path.append(MPH_DIR)
         from config import *
         import microphys.drivers.gfdl_cloud_microphys_gt4py as phy
+
+    else:
+        raise Exception(f"Parameterization {args.parameterization} is not supported")
 
     sys.path.append(SERIALBOX_DIR + "/python")
     import serialbox as ser
@@ -181,13 +192,15 @@ if __name__ == "__main__":
                 compare_data(out_data, ref_data)
 
                 isready = False
+
     print("SUCCESS")
+
     write_benchmark = False
 
     if write_benchmark:
         if (args.select_tile == "None") and (args.select_sp == "None"):
             timings["elapsed_time"] = timings["elapsed_time"] / (6 * len(savepoints))
             timings["run_time"] = timings["run_time"] / (6 * len(savepoints))
-        output_file = open("timings_{}_{}.dat".format(args.which_physics, BACKEND), "w")
+        output_file = open("timings_{}_{}.dat".format(args.parameterization, BACKEND), "w")
         output_file.write(str(timings["elapsed_time"]) + " " + str(timings["run_time"]))
         output_file.close()

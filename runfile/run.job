@@ -5,11 +5,18 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=<CPUSPERTASK>
 #SBATCH --hint=nomultithread
-#SBATCH --output=<which_physics>_<which_backend>.out
+#SBATCH --output=<OUTPUT>
 #SBATCH --time=00:30:00
 #SBATCH --gres=gpu:1
 #SBATCH --account=s1053
 #SBATCH --partition=cscsci
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-python physics.py <which_physics> <which_backend> --data_dir=/project/s1053/physics_standalone_serialized_test_data/c48/<which_physics>
+
+which python
+python --version
+pip list
+
+python physics.py --verbose <PARAMETERIZATION> <BACKEND> <OPTIONS>
+
+exit 0
