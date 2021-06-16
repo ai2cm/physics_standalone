@@ -51,8 +51,7 @@ def parse_args():
 
     parser.add_argument(
         "--verbose",
-        action="store_true",
-        default=False,
+        action="store_false",
     )
 
     return parser.parse_args()
