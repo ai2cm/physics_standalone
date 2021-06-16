@@ -51,7 +51,7 @@ def parse_args():
 
     parser.add_argument(
         "--verbose",
-        action="store_false",
+        action="store_true",
     )
 
     return parser.parse_args()
@@ -73,7 +73,8 @@ def compare_data(exp_data, ref_data):
         ref_data.keys()
     ), "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
-        print(key)
+        if args.verbose:
+            print(key)
         ind = np.array(
             np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True))
         )
@@ -168,7 +169,8 @@ if __name__ == "__main__":
                 if isready:
                     raise Exception("out-of-order data enountered: " + sp.name)
 
-                print("> running ", f"tile-{tile}", sp)
+                if args.verbose:
+                    print("> running ", f"tile-{tile}", sp)
 
                 # read serialized input data
                 in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
