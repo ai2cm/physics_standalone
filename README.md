@@ -21,10 +21,22 @@ After that:
 
 ```bash
 ./enter.sh # only if you are running using the Docker environment
-cd XXX
+cd <which_physics>
 ./get_data.sh
-make
-./main.x
+cd ../runfile
+python physics.py <which_physics> <backend> <--data_dir> <--which_tile> <--which_savepoint>
+```
+
+By default, `data_dir=../which_physics/data`, `which_tile=All`, and `which_savepoint=All`.
+
+For example, to validate microphysics using `gtx86` backend for all tiles and savepoints:
+```
+python physics.py microph gtx86
+```
+
+To validate tile 0 and savepoint 0:
+```
+python physics.py microph gtx86 --which_tile=0 --which_savepoint=cloud_mp-in-000000
 ```
 
 Note: You may have to adapt the `Makefile` to point to your serialbox installation if it is not installed under `/usr/local/serialbox`.
