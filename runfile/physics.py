@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
 """physics.py: Validate a parameterization with a specified GT4Py backend"""
-
 from argparse import ArgumentParser
 import numpy as np
 import sys
@@ -53,7 +51,6 @@ def parse_args():
         "--verbose",
         action="store_true",
     )
-
     return parser.parse_args()
 
 
@@ -193,7 +190,6 @@ if __name__ == "__main__":
                 compare_data(out_data, ref_data)
 
                 isready = False
-
     print("SUCCESS")
 
     write_benchmark = False

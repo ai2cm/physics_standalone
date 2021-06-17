@@ -75,6 +75,7 @@ test -f "${script}" || exitError 1301 ${LINENO} "cannot find script ${script}"
 # run the action script
 echo "### Running ${script} ${optarg}"
 ${script} ${optarg}
+
 if [ $? -ne 0 ] ; then
   exitError 1510 ${LINENO} "problem while executing script ${script}"
 fi

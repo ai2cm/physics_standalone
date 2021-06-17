@@ -3870,7 +3870,7 @@ module gfdl_cloud_microphys_mod
      wqs1 = es / (rvgas * ta * den)
  
 #endif
- 
+
  end function wqs1
  
  ! =======================================================================
@@ -3962,7 +3962,6 @@ module gfdl_cloud_microphys_mod
      real, intent (in) :: ta, den
  
 #ifdef EXACT_SVP
- 
      if (ta < t_ice) then
  
          ! Over ice between -160 degrees Celsius and 0 degrees Celsius
@@ -3984,7 +3983,6 @@ module gfdl_cloud_microphys_mod
      endif
  
 #else
-     
      real :: es, ap1, tmin
      
      integer :: it
@@ -4017,7 +4015,6 @@ module gfdl_cloud_microphys_mod
      real, intent (out) :: dqdt
  
 #ifdef EXACT_SVP
- 
      iqs2 = iqs1(ta, den)
      
      if (ta < t_ice) then
@@ -5119,4 +5116,3 @@ module gfdl_cloud_microphys_mod
  !+---+-----------------------------------------------------------------+
  
  end module gfdl_cloud_microphys_mod
- 
