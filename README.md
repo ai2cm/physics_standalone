@@ -21,13 +21,13 @@ After that:
 
 ```bash
 ./enter.sh # only if you are running using the Docker environment
-cd <which_physics>
+cd <parameterization>
 ./get_data.sh
 cd ../runfile
-python physics.py <which_physics> <backend> <--data_dir> <--which_tile> <--which_savepoint>
+python physics.py <parameterization> <backend> <--data_dir> <--which_tile> <--which_savepoint>
 ```
 
-By default, `data_dir=../which_physics/data`, `which_tile=All`, and `which_savepoint=All`.
+By default, `data_dir=../parameterization/data`, `which_tile=All`, and `which_savepoint=All`.
 
 For example, to validate microphysics using `gtx86` backend for all tiles and savepoints:
 ```

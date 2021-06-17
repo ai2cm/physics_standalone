@@ -2339,7 +2339,7 @@ module gfdl_cloud_microphys_mod
              tz (k) = tz (k) + pgsub * (lhl (k) + lhi (k)) / cvm (k)
          endif
          
- #ifdef USE_MIN_EVAP
+#ifdef USE_MIN_EVAP
          ! -----------------------------------------------------------------------
          ! update capacity heat and latend heat coefficient
          ! -----------------------------------------------------------------------
@@ -2360,7 +2360,7 @@ module gfdl_cloud_microphys_mod
              cvm (k) = c_air + qv (k) * c_vap + q_liq (k) * c_liq + q_sol (k) * c_ice
              tz (k) = tz (k) - sink * lhl (k) / cvm (k)
          endif
- #endif
+#endif
          
          ! -----------------------------------------------------------------------
          ! update capacity heat and latend heat coefficient
@@ -3561,9 +3561,9 @@ module gfdl_cloud_microphys_mod
      
      ! master = (mpp_pe () .eq.mpp_root_pe ())
      
- #ifdef INTERNAL_FILE_NML
+#ifdef INTERNAL_FILE_NML
      read (input_nml_file, nml = gfdl_cloud_microphysics_nml)
- #else
+#else
      inquire (file = trim (fn_nml), exist = exists)
      if (.not. exists) then
          write (6, *) 'gfdl - mp :: namelist file: ', trim (fn_nml), ' does not exist'
@@ -3574,16 +3574,16 @@ module gfdl_cloud_microphys_mod
      rewind (nlunit)
      read (nlunit, nml = gfdl_cloud_microphysics_nml)
      close (nlunit)
- #endif
+#endif
  
- #ifdef PRINT_NML
+#ifdef PRINT_NML
      ! write version number and namelist to log file
      if (me == master) then
          write (logunit, *) " ================================================================== "
          write (logunit, *) "gfdl_cloud_microphys_mod"
          write (logunit, nml = gfdl_cloud_microphysics_nml)
      endif
- #endif
+#endif
      
      if (do_setup) then
          call setup_con
@@ -3852,11 +3852,11 @@ module gfdl_cloud_microphys_mod
      
      real, intent (in) :: ta, den
  
- #ifdef EXACT_SVP
+#ifdef EXACT_SVP
  
      wqs1 = (e00 * exp((dc_vap * log(ta / t_ice) + lv0 * (ta - t_ice) / (ta * t_ice)) / rvgas)) / ( rvgas * ta * den )
      
- #else
+#else
  
      real :: es, ap1, tmin
      
@@ -3869,8 +3869,8 @@ module gfdl_cloud_microphys_mod
      es = tablew (it) + (ap1 - it) * desw (it)
      wqs1 = es / (rvgas * ta * den)
  
- #endif
- 
+#endif
+
  end function wqs1
  
  ! =======================================================================
@@ -3891,12 +3891,12 @@ module gfdl_cloud_microphys_mod
      
      real, intent (out) :: dqdt
  
- #ifdef EXACT_SVP
+#ifdef EXACT_SVP
      
      wqs2 = wqs1(ta, den)
      dqdt = wqs2 * (dc_vap + lv0 / ta) / (rvgas * ta)
  
- #else
+#else
  
      real :: es, ap1, tmin
      
@@ -3915,7 +3915,7 @@ module gfdl_cloud_microphys_mod
      ! finite diff, del_t = 0.1:
      dqdt = 10. * (desw (it) + (ap1 - it) * (desw (it + 1) - desw (it))) / (rvgas * ta * den)
      
- #endif
+#endif
  
  end function wqs2
  
@@ -3961,8 +3961,7 @@ module gfdl_cloud_microphys_mod
      
      real, intent (in) :: ta, den
  
- #ifdef EXACT_SVP
- 
+#ifdef EXACT_SVP
      if (ta < t_ice) then
  
          ! Over ice between -160 degrees Celsius and 0 degrees Celsius
@@ -3983,8 +3982,7 @@ module gfdl_cloud_microphys_mod
  
      endif
  
- #else
-     
+#else
      real :: es, ap1, tmin
      
      integer :: it
@@ -3996,7 +3994,7 @@ module gfdl_cloud_microphys_mod
      es = table2 (it) + (ap1 - it) * des2 (it)
      iqs1 = es / (rvgas * ta * den)
      
- #endif
+#endif
  
  end function iqs1
  
@@ -4016,8 +4014,7 @@ module gfdl_cloud_microphys_mod
      
      real, intent (out) :: dqdt
  
- #ifdef EXACT_SVP
- 
+#ifdef EXACT_SVP
      iqs2 = iqs1(ta, den)
      
      if (ta < t_ice) then
@@ -4040,7 +4037,7 @@ module gfdl_cloud_microphys_mod
  
      endif
  
- #else
+#else
  
      real :: es, ap1, tmin
      
@@ -4055,7 +4052,7 @@ module gfdl_cloud_microphys_mod
      it = ap1 - 0.5
      dqdt = 10. * (des2 (it) + (ap1 - it) * (des2 (it + 1) - des2 (it))) / (rvgas * ta * den)
      
- #endif
+#endif
  
  end function iqs2
  
@@ -5119,4 +5116,3 @@ module gfdl_cloud_microphys_mod
  !+---+-----------------------------------------------------------------+
  
  end module gfdl_cloud_microphys_mod
- 
