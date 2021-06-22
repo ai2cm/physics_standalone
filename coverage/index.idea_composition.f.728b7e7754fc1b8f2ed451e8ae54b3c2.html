@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>GCC Code Coverage Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="index.css">
+  </head>
+
+  <body>
+    <h1>GCC Code Coverage Report</h1>
+
+    <hr/>
+
+    <div class="summary">
+<div>
+  <table class="legend">
+    <tr>
+      <th scope="row">Directory:</th>
+      <td>./</td>
+    </tr>
+    <tr>
+      <th scope="row">File:</th>
+      <td>gfsphysics/physics/idea_composition.f</td>
+    </tr>
+    <tr>
+      <th scope="row">Date:</th>
+      <td>2021-06-18 17:08:19</td>
+    </tr>
+  </table>
+</div>
+<div>
+  <table class="coverage">
+    <tr>
+      <th></th>
+      <th scope="col">Exec</th>
+      <th scope="col">Total</th>
+      <th scope="col">Coverage</th>
+    </tr>
+    <tr>
+      <th scope="row">Lines:</th>
+      <td>0</td>
+      <td>80</td>
+      <td class="coverage-none">0.0%</td>
+    </tr>
+    <tr>
+      <th scope="row">Branches:</th>
+      <td>0</td>
+      <td>382</td>
+      <td class="coverage-none">0.0%</td>
+    </tr>
+  </table>
+</div>
+    </div>
+
+    <hr/>
+
+<div class="file-source">
+  <table>
+    <tr>
+      <th align="right">Line</th>
+      <th align="right">Branch</th>
+      <th align="right">Exec</th>
+      <th align="left">Source</th>
+    </tr>
+
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l1" href="#l1">1</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">module </span><span class="n">idea_composition</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l2" href="#l2">2</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!-------------------------------------------------------------------------</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l3" href="#l3">3</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! hold composition of O O2 N2</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l4" href="#l4">4</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! Apr 06 2012   Henry Juang, initial implement  into NEMS</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l5" href="#l5">5</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! Mar 08 2012   Jun Wang,    add fields for restart</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l6" href="#l6">6</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! Oct 20 2015   Weiyu Yang,  move f107 and kp to atmos/phys/wam_f107_kp_mod.</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l7" href="#l7">7</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!-------------------------------------------------------------------------</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l8" href="#l8">8</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">implicit none</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l9" href="#l9">9</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!hmhj save</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l10" href="#l10">10</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span> <span class="p">,</span> <span class="k">parameter</span><span class="kd">::</span> <span class="n">amo</span> <span class="o">=</span><span class="mi">1</span><span class="mf">5.9994</span>   <span class="c">! molecular wght of O ! (g/mol) </span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l11" href="#l11">11</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span> <span class="p">,</span> <span class="k">parameter</span><span class="kd">::</span> <span class="n">amn2</span><span class="o">=</span><span class="mi">2</span><span class="mf">8.013</span>    <span class="c">! molecular wght of N2 </span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l12" href="#l12">12</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span> <span class="p">,</span> <span class="k">parameter</span><span class="kd">::</span> <span class="n">amno</span><span class="o">=</span><span class="mi">3</span><span class="mf">0.0061</span>    <span class="c">! molecular wght of N0 </span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l13" href="#l13">13</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span> <span class="p">,</span> <span class="k">parameter</span><span class="kd">::</span> <span class="n">bz</span><span class="o">=</span><span class="mf">1.3806505e-23</span><span class="c">! Boltzmann constant </span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l14" href="#l14">14</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real  </span><span class="n">prlog150</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span><span class="n">h2ora150</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span><span class="n">o3ra150</span><span class="p">(</span><span class="mi">80</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l15" href="#l15">15</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real  </span><span class="n">amgm</span><span class="p">(</span><span class="mi">150</span><span class="p">),</span><span class="n">amgms</span><span class="p">(</span><span class="mi">150</span><span class="p">)</span>        <span class="c">! global mean wght of mix (g/mol)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l16" href="#l16">16</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span><span class="p">,</span> <span class="k">allocatable</span><span class="kd">::</span>  <span class="n">pr_idea</span><span class="p">(:),</span> <span class="n">prlog</span><span class="p">(:),</span> <span class="n">ef</span><span class="p">(:)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l17" href="#l17">17</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span><span class="p">,</span> <span class="k">allocatable</span><span class="kd">::</span>  <span class="n">h2ora</span><span class="p">(:),</span><span class="n">o3ra</span><span class="p">(:)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l18" href="#l18">18</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span><span class="p">,</span> <span class="k">allocatable</span><span class="kd">::</span>  <span class="n">gg</span><span class="p">(:),</span> <span class="n">prsilvl</span><span class="p">(:)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l19" href="#l19">19</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">integer </span><span class="n">nlev_h2o</span><span class="p">,</span><span class="n">nlevc_h2o</span><span class="p">,</span><span class="n">nlev_co2</span><span class="p">,</span><span class="n">k41</span><span class="p">,</span><span class="n">k71</span><span class="p">,</span><span class="n">k110</span><span class="p">,</span><span class="n">k105</span><span class="p">,</span><span class="n">k100</span><span class="p">,</span><span class="n">k43</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l20" href="#l20">20</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">integer </span><span class="n">k91</span><span class="p">,</span><span class="n">k47</span><span class="p">,</span><span class="n">k64</span><span class="p">,</span><span class="n">k81</span><span class="p">,</span><span class="n">k87</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l21" href="#l21">21</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l22" href="#l22">22</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">data </span><span class="n">prlog150</span><span class="o">/-</span><span class="p">.</span><span class="mi">010495013621173093</span><span class="p">,</span><span class="o">-</span><span class="p">.</span><span class="mi">0047796645053569788</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l23" href="#l23">23</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">0017317939011674947</span><span class="p">,</span>                                             <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l24" href="#l24">24</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">0091445549523354423</span><span class="p">,.</span><span class="mi">017575964483718530</span><span class="p">,.</span><span class="mi">027156409259219756</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l25" href="#l25">25</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">038029776798164390</span><span class="p">,.</span><span class="mi">050354098813263921</span><span class="p">,.</span><span class="mi">064301975566456532</span><span class="p">,</span>      <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l26" href="#l26">26</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">080060604331725002</span><span class="p">,.</span><span class="mi">097831430661753094</span><span class="p">,.</span><span class="mi">11782928094771801</span><span class="p">,</span>       <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l27" href="#l27">27</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">1402811398792534</span><span class="p">,.</span><span class="mi">16542406580956714</span><span class="p">,.</span><span class="mi">19350235130401269</span><span class="p">,</span>          <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l28" href="#l28">28</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">22476418567991183</span><span class="p">,.</span><span class="mi">25945740055444533</span><span class="p">,.</span><span class="mi">29782445285326098</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l29" href="#l29">29</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">34009706723024435</span><span class="p">,.</span><span class="mi">38649056296119455</span><span class="p">,.</span><span class="mi">43719785635654262</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l30" href="#l30">30</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">49238384410129205</span><span class="p">,.</span><span class="mi">55218040859471984</span><span class="p">,.</span><span class="mi">61668213110539583</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l31" href="#l31">31</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">68594338857491133</span><span class="p">,.</span><span class="mi">75997679704427235</span><span class="p">,.</span><span class="mi">83875307597091064</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l32" href="#l32">32</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="p">.</span><span class="mi">92220240072958426</span><span class="p">,</span><span class="mf">1.0102172332720634</span><span class="p">,</span><span class="mf">1.1026563113455261</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l33" href="#l33">33</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.1993493125965171</span><span class="p">,</span><span class="mf">1.3001020446943199</span><span class="p">,</span><span class="mf">1.4047022170280321</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l34" href="#l34">34</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.5129293855161694</span><span class="p">,</span><span class="mf">1.6245648325694693</span><span class="p">,</span><span class="mf">1.7393953508635152</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l35" href="#l35">35</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.8572172092097674</span><span class="p">,</span><span class="mf">1.9778421006194884</span><span class="p">,</span><span class="mf">2.1011027392385673</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l36" href="#l36">36</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">2.2268591758946630</span><span class="p">,</span><span class="mf">2.3550060174351386</span><span class="p">,</span><span class="mf">2.4854802051244675</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l37" href="#l37">37</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">2.6182709767607482</span><span class="p">,</span><span class="mf">2.7534197208872264</span><span class="p">,</span><span class="mf">2.8909811818384683</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l38" href="#l38">38</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.0309947994264324</span><span class="p">,</span><span class="mf">3.1734952229335223</span><span class="p">,</span><span class="mf">3.3185141840359855</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l39" href="#l39">39</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.4660806887940865</span><span class="p">,</span><span class="mf">3.6162208681691572</span><span class="p">,</span><span class="mf">3.7689579941351727</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l40" href="#l40">40</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.9243126000728270</span><span class="p">,</span><span class="mf">4.0823023952198705</span><span class="p">,</span><span class="mf">4.2429421890712113</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l41" href="#l41">41</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">4.4062440367083493</span><span class="p">,</span><span class="mf">4.5722171074490712</span><span class="p">,</span><span class="mf">4.7408678113152334</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l42" href="#l42">42</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">4.9121997598293738</span><span class="p">,</span><span class="mf">5.0862136813095233</span><span class="p">,</span><span class="mf">5.2629074813405223</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l43" href="#l43">43</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">5.4422762630064341</span><span class="p">,</span><span class="mf">5.6243123514382578</span><span class="p">,</span><span class="mf">5.8090052129405310</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l44" href="#l44">44</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">5.9963414712632250</span><span class="p">,</span><span class="mf">6.1863048973029393</span><span class="p">,</span><span class="mf">6.3788765414713984</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l45" href="#l45">45</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">6.5740346053768723</span><span class="p">,</span><span class="mf">6.7717544276443897</span><span class="p">,</span><span class="mf">6.9720085218050194</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l46" href="#l46">46</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">7.1747665967259380</span><span class="p">,</span><span class="mf">7.3799955384809381</span><span class="p">,</span><span class="mf">7.5876594664001917</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l47" href="#l47">47</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">7.7977196240960511</span><span class="p">,</span><span class="mf">8.0101343615235372</span><span class="p">,</span><span class="mf">8.2248592986929712</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l48" href="#l48">48</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">8.4418472650864640</span><span class="p">,</span><span class="mf">8.6610481622066615</span><span class="p">,</span><span class="mf">8.8824091352082579</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l49" href="#l49">49</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">9.1058744786331118</span><span class="p">,</span><span class="mf">9.3313856279708016</span><span class="p">,</span><span class="mf">9.5588812882688448</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l50" href="#l50">50</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">9.7882972917212427</span><span class="p">,</span><span class="mi">1</span><span class="mf">0.019566564224711</span><span class="p">,</span><span class="mi">1</span><span class="mf">0.252619320659370</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l51" href="#l51">51</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">0.487382934517129</span><span class="p">,</span><span class="mi">1</span><span class="mf">0.723781889667228</span><span class="p">,</span><span class="mi">1</span><span class="mf">0.961737871454984</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l52" href="#l52">52</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">1.201169705433793</span><span class="p">,</span><span class="mi">1</span><span class="mf">1.441993457513469</span><span class="p">,</span><span class="mi">1</span><span class="mf">1.684122340664617</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l53" href="#l53">53</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">1.927466717621803</span><span class="p">,</span><span class="mi">1</span><span class="mf">2.171934093143912</span><span class="p">,</span><span class="mi">1</span><span class="mf">2.417429143544323</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l54" href="#l54">54</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">2.663853787366328</span><span class="p">,</span><span class="mi">1</span><span class="mf">2.911107059366048</span><span class="p">,</span><span class="mi">1</span><span class="mf">3.159085134752051</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l55" href="#l55">55</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">3.407681405572704</span><span class="p">,</span><span class="mi">1</span><span class="mf">3.656786420959016</span><span class="p">,</span><span class="mi">1</span><span class="mf">3.906287867607862</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l56" href="#l56">56</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">4.156070558238182</span><span class="p">,</span><span class="mi">1</span><span class="mf">4.406016545469104</span><span class="p">,</span><span class="mi">1</span><span class="mf">4.656016536601980</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l57" href="#l57">57</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">4.906016520565826</span><span class="p">,</span><span class="mi">1</span><span class="mf">5.156016549153117</span><span class="p">,</span><span class="mi">1</span><span class="mf">5.406016561713120</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l58" href="#l58">58</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">5.656016540294088</span><span class="p">,</span><span class="mi">1</span><span class="mf">5.906016534936020</span><span class="p">,</span><span class="mi">1</span><span class="mf">6.156016568807406</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l59" href="#l59">59</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">6.406016534338949</span><span class="p">,</span><span class="mi">1</span><span class="mf">6.656016529668964</span><span class="p">,</span><span class="mi">1</span><span class="mf">6.906016577452895</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l60" href="#l60">60</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">7.156016561083050</span><span class="p">,</span><span class="mi">1</span><span class="mf">7.406016546123016</span><span class="p">,</span><span class="mi">1</span><span class="mf">7.656016537621376</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l61" href="#l61">61</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">7.906016506464592</span><span class="p">,</span><span class="mi">1</span><span class="mf">8.156016518186942</span><span class="p">,</span><span class="mi">1</span><span class="mf">8.406016541248878</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l62" href="#l62">62</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">8.656016561606052</span><span class="p">,</span><span class="mi">1</span><span class="mf">8.906016537947128</span><span class="p">,</span><span class="mi">1</span><span class="mf">9.156016514271940</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l63" href="#l63">63</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">1</span><span class="mf">9.406016513968229</span><span class="p">,</span><span class="mi">1</span><span class="mf">9.656016519436953</span><span class="p">,</span><span class="mi">1</span><span class="mf">9.906016540106812</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l64" href="#l64">64</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">0.156016505341348</span><span class="p">,</span><span class="mi">2</span><span class="mf">0.406016517771079</span><span class="p">,</span><span class="mi">2</span><span class="mf">0.656016529319292</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l65" href="#l65">65</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">0.906016501516998</span><span class="p">,</span><span class="mi">2</span><span class="mf">1.156016508903946</span><span class="p">,</span><span class="mi">2</span><span class="mf">1.406016525111486</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l66" href="#l66">66</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">1.656016521424860</span><span class="p">,</span><span class="mi">2</span><span class="mf">1.906016510407873</span><span class="p">,</span><span class="mi">2</span><span class="mf">2.156016517462234</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l67" href="#l67">67</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">2.406016507059238</span><span class="p">,</span><span class="mi">2</span><span class="mf">2.656016506270586</span><span class="p">,</span><span class="mi">2</span><span class="mf">2.906016547648477</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l68" href="#l68">68</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">3.156016547534154</span><span class="p">,</span><span class="mi">2</span><span class="mf">3.406016516157738</span><span class="p">,</span><span class="mi">2</span><span class="mf">3.656016508155140</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l69" href="#l69">69</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">3.906016513141179</span><span class="p">,</span><span class="mi">2</span><span class="mf">4.156016519666711</span><span class="p">,</span><span class="mi">2</span><span class="mf">4.406016497318937</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l70" href="#l70">70</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">4.656016492779738</span><span class="p">,</span><span class="mi">2</span><span class="mf">4.906016503952380</span><span class="p">,</span><span class="mi">2</span><span class="mf">5.156016485200560</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l71" href="#l71">71</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">5.406016484453687</span><span class="p">,</span><span class="mi">2</span><span class="mf">5.656016491410533</span><span class="p">,</span><span class="mi">2</span><span class="mf">5.906016498929535</span><span class="p">,</span>         <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l72" href="#l72">72</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mi">2</span><span class="mf">6.156016525642059</span><span class="p">,</span><span class="mi">2</span><span class="mf">6.406016533196180</span><span class="p">,</span><span class="mi">2</span><span class="mf">7.231955945328760</span><span class="o">/</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l73" href="#l73">73</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! 71-150 in levs=150</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l74" href="#l74">74</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">data </span><span class="n">h2ora150</span><span class="o">/</span><span class="mf">4.15074772E-06</span><span class="p">,</span><span class="mf">4.13699000E-06</span><span class="p">,</span><span class="mf">4.11797890E-06</span><span class="p">,</span>       <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l75" href="#l75">75</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">4.09487986E-06</span><span class="p">,</span>                                                   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l76" href="#l76">76</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">4.06858733E-06</span><span class="p">,</span> <span class="mf">4.03597828E-06</span><span class="p">,</span> <span class="mf">3.99688515E-06</span><span class="p">,</span> <span class="mf">3.95067808E-06</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l77" href="#l77">77</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.89717454E-06</span><span class="p">,</span> <span class="mf">3.83486354E-06</span><span class="p">,</span> <span class="mf">3.76154928E-06</span><span class="p">,</span> <span class="mf">3.67776509E-06</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l78" href="#l78">78</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.57952092E-06</span><span class="p">,</span> <span class="mf">3.45696758E-06</span><span class="p">,</span> <span class="mf">3.30616948E-06</span><span class="p">,</span> <span class="mf">3.13086436E-06</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l79" href="#l79">79</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">2.91936568E-06</span><span class="p">,</span> <span class="mf">2.64976784E-06</span><span class="p">,</span> <span class="mf">2.33136751E-06</span><span class="p">,</span> <span class="mf">1.97812350E-06</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l80" href="#l80">80</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.56715103E-06</span><span class="p">,</span> <span class="mf">1.18281856E-06</span><span class="p">,</span> <span class="mf">8.41511396E-07</span><span class="p">,</span> <span class="mf">5.69260876E-07</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l81" href="#l81">81</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.88780697E-07</span><span class="p">,</span> <span class="mf">2.50438515E-07</span><span class="p">,</span><span class="mf">1.54300660E-07</span><span class="p">,</span> <span class="mf">1.02009581E-07</span><span class="p">,</span>    <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l82" href="#l82">82</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">6.65450034E-08</span><span class="p">,</span> <span class="mf">4.17382808E-08</span><span class="p">,</span> <span class="mf">2.82805186E-08</span><span class="p">,</span> <span class="mf">2.01512556E-08</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l83" href="#l83">83</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.41564448E-08</span><span class="p">,</span> <span class="mf">1.02806445E-08</span><span class="p">,</span> <span class="mf">7.94408149E-09</span><span class="p">,</span> <span class="mf">6.32637731E-09</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l84" href="#l84">84</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">5.12551203E-09</span><span class="p">,</span> <span class="mf">4.27811892E-09</span><span class="p">,</span> <span class="mf">3.70565449E-09</span><span class="p">,</span> <span class="mf">3.31366890E-09</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l85" href="#l85">85</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.03512593E-09</span><span class="p">,</span> <span class="mf">2.86004858E-09</span><span class="p">,</span> <span class="mf">3.14079315E-09</span><span class="p">,</span> <span class="mf">3.43411317E-09</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l86" href="#l86">86</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">3.75162719E-09</span><span class="p">,</span> <span class="mf">4.09541203E-09</span><span class="p">,</span> <span class="mf">4.46698364E-09</span><span class="p">,</span> <span class="mf">4.86779007E-09</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l87" href="#l87">87</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">5.29913960E-09</span><span class="p">,</span><span class="mf">5.76212751E-09</span><span class="p">,</span> <span class="mf">6.25754557E-09</span><span class="p">,</span> <span class="mf">6.78577268E-09</span><span class="p">,</span>    <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l88" href="#l88">88</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">7.34664587E-09</span><span class="p">,</span> <span class="mf">7.93931252E-09</span><span class="p">,</span> <span class="mf">8.56206704E-09</span><span class="p">,</span> <span class="mf">9.21217910E-09</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l89" href="#l89">89</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">9.88572497E-09</span><span class="p">,</span> <span class="mf">1.05774394E-08</span><span class="p">,</span> <span class="mf">1.12806111E-08</span><span class="p">,</span> <span class="mf">1.19870504E-08</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l90" href="#l90">90</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.26871579E-08</span><span class="p">,</span> <span class="mf">1.33701220E-08</span><span class="p">,</span> <span class="mf">1.40242598E-08</span><span class="p">,</span> <span class="mf">1.46374975E-08</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l91" href="#l91">91</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.51979607E-08</span><span class="p">,</span> <span class="mf">1.56946171E-08</span><span class="p">,</span> <span class="mf">1.61178886E-08</span><span class="p">,</span> <span class="mf">1.64601425E-08</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l92" href="#l92">92</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.67159770E-08</span><span class="p">,</span> <span class="mf">1.68822374E-08</span><span class="p">,</span> <span class="mf">1.69577319E-08</span><span class="p">,</span><span class="mf">1.69426375E-08</span><span class="p">,</span>    <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l93" href="#l93">93</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.68375826E-08</span><span class="p">,</span> <span class="mf">1.66423366E-08</span><span class="p">,</span> <span class="mf">1.63538713E-08</span><span class="p">,</span> <span class="mf">1.59631314E-08</span><span class="p">,</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l94" href="#l94">94</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.54486221E-08</span><span class="p">,</span> <span class="mf">1.47606491E-08</span><span class="p">,</span> <span class="mf">1.37697900E-08</span><span class="p">,</span> <span class="mf">6.83803988E-09</span><span class="o">/</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l95" href="#l95">95</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l96" href="#l96">96</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! o3(71-150)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l97" href="#l97">97</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">data </span><span class="n">o3ra150</span><span class="o">/</span><span class="mf">4.10541952E-06</span><span class="p">,</span><span class="mf">3.47100766E-06</span><span class="p">,</span><span class="mf">2.87068966E-06</span><span class="p">,</span>        <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l98" href="#l98">98</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">2.35683753E-06</span><span class="p">,</span>                                                   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l99" href="#l99">99</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span><span class="mf">1.96476323E-06</span><span class="p">,</span><span class="mf">1.68001584E-06</span><span class="p">,</span><span class="mf">1.46059012E-06</span><span class="p">,</span><span class="mf">1.28086944E-06</span><span class="p">,</span>      <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l100" href="#l100">100</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.12287103E-06</span><span class="p">,</span><span class="mf">9.73440677E-07</span><span class="p">,</span><span class="mf">8.31057093E-07</span><span class="p">,</span><span class="mf">6.96823493E-07</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l101" href="#l101">101</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">5.70485075E-07</span><span class="p">,</span><span class="mf">4.54900920E-07</span><span class="p">,</span><span class="mf">3.51380290E-07</span><span class="p">,</span><span class="mf">2.59055385E-07</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l102" href="#l102">102</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.83987938E-07</span><span class="p">,</span><span class="mf">1.33985182E-07</span><span class="p">,</span><span class="mf">9.93050813E-08</span><span class="p">,</span><span class="mf">8.12517455E-08</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l103" href="#l103">103</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.04879335E-07</span><span class="p">,</span><span class="mf">1.96984693E-07</span><span class="p">,</span><span class="mf">3.40876799E-07</span><span class="p">,</span><span class="mf">5.63920720E-07</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l104" href="#l104">104</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">8.83452184E-07</span><span class="p">,</span><span class="mf">1.23309195E-06</span><span class="p">,</span><span class="mf">1.61560931E-06</span><span class="p">,</span><span class="mf">1.90510281E-06</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l105" href="#l105">105</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">2.00312741E-06</span><span class="p">,</span><span class="mf">1.98334669E-06</span><span class="p">,</span><span class="mf">1.75853471E-06</span><span class="p">,</span><span class="mf">1.44161553E-06</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l106" href="#l106">106</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.11576928E-06</span><span class="p">,</span><span class="mf">7.89776361E-07</span><span class="p">,</span><span class="mf">5.25719302E-07</span><span class="p">,</span><span class="mf">3.33307290E-07</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l107" href="#l107">107</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.90201852E-07</span><span class="p">,</span><span class="mf">9.50490959E-08</span><span class="p">,</span><span class="mf">4.25181927E-08</span><span class="p">,</span><span class="mf">1.71517381E-08</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l108" href="#l108">108</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">6.31168787E-09</span><span class="p">,</span><span class="mf">2.32353325E-09</span><span class="p">,</span><span class="mf">2.00874504E-09</span><span class="p">,</span><span class="mf">1.66279638E-09</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l109" href="#l109">109</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.36930561E-09</span><span class="p">,</span><span class="mf">1.12419760E-09</span><span class="p">,</span><span class="mf">9.19829659E-10</span><span class="p">,</span><span class="mf">7.49814512E-10</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l110" href="#l110">110</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">6.08729657E-10</span><span class="p">,</span><span class="mf">4.91976560E-10</span><span class="p">,</span><span class="mf">3.95658450E-10</span><span class="p">,</span><span class="mf">3.16475520E-10</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l111" href="#l111">111</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">2.51635148E-10</span><span class="p">,</span><span class="mf">1.98775150E-10</span><span class="p">,</span><span class="mf">1.55898314E-10</span><span class="p">,</span><span class="mf">1.21316667E-10</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l112" href="#l112">112</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">9.36041570E-11</span><span class="p">,</span><span class="mf">7.15566049E-11</span><span class="p">,</span><span class="mf">5.41579312E-11</span><span class="p">,</span><span class="mf">4.05517867E-11</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l113" href="#l113">113</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">3.00178145E-11</span><span class="p">,</span><span class="mf">2.19518467E-11</span><span class="p">,</span><span class="mf">1.58493829E-11</span><span class="p">,</span><span class="mf">1.12917456E-11</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l114" href="#l114">114</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">7.93434889E-12</span><span class="p">,</span><span class="mf">5.49657616E-12</span><span class="p">,</span><span class="mf">3.75284443E-12</span><span class="p">,</span><span class="mf">2.52454277E-12</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l115" href="#l115">115</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">1.67265129E-12</span><span class="p">,</span><span class="mf">1.09096239E-12</span><span class="p">,</span><span class="mf">6.99914181E-13</span><span class="p">,</span><span class="mf">4.41092526E-13</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l116" href="#l116">116</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">2.72463151E-13</span><span class="p">,</span><span class="mf">1.64366989E-13</span><span class="p">,</span><span class="mf">9.62680762E-14</span><span class="p">,</span><span class="mf">5.41996795E-14</span><span class="p">,</span>     <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l117" href="#l117">117</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span><span class="gs">&amp;</span> <span class="mf">2.88221148E-14</span><span class="p">,</span><span class="mf">1.39894852E-14</span><span class="p">,</span><span class="mf">5.72118432E-15</span><span class="p">,</span><span class="mf">4.70438733E-16</span><span class="o">/</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l118" href="#l118">118</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l119" href="#l119">119</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">end module </span><span class="n">idea_composition</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l120" href="#l120">120</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l121" href="#l121">121</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!     contains</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l122" href="#l122">122</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!hmhj subroutine idea_composition_init(levs,ak,bk) </span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l123" href="#l123">123</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">subroutine </span><span class="n">idea_composition_init</span><span class="p">(</span><span class="n">levs</span><span class="p">,</span><span class="n">plyr</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l124" href="#l124">124</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!-------------------------------------------------------------------------</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l125" href="#l125">125</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! get O O2 N2 composition in idea_composition</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l126" href="#l126">126</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!-------------------------------------------------------------------------</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l127" href="#l127">127</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">use </span><span class="n">idea_composition</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l128" href="#l128">128</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">implicit none</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l129" href="#l129">129</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! Argument</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l130" href="#l130">130</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">integer</span><span class="p">,</span> <span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span> <span class="kd">::</span> <span class="n">levs</span>             <span class="c">! number of pressure levels</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l131" href="#l131">131</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="kt">real</span><span class="p">,</span> <span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span>    <span class="kd">::</span> <span class="n">plyr</span><span class="p">(</span><span class="n">levs</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l132" href="#l132">132</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!hmhj real, intent(in)    :: ak(levs+1),bk(levs+1) ! hyb levels</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l133" href="#l133">133</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! local</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l134" href="#l134">134</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="kt">integer </span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l135" href="#l135">135</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l136" href="#l136">136</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">if</span> <span class="p">(.</span><span class="nb">not</span><span class="p">.</span><span class="nb">allocated</span><span class="p">(</span><span class="n">pr_idea</span><span class="p">))</span> <span class="k">then</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l137" href="#l137">137</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>   <span class="k">print</span> <span class="o">*</span><span class="p">,</span><span class="s1">&#39; plyr idea_composition_init &#39;</span><span class="p">,(</span><span class="n">plyr</span><span class="p">(</span><span class="n">k</span><span class="p">),</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">levs</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l138" href="#l138">138</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>   <span class="k">allocate</span> <span class="p">(</span><span class="n">pr_idea</span><span class="p">(</span><span class="n">levs</span><span class="p">))</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l139" href="#l139">139</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>   <span class="k">do </span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l140" href="#l140">140</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">pr_idea</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">=</span> <span class="n">plyr</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">/</span><span class="mi">10</span><span class="mf">0.</span>    <span class="c">! mb</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l141" href="#l141">141</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span>   <span class="k">enddo</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l142" href="#l142">142</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">endif</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l143" href="#l143">143</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l144" href="#l144">144</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">allocate</span> <span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">levs</span><span class="p">))</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l145" href="#l145">145</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l146" href="#l146">146</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">do </span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l147" href="#l147">147</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>   <span class="n">prlog</span>  <span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">=</span> <span class="nb">log</span><span class="p">(</span><span class="mi">100</span><span class="mf">0.</span><span class="o">/</span><span class="n">pr_idea</span><span class="p">(</span><span class="n">k</span><span class="p">))</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l148" href="#l148">148</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>   <span class="k">print</span> <span class="o">*</span><span class="p">,</span><span class="s1">&#39; idea_composition_init: k pr_idea prlog &#39;</span><span class="p">,</span><span class="n">k</span><span class="p">,</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l149" href="#l149">149</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>               <span class="n">pr_idea</span><span class="p">(</span><span class="n">k</span><span class="p">),</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l150" href="#l150">150</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">enddo</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l151" href="#l151">151</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l152" href="#l152">152</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">allocate</span> <span class="p">(</span><span class="n">h2ora</span><span class="p">(</span><span class="n">levs</span><span class="p">))</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l153" href="#l153">153</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">allocate</span> <span class="p">(</span><span class="n">o3ra</span><span class="p">(</span><span class="n">levs</span><span class="p">))</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l154" href="#l154">154</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l155" href="#l155">155</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! init h2o rad </span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l156" href="#l156">156</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>   <span class="k">if</span><span class="p">(</span><span class="n">levs</span><span class="p">.</span><span class="n">eq</span><span class="p">.</span><span class="mi">150</span><span class="p">)</span> <span class="k">then</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l157" href="#l157">157</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k41</span><span class="o">=</span><span class="mi">41</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l158" href="#l158">158</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k110</span><span class="o">=</span><span class="mi">110</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l159" href="#l159">159</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k71</span><span class="o">=</span><span class="mi">71</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l160" href="#l160">160</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k105</span><span class="o">=</span><span class="mi">105</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l161" href="#l161">161</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k100</span><span class="o">=</span><span class="mi">100</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l162" href="#l162">162</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! co2</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l163" href="#l163">163</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k43</span><span class="o">=</span><span class="mi">43</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l164" href="#l164">164</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! ion</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l165" href="#l165">165</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k91</span><span class="o">=</span><span class="mi">91</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l166" href="#l166">166</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">! merge</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l167" href="#l167">167</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k47</span><span class="o">=</span><span class="mi">47</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l168" href="#l168">168</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k64</span><span class="o">=</span><span class="mi">64</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l169" href="#l169">169</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k81</span><span class="o">=</span><span class="mi">81</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l170" href="#l170">170</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k87</span><span class="o">=</span><span class="mi">87</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l171" href="#l171">171</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span>   <span class="k">else</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l172" href="#l172">172</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k71</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l173" href="#l173">173</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k81</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l174" href="#l174">174</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k87</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l175" href="#l175">175</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k91</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l176" href="#l176">176</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k100</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l177" href="#l177">177</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k105</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l178" href="#l178">178</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">k110</span><span class="o">=</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l179" href="#l179">179</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">do </span><span class="n">k</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">levs</span><span class="o">-</span><span class="mi">2</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l180" href="#l180">180</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">41</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">41</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l181" href="#l181">181</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k41</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l182" href="#l182">182</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">71</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">71</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l183" href="#l183">183</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k71</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l184" href="#l184">184</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">le</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">110</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">).</span><span class="n">gt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">110</span><span class="p">))</span> <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l185" href="#l185">185</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k110</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l186" href="#l186">186</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">100</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span> <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l187" href="#l187">187</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k100</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l188" href="#l188">188</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">le</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">105</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">).</span><span class="n">gt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">105</span><span class="p">))</span> <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l189" href="#l189">189</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k105</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l190" href="#l190">190</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">43</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">43</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l191" href="#l191">191</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k43</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l192" href="#l192">192</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">91</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">91</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l193" href="#l193">193</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k91</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l194" href="#l194">194</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">47</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">47</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l195" href="#l195">195</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k47</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l196" href="#l196">196</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">64</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">64</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l197" href="#l197">197</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k64</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l198" href="#l198">198</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">81</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">81</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l199" href="#l199">199</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k81</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l200" href="#l200">200</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">if</span><span class="p">(</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">87</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">prlog</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">).</span><span class="n">lt</span><span class="p">.</span><span class="n">prlog150</span><span class="p">(</span><span class="mi">87</span><span class="p">))</span>   <span class="c">&amp;</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l201" href="#l201">201</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span><span class="gs">&amp;</span>       <span class="n">k87</span><span class="o">=</span><span class="n">k</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l202" href="#l202">202</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span>     <span class="k">enddo</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l203" href="#l203">203</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span>   <span class="k">endif</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l204" href="#l204">204</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">nlev_h2o</span><span class="o">=</span><span class="n">k110</span><span class="o">-</span><span class="n">k41</span><span class="o">+</span><span class="mi">1</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l205" href="#l205">205</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">nlevc_h2o</span><span class="o">=</span><span class="n">levs</span><span class="o">-</span><span class="n">k71</span><span class="o">+</span><span class="mi">1</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l206" href="#l206">206</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">nlev_co2</span><span class="o">=</span><span class="n">levs</span><span class="o">-</span><span class="n">k43</span><span class="o">+</span><span class="mi">1</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l207" href="#l207">207</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">if</span><span class="p">(</span><span class="n">levs</span><span class="p">.</span><span class="n">eq</span><span class="p">.</span><span class="mi">150</span><span class="p">)</span> <span class="k">then</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l208" href="#l208">208</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">h2ora</span><span class="p">(</span><span class="n">k71</span><span class="p">:</span><span class="n">levs</span><span class="p">)</span><span class="o">=</span><span class="n">h2ora150</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l209" href="#l209">209</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">h2ora</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">k71</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">=</span><span class="mf">0.</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l210" href="#l210">210</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">o3ra</span><span class="p">(</span><span class="n">k71</span><span class="p">:</span><span class="n">levs</span><span class="p">)</span><span class="o">=</span><span class="n">o3ra150</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l211" href="#l211">211</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="n">o3ra</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">k71</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">=</span><span class="mf">0.</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l212" href="#l212">212</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">else</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l213" href="#l213">213</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">call </span><span class="n">idea_interp</span><span class="p">(</span><span class="n">h2ora150</span><span class="p">,</span><span class="mi">71</span><span class="p">,</span><span class="mi">150</span><span class="p">,</span><span class="mi">80</span><span class="p">,</span><span class="n">h2ora</span><span class="p">,</span><span class="n">levs</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l214" href="#l214">214</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span>     <span class="k">call </span><span class="n">idea_interp</span><span class="p">(</span><span class="n">o3ra150</span><span class="p">,</span><span class="mi">71</span><span class="p">,</span><span class="mi">150</span><span class="p">,</span><span class="mi">80</span><span class="p">,</span><span class="n">o3ra</span><span class="p">,</span><span class="n">levs</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l215" href="#l215">215</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">endif</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l216" href="#l216">216</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">return</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l217" href="#l217">217</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">end subroutine </span><span class="n">idea_composition_init</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l218" href="#l218">218</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="c">!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l219" href="#l219">219</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">subroutine </span><span class="n">idea_interp</span><span class="p">(</span><span class="n">ain</span><span class="p">,</span><span class="n">nps</span><span class="p">,</span><span class="n">npn</span><span class="p">,</span><span class="n">np</span><span class="p">,</span><span class="n">aout</span><span class="p">,</span><span class="n">levs</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l220" href="#l220">220</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">use </span><span class="n">idea_composition</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l221" href="#l221">221</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">implicit none</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l222" href="#l222">222</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="kt">real </span><span class="n">ain</span><span class="p">(</span><span class="n">np</span><span class="p">),</span><span class="n">aout</span><span class="p">(</span><span class="n">levs</span><span class="p">),</span><span class="n">z</span><span class="p">(</span><span class="n">np</span><span class="p">),</span><span class="n">z1</span><span class="p">(</span><span class="n">levs</span><span class="p">),</span><span class="n">dz</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l223" href="#l223">223</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="kt">integer </span><span class="n">nps</span><span class="p">,</span><span class="n">npn</span><span class="p">,</span><span class="n">np</span><span class="p">,</span><span class="n">levs</span><span class="p">,</span><span class="n">kref</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">i</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l224" href="#l224">224</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="n">z</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">np</span><span class="p">)</span><span class="o">=</span><span class="n">prlog150</span><span class="p">(</span><span class="n">nps</span><span class="p">:</span><span class="n">npn</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l225" href="#l225">225</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="n">z1</span><span class="o">=</span><span class="n">prlog</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l226" href="#l226">226</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">do </span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">levs</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l227" href="#l227">227</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="n">kref</span><span class="o">=</span><span class="mi">0</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l228" href="#l228">228</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">do </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="o">-</span><span class="mi">1</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l229" href="#l229">229</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">if</span><span class="p">(</span><span class="n">z1</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">ge</span><span class="p">.</span><span class="n">z</span><span class="p">(</span><span class="n">i</span><span class="p">).</span><span class="nb">and</span><span class="p">.</span><span class="n">z1</span><span class="p">(</span><span class="n">k</span><span class="p">).</span><span class="n">le</span><span class="p">.</span><span class="n">z</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="k">then</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l230" href="#l230">230</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="n">kref</span><span class="o">=</span><span class="n">i</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l231" href="#l231">231</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="n">dz</span><span class="o">=</span><span class="p">(</span><span class="n">z1</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">-</span><span class="n">z</span><span class="p">(</span><span class="n">i</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="n">z</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="n">z</span><span class="p">(</span><span class="n">i</span><span class="p">))</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l232" href="#l232">232</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">endif</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l233" href="#l233">233</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">enddo</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l234" href="#l234">234</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">if</span><span class="p">(</span><span class="n">kref</span><span class="p">.</span><span class="n">ne</span><span class="p">.</span><span class="mi">0</span><span class="p">)</span> <span class="n">aout</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">=</span><span class="n">dz</span><span class="o">*</span><span class="n">ain</span><span class="p">(</span><span class="n">kref</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">+</span><span class="p">(</span><span class="mf">1.</span><span class="o">-</span><span class="n">dz</span><span class="p">)</span><span class="o">*</span><span class="n">ain</span><span class="p">(</span><span class="n">kref</span><span class="p">)</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l235" href="#l235">235</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">enddo</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l236" href="#l236">236</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount uncoveredLine">&cross;</td>
+      <td class="src uncoveredLine"><span class="nl">     </span> <span class="k">return</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l237" href="#l237">237</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "><span class="nl">     </span> <span class="k">end subroutine </span><span class="n">idea_interp</span></td>
+    </tr>
+
+    <tr class="source-line">
+      <td class="lineno"><a id="l238" href="#l238">238</a></td>
+      <td class="linebranch">
+      </td>
+      <td class="linecount "></td>
+      <td class="src "></td>
+    </tr>
+
+  </table>
+</div>
+
+    <hr/>
+
+    <footer>
+      Generated by: <a href="http://gcovr.com">GCOVR (Version 5.0)</a>
+    </footer>
+  </body>
+</html>
