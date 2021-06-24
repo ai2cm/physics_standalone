@@ -1,6 +1,6 @@
 from microphys.phys_const import *
 
-from microphys.stencils.stencils_normal import *
+from microphys.stencils.stencils_normal_reverseK import *
 import numpy as np
 import gt4py as gt
 import math as mt
