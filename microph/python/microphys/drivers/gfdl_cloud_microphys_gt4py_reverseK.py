@@ -1,6 +1,6 @@
 from microphys.phys_const import *
 
-from microphys.stencils.stencils_normal import *
+from microphys.stencils.stencils_normal_reverseK import *
 import numpy as np
 import gt4py as gt
 import math as mt
@@ -267,7 +267,6 @@ def run(input_data, timings):
         cpaut,
         exec_info=exec_info,
     )
-
     so3 = 7.0 / 3.0
 
     zs = 0.0
@@ -494,7 +493,9 @@ def run(input_data, timings):
             fac_imlt,
             fac_l2v,
             exec_info=exec_info,
-        )        
+        )
+        exec_info = {}
+
     exec_info = {}
     fields_update(
         graupel,
@@ -542,7 +543,6 @@ def run(input_data, timings):
         rdt,
         exec_info=exec_info,
     )
-
     """
     NOTE: Radar part missing (never executed since lradar is false)
     """

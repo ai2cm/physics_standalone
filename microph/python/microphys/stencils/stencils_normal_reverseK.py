@@ -495,11 +495,11 @@ def warm_rain(
         if (use_ppm == 1) and (no_fall == 0):
             zt_kbot1 = zt_kbot1[0, 0, -1]
 
-    """        
+    """
     with computation(PARALLEL), interval(...):
-        
+
         if (use_ppm == 1) and (no_fall == 0):
-            lagrangian_fall_ppm( ktop, kbot, zs, ze, zt, zt_kbot1, dp, qr, r1, 
+            lagrangian_fall_ppm( ktop, kbot, zs, ze, zt, zt_kbot1, dp, qr, r1,
                                  m1_rain, mono_prof, nf_inv )
     """
 
@@ -1089,7 +1089,7 @@ def sedimentation(
             if (use_ppm == 0) and (vi_fac >= 1.0e-5) and (no_fall == 0):
                 dz = ze - zs
         # with interval(0, -1):
-        with interval(-1, None):
+        with interval(1, None):
 
             if (use_ppm == 0) and (vi_fac >= 1.0e-5) and (no_fall == 0):
                 dz = ze - ze[0, 0, -1]

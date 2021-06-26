@@ -61,7 +61,12 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
         # convert single element numpy arrays to scalars
         if data.size == 1:
             data = data.item()
-        d[var] = data[:, :, ::-1]
+            d[var] = data
+        elif len(data.shape) == 2:
+            d[var] = data
+        else:
+            d[var] = data[:, :, ::-1]
+
     return d
 
 
@@ -73,12 +78,10 @@ def compare_data(exp_data, ref_data):
         if args.verbose:
             print(key)
         ind = np.array(
-            np.nonzero(
-                ~np.isclose(exp_data[key][:, :, ::-1], ref_data[key], equal_nan=True)
-            )
+            np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True))
         )
         if ind.size > 0:
-            diff = abs(exp_data[key][:, :, ::-1] - ref_data[key])
+            diff = abs(exp_data[key] - ref_data[key])
             max_diff_ind = np.unravel_index(np.argmax(diff, axis=None), diff.shape)
             print(
                 "FAIL at ",
@@ -130,7 +133,7 @@ if __name__ == "__main__":
         MPH_DIR = "../microph/python/"
         sys.path.append(MPH_DIR)
         from config import *
-        import microphys.drivers.gfdl_cloud_microphys_gt4py as phy
+        import microphys.drivers.gfdl_cloud_microphys_gt4py_reverseK as phy
 
     else:
         raise Exception(f"Parameterization {args.parameterization} is not supported")
