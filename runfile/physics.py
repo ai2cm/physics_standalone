@@ -137,8 +137,8 @@ if __name__ == "__main__":
         import get_prs_fv3 as phy
 
     elif args.parameterization == "get_phi_fv3":
-        PRS_DIR = "../get_phi_fv3/python/"
-        sys.path.append(PRS_DIR)
+        PHI_DIR = "../get_phi_fv3/python/"
+        sys.path.append(PHI_DIR)
         from config import *
         import get_phi_fv3 as phy
 
