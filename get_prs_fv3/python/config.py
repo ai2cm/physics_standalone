@@ -2,7 +2,7 @@ import os
 import numpy as np
 from gt4py import gtscript
 
-prefix = "get_prs_fv3"
+prefix = "prsfv3"
 BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "numpy"
 REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else True
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True

@@ -1,5 +1,4 @@
 import numpy as np
-import math
 import gt4py
 import gt4py.gtscript as gtscript
 import gt4py.storage as gt_storage
@@ -39,7 +38,7 @@ def storage_to_numpy(gt_storage, array_dim):
 
     return np_tmp
 
-def run(in_dict):
+def run(in_dict, timing):
     del_, del_gz = get_prs_fv3(
                     in_dict["ix"],
                     in_dict["levs"],

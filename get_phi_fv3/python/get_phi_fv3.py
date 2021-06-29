@@ -38,7 +38,7 @@ def storage_to_numpy(gt_storage, array_dim):
 
     return np_tmp
 
-def run(in_dict):
+def run(in_dict, timings):
     del_gz, phii, phil = get_phi_fv3(
                     in_dict["ix"],
                     in_dict["levs"],
