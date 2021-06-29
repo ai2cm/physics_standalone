@@ -12,7 +12,7 @@ from gt4py.gtscript import (
     interval,
 )
 
-backend = "numpy"
+backend = BACKEND
 
 def numpy_to_gt4py_storage_2D(arr, backend, k_depth):
     """convert numpy storage to gt4py storage"""

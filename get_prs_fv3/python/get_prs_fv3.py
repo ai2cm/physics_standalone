@@ -12,7 +12,7 @@ from gt4py.gtscript import (
     interval,
 )
 
-backend = "numpy"
+backend = BACKEND
 
 def numpy_to_gt4py_storage_2D(arr, backend, k_depth):
     """convert numpy storage to gt4py storage"""
@@ -97,6 +97,6 @@ def get_prs_fv3_stencil(phii: FIELD_FLT,
                         qgrs: FIELD_FLT,
                         del_: FIELD_FLT,
                         del_gz: FIELD_FLT):
-    with computation(FORWARD), interval(0,-1):
+    with computation(PARALLEL), interval(0,-1):
         del_ = prsi[0,0,0] - prsi[0,0,1]
         del_gz = (phii[0,0,1] - phii[0,0,0]) / (tgrs[0,0,0] * (1.0 + con_fvirt * max(0.0, qgrs[0,0,0])))
