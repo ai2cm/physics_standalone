@@ -7,13 +7,8 @@ BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "numpy"
 REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else True
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
 
-DTYPE_INT = np.int32
 DTYPE_FLT = np.float64
-DTYPE_BOOL = bool
-FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLT = gtscript.Field[DTYPE_FLT]
-FIELD_FLT_IJ = gtscript.Field[gtscript.IJ, DTYPE_FLT]
-FIELD_BOOL = gtscript.Field[DTYPE_BOOL]
 # Path of serialbox directory
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
