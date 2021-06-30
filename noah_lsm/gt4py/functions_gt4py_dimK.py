@@ -401,7 +401,7 @@ def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
     ci = -bi
 
     # calc rhstt for the top layer
-    dsmdz = (sh2o[0, 0, 0] - sh2o[0, 0, 1]) / (-0.5*zsoil)
+    dsmdz = (sh2o[0, 0, 0] - sh2o[0, 0, 1]) / (-0.5*zsoil[0, 0, 1])
     rhstt = (wdf*dsmdz + wcnd - pddum + edir + et) / zsoil
 
     return rhstt, runoff1, ai, bi, ci, dsmdz, ddz, wdf, wcnd
@@ -458,16 +458,20 @@ def srt_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sic
 
 
 @gtscript.function
-def rosr12_first_upperboundary_fn(ai, bi, ci, d):
+def rosr12_first_upperboundary_fn(ai, bi, ci, d, p, delta):
+
     p = -ci/bi
     delta = d/bi
+
     return p, delta
 
 
 @gtscript.function
 def rosr12_first_fn(ai, bi, ci, d, p, delta):
+    
     p = - ci / (bi + ai * p[0, 0, -1])
     delta = (d - ai*delta[0, 0, -1])/(bi + ai*p[0, 0, -1])
+
     return p, delta
 
 
@@ -484,15 +488,16 @@ def rosr12_second_fn(p, delta):
 
 
 @gtscript.function
-def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, sldpth):
+def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, zsoil):
     
     wplus = 0.
-    
-    sh2o = sh2o + ci + wplus/sldpth
+    ddz = -zsoil
+
+    sh2o = sh2o + ci + wplus/ddz
     stot = sh2o + sice
 
     if stot > smcmax:
-        wplus = (stot-smcmax)*sldpth
+        wplus = (stot-smcmax)*ddz
     else:
         wplus = 0.
 
@@ -502,13 +507,17 @@ def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, sldpth):
     return wplus, smc, sh2o
 
 @gtscript.function
-def sstep_fn(sh2o, smc, smcmax, sice, ci, sldpth, wplus):
+def sstep_fn(sh2o, smc, smcmax, sice, ci, zsoil, wplus):
 
-    sh2o = sh2o + ci + wplus[0,0,-1]/sldpth
+    ddz = zsoil[0,0,-1] - zsoil[0,0,0]
+
+    wplus = wplus[0,0,-1]
+    
+    sh2o = sh2o + ci + wplus/ddz
     stot = sh2o + sice
 
     if stot > smcmax:
-        wplus = (stot-smcmax)*sldpth
+        wplus = (stot-smcmax)*ddz
     else:
         wplus = 0.
 
@@ -956,8 +965,8 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
 
 @gtscript.function
-def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
-    zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o):
+def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1, 
+    zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta):
 
     stsoil = stc
 
@@ -973,7 +982,7 @@ def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
     ci *= dt
     rhsts *= dt
 
-    p, delta = rosr12_first_upperboundary_fn(ai, bi, ci, rhsts)
+    p, delta = rosr12_first_upperboundary_fn(ai, bi, ci, rhsts, p, delta)
 
     return stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz
 
@@ -1025,33 +1034,33 @@ def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bex
 
 @gtscript.function
 def shflx_second_lowerboundary_fn(p, delta, stc, stsoil):
-    ci = rosr12_second_lowerboundary_fn(p, delta)
-    stc += ci
+    p = rosr12_second_lowerboundary_fn(p, delta)
+    stc += p
 
     ctfil1 = 0.5
     ctfil2 = 1.0 - ctfil1
 
     stc = ctfil1*stc + ctfil2*stsoil
 
-    return stc
+    return stc, p
 
 
 @gtscript.function
 def shflx_second_fn(p, delta, stc, stsoil):
-    ci = rosr12_second_fn(p, delta)
-    stc += ci
+    p = rosr12_second_fn(p, delta)
+    stc += p
 
     ctfil1 = 0.5
     ctfil2 = 1.0 - ctfil1
 
     stc = ctfil1*stc + ctfil2*stsoil
 
-    return stc
+    return stc, p
 
 @gtscript.function
 def shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil):
-    ci = rosr12_second_fn(p, delta)
-    stc += ci
+    p = rosr12_second_fn(p, delta)
+    stc += p
 
     ctfil1 = 0.5
     ctfil2 = 1.0 - ctfil1
