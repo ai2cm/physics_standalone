@@ -24,10 +24,10 @@ After that:
 cd <parameterization>
 ./get_data.sh
 cd ../runfile
-python physics.py <parameterization> <backend> <--data_dir> <--which_tile> <--which_savepoint>
+python physics.py <parameterization> <backend> <--data_dir> <--select_tile> <--select_sp>
 ```
 
-By default, `data_dir=../parameterization/data`, `which_tile=All`, and `which_savepoint=All`.
+By default, `data_dir=../parameterization/data`, `select_tile=All`, and `select_sp=All`.
 
 For example, to validate microphysics using `gtx86` backend for all tiles and savepoints:
 ```
@@ -36,7 +36,7 @@ python physics.py microph gtx86
 
 To validate tile 0 and savepoint 0:
 ```
-python physics.py microph gtx86 --which_tile=0 --which_savepoint=cloud_mp-in-000000
+python physics.py microph gtx86 --select_tile=0 --select_sp=cloud_mp-in-000000
 ```
 
 Note: You may have to adapt the `Makefile` to point to your serialbox installation if it is not installed under `/usr/local/serialbox`.
