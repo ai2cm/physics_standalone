@@ -46,7 +46,7 @@ RUN cd /serialbox && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local/serialbox -DCMAKE_BUILD_TYPE=Debug \
           -DSERIALBOX_USE_NETCDF=ON -DSERIALBOX_ENABLE_FORTRAN=ON \
           -DSERIALBOX_TESTING=ON  ../ && \
-    make -j8 && \
+    make -j4 && \
     make test && \
     make install && \
     /bin/rm -rf /serialbox
