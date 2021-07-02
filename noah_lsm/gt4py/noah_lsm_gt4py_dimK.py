@@ -56,7 +56,7 @@ TEMP_VARS_1D_INT = ["count", "snowng"]
 
 
 TEMP_VARS_2D = ["sldpth", "rtdis", "smc_old", "stc_old", "slc_old",
-                "et1", "et", "rhstt", "ai", "bi", "ci", "dsmdz", "ddz", "gx",
+                "et1", "et", "rhstt", "rhsts", "ai", "bi", "ci", "dsmdz", "ddz", "gx",
                 "wdf", "wcnd", "sice", "p", "delta", "stsoil",
                 ]
 
@@ -99,7 +99,7 @@ NOPAC_VARS4 = ["smcmax", "dt", "smcwlt", "prcp", "prcp1", "zsoil", "shdfac", "ec
 
 NOPAC_VARS5 = ["smcmax", "etp", "dt", "bexp", "kdt", "frzx", "dksat", "dwsat", "slope",
                "zsoil", "sh2o", "flag_iter", "land", "sneqv", "sicemax", "dd", "dice", "pcpdrp", "edir1", "et1",
-               "rhstt", "ci", "runoff1", "runoff2", "dsmdz", "ddz", "wdf", "wcnd", "p", "delta"]
+               "ai", "bi", "rhstt", "ci", "runoff1", "runoff2", "dsmdz", "ddz", "wdf", "wcnd", "p", "delta"]
 
 NOPAC_VARS6 = ["dt", "smcmax", "flag_iter", "land", "sice", "zsoil", "rhsct", "ci", "sneqv",
                "sh2o", "smc", "cmc", "runoff3"]
@@ -107,7 +107,7 @@ NOPAC_VARS6 = ["dt", "smcmax", "flag_iter", "land", "sice", "zsoil", "rhsct", "c
 NOPAC_VARS7 = ["land", "flag_iter", "sneqv", "etp", "eta", "smc", "quartz", "smcmax", "ivegsrc",
                "vegtype", "shdfac", "fdown", "sfcemis", "t24", "sfctmp", "rch", "th2",
                "epsca", "rr", "zsoil", "dt", "psisat", "bexp", "ice", "stc",
-               "sh2o", "stsoil", "p", "delta", "tbot", "yy", "zz1", "df1", "beta"]
+               "sh2o", "stsoil", "rhsts", "ai", "bi", "ci", "p", "delta", "tbot", "yy", "zz1", "df1", "beta"]
 
 NOPAC_VARS8 = ["land", "flag_iter", "sneqv", "zsoil", "stsoil", "p", "delta",
                "yy", "zz1", "df1", "ssoil", "tsea", "stc"]
@@ -251,12 +251,20 @@ def run(in_dict, in_dict2, backend):
 
     nopac_smflx_second(**{k: general_dict[k] for k in NOPAC_VARS5})
 
+    ai = gt4py_to_numpy_storage_multilayer(general_dict["ai"], BACKEND)
+    print("AI:", ai[48])
+
     rosr12_second(general_dict["delta"], general_dict["p"],
                   general_dict["flag_iter"], general_dict["land"], general_dict["ci"])
 
     nopac_smflx_third(**{k: general_dict[k] for k in NOPAC_VARS6})
 
     nopac_shflx_first(**{k: general_dict[k] for k in NOPAC_VARS7})
+
+    # rhsts = gt4py_to_numpy_storage_multilayer(general_dict["rhsts"], BACKEND)
+    # print("RHSTT:", rhsts[48])
+    # stsoil = gt4py_to_numpy_storage_multilayer(general_dict["stsoil"], BACKEND)
+    # print("STSOIL:", stsoil[48])
 
     nopac_shflx_second(**{k: general_dict[k] for k in NOPAC_VARS8})
 

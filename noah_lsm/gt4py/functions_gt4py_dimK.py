@@ -295,7 +295,7 @@ def evapo_third_fn(etp1, shdfac, cmc, cmcmax, pc, cfactr, gx, denom, ett1):
 
 
 @gtscript.function
-def wdfcnd_fn(smc, smcmax, bexp, dksat, dwsat, sicemax):
+def wdfcnd_fn(smc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd):
     # calc the ratio of the actual to the max psbl soil h2o content of each layer
     factr = min(1.0, max(0.0, 0.2/smcmax))
     factr0 = min(1.0, max(0.0, smc/smcmax))
@@ -348,7 +348,7 @@ def srt_first_fn(sh2o, pcpdrp, zsoil, smcmax, smcwlt, sice, sicemax, dd, dice):
 def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
                                 dksat, smcmax, bexp, dt, kdt, frzx, sicemax, dd, dice,
                                 # output
-                                rhstt, runoff1, ci):
+                                ai, bi, rhstt, runoff1, ci, dsmdz, ddz, wdf, wcnd):
     # determine rainfall infiltration rate and runoff
     cvfrz = 3
 
@@ -383,7 +383,7 @@ def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
 
         infmax *= fcr
 
-        wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
+        wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
 
         infmax = max(infmax, wcnd)
         infmax = min(infmax, px)
@@ -392,7 +392,7 @@ def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
             runoff1 = pcpdrp - infmax
             pddum = infmax
 
-    wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
+    wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
 
     # calc the matrix coefficients ai, bi, and ci for the top layer
     ddz = 1.0 / (-.5*zsoil[0, 0, 1])
@@ -410,9 +410,9 @@ def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
 @gtscript.function
 def srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax,
                   # output
-                  rhstt, ci, dsmdz, ddz, wdf, wcnd):
+                  ai, bi, rhstt, ci, dsmdz, dsmdz_old, ddz, ddz_old, wdf, wdf_old, wcnd, wcnd_old):
 
-    wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
+    wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
 
     # 2. Layer
     denom2 = zsoil[0, 0, -1] - zsoil[0, 0, 0]
@@ -422,12 +422,14 @@ def srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax,
     ci = - wdf * ddz / denom2
     slopx = 1.
     numer = wdf*dsmdz + slopx*wcnd - \
-        wdf[0, 0, -1]*dsmdz[0, 0, -1] - wcnd[0, 0, -1] + et
-    rhstt = -numer / denom2
+        wdf_old*dsmdz_old - wcnd_old + et
+    rhstt = -numer / (zsoil[0, 0, -1] - zsoil[0, 0, 0])
 
     # calc matrix coefs
-    ai = - wdf[0, 0, -1]*ddz[0, 0, -1] / denom2
+    
+    ai = - wdf_old*ddz_old / (zsoil[0, 0, -1] - zsoil[0, 0, 0])
     bi = -(ai + ci)
+    
 
     return rhstt, ai, bi, ci, dsmdz, ddz, wdf, wcnd
 
@@ -435,9 +437,9 @@ def srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax,
 @gtscript.function
 def srt_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax, slope,
                                 # output
-                                rhstt, ci, dsmdz, ddz, wdf, wcnd):
+                                ai, bi, rhstt, ci, dsmdz, dsmdz_old, ddz, ddz_old, wdf, wdf_old, wcnd, wcnd_old):
 
-    wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax)
+    wdf, wcnd = wdfcnd_fn(sh2o, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd)
 
     # 2. Layer
     denom2 = zsoil[0, 0, -1] - zsoil[0, 0, 0]
@@ -445,16 +447,16 @@ def srt_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sic
     ci = 0.0
     slopx = slope
     numer = wdf*dsmdz + slopx*wcnd - \
-        wdf[0, 0, -1]*dsmdz[0, 0, -1] - wcnd[0, 0, -1] + et
+        wdf_old*dsmdz_old - wcnd_old + et
     rhstt = -numer / denom2
 
     # calc matrix coefs
-    ai = - wdf[0, 0, -1]*ddz[0, 0, -1] / denom2
+    ai = - wdf_old*ddz_old / denom2
     bi = -(ai + ci)
 
     runoff2 = slope * wcnd
 
-    return rhstt, ai, bi, ci, runoff2
+    return rhstt, ai, bi, ci, runoff2, dsmdz, ddz, wdf, wcnd
 
 
 @gtscript.function
@@ -467,10 +469,11 @@ def rosr12_first_upperboundary_fn(ai, bi, ci, d, p, delta):
 
 
 @gtscript.function
-def rosr12_first_fn(ai, bi, ci, d, p, delta):
+def rosr12_first_fn(ai, bi, ci, d, p, delta, p_old, delta_old):
     
-    p = - ci / (bi + ai * p[0, 0, -1])
-    delta = (d - ai*delta[0, 0, -1])/(bi + ai*p[0, 0, -1])
+    p = - ci / (bi + ai * p_old)
+    delta = (d - ai*delta_old)/(bi + ai*p_old)
+
 
     return p, delta
 
@@ -566,50 +569,53 @@ def smflx_first_fn(smcmax, smcwlt, zsoil, sh2o, smc, pcpdrp, sicemax,
 
 @gtscript.function
 def smflx_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
-                                  dksat, smcmax, bexp, dt, kdt, frzx, sicemax, dd, dice,
+                                  dksat, smcmax, bexp, dt, kdt, frzx, sicemax, dd, dice, ai, bi,
                                   # output
-                                  rhstt, runoff1, ci, dsmdz, ddz, wdf, wcnd):
+                                  rhstt, runoff1, ci, dsmdz, ddz, wdf, wcnd, p, delta):
     rhstt, runoff1, ai, bi, ci, dsmdz, ddz, wdf, wcnd = srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
                                                                                     dksat, smcmax, bexp, dt, kdt, frzx, sicemax, dd, dice,
-                                                                                    rhstt, runoff1, ci)
+                                                                                    ai, bi, rhstt, runoff1, ci, dsmdz, ddz, wdf, wcnd)
     ai *= dt
     bi = dt*bi + 1.
     ci *= dt
     rhstt *= dt
 
-    p, delta = rosr12_first_upperboundary_fn(ai, bi, ci, rhstt)
 
-    return rhstt, ci, runoff1, dsmdz, ddz, wdf, wcnd, p, delta
+    p, delta = rosr12_first_upperboundary_fn(ai, bi, ci, rhstt, p, delta)
+
+    return rhstt, ci, runoff1, dsmdz, ddz, wdf, wcnd, p, delta, ai, bi
 
 
 @gtscript.function
-def smflx_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, dt, sicemax,
+def smflx_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, dt, sicemax, ai, bi,
                     # output
-                    rhstt, ci, dsmdz, ddz, wdf, wcnd, p, delta):
-    rhstt, ai, bi, ci, dsmdz, ddz, wdf, wcnd = srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax,
-                                                             rhstt, ci, dsmdz, ddz, wdf, wcnd)
+                    rhstt, ci, dsmdz, dsmdz_old, ddz, ddz_old, wdf, wdf_old, wcnd, wcnd_old, p, delta, p_old, delta_old):
+    rhstt, ai, bi, ci, dsmdz, ddz, wdf, wcnd = srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax, ai, bi,
+                                                             rhstt, ci, dsmdz, dsmdz_old, ddz, ddz_old, wdf, wdf_old, wcnd, wcnd_old)
     ai *= dt
     bi = dt*bi + 1.
     ci *= dt
     rhstt *= dt
-    p, delta = rosr12_first_fn(ai, bi, ci, rhstt, p, delta)
 
-    return rhstt, ci, dsmdz, ddz, wdf, wcnd, p, delta
+    p, delta = rosr12_first_fn(ai, bi, ci, rhstt, p, delta, p_old, delta_old)
+
+    return rhstt, ci, dsmdz, ddz, wdf, wcnd, p, delta, ai, bi
 
 
 @gtscript.function
-def smflx_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, dt, sicemax, slope,
+def smflx_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, dt, sicemax, slope, ai, bi,
                                   # output
-                                  rhstt, ci, runoff2, dsmdz, ddz, wdf, wcnd, p, delta):
-    rhstt, ai, bi, ci, runoff2 = srt_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax, slope,
-                                                             rhstt, ci, dsmdz, ddz, wdf, wcnd)
+                                  rhstt, ci, runoff2, dsmdz, dsmdz_old, ddz, ddz_old, wdf, wdf_old, wcnd, wcnd_old, p, delta, p_old, delta_old):
+    rhstt, ai, bi, ci, runoff2, dsmdz, ddz, wdf, wcnd = srt_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax, slope, ai, bi,
+                                                             rhstt, ci, dsmdz, dsmdz_old, ddz, ddz_old, wdf, wdf_old, wcnd, wcnd_old)
     ai *= dt
     bi = dt*bi + 1.
     ci *= dt
     rhstt *= dt
-    p, delta = rosr12_first_fn(ai, bi, ci, rhstt, p, delta)
 
-    return rhstt, ci, runoff2, p, delta
+    p, delta = rosr12_first_fn(ai, bi, ci, rhstt, p, delta, p_old, delta_old)
+
+    return rhstt, ci, runoff2, p, delta, ai, bi, dsmdz, ddz, wdf, wcnd
 
 
 @gtscript.function
@@ -825,7 +831,7 @@ def snksrc_fn(free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz):
 
 @gtscript.function
 def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
-                         csoil, ivegsrc, vegtype, shdfac, sh2o):
+                         csoil, ivegsrc, vegtype, shdfac, sh2o, rhsts, ai, bi, ci):
  
     csoil_loc = csoil
 
@@ -876,7 +882,7 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
 
 
 @gtscript.function
-def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc):
 
     hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
@@ -888,7 +894,9 @@ def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
     if ivegsrc == 1 and vegtype == 12:
         df1k = 3.24*(1.-shdfac) + shdfac*df1k
 
-    tbk = stc[0,0,+1] + (stc[0,0,+1]-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
+    # tbk = stc[0,0,+1] + (stc[0,0,+1]-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
+    tbk = stc_plus + (stc_plus-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
+    
     # calc the vertical soil temp gradient thru each layer
     denom = 0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,+1])
     dtsdz = (stc[0,0,0] - stc[0,0,+1]) / denom
@@ -898,15 +906,15 @@ def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
     # calculate rhsts
     denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
-    rhsts = (df1k*dtsdz[0,0,0] - df1k[0,0,-1]*dtsdz[0,0,-1])/denom
+    rhsts = (df1k*dtsdz - df1k_old*dtsdz_old)/denom
 
     qtot = -1. * denom * rhsts
     sice = smc - sh2o
 
-    if sice > 0 or tbk[0,0,-1] < tfreez or stc < tfreez or tbk[0,0,0] < tfreez:
+    if sice > 0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
         ### ************ tmpavg *********** ###
         dz = zsoil[0, 0,-1] - zsoil[0, 0,0]
-        tavg = tmpavg_fn(tbk[0,0,-1], stc, tbk[0,0,0], dz)
+        tavg = tmpavg_fn(tbk_old, stc, tbk, dz)
         ### ************ snksrc *********** ###
         tsnsr, sh2o = snksrc_fn(
             free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
@@ -914,14 +922,14 @@ def hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
         rhsts -= tsnsr / denom
 
     # calc matrix coefs, ai, and bi for this layer.
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
+    ai = - df1 * ddz_old / ((zsoil[0,0,-1] - zsoil[0,0,0]) * hcpct)
     bi = - (ai + ci)
 
     return sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz
 
 
 @gtscript.function
-def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot):
 
     hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
@@ -933,32 +941,31 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
     if ivegsrc == 1 and vegtype == 12:
         df1k = 3.24*(1.-shdfac) + shdfac*df1k
 
-    tbk = stc[0,0,0] + (tbot-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] + zsoil[0, 0,0] - 2. * zbot)
+    tbk = stc + (tbot-stc)*(zsoil[0,0,-1] - zsoil[0,0,0])/(zsoil[0,0,-1] + zsoil[0,0,0] - 2. * zbot)
     # calc the vertical soil temp gradient thru each layer
-    denom = 0.5 * (zsoil[0, 0,-1] + zsoil[0, 0,0]) - zbot
-    dtsdz = (stc[0,0,0] - tbot) / denom
+    denom = 0.5 * (zsoil[0,0,-1] + zsoil[0,0,0]) - zbot
+    dtsdz = (stc - tbot) / denom
 
     ci = 0.0
 
     # calculate rhsts
     denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
-    rhsts = (df1k*dtsdz[0,0,0] - df1k[0,0,-1]*dtsdz[0,0,-1])/denom
+    rhsts = (df1k*dtsdz - df1k_old*dtsdz_old)/denom
 
     qtot = -1. * denom * rhsts
     sice = smc - sh2o
 
-    if sice > 0 or tbk[0,0,-1] < tfreez or stc < tfreez or tbk[0,0,0] < tfreez:
+    if sice > 0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
         ### ************ tmpavg *********** ###
-        dz = zsoil[0, 0,-1] - zsoil[0, 0,0]
-        tavg = tmpavg_fn(tbk[0,0,-1], stc, tbk[0,0,0], dz)
+        dz = zsoil[0,0,-1] - zsoil[0,0,0]
+        tavg = tmpavg_fn(tbk_old, stc, tbk, dz)
         ### ************ snksrc *********** ###
-        tsnsr, sh2o = snksrc_fn(
-            free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
+        tsnsr, sh2o = snksrc_fn(free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
         ### ************ END snksrc *********** ###
         rhsts -= tsnsr / denom
 
     # calc matrix coefs, ai, and bi for this layer.
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
+    ai = - df1 * ddz_old / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
     bi = - (ai + ci)
 
     return sh2o, rhsts, ai, bi, ci
@@ -966,7 +973,7 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
 @gtscript.function
 def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1, 
-    zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta):
+    zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci,):
 
     stsoil = stc
 
@@ -975,7 +982,7 @@ def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
 
     else:
         sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz = hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
-                         csoil, ivegsrc, vegtype, shdfac, sh2o)
+                         csoil, ivegsrc, vegtype, shdfac, sh2o, rhsts, ai, bi, ci)
 
     ai *= dt
     bi = dt*bi + 1.
@@ -984,12 +991,12 @@ def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
 
     p, delta = rosr12_first_upperboundary_fn(ai, bi, ci, rhsts, p, delta)
 
-    return stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz
+    return stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz
 
 
 @gtscript.function
-def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
-                    hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta):
+def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
+                    hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old, p_old, delta_old,  dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci):
 
     stsoil = stc
 
@@ -997,21 +1004,21 @@ def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegs
         rhsts, ai, bi, ci, dtsdz, ddz = hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz)
 
     else:
-        sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz = hrt_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+        sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz = hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc)
     ai *= dt
     bi = dt*bi + 1.
     ci *= dt
     rhsts *= dt
 
-    p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta)
+    p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta, p_old, delta_old)
 
-    return stsoil, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz   
+    return stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz   
 
  
 @gtscript.function
 def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
-                    hcpct, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta):
+                    hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old, p_old, delta_old, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci):
 
     stsoil = stc
 
@@ -1019,16 +1026,16 @@ def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bex
         rhsts, ai, bi, ci, tbot = hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot)
 
     else:
-        sh2o, rhsts, ai, bi, ci = hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
+        sh2o, rhsts, ai, bi, ci = hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot)
     ai *= dt
     bi = dt*bi + 1.
     ci *= dt
     rhsts *= dt
 
-    p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta)
+    p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta, p_old, delta_old)
 
-    return stsoil, sh2o, p, delta, tbot
+    return stsoil, rhsts, ai, bi, ci, sh2o, p, delta, tbot
 
 
 
