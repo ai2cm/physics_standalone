@@ -30,6 +30,14 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10 && 
     update-alternatives  --set python /usr/bin/python3 && \
     update-alternatives  --set pip /usr/bin/pip3
 
+# download and install NCEP libraries
+RUN git config --global http.sslverify false && \
+    git clone https://github.com/NCAR/NCEPlibs.git && \
+    mkdir /opt/NCEPlibs && \
+    cd NCEPlibs && \
+    git checkout 3da51e139d5cd731c9fc27f39d88cb4e1328212b && \
+    echo "y" | ./make_ncep_libs.sh -s linux -c gnu -d /opt/NCEPlibs -o 1
+
 # set TZ
 ENV TZ=US/Pacific
 RUN echo $TZ > /etc/timezone && \

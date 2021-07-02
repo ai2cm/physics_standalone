@@ -715,7 +715,7 @@
       logical :: lcf1
 
 !
-!===> ... begin here
+!===> ... begin
 !
 
 !  --- ...  initialization

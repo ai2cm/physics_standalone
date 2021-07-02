@@ -9,7 +9,9 @@ program test
       con_amw, con_amo3
       use module_radlw_main, only : lwrad
 
-      integer :: im, lmk, lmp, npts, levr
+      use module_radiation_driver,  only: radupdate
+
+      integer :: im, lmk, lmp, npts, levr, imp_physics
       
       real (kind=kind_phys), parameter :: eps     = 1.0e-6
       real (kind=kind_phys), parameter :: oneminus= 1.0-eps
@@ -77,66 +79,120 @@ program test
       real(8) :: time1, time2
 
       real(kind=kind_phys), dimension(:, :), allocatable :: plyr, tlyr, qlyr, olyr, &
-      dz, delp, htlwc, htlw0
+      dz, delp, htlwc, htlw0, htlwc_ref
       real(kind=kind_phys), dimension(:, :), allocatable :: plvl, tlvl
       real(kind=kind_phys), dimension(:, :, :), allocatable :: gasvmr
       real(kind=kind_phys), dimension(:, :, :), allocatable :: clouds
       real(kind=kind_phys), dimension(:, :, :, :), allocatable :: faerlw
-      real(kind=kind_phys), dimension(:, :), allocatable :: cldtaulw
+      real(kind=kind_phys), dimension(:, :), allocatable :: cldtaulw, cldtaulw_ref
       real(kind=kind_phys), dimension(:), allocatable :: semis, tsfg, &
                                              de_lgth
-      integer, dimension(24) :: icsdlw
+      integer, dimension(:), allocatable :: icsdlw
+      real(kind=kind_phys), dimension(:), allocatable :: si
 
-      type(topflw_type), dimension(24) :: topflw
-      type(sfcflw_type), dimension(24) :: sfcflw
+      type(topflw_type), dimension(:), allocatable :: topflw
+      type(sfcflw_type), dimension(:), allocatable :: sfcflw
+
+      real(kind=kind_phys), dimension(:), allocatable :: upfxc_t_ref, upfx0_t_ref, upfxc_s_ref, upfx0_s_ref
+
+      integer, parameter :: me = 0
+      integer :: ictm, isol, ico2, iaer, num_p2d,    &
+     &       ntcw, ialb, iems, num_p3d, npdf3d, ntoz, iovr_sw, iovr_lw, &
+     &       isubc_sw, isubc_lw, icliq_sw, iflip, idate(4)
+      logical :: crick_proof, ccnorm, norad_precip
+
+      integer:: idat(8), jdat(8)
+      logical :: lsswr
+
+      real (kind=kind_phys) :: deltsw, deltim
+
+!  ---  outputs:
+      real (kind=kind_phys) :: slag, sdec, cdec, solcon
+
 
       !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=0
       !$ser mode read
-!$ser savepoint "lwrad-in-000000"
-!$ser data im=im levr=levr
-
+      !$ser savepoint "lwrad-in-000000"
+      !$ser data im=im levr=levr 
+      
       allocate(plyr(im, levr), tlyr(im, levr), qlyr(im, levr), olyr(im, levr), dz(im, levr), &
-               delp(im, levr), htlwc(im, levr), htlw0(im, levr))
+               delp(im, levr), htlwc(im, levr), htlw0(im, levr), htlwc_ref(im, levr))
       allocate(plvl(im, levr+1), tlvl(im, levr+1))
       allocate(gasvmr(im, levr, NF_VGAS))
       allocate(clouds(im, levr, NF_CLDS))
       allocate(faerlw(im, levr, NBDLW, NF_AELW))
       allocate(semis(im), tsfg(im), de_lgth(im))
-      allocate(cldtaulw(im, levr))
-      !allocate(icsdlw(im))
+      allocate(cldtaulw(im, levr), cldtaulw_ref(im, levr))
+      allocate(icsdlw(im), topflw(im), sfcflw(im), upfxc_t_ref(im), upfx0_t_ref(im), upfxc_s_ref(im), upfx0_s_ref(im))
+      allocate(si(levr+1))
 
-      cldtaulw = 0.
+      !$ser mode read
+      !$ser savepoint "rad-initialize"
+      !$ser data si=si ictm=ictm isol=isol imp_physics=imp_physics
+        !$ser data ico2=ico2 iaer=iaer ialb=ialb iems=iems
+        !$ser data ntcw=ntcw num_p2d=num_p2d num_p3d=num_p3d npdf3d=npdf3d
+        !$ser data ntoz=ntoz iovr_sw=iovr_sw iovr_lw=iovr_lw isubc_sw=isubc_sw
+        !$ser data isubc_lw=isubc_lw icliq_sw=icliq_sw crick_proof=crick_proof
+        !$ser data ccnorm=ccnorm norad_precip=norad_precip idate=idate iflip=iflip
+      ! Initialization
 
-      ser_count_max = 5
-      num_tiles = 6
+      call rad_initialize(si,  levr,         ictm,    isol,      &
+                          ico2,        iaer,         ialb,    iems,      &
+                          ntcw,        num_p2d,      num_p3d, npdf3d,    &
+                          ntoz,        iovr_sw,      iovr_lw, isubc_sw,  &
+                          isubc_lw,    icliq_sw,     crick_proof, ccnorm,&
+                          imp_physics, norad_precip, idate,   iflip,  me)
+
+      ser_count_max = 6
+      num_tiles = 0
 
       call cdstart(num_tiles * ser_count_max * 2)
 
-      do tile = 0, num_tiles - 1
+      do tile = 0, 0
 
       !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=tile
 
-      do ser_count = 0, ser_count_max
+      do ser_count = 0, ser_count_max-1
   
           call cdshow(tile * ser_count_max + ser_count * 2 + iter - 1)
           
           write(ser_count_str, '(i6.6)') ser_count
+          write(*,*) 'ser_count = ' // ser_count_str
 
 !$ser mode read
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
 !$ser savepoint "lwrad-in-"//trim(ser_count_str)
 !$ser data plyr=plyr plvl=plvl tlyr=tlyr tlvl=tlvl qlyr=qlyr olyr=olyr
 !$ser data gasvmr=gasvmr clouds=clouds icsdlw=icsdlw faerlw=faerlw
 !$ser data semis=semis tsfg=tsfg dz=dz delp=delp de_lgth=de_lgth
-!     $ser data im=im lmk=lmk lmp=lmp lprnt=lprnt
+!$ser data im=im lmk=lmk lmp=lmp lprnt=lprnt
 
           call lwrad(plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
                      clouds, icsdlw, faerlw, semis,   &
                      tsfg, dz, delp, de_lgth,                     &
                      im, lmk, lmp, lprnt,                   &
-                     htlwc, topflw, sfcflw, cldtaulw,&        !  ---  outputs
-                     hlw0=htlw0)
+                     htlwc, topflw, sfcflw, cldtaulw)        !  ---  outputs
+
+!$ser mode write
+!$ser savepoint "lwrad-check-"//trim(ser_count_str)
+!$ser data htlwc=htlwc upfxc_t=topflw%upfxc upfx0_t=topflw%upfx0
+!$ser data upfxc_s=sfcflw%upfxc upfx0_s=sfcflw%upfx0
+!$ser data dnfxc_s=sfcflw%dnfxc dnfx0_s=sfcflw%dnfx0
+!$ser data cldtaulw=cldtaulw
+
+!$ser mode read
+!$ser savepoint "lwrad-out-"//trim(ser_count_str)
+! outputs
+!$ser data htlwc=htlwc_ref upfxc_t=upfxc_t_ref upfx0_t=upfx0_t_ref
+!$ser data upfxc_s=upfxc_s_ref upfx0_s=upfx0_s_ref cldtaulw=cldtaulw_ref
+
+      call check_r_2d(htlwc, htlwc_ref, "htlwc")
+      call check_r_1d(topflw%upfxc, upfxc_t_ref, "upfxc_t")
+      call check_r_1d(topflw%upfx0, upfx0_t_ref, "upfx0_t")
+      call check_r_1d(sfcflw%upfxc, upfxc_s_ref, "upfxc_s")
+      call check_r_1d(sfcflw%upfx0, upfx0_s_ref, "upfx0_s")
+      call check_r_2d(cldtaulw, cldtaulw_ref, "cldtaulw")
       end do
-  
       !$ser cleanup
 
       end do
@@ -158,6 +214,8 @@ contains
         close = all(isclose_r(a, b, atol, rtol))
         if (.not. close) then
             write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        else
+            write(*,*) trim(name) // ' validates!'
         end if
 
       end subroutine check_r_2d
@@ -173,6 +231,8 @@ contains
         close = all(isclose_r(a, b, atol, rtol))
         if (.not. close) then
             write(*,*) 'ERROR: ' // trim(name) // ' does not validate', tile, ser_count
+        else
+            write(*,*) trim(name) // ' validates!'
         end if
 
       end subroutine check_r_1d
