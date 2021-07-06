@@ -830,7 +830,8 @@ def snksrc_fn(free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz):
 
 
 @gtscript.function
-def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
+def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, hcpct,
+                         tbk, df1k, dtsdz, ddz,
                          csoil, ivegsrc, vegtype, shdfac, sh2o, rhsts, ai, bi, ci):
  
     csoil_loc = csoil
@@ -882,7 +883,8 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
 
 
 @gtscript.function
-def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
+def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcpct,
+            tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc):
 
     hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
@@ -929,7 +931,8 @@ def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk
 
 
 @gtscript.function
-def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
+def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcpct,
+            tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot):
 
     hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
@@ -973,7 +976,8 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
 @gtscript.function
 def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1, 
-    zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci,):
+    zsoil, psisat, bexp, df1, hcpct, tbk, df1k, dtsdz, ddz,
+    ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci,):
 
     stsoil = stc
 
@@ -982,6 +986,7 @@ def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
 
     else:
         sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz = hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
+                         hcpct, tbk, df1k, dtsdz, ddz,
                          csoil, ivegsrc, vegtype, shdfac, sh2o, rhsts, ai, bi, ci)
 
     ai *= dt
@@ -1004,7 +1009,7 @@ def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegs
         rhsts, ai, bi, ci, dtsdz, ddz = hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz)
 
     else:
-        sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz = hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
+        sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz = hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc)
     ai *= dt
     bi = dt*bi + 1.
@@ -1013,7 +1018,7 @@ def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegs
 
     p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta, p_old, delta_old)
 
-    return stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz   
+    return stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz   
 
  
 @gtscript.function
@@ -1026,7 +1031,7 @@ def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bex
         rhsts, ai, bi, ci, tbot = hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot)
 
     else:
-        sh2o, rhsts, ai, bi, ci = hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, tbk_old, df1k_old, dtsdz_old, ddz_old,
+        sh2o, rhsts, ai, bi, ci = hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot)
     ai *= dt
     bi = dt*bi + 1.

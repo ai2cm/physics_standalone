@@ -617,9 +617,11 @@ def nopac_smflx_third(dt: float, smcmax: DT_F, flag_iter: DT_I, land: DT_I, sice
 def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: DT_F, smc: DT_F2, quartz: DT_F, smcmax: DT_F, ivegsrc: int,
                       vegtype: DT_I, shdfac: DT_F, fdown: DT_F, sfcemis: DT_F, t24: DT_F, sfctmp: DT_F, rch: DT_F, th2: DT_F, 
                       epsca: DT_F, rr: DT_F, zsoil: DT_F2, dt: float, psisat: DT_F, bexp: DT_F, ice: DT_F, stc: DT_F2, 
+                      hcpct:DT_F2, tbk: DT_F2, df1k: DT_F2, dtsdz: DT_F2, ddz: DT_F2, csoil_loc: DT_F,
                       # output
                       sh2o: DT_F2, stsoil: DT_F2, rhsts: DT_F2, ai: DT_F2, bi: DT_F2, ci: DT_F2, p: DT_F2, delta: DT_F2, tbot: DT_F, yy: DT_F, zz1: DT_F, df1: DT_F, beta: DT_F):
     from __gtscript__ import FORWARD, computation, interval
+    # from __externals__ import tdfcnd_fn, shflx_first_upperboundary_fn, shflx_first_lowerboundary_fn
 
     with computation(FORWARD):
         with interval(0, 1):
@@ -658,7 +660,8 @@ def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: 
                     stc_plus = 285.963134765625
 
                     stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
-                                                                                                                                     zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci)
+                                                                                                                                     zsoil, psisat, bexp, df1, hcpct, tbk, df1k, dtsdz, ddz,
+                                                                                                                            ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci)
         with interval(1, 2):
             if flag_iter and land:
                 if sneqv == 0.0:
@@ -668,7 +671,7 @@ def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: 
                     # d = 0.002931237012818815
                     stc = 285.963134765625
                     stc_plus = 287.3513488769531
-                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
+                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci)
 
         with interval(2, -1):
@@ -680,7 +683,7 @@ def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: 
                     # d = -0.00012452344378477526
                     stc = 287.3513488769531 
                     stc_plus = 289.2500305175781
-                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
+                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci)
         
         with interval(-1, None):
@@ -1005,9 +1008,9 @@ def snopac_smflx_third(ice: DT_F,  dt: float, smcmax: DT_F, flag_iter: DT_I, lan
 
 
 @gtscript.stencil(backend=BACKEND)
-def snopac_shflx_first(ssoil: DT_F, csoil: DT_F, land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: DT_F, smc: DT_F2, quartz: DT_F, smcmax: DT_F, ivegsrc: int,
+def snopac_shflx_first(ssoil: DT_F, land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: DT_F, smc: DT_F2, quartz: DT_F, smcmax: DT_F, ivegsrc: int,
                       vegtype: DT_I, shdfac: DT_F, fdown: DT_F, sfcemis: DT_F, t24: DT_F, sfctmp: DT_F, rch: DT_F, th2: DT_F,
-                      epsca: DT_F, rr: DT_F, zsoil: DT_F2, dt: float, psisat: DT_F, bexp: DT_F, ice: DT_F, stc: DT_F2,
+                      epsca: DT_F, rr: DT_F, zsoil: DT_F2, dt: float, psisat: DT_F, bexp: DT_F, ice: DT_F, stc: DT_F2, hcpct:DT_F2, tbk: DT_F2, df1k: DT_F2, dtsdz: DT_F2, ddz: DT_F2, csoil_loc: DT_F,
                       # output
                       sh2o: DT_F2, stsoil: DT_F2, rhsts: DT_F2, ai: DT_F2, bi: DT_F2, ci: DT_F2, p: DT_F2, delta: DT_F2, tbot: DT_F, yy: DT_F, zz1: DT_F, df1: DT_F, beta: DT_F):
     from __gtscript__ import FORWARD, computation, interval
@@ -1021,18 +1024,18 @@ def snopac_shflx_first(ssoil: DT_F, csoil: DT_F, land: DT_I, flag_iter: DT_I, sn
                     yy = stc - 0.5 * ssoil * zsoil * zz1 / df1
 
                     stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
-                                                                                                                                     zsoil, psisat, bexp, df1, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci,)
+                                                                                                                                     zsoil, psisat, bexp, df1, hcpct, tbk, df1k, dtsdz, ddz, ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci,)
 
         with interval(1, -1):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, 1.0, sh2o,
+                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, 1.0, sh2o, 
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci,)
 
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    stsoil, rhsts, ai, bi, ci, sh2o, p, delta, tbot = shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
+                    stsoil, rhsts, ai, bi, ci, sh2o, p, delta, tbot = shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o, 
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci,)
 
 
