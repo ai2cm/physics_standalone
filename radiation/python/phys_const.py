@@ -1,154 +1,122 @@
+import numpy as np
 
-########################################################################
 # Physical constants
-########################################################################
 
-rhos  = 1.e2
-rhog  = 4.e2
-grav  = 9.80665              # Acceleration due to gravity
-rgrav = 1. / grav            # Inverse of gravitational acceleration
-rdgas = 287.05               # Gas constant for dry air
-rvgas = 461.50               # Gas constant for water vapor
+# Math constants
+con_pi = 4.0*np.arctan(1.0)
+con_sqrt2 = 1.414214
+con_sqrt3 = 1.732051
 
-cp_air = 1004.6              # Heat capacity of dry air at constant pressure
-cp_vap = 4.0 * rvgas         # Heat capacity of water vapor at constant pressure
-cv_air = cp_air - rdgas      # Heat capacity of dry air at constant volume
-cv_vap = 3.0 * rvgas         # Heat capacity of water vapor at constant volume
-c_ice  = 1972.0              # Heat capacity of ice at -15 degrees Celsius
-c_liq  = 4185.5              # Heat capacity of water at 15 degrees Celsius
+# Geophysics/Astronomy constants
 
-eps = rdgas / rvgas
+# radius of earth (m)
+con_rerth = 6.3712e6
+# gravity (\f$m/s^{2}\f$)
+con_g = 9.80665
+# ang vel of earth (\f$s^{-1}\f$)
+con_omega = 7.2921e-5
+# std atms pressure (pa)
+con_p0 = 1.01325e5
+# solar constant (\f$W/m^{2}\f$)-liu(2002)
+con_solr_old = 1.3660e3
+# solar constant (\f$W/m^{2}\f$)-nasa-sorce Tim(2008)
+con_solr   =1.3608e3
 
-t_ice = 273.16               # Freezing temperature
+# Thermodynamics constants
 
-e00 = 611.21                 # Saturation vapor pressure at 0 degrees Celsius
+# molar gas constant (\f$J/mol/K\f$)
+con_rgas = 8.314472
+# gas constant air (\f$J/kg/K\f$)
+con_rd = 2.8705e2
+# gas constant H2O (\f$J/kg/K\f$)
+con_rv = 4.6150e2
+# spec heat air at p (\f$J/kg/K\f$)
+con_cp =1.0046e3
+# spec heat air at v (\f$J/kg/K\f$)
+con_cv = 7.1760e2
+# spec heat H2O gas (\f$J/kg/K\f$)
+con_cvap = 1.8460e3
+# spec heat H2O liq (\f$J/kg/K\f$)
+con_cliq   =4.1855e3
+# spec heat H2O ice (\f$J/kg/K\f$)
+con_csol = 2.1060e3
+# lat heat H2O cond (\f$J/kg\f$)
+con_hvap = 2.5000e6
+# lat heat H2O fusion (\f$J/kg\f$)
+con_hfus = 3.3358e5
+# pres at H2O 3pt (Pa)
+con_psat = 6.1078e2
+# temp at 0C (K)
+con_t0c = 2.7315e2
+# temp at H2O 3pt (K)
+con_ttp = 2.7316e2
+# temp freezing sea (K)
+con_tice   =2.7120e2
+# joules per calorie
+con_jcal = 4.1855
+# sea water reference density (\f$kg/m^{3}\f$)
+con_rhw0 = 1022.0
+# min q for computing precip type
+con_epsq = 1.0e-12
 
-dc_vap = cp_vap - c_liq      # Isobaric heating / cooling
-dc_ice = c_liq - c_ice       # Isobaric heating / cooling
+# Secondary constants
 
-hlv  = 2.5e6                 # Latent heat of evaporation
-hlf  = 3.3358e5              # Latent heat of fusion
-hlv0 = hlv                   # Evaporation latent heat coefficient at 0 degrees Celsius
-hlf0 = hlf                   # Fusion latent heat coefficient at 0 degrees Celsius
+con_rocp = con_rd/con_cp
+con_cpor = con_cp/con_rd
+con_rog  = con_rd/con_g
+con_fvirt = con_rv/con_rd-1.
+con_eps = con_rd/con_rv
+con_epsm1 = con_rd/con_rv-1.
+con_dldt = con_cvap-con_cliq
+con_xpona = -con_dldt/con_rv
+con_xponb = -con_dldt/con_rv+con_hvap/(con_rv*con_ttp)
 
-lv0  = hlv0 - dc_vap * t_ice # Evaporation latent heat coefficient at 0 degrees Kelvin
-li00 = hlf0 - dc_ice * t_ice # Fusion latent heat coefficient at 0 degrees Kelvin
+# Other Physics/Chemistry constants (source: 2002 CODATA)
 
-d2ice = dc_vap + dc_ice      # Isobaric heating / cooling
-li2   = lv0 + li00           # Sublimation latent heat coefficient at 0 degrees Kelvin
+# speed of light (\f$m/s\f$)
+con_c      = 2.99792458e+8
+# planck constant (\f$J/s\f$)
+con_plnk   = 6.6260693e-34
+# boltzmann constant (\f$J/K\f$)
+con_boltz  = 1.3806505e-23
+# stefan-boltzmann (\f$W/m^{2}/K^{4}\f$)
+con_sbc    = 5.670400e-8
+# avogadro constant (\f$mol^{-1}\f$)
+con_avgd   = 6.0221415e23
+# vol of ideal gas at 273.15K, 101.325kPa (\f$m^{3}/mol\f$)
+con_gasv   = 22413.996e-6
+# molecular wght of dry air (\f$g/mol\f$)
+con_amd    = 28.9644
+# molecular wght of water vapor (\f$g/mol\f$)
+con_amw    = 18.0154
+# molecular wght of o3 (\f$g/mol\f$)
+con_amo3   = 47.9982
+# molecular wght of co2 (\f$g/mol\f$)
+con_amco2  = 44.011
+# molecular wght of o2 (\f$g/mol\f$)
+con_amo2   = 31.9999
+# molecular wght of ch4 (\f$g/mol\f$)
+con_amch4  = 16.043
+# molecular wght of n2o (\f$g/mol\f$)
+con_amn2o  = 44.013
+# temperature the H.G.Nuc. ice starts
+con_thgni  = -38.15
 
-qcmin = 1.e-12               # Minimum value for cloud condensation
+# minimum aerosol concentration
+qamin = 1.e-16
 
-vr_min = 1.e-3               # Minimum fall speed for rain
-vf_min = 1.e-5               # Minimum fall speed for cloud ice, snow, graupel
+# Miscellaneous physics related constants (Moorthi - Jul 2014)
+rlapse = 0.65e-2
+b2mb = 10.0
+pa2mb = 0.01
+# for wsm6
+rhowater = 1000.         # density of water (kg/m^3)
+rhosnow  = 100.          # density of snow (kg/m^3)
+rhoair   = 1.28          # density of air near surface (kg/m^3)
 
-qrmin = 1.e-8                # Minimum value for rain water
-qvmin = 1.e-20               # Minimum value for water vapor (treated as zero)
-
-dz_min = 1.e-2               # Use for correcting flipped height
-
-sfcrho = 1.2                 # Surface air density
-rhor   = 1.e3                # Density of rain water, lin83
-
-dt_fr = 8.                   # Homogeneous freezing of all cloud water at t_wfr - dt_fr
-
-p_min = 100.                 # Minimum pressure (Pascal) for mp to operate
-
-qi0_max = 1.0e-4             # Max cloud ice value (by other sources)
-
-alin = 842.0                 # "a" in lin1983
-clin = 4.8                   # "c" in lin 1983, 4.8 -- > 6. (to ehance ql -- > qs)
-
-vi_fac = 1.                  # if const_vi: 1/3
-vs_fac = 1.                  # if const_vs: 1.
-vg_fac = 1.                  # if const_vg: 2.
-vr_fac = 1.                  # if const_vr: 4.
-
-tice = 273.16                # Set tice = 165. to trun off ice-phase phys (kessler emulator)
-
-t_min = 178.                 # Minimum temperature to freeze-dry all water vapor
-t_sub = 184.                 # Minimum temperature for sublimation of cloud ice
-
-tau_imlt = 600.              # Cloud ice melting
-tau_v2g  = 21600.            # Graupel deposition -- make it a slow process
-
-qc_crt = 5.0e-8              # Minimum condensate mixing ratio to allow partial cloudiness
-
-qi_gen = 1.82e-6             # Maximum cloud ice generation during remapping step
-
-### Latent heat coefficients used in wet bulb and bigg mechanism ###
-latv = hlv
-lati = hlf
-lats = latv + lati
-lat2 = lats * lats
-lcp  = latv / cp_air
-icp  = lati / cp_air
-tcp  = (latv + lati) / cp_air
-
-### Fall velocity constants ###
-vconr = 2503.23638966667
-normr = 25132741228.7183
-thr   = 1.e-8
-thi   = 1.0e-8               # Cloud ice threshold for terminal fall
-thg   = 1.0e-8
-ths   = 1.0e-8
-aa    = -4.14122e-5
-bb    = -0.00538922
-cc    = -0.0516344
-dd_fs = 0.00216078
-ee    = 1.9714
-
-### Marshall-Palmer constants ###
-vcons = 6.6280504
-vcong = 87.2382675
-norms = 942477796.076938
-normg = 5026548245.74367
-
-
-########################################################################
-# Tunable parameters (Fortran namelist parameters)
-########################################################################
-
-c_cracw        = 0.8         # Rain accretion efficiency
-c_paut         = 0.5         # Autoconversion cloud water to rain (use 0.5 to reduce autoconversion)
-c_pgacs        = 0.01        # Snow to graupel "accretion" eff. (was 0.1 in zetac)
-c_psaci        = 0.05        # Accretion: cloud ice to snow (was 0.1 in zetac)
-ccn_l          = 300.0       # CCN over land (cm^-3)
-ccn_o          = 100.0       # CCN over ocean (cm^-3)
-const_vg       = 0           # Fall velocity tuning constant of graupel
-const_vi       = 0           # Fall velocity tuning constant of ice
-const_vr       = 0           # Fall velocity tuning constant of rain water
-const_vs       = 0           # Fall velocity tuning constant of snow
-de_ice         = 0           # To prevent excessive build-up of cloud ice from external sources
-do_qa          = 1           # Do inline cloud fraction
-do_sedi_heat   = 0           # Transport of heat in sedimentation
-dw_land        = 0.15        # Base value for subgrid deviation / variability over land
-dw_ocean       = 0.1         # Base value for ocean
-fast_sat_adj   = 1           # Has fast saturation adjustments
-fix_negative   = 1           # Fix negative water species
-irain_f        = 0           # Cloud water to rain auto conversion scheme
-mono_prof      = False       # Perform terminal fall with mono ppm scheme
-mp_time        = 225.0       # Maximum microphysics timestep (sec)
-prog_ccn       = 0           # Do prognostic ccn (yi ming's method)
-qi0_crt        = 8e-05       # Cloud ice to snow autoconversion threshold (highly dependent on horizontal resolution)
-qi_lim         = 1.0         # Cloud ice limiter to prevent large ice build up
-ql_mlt         = 0.002       # Maximum value of cloud water allowed from melted cloud ice
-qs0_crt        = 0.003       # Snow to graupel density threshold (0.6e-3 in purdue lin scheme)
-qs_mlt         = 1e-06       # Maximum cloud water due to snow melt
-rad_rain       = 1           # Consider rain in cloud fraction calculation
-rad_snow       = 1           # Consider snow in cloud fraction calculation
-rh_inc         = 0.2         # RH increment for complete evaporation of cloud water and cloud ice
-rh_inr         = 0.3         # RH increment for minimum evaporation of rain
-rthresh        = 1e-05       # Critical cloud drop radius (micrometers)
-sedi_transport = 1           # Transport of momentum in sedimentation
-tau_g2v        = 1200.0      # Graupel sublimation
-tau_i2s        = 1000.0      # Cloud ice to snow autoconversion
-tau_l2v        = 300.0       # Cloud water to water vapor (evaporation)
-tau_v2l        = 90.0        # Water vapor to cloud water (condensation)
-use_ppm        = 0           # Use ppm fall scheme
-vg_max         = 16.0        # Maximum fall speed for graupel
-vi_max         = 1.0         # Maximum fall speed for ice
-vr_max         = 16.0        # Maximum fall speed for rain
-vs_max         = 2.0         # Maximum fall speed for snow
-z_slope_ice    = 1           # Use linear mono slope for autoconversions
-z_slope_liq    = 1           # Use linear mono slope for autoconversions
+# For min/max hourly rh02m and t02m
+PQ0   = 379.90516
+A2A   = 17.2693882
+A3    = 273.16
+A4    = 35.86
+RHmin = 1.0e-6
