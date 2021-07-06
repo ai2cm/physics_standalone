@@ -226,13 +226,13 @@ def run(in_dict, in_dict2, backend):
                     **{k: initialize_gt4py_storage(im, km, np.float64) for k in TEMP_VARS_2D},
                     **{k: initialize_gt4py_storage(im, 1, np.int32) for k in TEMP_VARS_1D_INT}}
 
+    
     prepare_sflx(**{k: general_dict[k] for k in PREPARE_VARS})
 
     general_dict["cm"] = general_dict["cmx"]
     general_dict["dt"] = general_dict["delt"]
     general_dict["sfcprs"] = general_dict["prsl1"]
     general_dict["q2sat"] = general_dict["qs1"]
-    general_dict["shdfac"] = general_dict["sigmaf"]
     general_dict["sh2o"] = general_dict["slc"]
     general_dict["sfctmp"] = general_dict["t1"]
     general_dict["q2"] = general_dict["q0"]
@@ -260,16 +260,6 @@ def run(in_dict, in_dict2, backend):
 
     nopac_shflx_first(**{k: general_dict[k] for k in NOPAC_VARS7})
 
-    ai = gt4py_to_numpy_storage_multilayer(general_dict["ai"], BACKEND)
-    print("AI:", ai[48])
-    bi = gt4py_to_numpy_storage_multilayer(general_dict["bi"], BACKEND)
-    print("BI:", bi[48])
-    ci = gt4py_to_numpy_storage_multilayer(general_dict["ci"], BACKEND)
-    print("CI:", ci[48])
-    rhsts = gt4py_to_numpy_storage_multilayer(general_dict["rhsts"], BACKEND)
-    print("RHSTT:", rhsts[48])
-    stsoil = gt4py_to_numpy_storage_multilayer(general_dict["stsoil"], BACKEND)
-    print("STSOIL:", stsoil[48])
 
     nopac_shflx_second(**{k: general_dict[k] for k in NOPAC_VARS8})
 
@@ -279,7 +269,7 @@ def run(in_dict, in_dict2, backend):
     snopac_evapo_second(general_dict["ice"], general_dict["sncovr"],
                         **{k: general_dict[k] for k in NOPAC_VARS2})
 
-    snopac_evapo_third(general_dict["ice"], general_dict["sncovr"],
+    snopac_evapo_third(general_dict["ice"], general_dict["sncovr"], general_dict["edir"], general_dict["ec"],
                        **{k: general_dict[k] for k in NOPAC_VARS3})
 
     snopac_smflx_first(**{k: general_dict[k] for k in SNOPAC_VARS1})

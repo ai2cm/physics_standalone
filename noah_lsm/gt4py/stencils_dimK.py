@@ -724,10 +724,6 @@ def snopac_evapo_first(ice: DT_F, sncovr: DT_F, etp: DT_F, nroot: DT_I, smcmax: 
                         edir1, ec1, sgx, gx = evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt, sh2o, smcmax, smcwlt,
                                                                      smcref, smcdry, shdfac, cfactr, fxexp, count, sgx)
 
-                        edir1 *= 1.0 - sncovr
-                        ec1 *= 1.0 - sncovr
-                        edir = edir1 * 1000.0
-                        ec = ec1 * 1000.0
 
         with interval(1, None):
             if flag_iter and land:
@@ -780,7 +776,7 @@ def snopac_evapo_second(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_i
 
 
 @gtscript.stencil(backend=BACKEND)
-def snopac_evapo_third(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_iter: DT_I, land: DT_I,
+def snopac_evapo_third(ice: DT_F, sncovr: DT_F, edir: DT_F, ec: DT_F, shdfac: DT_F, etp: DT_F, flag_iter: DT_I, land: DT_I,
                       sneqv: DT_F, count: DT_I, gx: DT_F2, cmc: DT_F, pc: DT_F,
                       denom: DT_F, edir1: DT_F, ec1: DT_F,
                       # output
@@ -819,13 +815,20 @@ def snopac_evapo_third(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_it
                     if etp >= 0.0 and ice == 0 and sncovr < 1.0:
                         et1, ett1 = evapo_third_fn(
                             etp1, shdfac, cmc, cmcmax, pc, cfactr, gx, denom, ett1)
+
                         eta1 = edir1 + ett1 + ec1
-                    eta1 *= 1.0 - sncovr
-                    ett1 *= 1.0 - sncovr
-                    et1 *= 1.0 - sncovr
+                            
+                        eta1 *= 1.0 - sncovr
+                        ett1 *= 1.0 - sncovr
+                        et1 *= 1.0 - sncovr
+                        edir1 *= 1.0 - sncovr
+                        ec1 *= 1.0 - sncovr
+
                     et = et1 * 1000.0
                     eta = eta1 * 1000.0
                     ett = ett1 * 1000.0
+                    edir = edir1 * 1000.0
+                    ec = ec1 * 1000.0
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -844,7 +847,7 @@ def snopac_smflx_first(smcmax: DT_F, dt: float, smcwlt: DT_F, prcp: DT_F, prcp1:
                 if sneqv != 0.0:
                     snoexp = 2.0
                     esdmin = 1.e-6
-                    prcp1 = prcp * 0.001
+                    prcp1 = prcp1 * 0.001
                     etp1 = etp * 0.001
 
                     if etp < 0.0:
@@ -966,6 +969,7 @@ def snopac_smflx_second(ice: DT_F, smcmax: DT_F, etp: DT_F, dt: float, bexp: DT_
             if flag_iter and land:
                 if sneqv != 0.0:
                     if ice == 0.0:
+
                         rhstt, ci, runoff1, dsmdz, ddz, wdf, wcnd, p, delta, ai, bi = smflx_second_upperboundary_fn(edir1, et1, sh2o, pcpdrp, zsoil, dwsat,
                                                                                                             dksat, smcmax, bexp, dt, kdt, frzx, sicemax, dd, dice, ai, bi,
                                                                                                             rhstt, runoff1, ci, dsmdz, ddz, wdf, wcnd, p, delta)
@@ -1078,7 +1082,7 @@ def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: D
         with interval(0, 1):
             if flag_iter and land:
                 if sneqv != 0.0:
-                    ssoil, stc, t11 = shflx_second_upperboundary_fn(p, p[0,0,+1], delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
+                    ssoil1, stc, t11 = shflx_second_upperboundary_fn(p, p[0,0,+1], delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
 
                     # snow depth and density adjustment based on snow compaction.
                     if ice == 0:
