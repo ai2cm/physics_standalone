@@ -1,72 +1,35 @@
 import numpy as np
+import sys
+sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+from radphysparam import (isubclw as isubclw,
+                          ilwrgas as ilwrgas,
+                          icldflg as icldflg,
+                          ilwcliq as ilwcliq,
+                          ilwrate as ilwrate,
+                          iovrlw as iovrlw)
+from phys_const import (con_g as g,
+                        con_cp as cp)
 
-from physparam import *
-from phys_const import *
-
-def rlwinit(me):
-    """
-    Initialize non-varying module variables, conversion factors,!
-    and look-up tables.
-
-    inputs:
-        me       - print control for parallel process
-
-    outputs: (none)
-
-    external module variables:  (in physparam)
-        ilwrate - heating rate unit selections                              
-                =1: output in k/day                                         
-                =2: output in k/second                                      
-        ilwrgas - control flag for rare gases (ch4,n2o,o2,cfcs, etc.)       
-                =0: do not include rare gases                               
-                >0: include all rare gases                                  
-        ilwcliq - liquid cloud optical properties contrl flag               
-                =0: input cloud opt depth from diagnostic scheme            
-                >0: input cwp,rew, and other cloud content parameters       
-        isubclw - sub-column cloud approximation control flag               
-                =0: no sub-col cld treatment, use grid-mean cld quantities  
-                =1: mcica sub-col, prescribed seeds to get random numbers   
-                =2: mcica sub-col, providing array icseed for random numbers
-        icldflg - cloud scheme control flag                                 
-                =0: diagnostic scheme gives cloud tau, omiga, and g.        
-                =1: prognostic scheme gives cloud liq/ice path, etc.        
-        iovrlw  - clouds vertical overlapping control flag                  
-                =0: random overlapping clouds                               
-                =1: maximum/random overlapping clouds                       
-                =2: maximum overlap cloud (isubcol>0 only)                  
-                =3: decorrelation-length overlap (for isubclw>0 only)       
-
-    definitions:                                                          
-        arrays for 10000-point look-up tables:                              
-        tau_tbl - clear-sky optical depth (used in cloudy radiative transfer
-        exp_tbl - exponential lookup table for tansmittance                 
-        tfn_tbl - tau transition function; i.e. the transition of the Planck
-                  function from that for the mean layer temperature to that 
-                  for the layer boundary temperature as a function of optical
-                  depth. the "linear in tau" method is used to make the table
-"""
-
-
-
+def rlwinit(me, VTAGLW, tau_tbl, exp_tbl, tfn_tbl, ntbl, bpade):
     # locals:
     expeps = 1.e-20
 
     tfn = 0
     pival = 0
     explimit = 0
+    f_one = 1.0
+    f_zero = 0.0
 
     #===> ... begin here
 
     if iovrlw < 0 or iovrlw > 3:
         print(f'  *** Error in specification of cloud overlap flag',
-              ' IOVRLW={iovrlw}, in RLWINIT !!')
+              f' IOVRLW={iovrlw}, in RLWINIT !!')
     elif iovrlw >= 2 and isubclw == 0:
         if me == 0:
             print(f'  *** IOVRLW={iovrlw} is not available for',
                   ' ISUBCLW=0 setting!!')
             print('      The program uses maximum/random overlap instead.')
-
-        iovrlw = 1
 
     if me == 0:
         print(f' - Using AER Longwave Radiation, Version: {VTAGLW}')
@@ -88,7 +51,7 @@ def rlwinit(me):
                   'with provided input array of permutation seeds')
         else:
             print(f'  *** Error in specification of sub-column cloud ',
-                  ' control flag isubclw = {isubclw}!!')
+                  f' control flag isubclw = {isubclw}!!')
 
     #  --- ...  check cloud flags for consistency
 
@@ -107,9 +70,9 @@ def rlwinit(me):
     fluxfac = pival * 2.0
 
     if ilwrate == 1:
-        heatfac = con_g * 864.0 / con_cp            #   (in k/day)
+        heatfac = g * 864.0 / cp            #   (in k/day)
     else:
-        heatfac = con_g * 1.0e-2 / con_cp           #   (in k/second)
+        heatfac = g * 1.0e-2 / cp           #   (in k/second)
 
     #  --- ...  compute lookup tables for transmittance, tau transition
     #           function, and clear sky tau (for the cloudy sky radiative
@@ -139,9 +102,9 @@ def rlwinit(me):
         if tau_tbl[i] >= explimit:
             exp_tbl[i] = expeps
         else:
-            exp_tbl[i] = exp(-tau_tbl[i])
+            exp_tbl[i] = np.exp(-tau_tbl[i])
 
         if tau_tbl[i] < 0.06:
             tfn_tbl[i] = tau_tbl[i] / 6.0
         else:
-            tfn_tbl[i] = f_one - 2.0*((f_one / tau_tbl[i]) -(exp_tbl[i]/(f_one - exp_tbl[i])))
+            tfn_tbl[i] = f_one - 2.0*((f_one / tau_tbl[i]) -exp_tbl[i]/(f_one - exp_tbl[i]))
