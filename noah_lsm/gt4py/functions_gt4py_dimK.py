@@ -193,9 +193,6 @@ def transp_second_fn(rtdis, gx, sgx, denom):
 
     denom += gx
 
-    if denom <= 0.0:
-        denom = 1.0
-
     return denom, gx
 
 
@@ -1046,7 +1043,7 @@ def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bex
 
 @gtscript.function
 def shflx_second_lowerboundary_fn(p, delta, stc, stsoil):
-    p = rosr12_second_lowerboundary_fn(p, delta)
+    p = delta
     stc += p
 
     ctfil1 = 0.5
@@ -1058,8 +1055,8 @@ def shflx_second_lowerboundary_fn(p, delta, stc, stsoil):
 
 
 @gtscript.function
-def shflx_second_fn(p, delta, stc, stsoil):
-    p = rosr12_second_fn(p, delta)
+def shflx_second_fn(p, p_plus, delta, stc, stsoil):
+    p = p * p_plus + delta
     stc += p
 
     ctfil1 = 0.5
@@ -1070,8 +1067,8 @@ def shflx_second_fn(p, delta, stc, stsoil):
     return stc, p
 
 @gtscript.function
-def shflx_second_upperboundary_fn(p, delta, stc, stsoil, t1, yy, zz1, df1, zsoil):
-    p = rosr12_second_fn(p, delta)
+def shflx_second_upperboundary_fn(p, p_plus, delta, stc, stsoil, t1, yy, zz1, df1, zsoil):
+    p = p * p_plus + delta
     stc += p
 
     ctfil1 = 0.5

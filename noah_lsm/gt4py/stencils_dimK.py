@@ -455,7 +455,7 @@ def nopac_evapo_second(shdfac: DT_F, etp: DT_F, flag_iter: DT_I, land: DT_I,
                         denom, gx = evapo_second_fn(
                             etp1, shdfac, rtdis, gx, sgx, denom)
 
-        with interval(1, None):
+        with interval(1, -1):
             count += 1
             if flag_iter and land:
                 if sneqv == 0.0:
@@ -463,6 +463,18 @@ def nopac_evapo_second(shdfac: DT_F, etp: DT_F, flag_iter: DT_I, land: DT_I,
                     if etp > 0.0:
                         denom, gx = evapo_second_fn(
                             etp1, shdfac, rtdis, gx, sgx, denom)
+        
+        with interval(-1, None):
+            count += 1
+            if flag_iter and land:
+                if sneqv == 0.0:
+                    etp1 = etp * 0.001
+                    if etp > 0.0:
+                        denom, gx = evapo_second_fn(
+                            etp1, shdfac, rtdis, gx, sgx, denom)
+
+                        if denom <= 0.0:
+                            denom = 1.0
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -648,52 +660,21 @@ def nopac_shflx_first(land: DT_I, flag_iter: DT_I, sneqv: DT_F, etp: DT_F, eta: 
                     yy = sfctmp + (yynum/rch + th2 - sfctmp - beta*epsca)/rr
                     zz1 = df1/(-0.5*zsoil*rch*rr) + 1.0
 
-                    # a = 0.0
-                    # b = 1.0066067411524258
-                    # c =-0.0018672283887148726
-                    # d = 0.0027098023274942182
-
-                    # yynum = -24.803163838474916
-                    # yy = 290.5037075134267
-                    # zz1 = 1.5758821480652778
-                    stc = 288.8102722167969
-                    stc_plus = 285.963134765625
-
                     stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, csoil_loc, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
                                                                                                                                      zsoil, psisat, bexp, df1, hcpct, tbk, df1k, dtsdz, ddz,
                                                                                                                             ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci)
-        with interval(1, 2):
-            if flag_iter and land:
-                if sneqv == 0.0:
-                    # a = -0.0006369524357775406
-                    # b = 1.0014421206509545
-                    # c = -0.0008051682151768847
-                    # d = 0.002931237012818815
-                    stc = 285.963134765625
-                    stc_plus = 287.3513488769531
-                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
-                    hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci)
 
-        with interval(2, -1):
+        with interval(1, -1):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    # a = -0.00014020288551623848
-                    # b = 1.0003661756704383
-                    # c = -0.00022597278492207478
-                    # d = -0.00012452344378477526
-                    stc = 287.3513488769531 
-                    stc_plus = 289.2500305175781
-                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc_plus, sh2o,
+
+                    stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, stc[0,0,+1], sh2o,
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci)
         
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    # a = -4.6410075949695966e-05
-                    # b = 1.0000464100759496
-                    # c = 0.0
-                    # d = -0.00023352596741464869
-                    stc = 289.2500305175781
+
                     stsoil, rhsts, ai, bi, ci, sh2o, p, delta, tbot = shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci)
             
@@ -714,12 +695,12 @@ def nopac_shflx_second(land: DT_I, flag_iter: DT_I, sneqv: DT_F, zsoil: DT_F2, s
         with interval(1, -1):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    stc, p = shflx_second_fn(p, delta, stc, stsoil)
+                    stc, p = shflx_second_fn(p, p[0,0,+1], delta, stc, stsoil)
 
         with interval(0, 1):
             if flag_iter and land:
                 if sneqv == 0.0:
-                    ssoil, stc, tsea = shflx_second_upperboundary_fn(p, delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
+                    ssoil, stc, tsea = shflx_second_upperboundary_fn(p, p[0,0,+1], delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -768,14 +749,34 @@ def snopac_evapo_second(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_i
 
     with computation(FORWARD):
         with interval(0, 1):
-            count = 0.0
-        with interval(...):
+            count = 0
             if flag_iter and land:
                 if sneqv != 0.0:
                     etp1 = etp * 0.001
                     if etp >= 0.0 and ice == 0 and sncovr < 1.0:
-                        denom, gx = evapo_second_fn(etp1, shdfac, rtdis, gx, sgx, denom)
-                count += 1
+                        denom, gx = evapo_second_fn(
+                            etp1, shdfac, rtdis, gx, sgx, denom)
+
+        with interval(1, -1):
+            count += 1
+            if flag_iter and land:
+                if sneqv != 0.0:
+                    etp1 = etp * 0.001
+                    if etp >= 0.0 and ice == 0 and sncovr < 1.0:
+                        denom, gx = evapo_second_fn(
+                            etp1, shdfac, rtdis, gx, sgx, denom)
+        
+        with interval(-1, None):
+            count += 1
+            if flag_iter and land:
+                if sneqv != 0.0:
+                    etp1 = etp * 0.001
+                    if etp >= 0.0 and ice == 0 and sncovr < 1.0:
+                        denom, gx = evapo_second_fn(
+                            etp1, shdfac, rtdis, gx, sgx, denom)
+
+                        if denom <= 0.0:
+                            denom = 1.0
 
 
 @gtscript.stencil(backend=BACKEND)
@@ -789,7 +790,6 @@ def snopac_evapo_third(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_it
     with computation(FORWARD):
         with interval(0, 1):
             count = 0
-        with interval(...):
             if flag_iter and land:
                 if sneqv != 0.0:
                     etp1 = etp * 0.001
@@ -800,13 +800,30 @@ def snopac_evapo_third(ice: DT_F, sncovr: DT_F, shdfac: DT_F, etp: DT_F, flag_it
                 et = et1 * 1000.0
                 count += 1
 
+        with interval(1, -1):
+            if flag_iter and land:
+                count += 1
+                if sneqv != 0.0:
+                    etp1 = etp * 0.001
+                    if etp >= 0.0 and ice == 0 and sncovr < 1.0:
+                        et1, ett1 = evapo_third_fn(
+                            etp1, shdfac, cmc, cmcmax, pc, cfactr, gx, denom, ett1)
+                et1 *= 1.0 - sncovr
+                et = et1 * 1000.0
+
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv != 0.0:
+                    count += 1
+                    etp1 = etp * 0.001
                     if etp >= 0.0 and ice == 0 and sncovr < 1.0:
+                        et1, ett1 = evapo_third_fn(
+                            etp1, shdfac, cmc, cmcmax, pc, cfactr, gx, denom, ett1)
                         eta1 = edir1 + ett1 + ec1
                     eta1 *= 1.0 - sncovr
                     ett1 *= 1.0 - sncovr
+                    et1 *= 1.0 - sncovr
+                    et = et1 * 1000.0
                     eta = eta1 * 1000.0
                     ett = ett1 * 1000.0
 
@@ -1028,13 +1045,13 @@ def snopac_shflx_first(ssoil: DT_F, land: DT_I, flag_iter: DT_I, sneqv: DT_F, et
 
         with interval(1, -1):
             if flag_iter and land:
-                if sneqv == 0.0:
+                if sneqv != 0.0:
                     stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz = shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, 1.0, sh2o, 
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci,)
 
         with interval(-1, None):
             if flag_iter and land:
-                if sneqv == 0.0:
+                if sneqv != 0.0:
                     stsoil, rhsts, ai, bi, ci, sh2o, p, delta, tbot = shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o, 
                     hcpct, tbk[0,0,-1], df1k[0,0,-1], dtsdz[0,0,-1], ddz[0,0,-1], p[0,0,-1], delta[0,0,-1], dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci,)
 
@@ -1056,12 +1073,12 @@ def snopac_shflx_second(ice: DT_F, dt: float, snowh: DT_F, sndens: DT_F, land: D
         with interval(1, -1):
             if flag_iter and land:
                 if sneqv != 0.0:
-                    stc, p = shflx_second_fn(p, delta, stc, stsoil)
+                    stc, p = shflx_second_fn(p, p[0,0,+1], delta, stc, stsoil)
 
         with interval(0, 1):
             if flag_iter and land:
                 if sneqv != 0.0:
-                    ssoil, stc, t11 = shflx_second_upperboundary_fn(p, delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
+                    ssoil, stc, t11 = shflx_second_upperboundary_fn(p, p[0,0,+1], delta, stc, stsoil, tsea, yy, zz1, df1, zsoil)
 
                     # snow depth and density adjustment based on snow compaction.
                     if ice == 0:
@@ -1169,7 +1186,6 @@ def cleanup_sflx(
                 trans = ett
                 sbsno = esnow
                 snowc = sncovr
-                stm = soilm * 1000.0
                 snohf = flx1 + flx2 + flx3
 
                 smcwlt2 = smcwlt
@@ -1228,6 +1244,8 @@ def cleanup_sflx(
                 soilww += (smc - smcwlt) * (zsoil[0, 0,-1] - zsoil[0, 0,0])
                 soilwm = - (smcmax-smcwlt) * zsoil
                 soilw = soilww / soilwm
+                stm = soilm * 1000.0
+
 
                 # restore land-related prognostic fields for guess run
             if land and flag_guess:
