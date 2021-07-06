@@ -510,11 +510,11 @@ def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, zsoil):
     return wplus, smc, sh2o
 
 @gtscript.function
-def sstep_fn(sh2o, smc, smcmax, sice, ci, zsoil, wplus):
+def sstep_fn(sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus_old):
 
     ddz = zsoil[0,0,-1] - zsoil[0,0,0]
 
-    wplus = wplus[0,0,-1]
+    wplus = wplus_old
     
     sh2o = sh2o + ci + wplus/ddz
     stot = sh2o + sice

@@ -597,13 +597,13 @@ def nopac_smflx_third(dt: float, smcmax: DT_F, flag_iter: DT_I, land: DT_I, sice
             if flag_iter and land:
                 if sneqv == 0.0:
                     wplus, smc, sh2o = sstep_fn(
-                        sh2o, smc, smcmax, sice, ci, zsoil, wplus)
+                        sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus[0,0,-1])
 
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv == 0.0:
                     wplus, smc, sh2o = sstep_fn(
-                        sh2o, smc, smcmax, sice, ci, zsoil, wplus)
+                        sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus[0,0,-1])
                     runoff3 = wplus
 
                     # update canopy water content/interception
@@ -988,14 +988,14 @@ def snopac_smflx_third(ice: DT_F,  dt: float, smcmax: DT_F, flag_iter: DT_I, lan
                 if sneqv != 0.0:
                     if ice == 0.0:
                         wplus, smc, sh2o = sstep_fn(
-                            sh2o, smc, smcmax, sice, ci, zsoil, wplus)
+                            sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus[0,0,-1])
 
         with interval(-1, None):
             if flag_iter and land:
                 if sneqv != 0.0:
                     if ice == 0.0:
                         wplus, smc, sh2o = sstep_fn(
-                            sh2o, smc, smcmax, sice, ci, zsoil, wplus)
+                            sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus[0,0,-1])
 
                         runoff3 = wplus
 
