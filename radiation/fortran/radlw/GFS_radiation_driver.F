@@ -1205,7 +1205,7 @@
 !
 !  ---  local variables: (horizontal dimensioned by IM)
       !--- INTEGER VARIABLES
-      integer :: me, im, lm, levs, nfxr, ntrac
+      integer :: me, im, lm, levs, nfxr, ntrac, ser_count
       integer :: i, j, k, k1, lv, itop, ibtc, nday, LP1, LMK, LMP, kd,  &
                  lla, llb, lya, lyb, kt, kb, n, ntcw, ntiw, ncld, ntrw, &
                  ntsw, ntgl, k2, lsk, ncndl
@@ -1991,14 +1991,14 @@
 !     print *,' in grrad : calling lwrad'
 
         if (Model%lwhtr) then
-          call lwrad (plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
+          call lwrad (ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
                       clouds, Tbd%icsdlw, faerlw, Radtend%semis,   &
                       tsfg, dz, delp, de_lgth,                     &
                             im, lmk, lmp, Model%lprnt,             &
                       htlwc, Diag%topflw, Radtend%sfcflw, cldtaulw,&        !  ---  outputs
                       hlw0=htlw0)                                           !  ---  optional
         else
-          call lwrad (plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
+          call lwrad (ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
                       clouds, Tbd%icsdlw, faerlw, Radtend%semis,   &
                       tsfg, dz, delp, de_lgth,                     &
                             IM, LMK, LMP, Model%lprnt,             &

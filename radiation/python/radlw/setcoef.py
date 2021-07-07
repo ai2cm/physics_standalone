@@ -100,11 +100,12 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
     indlev = np.minimum(180, np.maximum(1, int(tz[0]-159.0) ))
     tlyrfr = stemp - int(stemp)
     tlvlfr = tz[0] - int(tz[0])
+
     for i in range(nbands):
-        tem1 = totplnk[indlay+1, i] - totplnk[indlay, i]
-        tem2 = totplnk[indlev+1, i] - totplnk[indlev, i]
-        pklay[i, 0] = delwave[i] * (totplnk[indlay, i] + tlyrfr*tem1)
-        pklev[i, 0] = delwave[i] * (totplnk[indlev, i] + tlvlfr*tem2)
+        tem1 = totplnk[indlay, i] - totplnk[indlay-1, i]
+        tem2 = totplnk[indlev, i] - totplnk[indlev-1, i]
+        pklay[i, 0] = delwave[i] * (totplnk[indlay-1, i] + tlyrfr*tem1)
+        pklev[i, 0] = delwave[i] * (totplnk[indlev-1, i] + tlvlfr*tem2)
 
 
     #  --- ...  begin layer loop
@@ -117,18 +118,18 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
         indlay = np.minimum(180, np.maximum(1, int(tavel[k]-159.0)))
         tlyrfr = tavel[k] - int(tavel[k])
 
-        indlev = np.minimum(180, np.maximum(1, int(tz[k]-159.0)))
-        tlvlfr = tz[k] - int(tz[k])
+        indlev = np.minimum(180, np.maximum(1, int(tz[k+1]-159.0)))
+        tlvlfr = tz[k+1] - int(tz[k+1])
 
         #  --- ...  begin spectral band loop
 
         for i in range(nbands):
-            pklay[i, k] = delwave[i] * (totplnk[indlay, i] + tlyrfr
-                                        * (totplnk[indlay+1, i] - \
-                totplnk[indlay, i]))
-            pklev[i, k] = delwave[i] * (totplnk[indlev, i] + tlvlfr
-                                        * (totplnk[indlev+1, i] - \
-                totplnk[indlev, i]))
+            pklay[i, k+1] = delwave[i] * (totplnk[indlay-1, i] + tlyrfr
+                                        * (totplnk[indlay, i] - \
+                totplnk[indlay-1, i]))
+            pklev[i, k+1] = delwave[i] * (totplnk[indlev-1, i] + tlvlfr
+                                        * (totplnk[indlev, i] - \
+                totplnk[indlev-1, i]))
 
         #  --- ...  find the two reference pressures on either side of the
         #           layer pressure. store them in jp and jp1. store in fp the
@@ -136,11 +137,12 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
         #           two values that the layer pressure lies.
 
         plog = np.log(pavel[k])
-        jp[k] = np.maximum(1, np.minimum(58, int(36.0 - 5.0*(plog+0.04))))
+        jp[k] = np.maximum(1, np.minimum(58, int(36.0 - 5.0*(plog+0.04))))-1
         jp1 = jp[k] + 1
         #  --- ...  limit pressure extrapolation at the top
         fp = np.maximum(f_zero, np.minimum(f_one, 5.0*(preflog[jp[k]]-plog)))
 
+        if k == 0:
         #  --- ...  determine, for each reference pressure (jp and jp1), which
         #           reference temperature (these are different for each
         #           reference pressure) is nearest the layer temperature but does
@@ -151,11 +153,11 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
 
         tem1 = (tavel[k]-tref[jp[k]]) / 15.0
         tem2 = (tavel[k]-tref[jp1]) / 15.0
-        jt[k] = np.maximum(1, np.minimum(4, int(3.0 + tem1)))
-        jt1[k] = np.maximum(1, np.minimum(4, int(3.0 + tem2)))
+        jt[k] = np.maximum(1, np.minimum(4, int(3.0 + tem1)))-1
+        jt1[k] = np.maximum(1, np.minimum(4, int(3.0 + tem2)))-1
         #  --- ...  restrict extrapolation ranges by limiting abs(det t) < 37.5 deg
-        ft  = np.maximum(-0.5, np.minimum(1.5, tem1 - float(jt[k] - 3)))
-        ft1 = np.maximum(-0.5, np.minimum(1.5, tem2 - float(jt1[k] - 3)))
+        ft  = np.maximum(-0.5, np.minimum(1.5, tem1 - float(jt[k] - 2)))
+        ft1 = np.maximum(-0.5, np.minimum(1.5, tem2 - float(jt1[k] - 2)))
 
         #  --- ...  we have now isolated the layer ln pressure and temperature,
         #           between two reference pressures and two reference temperatures
@@ -178,7 +180,7 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
 
         scaleminor[k] = pavel[k] / tavel[k]
         scaleminorn2[k] = (pavel[k] / tavel[k]) * \
-            (colbrd[k]/(coldry[k] + colamt[k, 1]))
+            (colbrd[k]/(coldry[k] + colamt[k, 0]))
         tem1 = (tavel[k] - 180.8) / 7.2
         indminor[k] = np.minimum(18, np.maximum(1, int(tem1)))
         minorfrac[k] = tem1 - float(indminor[k])
@@ -203,16 +205,20 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
             #  --- ...  setup reference ratio to be used in calculation of binary
             #           species parameter in lower atmosphere.
 
-            rfrate[k, 0, 0] = chi_mls[1, jp[k]] / chi_mls[1, jp[k]]
-            rfrate[k, 0, 1] = chi_mls[1,jp[k]+1] / chi_mls[1, jp[k]+1]
-            rfrate[k, 1, 0] = chi_mls[1,jp[k]] / chi_mls[2, jp[k]]
-            rfrate[k, 1, 1] = chi_mls[1,jp[k]+1] / chi_mls[2, jp[k]+1]
-            rfrate[k, 2, 0] = chi_mls[1,jp[k]] / chi_mls[3, jp[k]]
-            rfrate[k, 2, 1] = chi_mls[1,jp[k]+1] / chi_mls[3, jp[k]+1]
-            rfrate[k, 3, 0] = chi_mls[1,jp[k]] / chi_mls[5, jp[k]]
-            rfrate[k, 3, 1] = chi_mls[1,jp[k]+1] / chi_mls[5, jp[k]+1]
-            rfrate[k, 4, 0] = chi_mls[4,jp[k]] / chi_mls[1, jp[k]]
-            rfrate[k, 4, 1] = chi_mls[4,jp[k]+1] / chi_mls[1, jp[k]+1]
+            rfrate[k, 0, 0] = chi_mls[0, jp[k]] / chi_mls[1, jp[k]]
+            rfrate[k, 0, 1] = chi_mls[0, jp[k]+1] / chi_mls[1, jp[k]+1]
+
+            rfrate[k, 1, 0] = chi_mls[0, jp[k]] / chi_mls[2, jp[k]]
+            rfrate[k, 1, 1] = chi_mls[0, jp[k]+1] / chi_mls[2, jp[k]+1]
+
+            rfrate[k, 2, 0] = chi_mls[0, jp[k]] / chi_mls[3, jp[k]]
+            rfrate[k, 2, 1] = chi_mls[0, jp[k]+1] / chi_mls[3, jp[k]+1]
+
+            rfrate[k, 3, 0] = chi_mls[0, jp[k]] / chi_mls[5, jp[k]]
+            rfrate[k, 3, 1] = chi_mls[0, jp[k]+1] / chi_mls[5, jp[k]+1]
+
+            rfrate[k, 4, 0] = chi_mls[3, jp[k]] / chi_mls[1, jp[k]]
+            rfrate[k, 4, 1] = chi_mls[3, jp[k]+1] / chi_mls[1, jp[k]+1]
 
         else:
 
@@ -227,7 +233,8 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
             #           species parameter in upper atmosphere.
 
             rfrate[k, 0, 0] = chi_mls[0, jp[k]] / chi_mls[1, jp[k]]
-            rfrate[k, 0, 1] = chi_mls[0, jp[k]+1] / chi_mls[1, jp[1]+1]
+            rfrate[k, 0, 1] = chi_mls[0, jp[k]+1] / chi_mls[1, jp[k]+1]
+
             rfrate[k, 5, 0] = chi_mls[2, jp[k]] / chi_mls[1, jp[k]]
             rfrate[k, 5, 1] = chi_mls[2, jp[k]+1] / chi_mls[1, jp[k]+1]
 
@@ -256,23 +263,76 @@ savepoints = serializer.savepoint_list()
 invars = ['pavel', 'tavel', 'tz', 'stemp', 'h2ovmr', 'colamt',
           'coldry', 'colbrd', 'nlay', 'nlp1']
 
+outvars = ['laytrop', 'pklay', 'pklev', 'jp', 'jt', 'jt1',
+            'rfrate', 'fac00', 'fac01', 'fac10', 'fac11',
+            'selffac', 'selffrac', 'indself', 'forfac', 'forfrac', 'indfor',
+            'minorfrac', 'scaleminor', 'scaleminorn2', 'indminor']
+
 indict = dict()
+outdict = dict()
 
 for var in invars:
     tmp = serializer.read(var, savepoints[0])
 
     indict[var] = tmp
 
-(laytrop, pklay, pklev, jp, jt, jt1, rfrate, fac00, fac01, fac10,
-    fac11, selffac, selffrac, indself, forfac, forfrac, indfor,
-    minorfrac, scaleminor, scaleminorn2,
-    indminor) = setcoef(indict['pavel'],
-                        indict['tavel'],
-                        indict['tz'],
-                        indict['stemp'],
-                        indict['h2ovmr'],
-                        indict['colamt'],
-                        indict['coldry'],
-                        indict['colbrd'],
-                        indict['nlay'][0],
-                        indict['nlp1'][0])
+for var in outvars:
+    tmp = serializer.read(var, savepoints[1])
+
+    outdict[var] = tmp
+
+test = setcoef(indict['pavel'],
+               indict['tavel'],
+               indict['tz'],
+               indict['stemp'],
+               indict['h2ovmr'],
+               indict['colamt'],
+               indict['coldry'],
+               indict['colbrd'],
+               indict['nlay'][0],
+               indict['nlp1'][0])
+
+valdict = dict()
+for n, var in enumerate(outvars):
+    valdict[var] = test[n]
+
+def compare_data(data, ref_data, explicit=True, blocking=True):
+
+    wrong = []
+    flag = True
+
+    for var in data:
+
+        # Fix indexing for fortran vs python
+        if var == 'jp' or var == 'jt' or var == 'jt1':
+            if not np.allclose(
+                data[var]+1, ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
+            ):
+
+                wrong.append(var)
+                flag = False
+
+            else:
+
+                if explicit:
+                    print(f"Successfully validated {var}!")
+        else:
+            if not np.allclose(
+                data[var], ref_data[var], rtol=1e-11, atol=1.0e-10, equal_nan=True
+            ):
+
+                wrong.append(var)
+                flag = False
+
+            else:
+
+                if explicit:
+                    print(f"Successfully validated {var}!")
+
+    if blocking:
+        assert flag, f"Output data does not match reference data for field {wrong}!"
+    else:
+        if not flag:
+            print(f"Output data does not match reference data for field {wrong}!")
+
+compare_data(valdict, outdict)

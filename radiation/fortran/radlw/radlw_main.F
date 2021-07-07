@@ -1104,6 +1104,18 @@
      &       minorfrac,scaleminor,scaleminorn2,indminor                 &
      &     )
 
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-setcoef-output-"//trim(ser_count_str)
+  !$ser data laytrop=laytrop pklay=pklay pklev=pklev jp=jp jt=jt jt1=jt1
+  !$ser data rfrate=rfrate fac00=fac00 fac01=fac01 fac10=fac10 fac11=fac11
+  !$ser data selffac=selffac selffrac=selffrac indself=indself forfac=forfac
+  !$ser data forfrac=forfrac indfor=indfor minorfrac=minorfrac scaleminor=scaleminor
+  !$ser data scaleminorn2=scaleminorn2 indminor=indminor
+!$ser verbatim end if
+
 
 
 !     if (lprnt) then
@@ -2223,6 +2235,13 @@
         jp1  = jp(k) + 1
 !  --- ...  limit pressure extrapolation at the top
         fp   = max(f_zero, min(f_one, 5.0*(preflog(jp(k))-plog) ))
+
+        if (k == 1) then
+          write(*,*) 'plog = ', plog
+          write(*,*) 'preflog = ', preflog(jp(k))
+          write(*,*) 'jp(k) = ', jp(k)
+          write(*,*) 'fp = ', fp
+        endif
 !org    fp   = 5.0 * (preflog(jp(k)) - plog)
 
 !  --- ...  determine, for each reference pressure (jp and jp1), which
