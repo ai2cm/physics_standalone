@@ -1,5 +1,6 @@
-
-from radiation.python.phys_const import *
+import sys
+sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+from phys_const import *
 
 # num of total spectral bands
 nbands = 16         
@@ -19,14 +20,40 @@ nplnk  = 181
 nbdlw = nbands
 
 # \name Number of g-point in each band
-NG01=10, NG02=12, NG03=16, NG04=14, NG05=16, NG06=8
-NG07=12, NG08=8, NG09=12, NG10=6, NG11=8, NG12=8
-NG13=4, NG14=2, NG15=2, NG16=2
+NG01=10
+NG02=12
+NG03=16
+NG04=14
+NG05=16
+NG06=8
+NG07=12
+NG08=8
+NG09=12
+NG10=6
+NG11=8
+NG12=8
+NG13=4
+NG14=2
+NG15=2
+NG16=2
 
 # \name Begining index of each band
-NS01=0, NS02=10, NS03=22, NS04=38, NS05=52, NS06=68
-NS07=76, NS08=88, NS09=96, NS10=108, NS11=114,        
-NS12=122, NS13=130, NS14=134, NS15=136, NS16=138
+NS01=0
+NS02=10
+NS03=22
+NS04=38
+NS05=52
+NS06=68
+NS07=76
+NS08=88
+NS09=96
+NS10=108
+NS11=114,        
+NS12=122
+NS13=130
+NS14=134
+NS15=136
+NS16=138
 
 # band indices for each g-point
 NGB = [10*1, 12*2, 16*3, 14*4, 16*5, 8*6, 12*7,  8*8, 12*9,

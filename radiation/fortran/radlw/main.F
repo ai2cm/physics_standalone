@@ -167,7 +167,7 @@ program test
 !$ser data semis=semis tsfg=tsfg dz=dz delp=delp de_lgth=de_lgth
 !$ser data im=im lmk=lmk lmp=lmp lprnt=lprnt
 
-          call lwrad(plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
+          call lwrad(ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
                      clouds, icsdlw, faerlw, semis,   &
                      tsfg, dz, delp, de_lgth,                     &
                      im, lmk, lmp, lprnt,                   &
