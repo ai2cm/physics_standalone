@@ -130,6 +130,18 @@ if __name__ == "__main__":
         from config import *
         import microphys.drivers.gfdl_cloud_microphys_gt4py as phy
 
+    elif args.parameterization == "prsfv3":
+        PRS_DIR = "../prsfv3/python/"
+        sys.path.append(PRS_DIR)
+        from config import *
+        import get_prs_fv3 as phy
+
+    elif args.parameterization == "phifv3":
+        PHI_DIR = "../phifv3/python/"
+        sys.path.append(PHI_DIR)
+        from config import *
+        import get_phi_fv3 as phy
+
     else:
         raise Exception(f"Parameterization {args.parameterization} is not supported")
 
