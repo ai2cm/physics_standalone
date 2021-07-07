@@ -460,7 +460,7 @@
 !> @{
 ! --------------------------------
       subroutine lwrad                                                  &
-     &     ( plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr,                      &   !  ---  inputs
+     &     ( ser_count, plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr,                      &   !  ---  inputs
      &       clouds,icseed,aerosols,sfemis,sfgtmp,                      &
      &       dzlyr,delpin,de_lgth,                                      &
      &       npts, nlay, nlp1, lprnt,                                   &
@@ -637,7 +637,7 @@
 !  ======================    end of definitions    ===================  !
 
 !  ---  inputs:
-      integer, intent(in) :: npts, nlay, nlp1
+      integer, intent(in) :: npts, nlay, nlp1, ser_count
       integer, intent(in) :: icseed(npts)
 
       logical,  intent(in) :: lprnt
@@ -672,6 +672,8 @@
      &       intent(out) :: flxprf
 
 !  ---  locals:
+      character(len=6) :: ser_count_str
+
       real (kind=kind_phys), dimension(0:nlp1) :: cldfrc
 
       real (kind=kind_phys), dimension(0:nlay) :: totuflux, totdflux,   &
@@ -1083,6 +1085,14 @@
 
 !> -# Calling setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-setcoef-input-"//trim(ser_count_str)
+  !$ser data pavel=pavel tavel=tavel tz=tz stemp=stemp h2ovmr=h2ovmr 
+  !$ser data colamt=colamt coldry=coldry colbrd=colbrd nlay=nlay nlp1=nlp1
+!$ser verbatim end if
         call setcoef                                                    &
 !  ---  inputs:
      &     ( pavel,tavel,tz,stemp,h2ovmr,colamt,coldry,colbrd,          &
@@ -1093,6 +1103,8 @@
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor                 &
      &     )
+
+
 
 !     if (lprnt) then
 !      print *,'laytrop',laytrop
