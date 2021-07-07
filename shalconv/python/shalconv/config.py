@@ -4,7 +4,7 @@ import os
 
 prefix = "samfshalcnv"
 BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "numpy"
-REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else True
+REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else False
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
