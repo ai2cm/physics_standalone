@@ -417,16 +417,15 @@ def srt_second_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, sicemax,
     dsmdz = (sh2o[0, 0, 0] - sh2o[0, 0, +1])/(denom * 0.5)
     ddz = 2.0 / denom
     ci = - wdf * ddz / denom2
-    slopx = 1.
-    numer = wdf*dsmdz + slopx*wcnd - \
-        wdf_old*dsmdz_old - wcnd_old + et
+
+    numer = wdf*dsmdz + wcnd - wdf_old*dsmdz_old - wcnd_old + et
     rhstt = -numer / (zsoil[0, 0, -1] - zsoil[0, 0, 0])
 
     # calc matrix coefs
-    
+
     ai = - wdf_old*ddz_old / (zsoil[0, 0, -1] - zsoil[0, 0, 0])
     bi = -(ai + ci)
-    
+
 
     return rhstt, ai, bi, ci, dsmdz, ddz, wdf, wcnd
 
@@ -467,7 +466,7 @@ def rosr12_first_upperboundary_fn(ai, bi, ci, d, p, delta):
 
 @gtscript.function
 def rosr12_first_fn(ai, bi, ci, d, p, delta, p_old, delta_old):
-    
+
     p = - ci / (bi + ai * p_old)
     delta = (d - ai*delta_old)/(bi + ai*p_old)
 
@@ -489,7 +488,7 @@ def rosr12_second_fn(p, delta):
 
 @gtscript.function
 def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, zsoil):
-    
+
     wplus = 0.
     ddz = -zsoil
 
@@ -512,7 +511,7 @@ def sstep_fn(sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus_old):
     ddz = zsoil[0,0,-1] - zsoil[0,0,0]
 
     wplus = wplus_old
-    
+
     sh2o = sh2o + ci + wplus/ddz
     stot = sh2o + sice
 
@@ -616,7 +615,7 @@ def smflx_second_lowerboundary_fn(et, sh2o, zsoil, dwsat, dksat, smcmax, bexp, d
 
 
 @gtscript.function
-def hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice):
+def hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice, rhsts, ai, bi, ci, dtsdz, ddz):
     # calculates the right hand side of the time tendency
     # term of the soil thermal diffusion equation for sea-ice or glacial-ice
 
@@ -638,13 +637,18 @@ def hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice):
     ssoil = df1 * (stc - yy) / (0.5*zsoil*zz1)
     rhsts = (df1*dtsdz - ssoil) / (zsoil*hcpct)
 
-    return rhsts, ai, bi, ci, dtsdz, ddz, hcpct
+    return rhsts, ai, bi, ci, dtsdz, ddz
 
 
 @gtscript.function
-def hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz):
+def hrtice_fn(stc, zsoil, df1, ice, rhsts, ai, bi, ci, dtsdz, ddz, dtsdz_old, ddz_old):
     # calculates the right hand side of the time tendency
     # term of the soil thermal diffusion equation for sea-ice or glacial-ice
+        # set a nominal universal value of specific heat capacity
+    if ice == 1:        # sea-ice
+        hcpct = 1.72396e+6
+    else:               # glacial-ice
+        hcpct = 1.89000e+6
 
     denom = 0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,+1])
     dtsdz = (stc[0,0,0] - stc[0,0,1])/denom
@@ -652,33 +656,35 @@ def hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz):
     ci = - df1 * ddz / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
 
     denom = ((zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct)
-    rhsts = (df1*dtsdz - df1*dtsdz[0,0,-1]) / denom
+    rhsts = (df1*dtsdz - df1*dtsdz_old) / denom
 
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
+    ai = - df1 * ddz_old / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
     bi = -(ai + ci)
 
     return rhsts, ai, bi, ci, dtsdz, ddz
 
 
 @gtscript.function
-def hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot):
+def hrtice_lowerboundary_fn(stc, zsoil, df1, rhsts, ai, bi, ci, dtsdz, ice, tbot, dtsdz_old, ddz_old):
     # calculates the right hand side of the time tendency
     # term of the soil thermal diffusion equation for sea-ice or glacial-ice
-
+        
     # set ice pack depth
     if ice == 1:
         zbot = zsoil
         tbot = 271.16
+        hcpct = 1.72396e+6
     else:
         zbot = -25.0
+        hcpct = 1.89000e+6
 
     dtsdz = (stc[0,0,0] - tbot)/(0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,0]) - zbot)
     ci = 0.0
 
     denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
-    rhsts = (df1*dtsdz - df1*dtsdz[0,0,-1]) / denom
+    rhsts = (df1*dtsdz - df1*dtsdz_old) / denom
 
-    ai = - df1 * ddz[0,0,-1] / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
+    ai = - df1 * ddz_old / ((zsoil[0, 0,-1] - zsoil[0, 0,0])*hcpct)
     bi = -(ai + ci)
 
     return rhsts, ai, bi, ci, tbot
@@ -894,8 +900,8 @@ def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcp
         df1k = 3.24*(1.-shdfac) + shdfac*df1k
 
     # tbk = stc[0,0,+1] + (stc[0,0,+1]-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
-    tbk = stc_plus + (stc_plus-stc[0,0,0])*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
-    
+    tbk = stc + (stc_plus-stc)*(zsoil[0, 0,-1] - zsoil[0, 0,0])/(zsoil[0, 0,-1] - zsoil[0, 0,+1])
+
     # calc the vertical soil temp gradient thru each layer
     denom = 0.5 * (zsoil[0, 0,-1] - zsoil[0, 0,+1])
     dtsdz = (stc[0,0,0] - stc[0,0,+1]) / denom
@@ -915,6 +921,7 @@ def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcp
         dz = zsoil[0, 0,-1] - zsoil[0, 0,0]
         tavg = tmpavg_fn(tbk_old, stc, tbk, dz)
         ### ************ snksrc *********** ###
+        free = frh2o_fn(psisat, bexp, tavg, smc, sh2o, smcmax)
         tsnsr, sh2o = snksrc_fn(
             free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
         ### ************ END snksrc *********** ###
@@ -932,8 +939,6 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
             tbk_old, df1k_old, dtsdz_old, ddz_old,
             tbk, df1k, dtsdz, ddz, ivegsrc, vegtype, shdfac, sh2o, free, csoil_loc, tbot, zbot):
 
-    hcpct = sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
-        (smcmax - smc)*cp2 + (smc - sh2o)*cpice1
 
     # calculate thermal diffusivity for each layer
     df1k = tdfcnd_fn(smc, quartz, smcmax, sh2o)
@@ -949,10 +954,12 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
     ci = 0.0
 
     # calculate rhsts
-    denom = (zsoil[0, 0,0] - zsoil[0, 0,-1])*hcpct
-    rhsts = (df1k*dtsdz - df1k_old*dtsdz_old)/denom
+    hcpct = (zsoil[0, 0,0] - zsoil[0, 0,-1])* (sh2o*cph2o2 + (1.0 - smcmax)*csoil_loc + \
+    (smcmax - smc)*cp2 + (smc - sh2o)*cpice1)
 
-    qtot = -1. * denom * rhsts
+    rhsts = (df1k*dtsdz - df1k_old*dtsdz_old)/hcpct
+    qtot = -1. * hcpct * rhsts
+
     sice = smc - sh2o
 
     if sice > 0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
@@ -960,29 +967,30 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
         dz = zsoil[0,0,-1] - zsoil[0,0,0]
         tavg = tmpavg_fn(tbk_old, stc, tbk, dz)
         ### ************ snksrc *********** ###
+        free = frh2o_fn(psisat, bexp, tavg, smc, sh2o, smcmax)
         tsnsr, sh2o = snksrc_fn(free, psisat, bexp, tavg, smc, sh2o, smcmax, qtot, dt, dz)
         ### ************ END snksrc *********** ###
-        rhsts -= tsnsr / denom
+        rhsts -= tsnsr / hcpct
 
     # calc matrix coefs, ai, and bi for this layer.
-    ai = - df1 * ddz_old / ((zsoil[0, 0,-1] - zsoil[0, 0,0]) * hcpct)
+    ai = - df1 * ddz_old / hcpct
     bi = - (ai + ci)
 
     return sh2o, rhsts, ai, bi, ci
 
 
 @gtscript.function
-def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1, 
+def shflx_first_upperboundary_fn(smc, smcmax, dt, yy, zz1,
     zsoil, psisat, bexp, df1, hcpct, tbk, df1k, dtsdz, ddz,
     ice, csoil, ivegsrc, vegtype, shdfac, stc, sh2o, p, delta, rhsts, ai, bi, ci,):
 
     stsoil = stc
 
     if ice != 0:  # sea-ice or glacial ice case
-        rhsts, ai, bi, ci, dtsdz, ddz, hcpct = hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice)
+        rhsts, ai, bi, ci, dtsdz, ddz = hrtice_upperboundary_fn(stc, zsoil, yy, zz1, df1, ice, rhsts, ai, bi, ci, dtsdz, ddz)
 
     else:
-        sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz = hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1, 
+        sh2o, rhsts, ai, bi, ci, free, csoil_loc, tbk, df1k, dtsdz, ddz = hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1,
                          hcpct, tbk, df1k, dtsdz, ddz,
                          csoil, ivegsrc, vegtype, shdfac, sh2o, rhsts, ai, bi, ci)
 
@@ -1003,7 +1011,7 @@ def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegs
     stsoil = stc
 
     if ice != 0:  # sea-ice or glacial ice case
-        rhsts, ai, bi, ci, dtsdz, ddz = hrtice_fn(stc, zsoil, df1, hcpct, dtsdz, ddz)
+        rhsts, ai, bi, ci, dtsdz, ddz = hrtice_fn(stc, zsoil, df1, ice, rhsts, ai, bi, ci, dtsdz, ddz, dtsdz_old, ddz_old)
 
     else:
         sh2o, rhsts, ai, bi, ci, tbk, df1k, dtsdz, ddz = hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old,
@@ -1015,9 +1023,9 @@ def shflx_first_fn(smc, smcmax, dt, zsoil, psisat, bexp, df1, ice, quartz, ivegs
 
     p, delta = rosr12_first_fn(ai, bi, ci, rhsts, p, delta, p_old, delta_old)
 
-    return stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz   
+    return stsoil, rhsts, ai, bi, ci, dtsdz, ddz, hcpct, sh2o, free, p, delta, tbk, df1k, dtsdz, ddz
 
- 
+
 @gtscript.function
 def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bexp, df1, ice, quartz, ivegsrc, vegtype, shdfac, stc, sh2o,
                     hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old, p_old, delta_old, dtsdz, ddz, tbk, df1k, free, csoil_loc, p, delta, rhsts, ai, bi, ci):
@@ -1025,7 +1033,7 @@ def shflx_first_lowerboundary_fn(smc, smcmax, dt, zsoil, zbot, tbot, psisat, bex
     stsoil = stc
 
     if ice != 0:  # sea-ice or glacial ice case
-        rhsts, ai, bi, ci, tbot = hrtice_lowerboundary_fn(stc, zsoil, df1, hcpct, dtsdz, ddz, ice, tbot)
+        rhsts, ai, bi, ci, tbot = hrtice_lowerboundary_fn(stc, zsoil, df1, rhsts, ai, bi, ci, dtsdz, ice, tbot, dtsdz_old, ddz_old)
 
     else:
         sh2o, rhsts, ai, bi, ci = hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcpct, tbk_old, df1k_old, dtsdz_old, ddz_old,
@@ -1079,7 +1087,7 @@ def shflx_second_upperboundary_fn(p, p_plus, delta, stc, stsoil, t1, yy, zz1, df
     t1 = ctfil1*t1 + ctfil2*oldt1
 
     stc = ctfil1*stc + ctfil2*stsoil
-    
+
     # calculate surface soil heat flux
     ssoil = df1*(stc - t1) / (0.5*zsoil)
 

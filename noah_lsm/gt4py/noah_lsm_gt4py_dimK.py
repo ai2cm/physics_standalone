@@ -49,7 +49,7 @@ TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",  # prepar
                 "ett1", "eta1", "ett", "eta", "denom", "sicemax",
                 "dd", "dice", "pcpdrp", "rhsct", "drip", "runoff1", "runoff2",
                 "runoff3", "dew", "yy", "zz1", "beta", "flx1", "flx2", "flx3",
-                "esnow", "csoil_loc", "soilm", "snomlt", "tsea"
+                "esnow", "csoil_loc", "soilm", "snomlt", "tsea", "sneqv_new"
                 ]
 
 TEMP_VARS_1D_INT = ["count", "snowng"]
@@ -71,11 +71,11 @@ PREPARE_VARS = ["zsoil", "km", "zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "
                 "ch", "prsl1", "prslki", "land", "wind", "snoalb", "sfalb",
                 "flag_iter", "flag_guess", "bexppert", "xlaipert", "fpvs",
                 "weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc",
-                "canopy", "zorl", "delt", "ivegsrc", "bexp", "dksat",
+                "canopy", "zorl", "delt", "ivegsrc", "bexp", "dksat", "rsmin",
                 "quartz", "smcdry", "smcmax", "smcref", "smcwlt", "nroot", "snup", "xlai"]
 
 
-CANRES_VARS = ["dswsfc", "nroot", "chx", "q2", "q2sat", "dqsdt2", "sfctmp",
+CANRES_VARS = ["dswsfc", "nroot", "count", "chx", "q2", "q2sat", "dqsdt2", "sfctmp",
                "cpx1", "sfcprs", "sfcemis", "sh2o", "smcwlt", "smcref", "zsoil", "rsmin",
                "rgl", "hs", "xlai", "flag_iter", "land", "zsoil_root", "shdfac",
                "rc", "pc", "rcs", "rct", "rcq", "rcsoil"]
@@ -117,7 +117,7 @@ SNOPAC_VARS1 = ["smcmax", "dt", "smcwlt", "prcp", "prcp1", "zsoil", "shdfac", "e
                        "sncovr", "ice", "snowng", "ffrozp", "sfctmp", "eta", "snowh",
                        "df1", "rr", "rch", "fdown", "flx2", "sfcemis", "t24", "th2", "stc",
                        "sicemax", "dd", "dice", "pcpdrp", "rhsct", "drip", "sice", "dew",
-                       "tsea", "sneqv", "flx1", "flx3", "esnow", "ssoil", "snomlt"]
+                       "tsea", "sneqv", "sneqv_new", "flx1", "flx3", "esnow", "ssoil", "snomlt"]
 
 CLEANUP_VARS = ["land", "flag_iter", "eta", "ssoil", "edir", "ec", "ett", "esnow", "sncovr", "soilm",
         "flx1", "flx2", "flx3", "etp", "runoff1", "runoff2", "cmc", "snowh", "sneqv", "z0",
@@ -251,8 +251,6 @@ def run(in_dict, in_dict2, backend):
 
     nopac_smflx_second(**{k: general_dict[k] for k in NOPAC_VARS5})
 
-
-
     rosr12_second(general_dict["delta"], general_dict["p"],
                   general_dict["flag_iter"], general_dict["land"], general_dict["ci"])
 
@@ -286,7 +284,7 @@ def run(in_dict, in_dict2, backend):
     snopac_shflx_first(general_dict["ssoil"], 
                        **{k: general_dict[k] for k in NOPAC_VARS7})
 
-    snopac_shflx_second(general_dict["ice"], general_dict["dt"], general_dict["snowh"], general_dict["sndens"],
+    snopac_shflx_second(general_dict["ice"], general_dict["sneqv_new"], general_dict["sncovr"], general_dict["dt"], general_dict["snowh"], general_dict["sndens"],
                         **{k: general_dict[k] for k in NOPAC_VARS8})
 
     general_dict["cmx"] = general_dict["cm"]
@@ -302,9 +300,6 @@ def run(in_dict, in_dict2, backend):
     # post sflx data handling
     out_dict = {k: general_dict[k] for k in (INOUT_VARS + INOUT_MULTI_VARS)}
     cleanup_sflx(**{k: general_dict[k] for k in CLEANUP_VARS}, **out_dict)
-
-    # testing_canopy(general_dict["flag_iter"], general_dict["land"], general_dict["cmc"], out_dict["canopy"], general_dict["et"])
-
     # set timer
     toc = timeit.default_timer()
 
