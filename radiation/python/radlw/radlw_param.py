@@ -17,7 +17,7 @@ nrates = 6
 # dim for plank function table
 nplnk  = 181
 
-nbdlw = nbands
+NBDLW = nbands
 
 # \name Number of g-point in each band
 NG01=10

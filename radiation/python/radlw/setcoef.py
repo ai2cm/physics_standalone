@@ -142,7 +142,6 @@ def setcoef(pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd,
         #  --- ...  limit pressure extrapolation at the top
         fp = np.maximum(f_zero, np.minimum(f_one, 5.0*(preflog[jp[k]]-plog)))
 
-        if k == 0:
         #  --- ...  determine, for each reference pressure (jp and jp1), which
         #           reference temperature (these are different for each
         #           reference pressure) is nearest the layer temperature but does

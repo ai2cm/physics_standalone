@@ -9,8 +9,6 @@ program test
       con_amw, con_amo3
       use module_radlw_main, only : lwrad
 
-      use module_radiation_driver,  only: radupdate
-
       integer :: im, lmk, lmp, npts, levr, imp_physics
       
       real (kind=kind_phys), parameter :: eps     = 1.0e-6
@@ -200,6 +198,9 @@ program test
       call cdstop()
 
       write(*,*) 'FINISHED!'
+
+      !write(*,*) 'htlwc = ', htlwc
+      !write(*,*) 'htlwc_ref = ', htlwc_ref
 
 contains
 

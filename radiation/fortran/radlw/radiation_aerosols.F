@@ -1399,6 +1399,13 @@
 
       close (NIAERCM)
 
+!$ser mode write
+!$ser savepoint "lwrad-clim_aerinit-output"
+  !$ser data iendwv=iendwv haer=haer prsref=prsref rhidext0=rhidext0
+  !$ser data rhidsca0=rhidsca0 rhidssa0=rhidssa0 rhidasy0=rhidasy0
+  !$ser data rhdpext0=rhdpext0 rhdpsca0=rhdpsca0 rhdpssa0=rhdpssa0
+  !$ser data rhdpasy0=rhdpasy0 straext0=straext0
+
 !> -# Convert pressure reference level (in mb) to sigma reference level
 !!    assume an 1000mb reference surface pressure.
 

@@ -280,6 +280,26 @@
 !! @{
 !========================================!
       module module_radlw_main           !
+
+#ifdef SERIALIZE
+USE m_serialize, ONLY: &
+  fs_write_field, &
+  fs_create_savepoint, &
+  fs_add_savepoint_metainfo, &
+  fs_read_field
+USE utils_ppser, ONLY:  &
+  ppser_set_mode, &
+  ppser_get_mode, &
+  ppser_savepoint, &
+  ppser_serializer, &
+  ppser_serializer_ref, &
+  ppser_intlength, &
+  ppser_reallength, &
+  ppser_realtype, &
+  ppser_zrperturb, &
+  ppser_get_mode
+#endif
+
 !........................................!
 !
       use physparam,        only : ilwrate, ilwrgas, ilwcliq, ilwcice,  &
@@ -637,7 +657,11 @@
 !  ======================    end of definitions    ===================  !
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: npts, nlay, nlp1, ser_count
+#else
       integer, intent(in) :: npts, nlay, nlp1, ser_count
+#endif
       integer, intent(in) :: icseed(npts)
 
       logical,  intent(in) :: lprnt
@@ -1085,14 +1109,58 @@
 
 !> -# Calling setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
-!$ser verbatim if (iplon == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
-  !$ser savepoint "lwrad-setcoef-input-"//trim(ser_count_str)
-  !$ser data pavel=pavel tavel=tavel tz=tz stemp=stemp h2ovmr=h2ovmr 
-  !$ser data colamt=colamt coldry=coldry colbrd=colbrd nlay=nlay nlp1=nlp1
-!$ser verbatim end if
+#ifdef SERIALIZE
+if (iplon == 1) then
+! file: radlw_main.F lineno: #1089
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1092
+call fs_create_savepoint("lwrad-setcoef-input-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1093
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'pavel', pavel)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tavel', tavel)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tz', tz)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'stemp', stemp)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'h2ovmr', h2ovmr)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pavel', pavel)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tavel', tavel)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tz', tz)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'stemp', stemp)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'h2ovmr', h2ovmr)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pavel', pavel, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tavel', tavel, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tz', tz, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'stemp', stemp, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'h2ovmr', h2ovmr, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1094
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'colamt', colamt)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'coldry', coldry)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'colbrd', colbrd)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlay', nlay)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlp1', nlp1)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colamt', colamt)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'coldry', coldry)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colbrd', colbrd)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colamt', colamt, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'coldry', coldry, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colbrd', colbrd, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1, ppser_zrperturb)
+END SELECT
+end if
+#endif
         call setcoef                                                    &
 !  ---  inputs:
      &     ( pavel,tavel,tz,stemp,h2ovmr,colamt,coldry,colbrd,          &
@@ -1104,17 +1172,109 @@
      &       minorfrac,scaleminor,scaleminorn2,indminor                 &
      &     )
 
-!$ser verbatim if (iplon == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
-  !$ser savepoint "lwrad-setcoef-output-"//trim(ser_count_str)
-  !$ser data laytrop=laytrop pklay=pklay pklev=pklev jp=jp jt=jt jt1=jt1
-  !$ser data rfrate=rfrate fac00=fac00 fac01=fac01 fac10=fac10 fac11=fac11
-  !$ser data selffac=selffac selffrac=selffrac indself=indself forfac=forfac
-  !$ser data forfrac=forfrac indfor=indfor minorfrac=minorfrac scaleminor=scaleminor
-  !$ser data scaleminorn2=scaleminorn2 indminor=indminor
-!$ser verbatim end if
+#ifdef SERIALIZE
+if (iplon == 1) then
+! file: radlw_main.F lineno: #1108
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1111
+call fs_create_savepoint("lwrad-setcoef-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1112
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'laytrop', laytrop)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'pklay', pklay)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'pklev', pklev)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'jp', jp)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'jt', jt)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'jt1', jt1)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'laytrop', laytrop)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklay', pklay)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklev', pklev)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jp', jp)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt', jt)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt1', jt1)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'laytrop', laytrop, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklay', pklay, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklev', pklev, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jp', jp, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt', jt, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt1', jt1, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1113
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'rfrate', rfrate)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac00', fac00)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac01', fac01)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac10', fac10)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac11', fac11)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'rfrate', rfrate)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac00', fac00)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac01', fac01)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac10', fac10)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac11', fac11)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'rfrate', rfrate, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac00', fac00, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac01', fac01, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac10', fac10, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac11', fac11, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1114
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'selffac', selffac)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'selffrac', selffrac)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'indself', indself)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'forfac', forfac)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffac', selffac)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffrac', selffrac)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indself', indself)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfac', forfac)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffac', selffac, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffrac', selffrac, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indself', indself, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfac', forfac, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1115
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'forfrac', forfrac)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'indfor', indfor)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'minorfrac', minorfrac)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'scaleminor', scaleminor)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfrac', forfrac)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indfor', indfor)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'minorfrac', minorfrac)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminor', scaleminor)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfrac', forfrac, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indfor', indfor, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'minorfrac', minorfrac, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminor', scaleminor, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1116
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'scaleminorn2', scaleminorn2)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'indminor', indminor)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminorn2', scaleminorn2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indminor', indminor)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminorn2', scaleminorn2, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indminor', indminor, ppser_zrperturb)
+END SELECT
+end if
+#endif
 
 
 
@@ -1636,7 +1796,11 @@
       use module_radlw_cldprlw
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, nlp1, ipseed
+#else
       integer, intent(in) :: nlay, nlp1, ipseed
+#endif
 
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cfrac
       real (kind=kind_phys), dimension(nlay),   intent(in) :: cliqp,    &
@@ -1874,7 +2038,11 @@
       implicit none
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, ipseed
+#else
       integer, intent(in) :: nlay, ipseed
+#endif
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cldf, dz
       real (kind=kind_phys),                  intent(in) :: de_lgth
@@ -2153,15 +2321,35 @@
 !  ======================    end of definitions    ===================  !
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, nlp1
+#else
       integer, intent(in) :: nlay, nlp1
+#endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay,maxgas):: colamt
+#else
       real (kind=kind_phys), dimension(nlay,maxgas),intent(in):: colamt
+#endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(0:nlay):: tz
+#else
       real (kind=kind_phys), dimension(0:nlay),     intent(in):: tz
+#endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: pavel,      &
+#else
       real (kind=kind_phys), dimension(nlay), intent(in) :: pavel,      &
+#endif
      &       tavel, h2ovmr, coldry, colbrd
 
+#ifdef SERIALIZE
+      real (kind=kind_phys) :: stemp
+#else
       real (kind=kind_phys), intent(in) :: stemp
+#endif
 
 !  ---  outputs:
       integer, dimension(nlay), intent(out) :: jp, jt, jt1, indself,    &
@@ -2490,7 +2678,11 @@
 !  ======================  end of description block  =================  !
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, nlp1
+#else
       integer, intent(in) :: nlay, nlp1
+#endif
 
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cldfrc
       real (kind=kind_phys), dimension(nbands), intent(in) :: semiss,   &
@@ -2501,7 +2693,11 @@
       real (kind=kind_phys), dimension(ngptlw,nlay),intent(in):: fracs, &
      &       tautot
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,0:nlay) ::    &
+#else
       real (kind=kind_phys), dimension(nbands,0:nlay), intent(in) ::    &
+#endif
      &       pklev, pklay
 
 !  ---  outputs:
@@ -2872,7 +3068,11 @@
 !  ======================  end of description block  =================  !
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, nlp1
+#else
       integer, intent(in) :: nlay, nlp1
+#endif
 
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cldfrc
       real (kind=kind_phys), dimension(nbands), intent(in) :: semiss,   &
@@ -2883,7 +3083,11 @@
       real (kind=kind_phys), dimension(ngptlw,nlay),intent(in):: fracs, &
      &       tautot
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,0:nlay) ::    &
+#else
       real (kind=kind_phys), dimension(nbands,0:nlay), intent(in) ::    &
+#endif
      &       pklev, pklay
 
 !  ---  outputs:
@@ -3467,7 +3671,11 @@
 !  ======================  end of description block  =================  !
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, nlp1
+#else
       integer, intent(in) :: nlay, nlp1
+#endif
 
       real (kind=kind_phys), dimension(nbands), intent(in) :: semiss,   &
      &       secdif
@@ -3477,7 +3685,11 @@
       real (kind=kind_phys), dimension(ngptlw,nlay),intent(in):: fracs, &
      &       tautot, cldfmc
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,0:nlay) ::    &
+#else
       real (kind=kind_phys), dimension(nbands,0:nlay), intent(in) ::    &
+#endif
      &       pklev, pklay
 
 !  ---  outputs:
@@ -3898,17 +4110,33 @@
 !  ******************************************************************   !
 
 !  ---  inputs:
+#ifdef SERIALIZE
+      integer :: nlay, laytrop
+#else
       integer, intent(in) :: nlay, laytrop
+#endif
 
+#ifdef SERIALIZE
+      integer, dimension(nlay) :: jp, jt, jt1, indself,     &
+#else
       integer, dimension(nlay), intent(in) :: jp, jt, jt1, indself,     &
+#endif
      &       indfor, indminor
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: pavel,      &
+#else
       real (kind=kind_phys), dimension(nlay), intent(in) :: pavel,      &
+#endif
      &       coldry, colbrd, fac00, fac01, fac10, fac11, selffac,       &
      &       selffrac, forfac, forfrac, minorfrac, scaleminor,          &
      &       scaleminorn2
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay,maxgas):: colamt
+#else
       real (kind=kind_phys), dimension(nlay,maxgas), intent(in):: colamt
+#endif
       real (kind=kind_phys), dimension(nlay,maxxsec),intent(in):: wx
 
       real (kind=kind_phys), dimension(nbands,nlay), intent(in):: tauaer
