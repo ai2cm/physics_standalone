@@ -137,7 +137,7 @@ iaermdl = 0
 iaerflg = 0
 
 # external aerosols data file: aerosol.dat
-aeros_file = 'aerosol.dat'
+aeros_file = 'aerosol.nc'
 
 # ............................................. !
 #   -2.3- For module radiation_gases 

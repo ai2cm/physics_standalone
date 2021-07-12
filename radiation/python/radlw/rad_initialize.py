@@ -6,6 +6,9 @@ from radphysparam import (isolar , ictmflg, ico2flg, ioznflg, iaerflg,
                           lcnorm , lnoprec, ialbflg, iemsflg, isubcsw,
                           isubclw, ivflip , ipsd0, iswcliq, kind_phys)
 from aer_init import aer_init
+from cld_init import cld_init
+from sfc_init import sfc_init
+from rlwinit import rlwinit
 # use module_radiation_driver, only : radinit
 
 def rad_initialize(si,
@@ -33,7 +36,8 @@ def rad_initialize(si,
                    idate,
                    iflip,
                    me,
-                   solar_fname):
+                   solar_fname,
+                   exp_tbl):
         
     # =================   subprogram documentation block   ================ !
     #                                                                       !
@@ -191,7 +195,7 @@ def rad_initialize(si,
         print('return from rad_initialize - after calling radinit')
 
 
-def radinit(si, NLAY, imp_physics, me, solar_fname):
+def radinit(si, NLAY, imp_physics, me, solar_fname, exp_tbl):
     # =================   subprogram documentation block   ================ !
     #                                                                       !
     # subprogram:   radinit     initialization of radiation calculations    !
@@ -356,10 +360,10 @@ def radinit(si, NLAY, imp_physics, me, solar_fname):
     solar_fname = sol_init(me, solar_fname)
     aer_init(NLAY, me)    #  --- ...  aerosols initialization routine
     gas_init(me)          #  --- ...  co2 and other gases initialization routine
-    sfc_init(me)          #  --- ...  surface initialization routine
-    cld_init(si, NLAY, imp_physics, me) #  --- ...  cloud initialization routine
+    sfc_init(me, ialbflg, iemsflg)          #  --- ...  surface initialization routine
+    llyr = cld_init(si, NLAY, imp_physics, me) #  --- ...  cloud initialization routine
     rlwinit(me)            #  --- ...  lw radiation initialization routine
-    rswinit(me)            #  --- ...  sw radiation initialization routine
+    rswinit(me, iovrsw, isubcsw, iswcliq, exp_tbl)            #  --- ...  sw radiation initialization routine
 
 
 def sol_init(me, solar_fname):
