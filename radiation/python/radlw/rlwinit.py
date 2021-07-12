@@ -7,11 +7,13 @@ from radphysparam import (isubclw as isubclw,
                           ilwcliq as ilwcliq,
                           ilwrate as ilwrate,
                           iovrlw as iovrlw)
+from radlw_param import ntbl
 from phys_const import (con_g as g,
                         con_cp as cp)
 
-def rlwinit(me, VTAGLW, tau_tbl, exp_tbl, tfn_tbl, ntbl, bpade):
+def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
     # locals:
+    VTAGLW='NCEP LW v5.1  Nov 2012 -RRTMG-LW v4.82'
     expeps = 1.e-20
 
     tfn = 0
@@ -19,6 +21,7 @@ def rlwinit(me, VTAGLW, tau_tbl, exp_tbl, tfn_tbl, ntbl, bpade):
     explimit = 0
     f_one = 1.0
     f_zero = 0.0
+    bpade   = 1.0/0.278
 
     #===> ... begin here
 
@@ -93,7 +96,7 @@ def rlwinit(me, VTAGLW, tau_tbl, exp_tbl, tfn_tbl, ntbl, bpade):
     exp_tbl[ntbl] = expeps
     tfn_tbl[ntbl] = f_one
 
-    explimit = np.log(tiny(exp_tbl(0)))
+    explimit = np.finfo(float).tiny
     explimit = np.sign(explimit) * np.floor(np.abs(explimit))
 
     for i in range(ntbl-1):

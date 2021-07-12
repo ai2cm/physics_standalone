@@ -240,7 +240,7 @@ ialbflg = 0
 iemsflg = 0
 
 # external sfc emissivity data table: sfc_emissivity_idx.txt
-semis_file = 'sfc_emissivity_idx.txt'
+semis_file = 'semisdata.nc'
 
 # ............................................. !
 #   -2.6- general purpose

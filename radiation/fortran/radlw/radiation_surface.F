@@ -264,6 +264,10 @@
         stop
       endif   ! end if_iemslw_block
 
+!$ser mode write
+!$ser savepoint 'sfc_init_data'
+!$ser data cline=cline idxems=idxems
+
 !
       return
 !...................................
