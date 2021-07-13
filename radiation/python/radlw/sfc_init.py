@@ -50,11 +50,11 @@ def sfc_init(me, ialbflg, iemsflg):
 
     if ialbflg == 0:
         if me == 0:
-            print(' - Using climatology surface albedo scheme for sw')
+            print('- Using climatology surface albedo scheme for sw')
 
     elif ialbflg == 1:
         if me == 0:
-            print(' - Using MODIS based land surface albedo for sw')
+            print('- Using MODIS based land surface albedo for sw')
     else:
         print(f'!! ERROR in Albedo Scheme Setting, IALB={ialbflg}')
 
@@ -66,7 +66,7 @@ def sfc_init(me, ialbflg, iemsflg):
     iemslw = iemsflg % 10          # emissivity control
     if iemslw == 0:                # fixed sfc emis at 1.0
         if me == 0:
-            print(' - Using Fixed Surface Emissivity = 1.0 for lw')
+            print('- Using Fixed Surface Emissivity = 1.0 for lw')
 
     elif iemslw == 1:              # input sfc emiss type map
         if 'idxems' not in vars():

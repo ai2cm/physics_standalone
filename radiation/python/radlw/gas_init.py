@@ -1,6 +1,11 @@
 import numpy as np
+import xarray as xr
+import os
+import sys
+sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+from radphysparam import co2cyc_file, co2usr_file
 
-def gas_init(me):
+def gas_init(me, ioznflg, ico2flg, ictmflg):
     #  ===================================================================  !
     #                                                                       !
     #  gas_init sets up ozone, co2, etc. parameters.  if climatology ozone  !
@@ -47,17 +52,10 @@ def gas_init(me):
     #  ===================================================================  !
     #
 
+    VTAGGAS = 'NCEP-Radiation_gases     v5.1  Nov 2012'
     IMXCO2 = 24
     JMXCO2 = 12
-
-    co2dat = np.zeros((IMXCO2,JMXCO2))
-    pstr = np.zeros(LOZ)
-    o3clim4 = np.zeros((JMR, LOZ, 12))
-    pstr4 = np.zeros(LOZ)
-
-    imond = np.zeros(12)
-    ilat = np.zeros((JMR, 12))
-    #data  cform  / '(24f7.2)' /       !! data format in IMXCO2*f7.2
+    co2vmr_def = 350.0e-6
 
     if me == 0:
         print(VTAGGAS)    # print out version tag
@@ -87,10 +85,11 @@ def gas_init(me):
 
         else:                     # input from observed data
             if ico2flg == 1:
-                print('ico2flg = 1 is not implemented')
+                print('Using observed co2 global annual mean value')
            
             elif ico2flg == 2:
-                print('ico2flg = 2 is not implemented')
+                if me == 0:
+                    print('Using observed co2 monthly 2-d data')
            
             else:
                 print(f' ICO2={ico2flg}, is not a valid selection',
@@ -98,56 +97,26 @@ def gas_init(me):
 
 
         if ictmflg == -2:
-           inquire (file=co2cyc_file, exist=file_exist)
-           if ( .not. file_exist ) then
-             if ( me == 0 ) then
-               print *,'   Can not find seasonal cycle CO2 data: ',    &
-    &               co2cyc_file,' - Stopped in subroutine gas_init !!'
-             endif
-             stop
-           else
-             allocate( co2cyc_sav(IMXCO2,JMXCO2,12) )
+            file_exist = os.path.isfile(co2cyc_file)
+            if not file_exist:
+                if me == 0:
+                  print('Can not find seasonal cycle CO2 data: ',
+                        f'{co2cyc_file} - Stopped in subroutine gas_init !!')
+            else:
+                co2cyc_sav = np.zeros((IMXCO2, JMXCO2, 12))
+                ds = xr.open_dataset(co2cyc_file)
+                #  --- ...  read in co2 2-d seasonal cycle data
+                cline = ds['cline'].data
+                co2g1 = ds['co2g1'].data
+                co2g2 = ds['co2g2'].data
+                co2dat = ds['co2dat']
 
-!  --- ...  read in co2 2-d seasonal cycle data
-             close (NICO2CN)
-             open (NICO2CN,file=co2cyc_file,form='formatted',          &
-    &              status='old')
-             rewind NICO2CN
-             read (NICO2CN, 35) cline, co2g1, co2g2
- 35          format(a98,f7.2,16x,f5.2)
-             read (NICO2CN,cform) co2dat        ! skip annual mean part
+                if me == 0:
+                    print(' - Superimpose seasonal cycle to mean CO2 data')
+                    print('Opened CO2 climatology seasonal cycle data',
+                          f' file: {co2cyc_file}')
 
-             if ( me == 0 ) then
-               print *,' - Superimpose seasonal cycle to mean CO2 data'
-               print *,'   Opened CO2 climatology seasonal cycle data',&
-    &                  ' file: ',co2cyc_file
-!check          print *, cline(1:98), co2g1, co2g2
-             endif
-
-             do imo = 1, 12
-               read (NICO2CN,45) cline, gco2cyc(imo)
- 45            format(a58,f7.2)
-!check          print *, cline(1:58),gco2cyc(imo)
-               gco2cyc(imo) = gco2cyc(imo) * 1.0e-6
-
-               read (NICO2CN,cform) co2dat
-!check          print cform, co2dat
-               do j = 1, JMXCO2
-                 do i = 1, IMXCO2
-                   co2cyc_sav(i,j,imo) = co2dat(i,j) * 1.0e-6
-                 enddo
-               enddo
-             enddo
-
-             close (NICO2CN)
-           endif   ! endif_file_exist_block
-         endif
-
-       endif   lab_ictm
-     endif   lab_ico2
-
-     return
-!
-!...................................
-     end subroutine gas_init
-!-----------------------------------
+                gco2cyc = ds['gco2cyc']
+                gco2cyc = gco2cyc * 1.0e-6
+               
+                co2cyc_sav = co2dat

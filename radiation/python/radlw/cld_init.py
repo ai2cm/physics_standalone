@@ -54,19 +54,19 @@ def cld_init(si, NLAY, imp_physics, me ):
         print(' - Diagnostic Cloud Method has been discontinued')
     else:
         if me == 0:
-            print(' - Using Prognostic Cloud Method')
+            print('- Using Prognostic Cloud Method')
             if imp_physics == 99:
-                print('--- Zhao/Carr/Sundqvist microphysics')
+                print('   --- Zhao/Carr/Sundqvist microphysics')
             elif imp_physics == 98:
-                print('--- zhao/carr/sundqvist + pdf cloud')
+                print('   --- zhao/carr/sundqvist + pdf cloud')
             elif imp_physics == 11:
-                print('--- GFDL Lin cloud microphysics')
+                print('   --- GFDL Lin cloud microphysics')
             elif imp_physics == 8:
-                print('--- Thompson cloud microphysics')
+                print('   --- Thompson cloud microphysics')
             elif imp_physics == 6:
-                print('--- WSM6 cloud microphysics')
+                print('   --- WSM6 cloud microphysics')
             elif imp_physics == 10:
-                print('--- MG cloud microphysics')
+                print('   --- MG cloud microphysics')
             else:
                 print('!!! ERROR in cloud microphysc specification!!!',
                       f'imp_physics (NP3D) = {imp_physics}')

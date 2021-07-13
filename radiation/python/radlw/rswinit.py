@@ -70,29 +70,29 @@ def rswinit(me, iovrsw, isubcsw, iswcliq, exp_tbl):
               f' IOVRSW={iovrsw} in RSWINIT !!')
 
     if me == 0:
-        print(f' - Using AER Shortwave Radiation, Version: {VTAGSW}')
+        print(f'- Using AER Shortwave Radiation, Version: {VTAGSW}')
 
         if iswmode == 1:
-            print('--- Delta-eddington 2-stream transfer scheme')
+            print('   --- Delta-eddington 2-stream transfer scheme')
         elif iswmode == 2:
-            print('--- PIFM 2-stream transfer scheme')
+            print('   --- PIFM 2-stream transfer scheme')
         elif iswmode == 3:
-            print('--- Discrete ordinates 2-stream transfer scheme')
+            print('   --- Discrete ordinates 2-stream transfer scheme')
 
         if iswrgas <= 0:
-            print('--- Rare gases absorption is NOT included in SW')
+            print('   --- Rare gases absorption is NOT included in SW')
         else:
-            print('--- Include rare gases N2O, CH4, O2, absorptions in SW')
+            print('   --- Include rare gases N2O, CH4, O2, absorptions in SW')
 
         if isubcsw == 0:
-            print('--- Using standard grid average clouds, no ',
-                  'sub-column clouds approximation applied')
+            print('   --- Using standard grid average clouds, no ',
+                  '   sub-column clouds approximation applied')
         elif isubcsw == 1:
-            print('--- Using MCICA sub-colum clouds approximation ',
-                  'with a prescribed sequence of permutation seeds')
+            print('   --- Using MCICA sub-colum clouds approximation ',
+                  '   with a prescribed sequence of permutation seeds')
         elif isubcsw == 2:
-            print('--- Using MCICA sub-colum clouds approximation ',
-                  'with provided input array of permutation seeds')
+            print('   --- Using MCICA sub-colum clouds approximation ',
+                  '   with provided input array of permutation seeds')
         else:
             print('  *** Error in specification of sub-column cloud ',
                   f' control flag isubcsw = {isubcsw} !!')

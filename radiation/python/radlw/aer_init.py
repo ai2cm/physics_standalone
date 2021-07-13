@@ -4,11 +4,11 @@ import sys
 import os
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from phys_const import con_pi, con_plnk, con_c, con_boltz, con_t0c
-from radphysparam import iaerflg, lalw1bd, iaermdl
+from radphysparam import lalw1bd, iaermdl, aeros_file
 from radsw_param import NBDSW, wvnum1, wvnum2, NSWSTR
 from radlw_param import NBDLW, wvnlw1, wvnlw2
 
-def aer_init(NLAY, me):
+def aer_init(NLAY, me, iaerflg):
     #  ==================================================================  !
     #                                                                      !
     #  aer_init is the initialization program to set up necessary          !
@@ -60,7 +60,7 @@ def aer_init(NLAY, me):
     # -# Call wrt_aerlog() to write aerosol parameter configuration to output logs.
 
     if me == 0:
-        wrt_aerlog()      # write aerosol param info to log file
+        wrt_aerlog(iaerflg)      # write aerosol param info to log file
 
     if iaerflg == 0:
         return  # return without any aerosol calculations
@@ -114,7 +114,7 @@ def aer_init(NLAY, me):
             clim_aerinit(solfwv, eirfwv, me,
                          wvn_sw1, wvn_sw2,
                          wvn_lw1, wvn_lw2,
-                         lmap_new)
+                         lmap_new, laswflg, lalwflg)
 
         else:
             if me == 0:
@@ -128,7 +128,7 @@ def aer_init(NLAY, me):
         ivolae = np.zeros((12,4,10))
 
 
-def wrt_aerlog():
+def wrt_aerlog(iaerflg):
     #  ==================================================================  !
     #                                                                      !
     #  subprogram : wrt_aerlog                                             !
@@ -315,7 +315,7 @@ def set_spectrum():
 def clim_aerinit(solfwv, eirfwv, me,
                  wvn_sw1, wvn_sw2,
                  wvn_lw1, wvn_lw2,
-                 lmap_new):
+                 lmap_new, laswflg, lalwflg):
     #  ==================================================================  !
     #                                                                      !
     #  clim_aerinit is the opac-climatology aerosol initialization program !
@@ -526,8 +526,8 @@ def set_aercoef(solfwv,
     #    spectral bands between SW radiation and aerosol data.
 
     NSWBND = NBDSW
-    nv1 = np.zeros(NSWBND)
-    nv2 = np.zeros(NSWBND)
+    nv1 = np.zeros(NSWBND, dtype=np.int32)
+    nv2 = np.zeros(NSWBND, dtype=np.int32)
 
     if laswflg:
         solbnd = np.zeros(NSWBND)
@@ -603,8 +603,8 @@ def set_aercoef(solfwv,
     #    spectral bands between lw radiation and aerosol data.
 
     NLWBND = NBDLW
-    nr1 = np.zeros(NLWBND)
-    nr2 = np.zeros(NLWBND)
+    nr1 = np.zeros(NLWBND, dtype=np.int32)
+    nr2 = np.zeros(NLWBND, dtype=np.int32)
     NLWSTR = 1
 
     if lalwflg:

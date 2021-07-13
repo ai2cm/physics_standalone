@@ -1,43 +1,17 @@
 import os
-
-from radphysparam import (isolar , ictmflg, ico2flg, ioznflg, iaerflg,
-                          iaermdl, laswflg, lalwflg, lavoflg, icldflg,
-                          iaermdl, icldflg, iovrsw , iovrlw , lcrick , 
-                          lcnorm , lnoprec, ialbflg, iemsflg, isubcsw,
-                          isubclw, ivflip , ipsd0, iswcliq, kind_phys)
+import sys
+sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+from radphysparam import (solar_file, icldflg)
+from phys_const import con_solr_old, con_solr
 from aer_init import aer_init
 from cld_init import cld_init
 from sfc_init import sfc_init
 from rlwinit import rlwinit
+from rswinit import rswinit
+from gas_init import gas_init
 # use module_radiation_driver, only : radinit
 
-def rad_initialize(si,
-                   levr,
-                   ictm,
-                   isol,
-                   ico2,
-                   iaer,
-                   ialb,
-                   iems,
-                   ntcw,
-                   num_p2d,
-                   num_p3d,
-                   npdf3d,
-                   ntoz,
-                   iovr_sw,
-                   iovr_lw,
-                   isubc_sw,
-                   isubc_lw,
-                   icliq_sw,
-                   crick_proof,
-                   ccnorm,
-                   imp_physics,
-                   norad_precip,
-                   idate,
-                   iflip,
-                   me,
-                   solar_fname,
-                   exp_tbl):
+def rad_initialize(indict):
         
     # =================   subprogram documentation block   ================ !
     #                                                                       !
@@ -143,6 +117,37 @@ def rad_initialize(si,
     #  ===================================================================  !
     #
 
+    si = indict['si']
+    levr = indict['levr'][0]
+    ictm = indict['ictm'][0]
+    isol = indict['isol'][0]
+    ico2 = indict['ico2'][0]
+    iaer = indict['iaer'][0]
+    ialb = indict['ialb'][0]
+    iems = indict['iems'][0]
+    ntcw = indict['ntcw'][0]
+    num_p2d = indict['num_p2d'][0]
+    num_p3d = indict['num_p3d'][0]
+    npdf3d = indict['npdf3d'][0]
+    ntoz = indict['ntoz'][0]
+    iovr_sw = indict['iovr_sw'][0]
+    iovr_lw = indict['iovr_lw'][0]
+    isubc_sw = indict['isubc_sw'][0]
+    isubc_lw = indict['isubc_lw'][0]
+    icliq_sw = indict['icliq_sw'][0]
+    crick_proof = indict['crick_proof'][0]
+    ccnorm = indict['ccnorm'][0]
+    imp_physics = indict['imp_physics'][0]
+    norad_precip = indict['norad_precip'][0]
+    idate = indict['idate']
+    iflip = indict['iflip'][0]
+    me = indict['me']
+    exp_tbl = indict['exp_tbl']
+    tau_tbl = indict['tau_tbl']
+    tfn_tbl = indict['tfn_tbl']
+
+    NLAY = levr
+
     isolar = isol                     # solar constant control flag
     ictmflg= ictm                     # data ic time/date control flag
     ico2flg= ico2                     # co2 data source control flag
@@ -155,7 +160,7 @@ def rad_initialize(si,
 
     iaermdl = iaer/1000               # control flag for aerosol scheme selection                              
     if iaermdl < 0 or iaermdl > 2 and iaermdl != 5:
-        print(' Error -- IAER flag is incorrect, Abort')
+        print('Error -- IAER flag is incorrect, Abort')
         
     iswcliq = icliq_sw                # optical property for liquid clouds for sw
     iovrsw = iovr_sw                  # cloud overlapping control flag for sw
@@ -176,18 +181,42 @@ def rad_initialize(si,
     if me == 0:
         print('In rad_initialize, before calling radinit')
         print(f'si = {si}')
-        print(f'levr={levr}, ictm={ictm}, isol={isol}, ico2={ico2}',
+        print(f'levr={levr}, ictm={ictm}, isol={isol}, ico2={ico2}, ',
               f'iaer={iaer}, ialb={ialb}, iems={iems}, ntcw={ntcw}')
 
         print(f'np3d={num_p3d}, ntoz={ntoz}, iovr_sw={iovr_sw}, '
-              f'iovr_lw={iovr_lw}, isubc_sw={isubc_sw},'
-              f'isubc_lw={isubc_lw}, icliq_sw={icliq_sw},'
-              f'iflip={iflip},  me={me}')
-        print(f'crick_proof={crick_proof}, ccnorm={ccnorm},'
+              f'iovr_lw={iovr_lw}, isubc_sw={isubc_sw}, '
+              f'isubc_lw={isubc_lw}, icliq_sw={icliq_sw}, '
+              f'iflip={iflip}, me={me}')
+        print(f'crick_proof={crick_proof}, ccnorm={ccnorm}, '
               f'norad_precip={norad_precip}')
+        print(' ')
 
         
-    radinit(si, levr, imp_physics, me, solar_fname)
+    radinit(si,
+            NLAY,
+            imp_physics,
+            me,
+            exp_tbl,
+            tau_tbl,
+            tfn_tbl,
+            iemsflg,
+            ioznflg,
+            ictmflg,
+            isolar,
+            ico2flg,
+            iaerflg,
+            ialbflg,
+            icldflg,
+            ivflip,
+            iovrsw,
+            iovrlw,
+            isubcsw,
+            isubclw,
+            lcrick,
+            lcnorm,
+            lnoprec,
+            iswcliq)
 
     if me == 0:
         print(f'Radiation sub-cloud initial seed = {ipsd0}')
@@ -195,7 +224,30 @@ def rad_initialize(si,
         print('return from rad_initialize - after calling radinit')
 
 
-def radinit(si, NLAY, imp_physics, me, solar_fname, exp_tbl):
+def radinit(si,
+            NLAY,
+            imp_physics,
+            me,
+            exp_tbl,
+            tau_tbl,
+            tfn_tbl,
+            iemsflg,
+            ioznflg,
+            ictmflg,
+            isolar,
+            ico2flg,
+            iaerflg,
+            ialbflg,
+            icldflg,
+            ivflip,
+            iovrsw,
+            iovrlw,
+            isubcsw,
+            isubclw,
+            lcrick,
+            lcnorm,
+            lnoprec,
+            iswcliq):
     # =================   subprogram documentation block   ================ !
     #                                                                       !
     # subprogram:   radinit     initialization of radiation calculations    !
@@ -312,16 +364,18 @@ def radinit(si, NLAY, imp_physics, me, solar_fname, exp_tbl):
     VTAGRAD = 'NCEP-Radiation_driver    v5.2  Jan 2013'
 
     if me == 0:
-        print(' NEW RADIATION PROGRAM STRUCTURES BECAME OPER. May 01 2007')
+        print('NEW RADIATION PROGRAM STRUCTURES BECAME OPER. May 01 2007')
         print(VTAGRAD)                #print out version tag
-        print(f' - Selected Control Flag settings: ICTMflg={ictmflg}')
-        print(f'ISOLar ={isolar}, ICO2flg={ico2flg}, IAERflg={iaerflg}')
-        print(f'IALBflg={ialbflg}, IEMSflg={iemsflg}, ICLDflg={icldflg}')
-        print(f'IMP_PHYSICS={imp_physics}, IOZNflg={ioznflg}')
-        print(f'IVFLIP={ivflip}, IOVRSW={iovrsw}, IOVRLW={iovrlw}')
-        print(f'ISUBCSW={isubcsw}, ISUBCLW={isubclw}')
-        print(f'LCRICK={lcrick}, LCNORM={lcnorm}, LNOPREC={lnoprec}')
-        print(f'LTP ={LTP}, add extra top layer ={lextop}')
+        print(' ')
+        print(f'- Selected Control Flag settings: ICTMflg={ictmflg}')
+        print(f'  ISOLar ={isolar}, ICO2flg={ico2flg}, IAERflg={iaerflg}')
+        print(f'  IALBflg={ialbflg}, IEMSflg={iemsflg}, ICLDflg={icldflg}')
+        print(f'  IMP_PHYSICS={imp_physics}, IOZNflg={ioznflg}')
+        print(f'  IVFLIP={ivflip}, IOVRSW={iovrsw}, IOVRLW={iovrlw}')
+        print(f'  ISUBCSW={isubcsw}, ISUBCLW={isubclw}')
+        print(f'  LCRICK={lcrick}, LCNORM={lcnorm}, LNOPREC={lnoprec}')
+        print(f'  LTP ={LTP}, add extra top layer ={lextop}')
+        print(' ')
 
         if ictmflg == 0 or ictmflg == -2:
             print('Data usage is limited by initial condition!')
@@ -357,16 +411,22 @@ def radinit(si, NLAY, imp_physics, me, solar_fname, exp_tbl):
 
     # -# Initialization
     #  --- ...  astronomy initialization routine
-    solar_fname = sol_init(me, solar_fname)
-    aer_init(NLAY, me)    #  --- ...  aerosols initialization routine
-    gas_init(me)          #  --- ...  co2 and other gases initialization routine
+    sol_init(me, isolar)
+    print(' ')
+    aer_init(NLAY, me, iaerflg)    #  --- ...  aerosols initialization routine
+    print(' ')
+    solar_fname = gas_init(me, ioznflg, ico2flg, ictmflg)          #  --- ...  co2 and other gases initialization routine
+    print(' ')
     sfc_init(me, ialbflg, iemsflg)          #  --- ...  surface initialization routine
+    print(' ')
     llyr = cld_init(si, NLAY, imp_physics, me) #  --- ...  cloud initialization routine
-    rlwinit(me)            #  --- ...  lw radiation initialization routine
+    print(' ')
+    rlwinit(me, tau_tbl, exp_tbl, tfn_tbl)            #  --- ...  lw radiation initialization routine
+    print(' ')
     rswinit(me, iovrsw, isubcsw, iswcliq, exp_tbl)            #  --- ...  sw radiation initialization routine
+    print(' ')
 
-
-def sol_init(me, solar_fname):
+def sol_init(me, isolar):
     #  ===================================================================  !
     #                                                                       !
     #  initialize astronomy process, set up module constants.               !
@@ -398,8 +458,10 @@ def sol_init(me, solar_fname):
     #                                                                       !
     #  ===================================================================  !
 
+    VTAGAST = 'NCEP-Radiation_astronomy v5.2  Jan 2013'
+
     if me == 0:
-        print('VTAGAST')    # print out version tag
+        print(VTAGAST)    # print out version tag
 
     #  ---  initialization
     # global isolflg = isolar
@@ -407,6 +469,8 @@ def sol_init(me, solar_fname):
     # global solar_fname = solar_file
     # global iyr_sav = 0
     # global nstp = 6
+    solar_fname = solar_file
+    solc0 = con_solr
 
     if isolar == 0:
         solc0 = con_solr_old
@@ -416,7 +480,7 @@ def sol_init(me, solar_fname):
         if me == 0:
             print(f'- Using new fixed solar constant = {solc0}')
     elif isolar == 1:        # noaa ann-mean tsi in absolute scale
-        solar_fname[14:26] = 'noaa_a0.txt'
+        solar_fname = solar_file[:14] + 'noaa_a0.txt' + solar_file[26:]
 
         if me == 0:
             print('- Using NOAA annual mean TSI table in ABS scale',
@@ -432,7 +496,7 @@ def sol_init(me, solar_fname):
                       f' reset control flag isolflg={isolflg}')
 
     elif isolar == 2:        # noaa ann-mean tsi in tim scale
-        solar_fname[14:26] = 'noaa_an.txt'
+        solar_fname = solar_file[:14] + 'noaa_an.txt' + solar_file[26:]
 
         if me == 0:
             print(' - Using NOAA annual mean TSI table in TIM scale',
@@ -448,7 +512,7 @@ def sol_init(me, solar_fname):
                       f' reset control flag isolflg={isolflg}')
 
     elif isolar == 3:        # cmip5 ann-mean tsi in tim scale
-        solar_fname[14:26] = 'cmip_an.txt'
+        solar_fname = solar_file[:14] + 'cmip_an.txt' + solar_file[26:]
 
         if me == 0:
             print('- Using CMIP5 annual mean TSI table in TIM scale',
@@ -464,7 +528,7 @@ def sol_init(me, solar_fname):
                       f' reset control flag isolflg={isolflg}')
 
     elif isolar == 4:      # cmip5 mon-mean tsi in tim scale
-        solar_fname[14:26] = 'cmip_mn.txt'
+        solar_fname = solar_file[:14] + 'cmip_mn.txt' + solar_file[26:]
 
         if me == 0:
             print('- Using CMIP5 monthly mean TSI table in TIM scale',

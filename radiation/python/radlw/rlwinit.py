@@ -35,7 +35,7 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
             print('      The program uses maximum/random overlap instead.')
 
     if me == 0:
-        print(f' - Using AER Longwave Radiation, Version: {VTAGLW}')
+        print(f'- Using AER Longwave Radiation, Version: {VTAGLW}')
 
         if ilwrgas > 0:
             print('   --- Include rare gases N2O, CH4, O2, CFCs ',
@@ -45,13 +45,13 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
 
         if isubclw == 0:
             print('   --- Using standard grid average clouds, no ',
-                  'sub-column clouds approximation applied')
+                  '   sub-column clouds approximation applied')
         elif isubclw == 1:
             print('   --- Using MCICA sub-colum clouds approximation ',
-                  'with a prescribed sequence of permutaion seeds')
+                  '   with a prescribed sequence of permutaion seeds')
         elif isubclw == 2:
             print('   --- Using MCICA sub-colum clouds approximation ',
-                  'with provided input array of permutation seeds')
+                  '   with provided input array of permutation seeds')
         else:
             print(f'  *** Error in specification of sub-column cloud ',
                   f' control flag isubclw = {isubclw}!!')
@@ -59,8 +59,8 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
     #  --- ...  check cloud flags for consistency
 
     if (icldflg == 0 and ilwcliq != 0) or (icldflg == 1 and ilwcliq == 0):
-        print('  *** Model cloud scheme inconsistent with LW',
-              ' radiation cloud radiative property setup !!')
+        print('*** Model cloud scheme inconsistent with LW',
+              'radiation cloud radiative property setup !!')
 
     #  --- ...  setup default surface emissivity for each band here
 
