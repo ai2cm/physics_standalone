@@ -97,7 +97,6 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
     tfn_tbl[ntbl] = f_one
 
     explimit = int(np.floor(-np.log(np.finfo(float).tiny)))
-    #explimit = np.sign(explimit) * np.floor(np.abs(explimit))
 
     for i in range(1, ntbl):
         tfn = (i) / (ntbl-i)
