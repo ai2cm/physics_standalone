@@ -645,7 +645,7 @@
       call rlwinit ( me )           !  --- ...  lw radiation initialization routine
 
       call rswinit ( me )           !  --- ...  sw radiation initialization routine
-!
+      
       return
 !...................................
       end subroutine radinit

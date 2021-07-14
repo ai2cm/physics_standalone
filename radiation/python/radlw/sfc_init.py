@@ -93,3 +93,9 @@ def sfc_init(me, ialbflg, iemsflg):
                     print(cline)
         else:
             print(f'!! ERROR in Emissivity Scheme Setting, IEMS={iemsflg}')
+
+    sfc_dict = dict()
+    sfc_dict['cline'] = cline
+    sfc_dict['idxems'] = idxems
+
+    return sfc_dict

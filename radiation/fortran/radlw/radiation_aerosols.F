@@ -864,6 +864,12 @@
 
       endif    ! end if_lavoflg_block
 
+!$ser mode write
+!$ser savepoint "lw_aer_init_out"
+!$ser data extrhi=extrhi scarhi=scarhi ssarhi=ssarhi asyrhi=asyrhi extstra=extstra
+!$ser data extrhd=extrhd scarhd=scarhd ssarhd=ssarhd asyrhd=asyrhd prsref=prsref
+!$ser data haer=haer eirfwv=eirfwv solfwv=solfwv ivolae=ivolae
+
 
 ! =================
       contains

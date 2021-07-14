@@ -70,7 +70,7 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
     #           the 1.0e-2 is to convert pressure from mb to N/m**2
 
     pival = 2.0 * np.arcsin(f_one)
-    fluxfac = pival * 2.0
+    fluxfac = pival * 2.0e4
 
     if ilwrate == 1:
         heatfac = g * 864.0 / cp            #   (in k/day)
@@ -96,11 +96,11 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
     exp_tbl[ntbl] = expeps
     tfn_tbl[ntbl] = f_one
 
-    explimit = np.finfo(float).tiny
-    explimit = np.sign(explimit) * np.floor(np.abs(explimit))
+    explimit = int(np.floor(-np.log(np.finfo(float).tiny)))
+    #explimit = np.sign(explimit) * np.floor(np.abs(explimit))
 
-    for i in range(ntbl-1):
-        tfn = (i+1) / (ntbl-i+1)
+    for i in range(1, ntbl):
+        tfn = (i) / (ntbl-i)
         tau_tbl[i] = bpade * tfn
         if tau_tbl[i] >= explimit:
             exp_tbl[i] = expeps
@@ -110,4 +110,15 @@ def rlwinit(me, tau_tbl, exp_tbl, tfn_tbl):
         if tau_tbl[i] < 0.06:
             tfn_tbl[i] = tau_tbl[i] / 6.0
         else:
-            tfn_tbl[i] = f_one - 2.0*((f_one / tau_tbl[i]) -exp_tbl[i]/(f_one - exp_tbl[i]))
+            tfn_tbl[i] = f_one - 2.0*((f_one / tau_tbl[i]) - (exp_tbl[i]/(f_one - exp_tbl[i])))
+
+    rlw_dict = dict()
+
+    rlw_dict['semiss0'] = semiss0
+    rlw_dict['fluxfac'] = fluxfac
+    rlw_dict['heatfac'] = heatfac
+    rlw_dict['exp_tbl'] = exp_tbl
+    rlw_dict['tau_tbl'] = tau_tbl
+    rlw_dict['tfn_tbl'] = tfn_tbl
+
+    return rlw_dict

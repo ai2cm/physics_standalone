@@ -133,3 +133,10 @@ def rswinit(me, iovrsw, isubcsw, iswcliq, exp_tbl):
         tfn = i / (NTBMX-i)
         tau = bpade * tfn
         exp_tbl[i] = np.exp(-tau)
+
+    rsw_dict = dict()
+
+    rsw_dict['heatfac'] = heatfac
+    rsw_dict['exp_tbl'] = exp_tbl
+
+    return rsw_dict

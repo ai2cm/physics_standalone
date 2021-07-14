@@ -1500,6 +1500,11 @@
         endif
       enddo
 
+!$ser mode write
+!$ser savepoint "lw_rlwinit_out"
+!$ser data semiss0=semiss0 fluxfac=fluxfac heatfac=heatfac exp_tbl=exp_tbl
+!$ser data tau_tbl=tau_tbl tfn_tbl=tfn_tbl
+
 !...................................
       end subroutine rlwinit
 !-----------------------------------

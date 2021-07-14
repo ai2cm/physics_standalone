@@ -429,6 +429,10 @@
         llyr = kl - 1
       endif                     ! end_if_ivflip
 
+!$ser mode write 
+!$ser savepoint 'lw_cld_init_out'
+!$ser data llyr=llyr
+
 !
       return
 !...................................

@@ -1556,6 +1556,10 @@
         exp_tbl(i) = exp( -tau )
       enddo
 
+!$ser mode write
+!$ser savepoint 'lw_rswinit_out'
+!$ser data heatfac=heatfac exp_tbl=exp_tbl
+
       return
 !...................................
       end subroutine rswinit

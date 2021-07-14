@@ -293,6 +293,10 @@
      &              ' reset control flag isolflg=',isolflg
         endif
       endif       ! end if_isolar_block
+
+!$ser mode write
+!$ser savepoint 'lw_sol_init_out'
+!$ser data solar_fname=solar_fname
 !
       return
 !...................................

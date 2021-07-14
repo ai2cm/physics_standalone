@@ -111,10 +111,10 @@ def aer_init(NLAY, me, iaerflg):
 
         if iaermdl == 0 or iaermdl == 5:      # opac-climatology scheme
 
-            clim_aerinit(solfwv, eirfwv, me,
-                         wvn_sw1, wvn_sw2,
-                         wvn_lw1, wvn_lw2,
-                         lmap_new, laswflg, lalwflg)
+            out_dict = clim_aerinit(solfwv, eirfwv, me,
+                                    wvn_sw1, wvn_sw2,
+                                    wvn_lw1, wvn_lw2,
+                                    lmap_new, laswflg, lalwflg)
 
         else:
             if me == 0:
@@ -127,6 +127,11 @@ def aer_init(NLAY, me, iaerflg):
     if lavoflg:
         ivolae = np.zeros((12,4,10))
 
+    out_dict['eirfwv'] = eirfwv
+    out_dict['solfwv'] = solfwv
+    # out_dict['ivolae'] = ivolae
+
+    return out_dict
 
 def wrt_aerlog(iaerflg):
     #  ==================================================================  !
@@ -288,13 +293,13 @@ def set_spectrum():
 
     for nb in range(NWVSOL):
         if nb == 0:
-            nw1 = 0
+            nw1 = 1
         else:
-            nw1 = nw1 + nwvns0[nb-1] -1
+            nw1 = nw1 + nwvns0[nb-1]
 
         nw2 = nw1 + nwvns0[nb] - 1
 
-        for nw in range(nw1, nw2):
+        for nw in range(nw1-1, nw2):
             solfwv[nw] = s0intv[nb]
 
     #  --- ...  define the one wavenumber ir fluxes based on black-body
@@ -363,16 +368,18 @@ def clim_aerinit(solfwv, eirfwv, me,
     #  --- ...  invoke tropospheric aerosol initialization
 
     # - call set_aercoef() to invoke tropospheric aerosol initialization.
-    set_aercoef(solfwv,
-                eirfwv,
-                aeros_file,
-                laswflg,
-                lalwflg,
-                wvn_sw1,
-                wvn_sw2,
-                wvn_lw1,
-                wvn_lw2,
-                lmap_new)
+    out_dict = set_aercoef(solfwv,
+                           eirfwv,
+                           aeros_file,
+                           laswflg,
+                           lalwflg,
+                           wvn_sw1,
+                           wvn_sw2,
+                           wvn_lw1,
+                           wvn_lw2,
+                           lmap_new)
+    
+    return out_dict
 
     # The initialization program for climatological aerosols. The program
     # reads and maps the pre-tabulated aerosol optical spectral data onto
@@ -566,7 +573,7 @@ def set_aercoef(solfwv,
                 if ib == ibs:
                     sumsol = 0.0
                 else:
-                    sumsol = -0.5 * solfwv[iw1]
+                    sumsol = -0.5 * solfwv[iw1-1]
                 
                 if ib == ibe:
                     fac = 0.0
@@ -578,22 +585,22 @@ def set_aercoef(solfwv,
 
             nv1[ib] = ii
 
-            for iw in range(iw1, iw2+1):
+            for iw in range(iw1-1, iw2):
                 solbnd[ib] = solbnd[ib] + solfwv[iw]
                 sumsol     = sumsol     + solfwv[iw]
 
-                if iw == iendwv[ii]:
+                if iw == iendwv[ii]-1:
                     solwaer[ib, ii] = sumsol
 
                     if ii < NAERBND-1:
                         sumsol = 0.0
                         ii += 1
 
-            if iw2 != iendwv[ii]:
+            if iw2 != iendwv[ii]-1:
                 solwaer[ib, ii] = sumsol
 
             if lmap_new:
-                tmp = fac * solfwv[iw2]
+                tmp = fac * solfwv[iw2-1]
                 solwaer[ib, ii] = solwaer[ib, ii] + tmp
                 solbnd[ib] = solbnd[ib] + tmp
 
@@ -644,7 +651,7 @@ def set_aercoef(solfwv,
                 if ib == ibs:
                     sumir = 0.0
                 else:
-                    sumir = -0.5 * eirfwv[iw1]
+                    sumir = -0.5 * eirfwv[iw1-1]
 
                 if ib == ibe:
                     fac = 0.0
@@ -657,11 +664,11 @@ def set_aercoef(solfwv,
 
             nr1[ib] = ii
 
-            for iw in range(iw1, iw2+1):
+            for iw in range(iw1-1, iw2):
                 eirbnd[ib] = eirbnd[ib] + eirfwv[iw]
                 sumir  = sumir  + eirfwv[iw]
 
-                if iw == iendwv[ii]:
+                if iw == iendwv[ii]-1:
                     eirwaer[ib, ii] = sumir
 
                     if ii < NAERBND-1:
@@ -669,11 +676,11 @@ def set_aercoef(solfwv,
                         ii += 1
 
 
-            if iw2 != iendwv[ii]:
+            if iw2 != iendwv[ii]-1:
                 eirwaer[ib, ii] = sumir
 
             if lmap_new:
-                tmp = fac * eirfwv[iw2]
+                tmp = fac * eirfwv[iw2-1]
                 eirwaer[ib, ii] = eirwaer[ib, ii] + tmp
                 eirbnd[ib] = eirbnd[ib] + tmp
 
@@ -683,12 +690,20 @@ def set_aercoef(solfwv,
     # -# Call optavg() to compute spectral band mean properties for each
     # species.
 
-    optavg(laswflg, lalwflg, solbnd, solwaer, nv1, nv2, nr1, nr2,
-           rhidext0, rhidsca0, rhidssa0, rhidasy0,
-           rhdpext0, rhdpsca0, rhdpssa0, rhdpasy0, straext0,
-           extrhi, scarhi, ssarhi, asyrhi,
-           extrhd, scarhd, ssarhd, asyrhd, extstra,
-           eirbnd, eirwaer)
+    out_dict = optavg(laswflg, lalwflg, solbnd, solwaer, nv1, nv2, nr1, nr2,
+                      rhidext0, rhidsca0, rhidssa0, rhidasy0,
+                      rhdpext0, rhdpsca0, rhdpssa0, rhdpasy0, straext0,
+                      extrhi, scarhi, ssarhi, asyrhi,
+                      extrhd, scarhd, ssarhd, asyrhd, extstra,
+                      eirbnd, eirwaer)
+    
+    out_dict['prsref'] = prsref
+    out_dict['haer'] = haer
+    out_dict['eirfwv'] = eirfwv
+    out_dict['solfwv'] = solfwv
+
+    return out_dict
+    
 
 # This subroutine computes mean aerosols optical properties over each
 # SW radiation spectral band for each of the species components. This
@@ -742,6 +757,8 @@ def optavg(laswflg, lalwflg, solbnd, solwaer, nv1, nv2, nr1, nr2,
     NCM1 = 6
     NRHLEV = 8
     NCM2 = 4
+
+    print(f'laswflg = {laswflg}, lalwflg = {lalwflg}')
 
     if laswflg:
 
@@ -886,3 +903,18 @@ def optavg(laswflg, lalwflg, solbnd, solwaer, nv1, nv2, nr1, nr2,
                 sumk += straext0[ni]*eirwaer[nb, ni]
 
             extstra[ib] = sumk * rirbd
+
+    out_dict = dict()
+    out_dict['extrhi'] = extrhi
+    out_dict['scarhi'] = scarhi
+    out_dict['ssarhi'] = ssarhi
+    out_dict['asyrhi'] = asyrhi
+
+    out_dict['extstra'] = extstra
+
+    out_dict['extrhd'] = extrhd
+    out_dict['scarhd'] = scarhd
+    out_dict['ssarhd'] = ssarhd
+    out_dict['asyrhd'] = asyrhd
+
+    return out_dict

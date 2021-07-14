@@ -1,6 +1,7 @@
-from radphysparam import iovrsw, iovrlw, ivflip, icldflg
+from radphysparam import icldflg
 
-def cld_init(si, NLAY, imp_physics, me ):
+def cld_init(si, NLAY, imp_physics, me,
+             ivflip, icldflg):
     #  ===================================================================  !
     #                                                                       !
     # abstract: cld_init is an initialization program for cloud-radiation   !
@@ -45,7 +46,6 @@ def cld_init(si, NLAY, imp_physics, me ):
     #
     #  ---  set up module variables
     VTAGCLD = 'NCEP-Radiation_clouds    v5.1  Nov 2012'
-    iovr = max(iovrsw, iovrlw)    # cld ovlp used for diag HML cld output
 
     if me == 0:
         print(VTAGCLD)      # print out version tag
@@ -80,13 +80,16 @@ def cld_init(si, NLAY, imp_physics, me ):
             if si[k] < 0.9e0:
                 break
 
-        llyr = kl
+        llyr = kl + 1
     else:                      # data from sfc to top
         for k in range(1, NLAY):
             kl = k
             if si[k] < 0.9e0:
                 break
 
-        llyr = kl - 1
+        llyr = kl
 
-    return llyr
+    cld_dict = dict()
+    cld_dict['llyr'] = llyr
+
+    return cld_dict

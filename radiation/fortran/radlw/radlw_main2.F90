@@ -283,13 +283,13 @@
 
 #ifdef SERIALIZE
 USE m_serialize, ONLY: &
-  fs_write_field, &
-  fs_create_savepoint, &
+  fs_read_field, &
   fs_add_savepoint_metainfo, &
-  fs_read_field
+  fs_create_savepoint, &
+  fs_write_field
 USE utils_ppser, ONLY:  &
-  ppser_set_mode, &
   ppser_get_mode, &
+  ppser_set_mode, &
   ppser_savepoint, &
   ppser_serializer, &
   ppser_serializer_ref, &
@@ -698,46 +698,47 @@ USE utils_ppser, ONLY:  &
 !  ---  locals:
       character(len=6) :: ser_count_str
 
-      real (kind=kind_phys), dimension(0:nlp1) :: cldfrc
+      real (kind=kind_phys), dimension(npts,0:nlp1) :: cldfrc
 
-      real (kind=kind_phys), dimension(0:nlay) :: totuflux, totdflux,   &
+      real (kind=kind_phys), dimension(npts,0:nlay) :: totuflux, totdflux,   &
      &       totuclfl, totdclfl, tz
 
-      real (kind=kind_phys), dimension(nlay)   :: htr, htrcl
+      real (kind=kind_phys), dimension(npts,nlay)   :: htr, htrcl
 
-      real (kind=kind_phys), dimension(nlay)   :: pavel, tavel, delp,   &
+      real (kind=kind_phys), dimension(npts, nlay)   :: pavel, tavel, delp,   &
      &       clwp, ciwp, relw, reiw, cda1, cda2, cda3, cda4,            &
      &       coldry, colbrd, h2ovmr, o3vmr, fac00, fac01, fac10, fac11, &
      &       selffac, selffrac, forfac, forfrac, minorfrac, scaleminor, &
      &       scaleminorn2, temcol, dz
 
-      real (kind=kind_phys), dimension(nbands,0:nlay) :: pklev, pklay
+      real (kind=kind_phys), dimension(npts,nbands,0:nlay) :: pklev, pklay
 
-      real (kind=kind_phys), dimension(nlay,nbands) :: htrb
-      real (kind=kind_phys), dimension(nbands,nlay) :: taucld, tauaer
-      real (kind=kind_phys), dimension(ngptlw,nlay) :: fracs, tautot,   &
+      real (kind=kind_phys), dimension(npts,nlay,nbands) :: htrb
+      real (kind=kind_phys), dimension(npts,nbands,nlay) :: taucld, tauaer
+      real (kind=kind_phys), dimension(npts,ngptlw,nlay) :: fracs, tautot,   &
      &       cldfmc
 
-      real (kind=kind_phys), dimension(nbands) :: semiss, secdiff
+      real (kind=kind_phys), dimension(npts, nbands) :: semiss, secdiff
+
+      real (kind=kind_phys), dimension(npts) :: stemp, pwvcm, delgth
 
 !  ---  column amount of absorbing gases:
 !       (:,m) m = 1-h2o, 2-co2, 3-o3, 4-n2o, 5-ch4, 6-o2, 7-co
-      real (kind=kind_phys) :: colamt(nlay,maxgas)
+      real (kind=kind_phys) :: colamt(npts, nlay,maxgas)
 
 !  ---  column cfc cross-section amounts:
 !       (:,m) m = 1-ccl4, 2-cfc11, 3-cfc12, 4-cfc22
-      real (kind=kind_phys) :: wx(nlay,maxxsec)
+      real (kind=kind_phys) :: wx(npts,nlay,maxxsec)
 
 !  ---  reference ratios of binary species parameter in lower atmosphere:
 !       (:,m,:) m = 1-h2o/co2, 2-h2o/o3, 3-h2o/n2o, 4-h2o/ch4, 5-n2o/co2, 6-o3/co2
-      real (kind=kind_phys) :: rfrate(nlay,nrates,2)
+      real (kind=kind_phys) :: rfrate(npts,nlay,nrates,2)
 
-      real (kind=kind_phys) :: tem0, tem1, tem2, pwvcm, summol, stemp,  &
-     &                         delgth
+      real (kind=kind_phys) :: tem0, tem1, tem2, summol
 
-      integer, dimension(npts) :: ipseed
-      integer, dimension(nlay) :: jp, jt, jt1, indself, indfor, indminor
-      integer                  :: laytrop, iplon, i, j, k, k1
+      integer, dimension(npts) :: ipseed, laytrop
+      integer, dimension(npts,nlay) :: jp, jt, jt1, indself, indfor, indminor
+      integer                  :: iplon, i, j, k, k1
       logical :: lcf1
 
 !
@@ -751,7 +752,7 @@ USE utils_ppser, ONLY:  &
       lflxprf= present ( flxprf )
  
 
-      colamt(:,:) = f_zero
+      colamt(:,:,:) = f_zero
       cldtau(:,:) = f_zero
 
 !> -# Change random number seed value for each radiation invocation
@@ -779,16 +780,16 @@ USE utils_ppser, ONLY:  &
 !> -# Read surface emissivity.
         if (sfemis(iplon) > eps .and. sfemis(iplon) <= 1.0) then  ! input surface emissivity
           do j = 1, nbands
-            semiss(j) = sfemis(iplon)
+            semiss(iplon, j) = sfemis(iplon)
           enddo
         else                                                      ! use default values
           do j = 1, nbands
-            semiss(j) = semiss0(j)
+            semiss(iplon, j) = semiss0(j)
           enddo
         endif
 
-        stemp = sfgtmp(iplon)          ! surface ground temp
-        if (iovrlw == 3) delgth= de_lgth(iplon)    ! clouds decorr-length
+        stemp(iplon) = sfgtmp(iplon)          ! surface ground temp
+        if (iovrlw == 3) delgth(iplon)= de_lgth(iplon)    ! clouds decorr-length
 
 !> -# Prepare atmospheric profile for use in rrtm.
 !           the vertical index of internal array is from surface to top
@@ -803,35 +804,30 @@ USE utils_ppser, ONLY:  &
 
           tem1 = 100.0 * con_g
           tem2 = 1.0e-20 * 1.0e3 * con_avgd
-          tz(0) = tlvl(iplon,nlp1)
+          tz(iplon,0) = tlvl(iplon,nlp1)
 
           do k = 1, nlay
             k1 = nlp1 - k
-            pavel(k)= plyr(iplon,k1)
-            delp(k) = delpin(iplon,k1)
-            tavel(k)= tlyr(iplon,k1)
-            tz(k)   = tlvl(iplon,k1)
-            dz(k)   = dzlyr(iplon,k1)
+            pavel(npts, k)= plyr(iplon,k1)
+            delp(npts, k) = delpin(iplon,k1)
+            tavel(npts, k)= tlyr(iplon,k1)
+            tz(npts, k)   = tlvl(iplon,k1)
+            dz(npts, k)   = dzlyr(iplon,k1)
 
 !> -# Set absorber amount for h2o, co2, and o3.
-
-!test use
-!           h2ovmr(k)= max(f_zero,qlyr(iplon,k1)*amdw)                  ! input mass mixing ratio
-!           h2ovmr(k)= max(f_zero,qlyr(iplon,k1))                       ! input vol mixing ratio
-!           o3vmr (k)= max(f_zero,olyr(iplon,k1))                       ! input vol mixing ratio
 !ncep model use
-            h2ovmr(k)= max(f_zero,qlyr(iplon,k1)                        &
+            h2ovmr(iplon, k)= max(f_zero,qlyr(iplon,k1)                        &
      &                           *amdw/(f_one-qlyr(iplon,k1)))          ! input specific humidity
-            o3vmr (k)= max(f_zero,olyr(iplon,k1)*amdo3)                 ! input mass mixing ratio
+            o3vmr (iplon, k)= max(f_zero,olyr(iplon,k1)*amdo3)                 ! input mass mixing ratio
 
 !  --- ...  tem0 is the molecular weight of moist air
-            tem0 = (f_one - h2ovmr(k))*con_amd + h2ovmr(k)*con_amw
-            coldry(k) = tem2*delp(k) / (tem1*tem0*(f_one+h2ovmr(k)))
-            temcol(k) = 1.0e-12 * coldry(k)
+            tem0 = (f_one - h2ovmr(iplon, k))*con_amd + h2ovmr(iplon, k)*con_amw
+            coldry(iplon, k) = tem2*delp(iplon, k) / (tem1*tem0*(f_one+h2ovmr(iplon, k)))
+            temcol(iplon, k) = 1.0e-12 * coldry(iplon, k)
 
-            colamt(k,1) = max(f_zero,    coldry(k)*h2ovmr(k))          ! h2o
-            colamt(k,2) = max(temcol(k), coldry(k)*gasvmr(iplon,k1,1)) ! co2
-            colamt(k,3) = max(temcol(k), coldry(k)*o3vmr(k))           ! o3
+            colamt(iplon,k,1) = max(f_zero,coldry(iplon,k)*h2ovmr(iplon,k))          ! h2o
+            colamt(iplon,k,2) = max(temcol(iplon,k), coldry(iplon,k)*gasvmr(iplon,k1,1)) ! co2
+            colamt(iplon,k,3) = max(temcol(iplon,k), coldry(iplon,k)*o3vmr(iplon,k))           ! o3
           enddo
 
 !> -# Set up column amount for rare gases n2o,ch4,o2,co,ccl4,cf11,cf12,
@@ -841,27 +837,27 @@ USE utils_ppser, ONLY:  &
           if (ilwrgas > 0) then
             do k = 1, nlay
               k1 = nlp1 - k
-              colamt(k,4)=max(temcol(k), coldry(k)*gasvmr(iplon,k1,2))  ! n2o
-              colamt(k,5)=max(temcol(k), coldry(k)*gasvmr(iplon,k1,3))  ! ch4
-              colamt(k,6)=max(f_zero,    coldry(k)*gasvmr(iplon,k1,4))  ! o2
-              colamt(k,7)=max(f_zero,    coldry(k)*gasvmr(iplon,k1,5))  ! co
+              colamt(iplon,k,4)=max(temcol(iplon,k), coldry(iplon,k)*gasvmr(iplon,k1,2))  ! n2o
+              colamt(iplon,k,5)=max(temcol(iplon,k), coldry(iplon,k)*gasvmr(iplon,k1,3))  ! ch4
+              colamt(iplon,k,6)=max(f_zero,    coldry(iplon,k)*gasvmr(iplon,k1,4))  ! o2
+              colamt(iplon,k,7)=max(f_zero,    coldry(iplon,k)*gasvmr(iplon,k1,5))  ! co
 
-              wx(k,1) = max( f_zero, coldry(k)*gasvmr(iplon,k1,9) )   ! ccl4
-              wx(k,2) = max( f_zero, coldry(k)*gasvmr(iplon,k1,6) )   ! cf11
-              wx(k,3) = max( f_zero, coldry(k)*gasvmr(iplon,k1,7) )   ! cf12
-              wx(k,4) = max( f_zero, coldry(k)*gasvmr(iplon,k1,8) )   ! cf22
+              wx(iplon,k,1) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k1,9) )   ! ccl4
+              wx(iplon,k,2) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k1,6) )   ! cf11
+              wx(iplon,k,3) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k1,7) )   ! cf12
+              wx(iplon,k,4) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k1,8) )   ! cf22
             enddo
           else
             do k = 1, nlay
-              colamt(k,4) = f_zero     ! n2o
-              colamt(k,5) = f_zero     ! ch4
-              colamt(k,6) = f_zero     ! o2
-              colamt(k,7) = f_zero     ! co
+              colamt(iplon,k,4) = f_zero     ! n2o
+              colamt(iplon,k,5) = f_zero     ! ch4
+              colamt(iplon,k,6) = f_zero     ! o2
+              colamt(iplon,k,7) = f_zero     ! co
 
-              wx(k,1) = f_zero
-              wx(k,2) = f_zero
-              wx(k,3) = f_zero
-              wx(k,4) = f_zero
+              wx(iplon,k,1) = f_zero
+              wx(iplon,k,2) = f_zero
+              wx(iplon,k,3) = f_zero
+              wx(iplon,k,4) = f_zero
             enddo
           endif
 
@@ -870,7 +866,7 @@ USE utils_ppser, ONLY:  &
           do k = 1, nlay
             k1 = nlp1 - k
             do j = 1, nbands
-              tauaer(j,k) = aerosols(iplon,k1,j,1)                      &
+              tauaer(iplon,j,k) = aerosols(iplon,k1,j,1)                      &
      &                    * (f_one - aerosols(iplon,k1,j,2))
             enddo
           enddo
@@ -879,98 +875,95 @@ USE utils_ppser, ONLY:  &
           if (ilwcliq > 0) then    ! use prognostic cloud method
             do k = 1, nlay
               k1 = nlp1 - k
-              cldfrc(k)= clouds(iplon,k1,1)
-              clwp(k)  = clouds(iplon,k1,2)
-              relw(k)  = clouds(iplon,k1,3)
-              ciwp(k)  = clouds(iplon,k1,4)
-              reiw(k)  = clouds(iplon,k1,5)
-              cda1(k)  = clouds(iplon,k1,6)
-              cda2(k)  = clouds(iplon,k1,7)
-              cda3(k)  = clouds(iplon,k1,8)
-              cda4(k)  = clouds(iplon,k1,9)
+              cldfrc(iplon,k)= clouds(iplon,k1,1)
+              clwp(iplon,k)  = clouds(iplon,k1,2)
+              relw(iplon,k)  = clouds(iplon,k1,3)
+              ciwp(iplon,k)  = clouds(iplon,k1,4)
+              reiw(iplon,k)  = clouds(iplon,k1,5)
+              cda1(iplon,k)  = clouds(iplon,k1,6)
+              cda2(iplon,k)  = clouds(iplon,k1,7)
+              cda3(iplon,k)  = clouds(iplon,k1,8)
+              cda4(iplon,k)  = clouds(iplon,k1,9)
             enddo
           else                       ! use diagnostic cloud method
             do k = 1, nlay
               k1 = nlp1 - k
-              cldfrc(k)= clouds(iplon,k1,1)
-              cda1(k)  = clouds(iplon,k1,2)
+              cldfrc(iplon,k)= clouds(iplon,k1,1)
+              cda1(iplon,k)  = clouds(iplon,k1,2)
             enddo
           endif                      ! end if_ilwcliq
 
-          cldfrc(0)    = f_one       ! padding value only
-          cldfrc(nlp1) = f_zero      ! padding value only
+          cldfrc(iplon,0)    = f_one       ! padding value only
+          cldfrc(iplon,nlp1) = f_zero      ! padding value only
 
 !> -# Compute precipitable water vapor for diffusivity angle adjustments.
 
           tem1 = f_zero
           tem2 = f_zero
           do k = 1, nlay
-            tem1 = tem1 + coldry(k) + colamt(k,1)
-            tem2 = tem2 + colamt(k,1)
+            tem1 = tem1 + coldry(iplon,k) + colamt(iplon,k,1)
+            tem2 = tem2 + colamt(iplon,k,1)
           enddo
 
           tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
-          pwvcm = tem0 * plvl(iplon,nlp1)
+          pwvcm(iplon) = tem0 * plvl(iplon,nlp1)
 
         else                        ! input from sfc to toa
 
           tem1 = 100.0 * con_g
           tem2 = 1.0e-20 * 1.0e3 * con_avgd
-          tz(0) = tlvl(iplon,1)
+          tz(iplon,0) = tlvl(iplon,1)
 
           do k = 1, nlay
-            pavel(k)= plyr(iplon,k)
-            delp(k) = delpin(iplon,k)
-            tavel(k)= tlyr(iplon,k)
-            tz(k)   = tlvl(iplon,k+1)
-            dz(k)   = dzlyr(iplon,k)
+            pavel(iplon,k)= plyr(iplon,k)
+            delp(iplon,k) = delpin(iplon,k)
+            tavel(iplon,k)= tlyr(iplon,k)
+            tz(iplon,k)   = tlvl(iplon,k+1)
+            dz(iplon,k)   = dzlyr(iplon,k)
 
 !  --- ...  set absorber amount
-!test use
-!           h2ovmr(k)= max(f_zero,qlyr(iplon,k)*amdw)                   ! input mass mixing ratio
-!           h2ovmr(k)= max(f_zero,qlyr(iplon,k))                        ! input vol mixing ratio
-!           o3vmr (k)= max(f_zero,olyr(iplon,k))                        ! input vol mixing ratio
 !ncep model use
-            h2ovmr(k)= max(f_zero,qlyr(iplon,k)                         &
+            h2ovmr(iplon,k)= max(f_zero,qlyr(iplon,k)                         &
      &                           *amdw/(f_one-qlyr(iplon,k)))           ! input specific humidity
-            o3vmr (k)= max(f_zero,olyr(iplon,k)*amdo3)                  ! input mass mixing ratio
+            o3vmr (iplon,k)= max(f_zero,olyr(iplon,k)*amdo3)                  ! input mass mixing ratio
 
 !  --- ...  tem0 is the molecular weight of moist air
-            tem0 = (f_one - h2ovmr(k))*con_amd + h2ovmr(k)*con_amw
-            coldry(k) = tem2*delp(k) / (tem1*tem0*(f_one+h2ovmr(k)))
-            temcol(k) = 1.0e-12 * coldry(k)
+            tem0 = (f_one - h2ovmr(iplon,k))*con_amd + h2ovmr(iplon,k)*con_amw
+            coldry(iplon,k) = tem2*delp(iplon,k) / (tem1*tem0*(f_one+h2ovmr(iplon,k)))
+            temcol(iplon,k) = 1.0e-12 * coldry(iplon,k)
 
-            colamt(k,1) = max(f_zero,    coldry(k)*h2ovmr(k))          ! h2o
-            colamt(k,2) = max(temcol(k), coldry(k)*gasvmr(iplon,k,1))  ! co2
-            colamt(k,3) = max(temcol(k), coldry(k)*o3vmr(k))           ! o3
+            colamt(iplon,k,1) = max(f_zero,          coldry(iplon,k)*h2ovmr(iplon,k))          ! h2o
+            colamt(iplon,k,2) = max(temcol(iplon,k), coldry(iplon,k)*gasvmr(iplon,k,1))  ! co2
+            colamt(iplon,k,3) = max(temcol(iplon,k), coldry(iplon,k)*o3vmr(iplon,k))           ! o3
           enddo
+        
 
 !  --- ...  set up col amount for rare gases, convert from volume mixing ratio
 !           to molec/cm2 based on coldry (scaled to 1.0e-20)
 
           if (ilwrgas > 0) then
             do k = 1, nlay
-              colamt(k,4)=max(temcol(k), coldry(k)*gasvmr(iplon,k,2))  ! n2o
-              colamt(k,5)=max(temcol(k), coldry(k)*gasvmr(iplon,k,3))  ! ch4
-              colamt(k,6)=max(f_zero,    coldry(k)*gasvmr(iplon,k,4))  ! o2
-              colamt(k,7)=max(f_zero,    coldry(k)*gasvmr(iplon,k,5))  ! co
+              colamt(iplon,k,4)=max(temcol(iplon,k), coldry(iplon,k)*gasvmr(iplon,k,2))  ! n2o
+              colamt(iplon,k,5)=max(temcol(iplon,k), coldry(iplon,k)*gasvmr(iplon,k,3))  ! ch4
+              colamt(iplon,k,6)=max(f_zero,    coldry(iplon,k)*gasvmr(iplon,k,4))  ! o2
+              colamt(iplon,k,7)=max(f_zero,    coldry(iplon,k)*gasvmr(iplon,k,5))  ! co
 
-              wx(k,1) = max( f_zero, coldry(k)*gasvmr(iplon,k,9) )   ! ccl4
-              wx(k,2) = max( f_zero, coldry(k)*gasvmr(iplon,k,6) )   ! cf11
-              wx(k,3) = max( f_zero, coldry(k)*gasvmr(iplon,k,7) )   ! cf12
-              wx(k,4) = max( f_zero, coldry(k)*gasvmr(iplon,k,8) )   ! cf22
+              wx(iplon,k,1) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k,9) )   ! ccl4
+              wx(iplon,k,2) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k,6) )   ! cf11
+              wx(iplon,k,3) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k,7) )   ! cf12
+              wx(iplon,k,4) = max( f_zero, coldry(iplon,k)*gasvmr(iplon,k,8) )   ! cf22
             enddo
           else
             do k = 1, nlay
-              colamt(k,4) = f_zero     ! n2o
-              colamt(k,5) = f_zero     ! ch4
-              colamt(k,6) = f_zero     ! o2
-              colamt(k,7) = f_zero     ! co
+              colamt(iplon,k,4) = f_zero     ! n2o
+              colamt(iplon,k,5) = f_zero     ! ch4
+              colamt(iplon,k,6) = f_zero     ! o2
+              colamt(iplon,k,7) = f_zero     ! co
 
-              wx(k,1) = f_zero
-              wx(k,2) = f_zero
-              wx(k,3) = f_zero
-              wx(k,4) = f_zero
+              wx(iplon,k,1) = f_zero
+              wx(iplon,k,2) = f_zero
+              wx(iplon,k,3) = f_zero
+              wx(iplon,k,4) = f_zero
             enddo
           endif
 
@@ -978,55 +971,56 @@ USE utils_ppser, ONLY:  &
 
           do j = 1, nbands
             do k = 1, nlay
-              tauaer(j,k) = aerosols(iplon,k,j,1)                       &
+              tauaer(iplon,j,k) = aerosols(iplon,k,j,1)                       &
      &                    * (f_one - aerosols(iplon,k,j,2))
             enddo
           enddo
 
           if (ilwcliq > 0) then    ! use prognostic cloud method
             do k = 1, nlay
-              cldfrc(k)= clouds(iplon,k,1)
-              clwp(k)  = clouds(iplon,k,2)
-              relw(k)  = clouds(iplon,k,3)
-              ciwp(k)  = clouds(iplon,k,4)
-              reiw(k)  = clouds(iplon,k,5)
-              cda1(k)  = clouds(iplon,k,6)
-              cda2(k)  = clouds(iplon,k,7)
-              cda3(k)  = clouds(iplon,k,8)
-              cda4(k)  = clouds(iplon,k,9)
+              cldfrc(iplon,k)= clouds(iplon,k,1)
+              clwp(iplon,k)  = clouds(iplon,k,2)
+              relw(iplon,k)  = clouds(iplon,k,3)
+              ciwp(iplon,k)  = clouds(iplon,k,4)
+              reiw(iplon,k)  = clouds(iplon,k,5)
+              cda1(iplon,k)  = clouds(iplon,k,6)
+              cda2(iplon,k)  = clouds(iplon,k,7)
+              cda3(iplon,k)  = clouds(iplon,k,8)
+              cda4(iplon,k)  = clouds(iplon,k,9)
             enddo
           else                       ! use diagnostic cloud method
             do k = 1, nlay
-              cldfrc(k)= clouds(iplon,k,1)
-              cda1(k)  = clouds(iplon,k,2)
+              cldfrc(iplon,k)= clouds(iplon,k,1)
+              cda1(iplon,k)  = clouds(iplon,k,2)
             enddo
           endif                      ! end if_ilwcliq
 
-          cldfrc(0)    = f_one       ! padding value only
-          cldfrc(nlp1) = f_zero      ! padding value only
+          cldfrc(iplon,0)    = f_one       ! padding value only
+          cldfrc(iplon,nlp1) = f_zero      ! padding value only
 
 !  --- ...  compute precipitable water vapor for diffusivity angle adjustments
 
           tem1 = f_zero
           tem2 = f_zero
           do k = 1, nlay
-            tem1 = tem1 + coldry(k) + colamt(k,1)
-            tem2 = tem2 + colamt(k,1)
+            tem1 = tem1 + coldry(iplon,k) + colamt(iplon,k,1)
+            tem2 = tem2 + colamt(iplon,k,1)
           enddo
 
           tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
-          pwvcm = tem0 * plvl(iplon,1)
+          pwvcm(iplon) = tem0 * plvl(iplon,1)
 
         endif                       ! if_ivflip
+      enddo lab_do_iplon
 
 !> -# Compute column amount for broadening gases.
-
+      lab_do_iplon3 : do iplon = 1, npts
         do k = 1, nlay
           summol = f_zero
           do i = 2, maxgas
-            summol = summol + colamt(k,i)
+            summol = summol + colamt(iplon,k,i)
           enddo
-          colbrd(k) = coldry(k) - summol
+          colbrd(iplon,k) = coldry(iplon,k) - summol
         enddo
 
 !> -# Compute diffusivity angle adjustments.
@@ -1035,34 +1029,19 @@ USE utils_ppser, ONLY:  &
         tem2 = 1.50
         do j = 1, nbands
           if (j==1 .or. j==4 .or. j==10) then
-            secdiff(j) = 1.66
+            secdiff(iplon,j) = 1.66
           else
-            secdiff(j) = min( tem1, max( tem2,                          &
-     &                   a0(j)+a1(j)*exp(a2(j)*pwvcm) ))
+            secdiff(iplon,j) = min( tem1, max( tem2,                          &
+     &                   a0(j)+a1(j)*exp(a2(j)*pwvcm(iplon))))
           endif
         enddo
-
-!     if (lprnt) then
-!      print *,'  coldry',coldry
-!      print *,' wx(*,1) ',(wx(k,1),k=1,NLAY)
-!      print *,' wx(*,2) ',(wx(k,2),k=1,NLAY)
-!      print *,' wx(*,3) ',(wx(k,3),k=1,NLAY)
-!      print *,' wx(*,4) ',(wx(k,4),k=1,NLAY)
-!      print *,' iplon ',iplon
-!      print *,'  pavel ',pavel
-!      print *,'  delp ',delp
-!      print *,'  tavel ',tavel
-!      print *,'  tz ',tz
-!      print *,' h2ovmr ',h2ovmr
-!      print *,' o3vmr ',o3vmr
-!     endif
 
 !> -# For cloudy atmosphere, call cldprop() to set cloud optical
 !!    properties.
 
         lcf1 = .false.
         lab_do_k0 : do k = 1, nlay
-          if ( cldfrc(k) > eps ) then
+          if ( cldfrc(iplon,k) > eps ) then
             lcf1 = .true.
             exit lab_do_k0
           endif
@@ -1072,10 +1051,12 @@ USE utils_ppser, ONLY:  &
 
           call cldprop                                                  &
 !  ---  inputs:
-     &     ( cldfrc,clwp,relw,ciwp,reiw,cda1,cda2,cda3,cda4,            &
-     &       nlay, nlp1, ipseed(iplon), dz, delgth,                     &
+     &     ( cldfrc(iplon, :),clwp(iplon, :),relw(iplon, :),            &
+     &       ciwp(iplon, :),reiw(iplon, :),cda1(iplon, :),              &
+     &       cda2(iplon, :),cda3(iplon, :),cda4(iplon, :),              &
+     &       nlay, nlp1, ipseed(iplon), dz(iplon, :), delgth(iplon),                     &
 !  ---  outputs:
-     &       cldfmc, taucld                                             &
+     &       cldfmc(iplon, :, :), taucld(iplon, :, :)                                             &
      &     )
 
 !  --- ...  save computed layer cloud optical depth for output
@@ -1084,40 +1065,30 @@ USE utils_ppser, ONLY:  &
           if (ivflip == 0) then       ! input from toa to sfc
             do k = 1, nlay
               k1 = nlp1 - k
-              cldtau(iplon,k1) = taucld( 7,k)
+              cldtau(iplon,k1) = taucld(iplon, 7,k)
             enddo
           else                        ! input from sfc to toa
             do k = 1, nlay
-              cldtau(iplon,k) = taucld( 7,k)
+              cldtau(iplon,k) = taucld(iplon, 7,k)
             enddo
           endif                       ! end if_ivflip_block
 
         else
-          cldfmc = f_zero
-          taucld = f_zero
+          cldfmc(iplon, :, :) = f_zero
+          taucld(iplon, :, :) = f_zero
         endif
-
-!     if (lprnt) then
-!      print *,' after cldprop'
-!      print *,' clwp',clwp
-!      print *,' ciwp',ciwp
-!      print *,' relw',relw
-!      print *,' reiw',reiw
-!      print *,' taucl',cda1
-!      print *,' cldfrac',cldfrc
-!     endif
 
 !> -# Calling setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
 #ifdef SERIALIZE
 if (iplon == 1) then
-! file: radlw_main.F lineno: #1089
+! file: radlw_main2.F lineno: #1060
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
 write(*,*) 'iplon = ', iplon
-! file: radlw_main.F lineno: #1092
+! file: radlw_main2.F lineno: #1063
 call fs_create_savepoint("lwrad-setcoef-input-"//trim(ser_count_str), ppser_savepoint)
-! file: radlw_main.F lineno: #1093
+! file: radlw_main2.F lineno: #1064
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'pavel', pavel)
@@ -1138,7 +1109,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'stemp', stemp, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'h2ovmr', h2ovmr, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1094
+! file: radlw_main2.F lineno: #1065
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'colamt', colamt)
@@ -1163,24 +1134,30 @@ end if
 #endif
         call setcoef                                                    &
 !  ---  inputs:
-     &     ( pavel,tavel,tz,stemp,h2ovmr,colamt,coldry,colbrd,          &
+     &     ( pavel(iplon,:),tavel(iplon,:),tz(iplon,:),                 &
+     &       stemp(iplon),h2ovmr(iplon,:),colamt(iplon,:,:),            &
+     &       coldry(iplon,:),colbrd(iplon,:),                           &
      &       nlay, nlp1,                                                &
 !  ---  outputs:
-     &       laytrop,pklay,pklev,jp,jt,jt1,                             &
-     &       rfrate,fac00,fac01,fac10,fac11,                            &
-     &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
-     &       minorfrac,scaleminor,scaleminorn2,indminor                 &
+     &       laytrop(iplon),pklay(iplon,:,:),pklev(iplon,:,:),                 &
+     &       jp(iplon,:),jt(iplon,:),jt1(iplon,:),                             &
+     &       rfrate(iplon,:,:,:),fac00(iplon,:),fac01(iplon,:),         &
+     &       fac10(iplon,:),fac11(iplon,:),                            &
+     &       selffac(iplon,:),selffrac(iplon,:),indself(iplon,:),       &
+     &       forfac(iplon,:),forfrac(iplon,:),indfor(iplon,:),            &
+     &       minorfrac(iplon,:),scaleminor(iplon,:),scaleminorn2(iplon,:), &
+     &       indminor(iplon,:)                 &
      &     )
 
 #ifdef SERIALIZE
 if (iplon == 1) then
-! file: radlw_main.F lineno: #1108
+! file: radlw_main2.F lineno: #1085
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
 write(*,*) 'iplon = ', iplon
-! file: radlw_main.F lineno: #1111
+! file: radlw_main2.F lineno: #1088
 call fs_create_savepoint("lwrad-setcoef-output-"//trim(ser_count_str), ppser_savepoint)
-! file: radlw_main.F lineno: #1112
+! file: radlw_main2.F lineno: #1089
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'laytrop', laytrop)
@@ -1204,7 +1181,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt', jt, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt1', jt1, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1113
+! file: radlw_main2.F lineno: #1090
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'rfrate', rfrate)
@@ -1225,7 +1202,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac10', fac10, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac11', fac11, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1114
+! file: radlw_main2.F lineno: #1091
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'selffac', selffac)
@@ -1243,7 +1220,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indself', indself, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfac', forfac, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1115
+! file: radlw_main2.F lineno: #1092
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'forfrac', forfrac)
@@ -1261,7 +1238,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'minorfrac', minorfrac, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminor', scaleminor, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1116
+! file: radlw_main2.F lineno: #1093
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'scaleminorn2', scaleminorn2)
@@ -1275,57 +1252,28 @@ SELECT CASE ( ppser_get_mode() )
 END SELECT
 end if
 #endif
-
-
-
-!     if (lprnt) then
-!      print *,'laytrop',laytrop
-!      print *,'colh2o',(colamt(k,1),k=1,NLAY)
-!      print *,'colco2',(colamt(k,2),k=1,NLAY)
-!      print *,'colo3', (colamt(k,3),k=1,NLAY)
-!      print *,'coln2o',(colamt(k,4),k=1,NLAY)
-!      print *,'colch4',(colamt(k,5),k=1,NLAY)
-!      print *,'fac00',fac00
-!      print *,'fac01',fac01
-!      print *,'fac10',fac10
-!      print *,'fac11',fac11
-!      print *,'jp',jp
-!      print *,'jt',jt
-!      print *,'jt1',jt1
-!      print *,'selffac',selffac
-!      print *,'selffrac',selffrac
-!      print *,'indself',indself
-!      print *,'forfac',forfac
-!      print *,'forfrac',forfrac
-!      print *,'indfor',indfor
-!     endif
+      enddo lab_do_iplon3
 
 !> -# Call taumol() to calculte the gaseous optical depths and Plank 
 !! fractions for each longwave spectral band.
+      lab_do_iplon4 : do iplon = 1, npts
 
         call taumol                                                     &
 !  ---  inputs:
-     &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
-     &       rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,                  &
-     &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
-     &       minorfrac,scaleminor,scaleminorn2,indminor,                &
+     &     ( laytrop(iplon),pavel(iplon, :),coldry(iplon, :),                  &
+     &       colamt(iplon, :, :),colbrd(iplon, :),wx(iplon, :, :),      &
+     &       tauaer(iplon,:,:),rfrate(iplon,:,:,:),fac00(iplon,:),      &
+     &       fac01(iplon,:),fac10(iplon,:),fac11(iplon,:),jp(iplon,:),  &
+     &       jt(iplon,:),jt1(iplon,:),                                  &
+     &       selffac(iplon,:),selffrac(iplon,:),indself(iplon,:),       &
+     &       forfac(iplon,:),forfrac(iplon,:),indfor(iplon,:),          &
+     &       minorfrac(iplon,:),scaleminor(iplon,:),                    &
+     &       scaleminorn2(iplon,:),indminor(iplon,:),                   &
      &       nlay,                                                      &
 !  ---  outputs:
-     &       fracs, tautot                                              &
+     &       fracs(iplon,:,:), tautot(iplon,:,:)                                              &
      &     )
-
-!     if (lprnt) then
-!     print *,' after taumol'
-!     do k = 1, nlay
-!       write(6,121) k
-!121    format(' k =',i3,5x,'FRACS')
-!       write(6,122) (fracs(j,k),j=1,ngptlw)
-!122    format(10e14.7)
-!       write(6,123) k
-!123    format(' k =',i3,5x,'TAUTOT')
-!       write(6,122) (tautot(j,k),j=1,ngptlw)
-!     enddo
-!     endif
+      enddo lab_do_iplon4
 
 !> -# Call the radiative transfer routine based on cloud scheme
 !!    selection. Compute the upward/downward radiative fluxes, and
@@ -1336,6 +1284,7 @@ end if
 !!                     overlaping in a vertical column;
 !!\n  - call rtrnmc(): clouds are treated with the mcica stochastic
 !!                     approach.
+      lab_do_iplon5 : do iplon = 1, npts
 
         if (isubclw <= 0) then
 
@@ -1343,20 +1292,28 @@ end if
 
             call rtrn                                                   &
 !  ---  inputs:
-     &     ( semiss,delp,cldfrc,taucld,tautot,pklay,pklev,              &
-     &       fracs,secdiff,nlay,nlp1,                                   &
+     &     ( semiss(iplon,:),delp(iplon,:),cldfrc(iplon,:),             &
+     &       taucld(iplon,:,:),tautot(iplon,:,:),pklay(iplon,:,:),      &
+     &       pklev(iplon,:,:),              &
+     &       fracs(iplon,:,:),secdiff(iplon,:),nlay,nlp1,                                   &
 !  ---  outputs:
-     &       totuflux,totdflux,htr, totuclfl,totdclfl,htrcl, htrb       &
+     &       totuflux(iplon,:),totdflux(iplon,:),htr(iplon,:),          &
+     &       totuclfl(iplon,:),totdclfl(iplon,:),htrcl(iplon,:),        &
+     &       htrb(iplon,:,:)                                            &
      &     )
 
           else
 
             call rtrnmr                                                 &
 !  ---  inputs:
-     &     ( semiss,delp,cldfrc,taucld,tautot,pklay,pklev,              &
-     &       fracs,secdiff,nlay,nlp1,                                   &
+     &     ( semiss(iplon,:),delp(iplon,:),cldfrc(iplon,:),             &
+     &       taucld(iplon,:,:),tautot(iplon,:,:),pklay(iplon,:,:),      &
+     &       pklev(iplon,:,:),              &
+     &       fracs(iplon,:,:),secdiff(iplon,:),nlay,nlp1,                                  &
 !  ---  outputs:
-     &       totuflux,totdflux,htr, totuclfl,totdclfl,htrcl, htrb       &
+     &       totuflux(iplon,:),totdflux(iplon,:),htr(iplon,:),          &
+     &       totuclfl(iplon,:),totdclfl(iplon,:),htrcl(iplon,:),        &
+     &       htrb(iplon,:,:)                                            &
      &     )
 
           endif   ! end if_iovrlw_block
@@ -1365,47 +1322,53 @@ end if
 
           call rtrnmc                                                   &
 !  ---  inputs:
-     &     ( semiss,delp,cldfmc,taucld,tautot,pklay,pklev,              &
-     &       fracs,secdiff,nlay,nlp1,                                   &
+     &     ( semiss(iplon,:),delp(iplon,:),cldfmc(iplon,:,:),             &
+     &       taucld(iplon,:,:),tautot(iplon,:,:),pklay(iplon,:,:),      &
+     &       pklev(iplon,:,:),              &
+     &       fracs(iplon,:,:),secdiff(iplon,:),nlay,nlp1,                                  &
 !  ---  outputs:
-     &       totuflux,totdflux,htr, totuclfl,totdclfl,htrcl, htrb       &
+     &       totuflux(iplon,:),totdflux(iplon,:),htr(iplon,:),          &
+     &       totuclfl(iplon,:),totdclfl(iplon,:),htrcl(iplon,:),        &
+     &       htrb(iplon,:,:)                                            &
      &     )
 
         endif   ! end if_isubclw_block
 
 !> -# Save outputs.
 
-        topflx(iplon)%upfxc = totuflux(nlay)
-        topflx(iplon)%upfx0 = totuclfl(nlay)
+        topflx(iplon)%upfxc = totuflux(iplon,nlay)
+        topflx(iplon)%upfx0 = totuclfl(iplon,nlay)
 
-        sfcflx(iplon)%upfxc = totuflux(0)
-        sfcflx(iplon)%upfx0 = totuclfl(0)
-        sfcflx(iplon)%dnfxc = totdflux(0)
-        sfcflx(iplon)%dnfx0 = totdclfl(0)
+        sfcflx(iplon)%upfxc = totuflux(iplon,0)
+        sfcflx(iplon)%upfx0 = totuclfl(iplon,0)
+        sfcflx(iplon)%dnfxc = totdflux(iplon,0)
+        sfcflx(iplon)%dnfx0 = totdclfl(iplon,0)
+      enddo lab_do_iplon5
 
+      lab_do_iplon6 : do iplon = 1, npts
         if (ivflip == 0) then       ! output from toa to sfc
 
 !! --- ...  optional fluxes
           if ( lflxprf ) then
             do k = 0, nlay
               k1 = nlp1 - k
-              flxprf(iplon,k1)%upfxc = totuflux(k)
-              flxprf(iplon,k1)%dnfxc = totdflux(k)
-              flxprf(iplon,k1)%upfx0 = totuclfl(k)
-              flxprf(iplon,k1)%dnfx0 = totdclfl(k)
+              flxprf(iplon,k1)%upfxc = totuflux(iplon,k)
+              flxprf(iplon,k1)%dnfxc = totdflux(iplon,k)
+              flxprf(iplon,k1)%upfx0 = totuclfl(iplon,k)
+              flxprf(iplon,k1)%dnfx0 = totdclfl(iplon,k)
             enddo
           endif
 
           do k = 1, nlay
             k1 = nlp1 - k
-            hlwc(iplon,k1) = htr(k)
+            hlwc(iplon,k1) = htr(iplon,k)
           enddo
 
 !! --- ...  optional clear sky heating rate
           if ( lhlw0 ) then
             do k = 1, nlay
               k1 = nlp1 - k
-              hlw0(iplon,k1) = htrcl(k)
+              hlw0(iplon,k1) = htrcl(iplon,k)
             enddo
           endif
 
@@ -1414,7 +1377,7 @@ end if
             do j = 1, nbands
             do k = 1, nlay
               k1 = nlp1 - k
-              hlwb(iplon,k1,j) = htrb(k,j)
+              hlwb(iplon,k1,j) = htrb(iplon,k,j)
             enddo
             enddo
           endif
@@ -1424,21 +1387,21 @@ end if
 !! --- ...  optional fluxes
           if ( lflxprf ) then
             do k = 0, nlay
-              flxprf(iplon,k+1)%upfxc = totuflux(k)
-              flxprf(iplon,k+1)%dnfxc = totdflux(k)
-              flxprf(iplon,k+1)%upfx0 = totuclfl(k)
-              flxprf(iplon,k+1)%dnfx0 = totdclfl(k)
+              flxprf(iplon,k+1)%upfxc = totuflux(iplon,k)
+              flxprf(iplon,k+1)%dnfxc = totdflux(iplon,k)
+              flxprf(iplon,k+1)%upfx0 = totuclfl(iplon,k)
+              flxprf(iplon,k+1)%dnfx0 = totdclfl(iplon,k)
             enddo
           endif
 
           do k = 1, nlay
-            hlwc(iplon,k) = htr(k)
+            hlwc(iplon,k) = htr(iplon,k)
           enddo
 
 !! --- ...  optional clear sky heating rate
           if ( lhlw0 ) then
             do k = 1, nlay
-              hlw0(iplon,k) = htrcl(k)
+              hlw0(iplon,k) = htrcl(iplon,k)
             enddo
           endif
 
@@ -1446,14 +1409,14 @@ end if
           if ( lhlwb ) then
             do j = 1, nbands
             do k = 1, nlay
-              hlwb(iplon,k,j) = htrb(k,j)
+              hlwb(iplon,k,j) = htrb(iplon,k,j)
             enddo
             enddo
           endif
 
         endif                       ! if_ivflip
 
-      enddo  lab_do_iplon
+      enddo  lab_do_iplon6
 
 !...................................
       end subroutine lwrad
@@ -2423,6 +2386,7 @@ end if
         jp1  = jp(k) + 1
 !  --- ...  limit pressure extrapolation at the top
         fp   = max(f_zero, min(f_one, 5.0*(preflog(jp(k))-plog) ))
+
 !org    fp   = 5.0 * (preflog(jp(k)) - plog)
 
 !  --- ...  determine, for each reference pressure (jp and jp1), which
