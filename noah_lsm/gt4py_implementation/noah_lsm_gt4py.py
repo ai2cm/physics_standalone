@@ -145,7 +145,7 @@ def run(in_dict, in_dict2, backend):
     slc[:, 3] = out_dict.pop("slc3")[:]
     out_dict["slc"] = slc
 
-    return out_dict
+    return elapsed_time, out_dict
 
 
 @gtscript.function
@@ -932,6 +932,7 @@ def hrt_fn(stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, smcmax, zsoil0, zsoil
         tsnsr, sh2o3 = snksrc_fn(
             psisat, bexp, tavg, smc3, sh2o3, smcmax, qtot, dt, dz)
 
+        rhsts3 -= tsnsr / denom
     # calc matrix coefs, ai, and bi for this layer.
     ai3 = - df1 * ddz / ((zsoil2 - zsoil3) * hcpct)
     bi3 = - (ai3 + ci3)
@@ -941,7 +942,6 @@ def hrt_fn(stc0, stc1, stc2, stc3, smc0, smc1, smc2, smc3, smcmax, zsoil0, zsoil
 
 @gtscript.function
 def hstep_fn(stc0, stc1, stc2, stc3, dt, rhsts0, rhsts1, rhsts2, rhsts3, ai0, ai1, ai2, ai3, bi0, bi1, bi2, bi3, ci0, ci1, ci2, ci3):
-    dt = 225.0
     
     ci0, ci1, ci2, ci3, rhsts0, rhsts1, rhsts2, rhsts3 = rosr12_fn(ai1*dt, ai2*dt, ai3*dt,
                                                                    1. + dt*bi0, 1. + dt*bi1, 1. + dt*bi2, 1. + dt*bi3,
@@ -1637,12 +1637,6 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
          sneqv, ch, cm, z0, shdfac, snowh):
     # --- ... subprograms called: redprm, snow_new, csnow, snfrac, alcalc, tdfcnd, snowz0, sfcdif, penman, canres, nopac, snopac.
     # initialization
-    runoff1 = 0.
-    runoff2 = 0.
-    runoff3 = 0.
-    snomlt = 0.
-
-    pc = 0.
 
     shdfac0 = shdfac
 
@@ -1827,6 +1821,12 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
     rct = 0.
     rcq = 0.
     rcsoil = 0.
+    runoff1 = 0.
+    runoff2 = 0.
+    runoff3 = 0.
+    snomlt = 0.
+
+    pc = 0.
 
     if shdfac > 0.:
 
@@ -1930,7 +1930,7 @@ def sflx(couple, ice, ffrozp, dt, sldpth0, sldpth1, sldpth2, sldpth3,
         rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax
 
 
-@gtscript.stencil(backend="gtx86")
+@gtscript.stencil(backend="numpy")
 def sfc_drv_defs(
     ps: DT_F, t1: DT_F, q1: DT_F, soiltyp: DT_I, vegtype: DT_I, sigmaf: DT_F,
     sfcemis: DT_F, dlwflx: DT_F, dswsfc: DT_F, snet: DT_F, tg3: DT_F, cm: DT_F, ch: DT_F,

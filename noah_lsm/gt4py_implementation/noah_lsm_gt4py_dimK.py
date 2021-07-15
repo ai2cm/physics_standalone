@@ -14,7 +14,7 @@ DT_I2 = gtscript.Field[np.int32]
 DT_F = gtscript.Field[gtscript.IJ, np.float64]
 DT_I = gtscript.Field[gtscript.IJ, np.int32]
 
-BACKEND = "numpy"
+BACKEND = "gtx86"
 
 INOUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "canopy",
               "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx",
@@ -38,7 +38,7 @@ SOIL_VARS_NAMES = ["bexp", "dksat", "dwsat", "f1", "psisat",
                    "quartz", "smcdry", "smcmax", "smcref", "smcwlt"]
 VEG_VARS_NAMES = ["nroot", "snup", "rsmin", "rgl", "hs", "xlai"]
 
-TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",  # prepare_sflx
+TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", # prepare_sflx
                 "prcp", "dqsdt2", "snowh", "sneqv", "chx", "cmx", "z0",
                 "shdfac", "kdt", "frzx", "sndens", "prcp1",
                 "sncovr", "df1", "ssoil", "t2v", "fdown", "cpx1",
@@ -52,7 +52,7 @@ TEMP_VARS_1D = ["zsoil_root", "q0", "cmc", "th2", "rho", "qs1", "ice",  # prepar
                 "esnow", "csoil_loc", "soilm", "snomlt", "tsea", "sneqv_new"
                 ]
 
-TEMP_VARS_1D_INT = ["count", "snowng"]
+TEMP_VARS_1D_INT = ["count", "snowng", "ice"]
 
 
 TEMP_VARS_2D = ["sldpth", "rtdis", "smc_old", "stc_old", "slc_old",
@@ -311,4 +311,4 @@ def run(in_dict, in_dict2, backend):
         out_dict[k], backend=backend) for k in INOUT_VARS}, **{k: gt4py_to_numpy_storage_multilayer(
             out_dict[k], backend=backend) for k in INOUT_MULTI_VARS}}
 
-    return out_dict
+    return elapsed_time, out_dict

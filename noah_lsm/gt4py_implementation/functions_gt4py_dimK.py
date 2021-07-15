@@ -103,7 +103,7 @@ def tdfcnd_fn(smc, qz, smcmax, sh2o):
         ake = satratio
     elif satratio > 0.1:
         # kersten number
-        ake = log(satratio)/log(10) + 1.0   # log10 from ln
+        ake = log(satratio)/log(10.) + 1.0   # log10 from ln
     else:
         ake = 0.0
 
@@ -172,14 +172,16 @@ def devap_fn(etp1, smc, shdfac, smcmax, smcdry, fxexp):
 
 
 @gtscript.function
-def transp_first_fn(nroot, smc, smcwlt, smcref, count, sgx):
+def transp_first_fn(nroot, smc, smcwlt, smcref, count, sgx, gx):
     # initialize plant transp to zero for all soil layers.
     if nroot > count:
         gx = max(0.0, min(1.0, (smc-smcwlt)/(smcref - smcwlt)))
+        # gx = 0.8905800461946161
     else:
-        gx = 0.
-
+        gx = 0.0
+        
     sgx += gx / nroot
+    
 
     return sgx, gx
 
@@ -212,7 +214,7 @@ def transp_third_fn(etp1, cmc, cmcmax, shdfac, pc, cfactr, gx, denom):
 @gtscript.function
 def evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt,
                            sh2o, smcmax, smcwlt, smcref, smcdry,
-                           shdfac, cfactr, fxexp, count, sgx):
+                           shdfac, cfactr, fxexp, count, sgx, gx):
     # --- ... subprograms called: devap, transp
 
     ec1 = 0.0
@@ -224,7 +226,7 @@ def evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt,
 
         # initialize plant total transpiration, retrieve plant transpiration,
         # and accumulate it for all soil layers.
-        if shdfac > 0.:
+        if shdfac > 0.0:
             # calculates transpiration for the veg class
 
             # calculate canopy evaporation.
@@ -237,22 +239,23 @@ def evapo_boundarylayer_fn(nroot, cmc, cmcmax, etp1, dt,
             cmc2ms = cmc / dt
             ec1 = min(cmc2ms, ec1)
 
-            sgx, gx = transp_first_fn(nroot, sh2o, smcwlt, smcref, count, sgx)
+            sgx, gx = transp_first_fn(nroot, sh2o, smcwlt, smcref, count, sgx, gx)
 
     return edir1, ec1, sgx, gx
 
 
 @gtscript.function
-def evapo_first_fn(nroot, etp1, sh2o, smcwlt, smcref, shdfac, count, sgx):
+def evapo_first_fn(nroot, etp1, sh2o, smcwlt, smcref, shdfac, count, sgx, gx):
     # --- ... subprograms called: devap, transp
 
     if etp1 > 0.0:
         # initialize plant total transpiration, retrieve plant transpiration,
         # and accumulate it for all soil layers.
-        if shdfac > 0.:
+        if shdfac > 0.0:
             # calculates transpiration for the veg class
 
-            sgx, gx = transp_first_fn(nroot, sh2o, smcwlt, smcref, count, sgx)
+            sgx, gx = transp_first_fn(nroot, sh2o, smcwlt, smcref, count, sgx, gx)
+
 
     return sgx, gx
 
@@ -264,7 +267,7 @@ def evapo_second_fn(etp1, shdfac, rtdis, gx, sgx, denom):
     if etp1 > 0.0:
         # initialize plant total transpiration, retrieve plant transpiration,
         # and accumulate it for all soil layers.
-        if shdfac > 0.:
+        if shdfac > 0.0:
             # calculates transpiration for the veg class
 
             denom, gx = transp_second_fn(rtdis, gx, sgx, denom)
@@ -280,7 +283,7 @@ def evapo_third_fn(etp1, shdfac, cmc, cmcmax, pc, cfactr, gx, denom, ett1):
     if etp1 > 0.0:
         # initialize plant total transpiration, retrieve plant transpiration,
         # and accumulate it for all soil layers.
-        if shdfac > 0.:
+        if shdfac > 0.0:
             # calculates transpiration for the veg class
 
             et1 = transp_third_fn(
@@ -302,7 +305,7 @@ def wdfcnd_fn(smc, smcmax, bexp, dksat, dwsat, sicemax, wdf, wcnd):
     wdf = dwsat * factr0 ** expon
 
     # frozen soil hydraulic diffusivity.
-    if sicemax > 0.:
+    if sicemax > 0.0:
         vkwgt = 1.0 / (1.0 + (500.0*sicemax)**3.0)
         wdf = vkwgt*wdf + (1.0 - vkwgt)*dwsat*factr**expon
 
@@ -318,7 +321,7 @@ def srt_first_upperboundary_fn(sh2o, pcpdrp, zsoil, smcmax, smcwlt, sice, sicema
 
     sicemax = max(sice, 0.0)
 
-    if pcpdrp != 0:
+    if pcpdrp != 0.0:
         # frozen ground version
         smcav = smcmax - smcwlt
         dd = -zsoil * (smcav - (sh2o + sice - smcwlt))
@@ -332,7 +335,7 @@ def srt_first_fn(sh2o, pcpdrp, zsoil, smcmax, smcwlt, sice, sicemax, dd, dice):
 
     sicemax = max(sice, sicemax)
 
-    if pcpdrp != 0:
+    if pcpdrp != 0.0:
         # frozen ground version
         smcav = smcmax - smcwlt
         dd += (zsoil[0, 0, -1] - zsoil[0, 0, 0]) * (smcav - (sh2o + sice - smcwlt))
@@ -347,12 +350,12 @@ def srt_second_upperboundary_fn(edir, et, sh2o, pcpdrp, zsoil, dwsat,
                                 # output
                                 ai, bi, rhstt, runoff1, ci, dsmdz, ddz, wdf, wcnd):
     # determine rainfall infiltration rate and runoff
-    cvfrz = 3
+    cvfrz = 3.0
 
     pddum = pcpdrp
     runoff1 = 0.0
 
-    if pcpdrp != 0:
+    if pcpdrp != 0.0:
         # frozen ground version
         dt1 = dt/86400.
 
@@ -489,17 +492,17 @@ def rosr12_second_fn(p, delta):
 @gtscript.function
 def sstep_upperboundary_fn(sh2o, smc, smcmax, sice, ci, zsoil):
 
-    wplus = 0.
+    wplus = 0.0
     ddz = -zsoil
 
     sh2o = sh2o + ci + wplus/ddz
+    # sice = 0.0
     stot = sh2o + sice
 
     if stot > smcmax:
         wplus = (stot-smcmax)*ddz
     else:
-        wplus = 0.
-
+        wplus = 0.0
     smc = max(min(stot, smcmax), 0.02)
     sh2o = max(smc-sice, 0.0)
 
@@ -518,7 +521,7 @@ def sstep_fn(sh2o, smc, smcmax, sice, ci, zsoil, wplus, wplus_old):
     if stot > smcmax:
         wplus = (stot-smcmax)*ddz
     else:
-        wplus = 0.
+        wplus = 0.0
 
     smc = max(min(stot, smcmax), 0.02)
     sh2o = max(smc-sice, 0.0)
@@ -870,7 +873,7 @@ def hrt_upperboundary_fn(stc, smc, smcmax, zsoil, yy, zz1, psisat, dt, bexp, df1
 
     df1k = df1
 
-    if sice > 0 or tsurf < tfreez or stc[0,0,0] < tfreez or tbk < tfreez:
+    if sice > 0.0 or tsurf < tfreez or stc[0,0,0] < tfreez or tbk < tfreez:
         ### ************ tmpavg *********** ###
         dz = -zsoil[0, 0,0]
         tavg = tmpavg_fn(tsurf, stc[0,0,0], tbk, dz)
@@ -916,7 +919,7 @@ def hrt_fn(stc, stc_plus, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz, hcp
     qtot = -1. * denom * rhsts
     sice = smc - sh2o
 
-    if sice > 0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
+    if sice > 0.0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
         ### ************ tmpavg *********** ###
         dz = zsoil[0, 0,-1] - zsoil[0, 0,0]
         tavg = tmpavg_fn(tbk_old, stc, tbk, dz)
@@ -962,7 +965,7 @@ def hrt_lowerboundary_fn(stc, smc, smcmax, zsoil, psisat, dt, bexp, df1, quartz,
 
     sice = smc - sh2o
 
-    if sice > 0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
+    if sice > 0.0 or tbk_old < tfreez or stc < tfreez or tbk < tfreez:
         ### ************ tmpavg *********** ###
         dz = zsoil[0,0,-1] - zsoil[0,0,0]
         tavg = tmpavg_fn(tbk_old, stc, tbk, dz)

@@ -33,7 +33,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
 
-BACKEND = "gtx86"
+BACKEND = "numpy"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -67,6 +67,8 @@ def compare_data(exp_data, ref_data):
             "Data does not match for field " + key
     # assert False, "done"
 
+total_time = 0.0
+time = 0.0
 
 for tile in range(6):
 
@@ -102,8 +104,9 @@ for tile in range(6):
             in_data_fpvs = data_dict_from_var_list(IN_VARS_FPVS, serializer2, savepoint2[0])
 
             # run Python version
-            out_data = noah_lsm_gt4py.run(in_data, in_data_fpvs, BACKEND)
-
+            time, out_data = noah_lsm_gt4py.run(in_data, in_data_fpvs, BACKEND)
+            
+            total_time += time
             isready = True
 
         if sp.name.startswith("sfc_drv-out"):
@@ -123,3 +126,4 @@ for tile in range(6):
             isready = False
 
 
+print("total time: ", total_time, "s")

@@ -5,7 +5,7 @@ import sys
 import numpy as np
 from numpy.lib.npyio import save
 np.seterr(divide="ignore", invalid="ignore")
-import noah_lsm_gt4py_dimK
+import noah_lsm_gt4py_dimK2
 
 #SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
 SERIALBOX_DIR = "/usr/local/serialbox/"
@@ -33,7 +33,7 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
 
-BACKEND = "numpy"
+BACKEND = "gtx86"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -60,13 +60,20 @@ def compare_data(exp_data, ref_data):
             #         i = tuple(ind[:, j])
 
             fails = ind.size
-
+            if key == "smc":
+                for j in range(ind[0,:].size):
+                    if tuple(ind[:, j])[0] == 145:
+                        i = tuple(ind[:, j])
+                        print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
             print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
 
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
     # assert False, "done"
 
+ser_count = 0
+total_time = 0.0
+time = 0.0
 
 for tile in range(6):
 
@@ -102,7 +109,8 @@ for tile in range(6):
             in_data_fpvs = data_dict_from_var_list(IN_VARS_FPVS, serializer2, savepoint2[0])
 
             # run Python version
-            out_data = noah_lsm_gt4py_dimK.run(in_data, in_data_fpvs, BACKEND)
+            time, out_data = noah_lsm_gt4py_dimK2.run(in_data, in_data_fpvs, BACKEND)
+            total_time += time 
 
             isready = True
 
@@ -118,8 +126,15 @@ for tile in range(6):
 
             # check result
             # if tile == 1:
+            ser_count += 1
+            # if tile == 2:
             compare_data(out_data, ref_data)
+            # if ser_count == 10*2:
+            #     assert False, "done"
 
             isready = False
 
+
+
+print("time:", total_time, "s")
 
