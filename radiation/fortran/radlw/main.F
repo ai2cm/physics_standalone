@@ -112,6 +112,8 @@ program test
       !$ser mode read
       !$ser savepoint "lwrad-in-000000"
       !$ser data im=im levr=levr 
+
+      write(*,*) 'im = ', im
       
       allocate(plyr(im, levr), tlyr(im, levr), qlyr(im, levr), olyr(im, levr), dz(im, levr), &
                delp(im, levr), htlwc(im, levr), htlw0(im, levr), htlwc_ref(im, levr))

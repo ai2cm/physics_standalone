@@ -943,6 +943,10 @@
             enddo
           endif
 
+          if (iplon==npts) then
+            write(*,*) 'colamt = ', colamt(iplon,:,1)
+          endif
+
 !  --- ...  set aerosol optical properties
 
           do j = 1, nbands
@@ -988,6 +992,11 @@
 
         endif                       ! if_ivflip
       enddo lab_do_iplon
+
+      write(*,*) 'tem1 = ', tem1
+      write(*,*) 'tem2 = ', tem2
+      write(*,*) 'pwvcm = ', pwvcm
+      
 
 !> -# Compute column amount for broadening gases.
       lab_do_iplon3 : do iplon = 1, npts
