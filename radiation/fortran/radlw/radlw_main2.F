@@ -943,10 +943,6 @@
             enddo
           endif
 
-          if (iplon==npts) then
-            write(*,*) 'colamt = ', colamt(iplon,:,1)
-          endif
-
 !  --- ...  set aerosol optical properties
 
           do j = 1, nbands
@@ -993,9 +989,14 @@
         endif                       ! if_ivflip
       enddo lab_do_iplon
 
-      write(*,*) 'tem1 = ', tem1
-      write(*,*) 'tem2 = ', tem2
-      write(*,*) 'pwvcm = ', pwvcm
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser savepoint "lw_firstloop_out_"//trim(ser_count_str)
+!$ser data pavel=pavel tavel=tavel delp=delp colbrd=colbrd cldfrc=cldfrc
+!$ser data temcol=temcol tem0=tem0 taucld=taucld semiss0=semiss0 tz=tz dz=dz
+!$ser data semiss=semiss coldry=coldry colamt=colamt tauaer=tauaer
+!$ser data h2ovmr=h2ovmr o3vmr=o3vmr wx=wx clwp=clwp relw=relw ciwp=ciwp
+!$ser data reiw=reiw cda1=cda1 cda2=cda2 cda3=cda3 cda4=cda4 pwvcm=pwvcm
       
 
 !> -# Compute column amount for broadening gases.

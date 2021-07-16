@@ -6,6 +6,7 @@ import numpy as np
 from gt4py.gtscript import FORWARD, PARALLEL, Field, computation, interval, stencil
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
+from util import view_gt4py_storage, compare_data
 
 os.environ["DYLD_LIBRARY_PATH"]="/Users/AndrewP/Documents/code/serialbox2/install/lib"
 
@@ -139,7 +140,7 @@ print(' ')
 print('Creating local storages...')
 
 locvars = ['pavel', 'tavel', 'delp', 'colbrd', 'h2ovmr',
-           'o3vmr', 'coldry', 'colamt', 'temcol', 'tem0', 'tauaer',
+           'o3vmr', 'coldry', 'colamt', 'temcol', 'tauaer',
            'taucld', 'semiss0', 'semiss', 'tz', 'dz', 'wx',
            'cldfrc', 'clwp', 'ciwp', 'relw', 'reiw', 'cda1', 'cda2',
            'cda3', 'cda4', 'pwvcm']
@@ -203,7 +204,6 @@ for var in locvars:
                                 dtype = type1)
 
 print('Done')
-print(locdict_gt4py['pwvcm'].shape)
 
 @stencil(backend=backend, rebuild=rebuild)
 def get_surface_emissivity(sfemis: FIELD_FLT,
@@ -222,7 +222,7 @@ def set_aerosols(aerosols: Field[type_nbands3],
                  tauaer: Field[type_nbands],
                  value: int):
     with computation(PARALLEL), interval(...):
-        tauaer[0, 0, 0][value] = aerosols[0, 0, 0][0]*(1. - aerosols[0, 0, 0][1])
+        tauaer[0, 0, 0][value] = aerosols[0, 0, 0][value, 0]*(1. - aerosols[0, 0, 0][value, 1])
 
 tem1 = 100.*con_g
 tem2 = 1.0e-20 * 1.0e3 * con_avgd
@@ -273,10 +273,10 @@ def set_absorbers(plyr: FIELD_FLT,
             colamt[0, 0, 0][5] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][3])  # o2
             colamt[0, 0, 0][6] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][4])  # co
             
-            wx[0, 0, 0][1] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][8])   # ccl4
-            wx[0, 0, 0][2] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][5])   # cf11
-            wx[0, 0, 0][3] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][6])   # cf12
-            wx[0, 0, 0][4] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][7])   # cf22
+            wx[0, 0, 0][0] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][8])   # ccl4
+            wx[0, 0, 0][1] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][5])   # cf11
+            wx[0, 0, 0][2] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][6])   # cf12
+            wx[0, 0, 0][3] = max(0.0, coldry[0, 0, 0]*gasvmr[0, 0, 0][7])   # cf22
 
 @stencil(backend=backend, rebuild=rebuild)
 def set_clouds(clouds: Field[type_9],
@@ -329,6 +329,11 @@ for j in range(nbands):
 
 locdict_gt4py['tz'] = indict_gt4py['tlvl']
 
+tem0 = gt4py.storage.zeros(backend=backend,
+                           default_origin=default_origin,
+                           shape=shape_nlay,
+                           dtype = type1)
+
 set_absorbers(indict_gt4py['plyr'],
               indict_gt4py['delp'],
               indict_gt4py['tlyr'],
@@ -344,16 +349,13 @@ set_absorbers(indict_gt4py['plyr'],
               locdict_gt4py['o3vmr'],
               locdict_gt4py['coldry'],
               locdict_gt4py['temcol'],
-              locdict_gt4py['tem0'],
+              tem0,
               locdict_gt4py['colamt'],
               locdict_gt4py['wx'],
               origin=default_origin,
               domain=domain2,
               validate_args=True
               )
-
-print(f"colamt = {locdict_gt4py['colamt'][-1, :, :, 0]}")
-
 
 for j in range(nbands):
     set_aerosols(indict_gt4py['faerlw'],
@@ -388,9 +390,6 @@ tem2 = gt4py.storage.zeros(backend=backend,
                            shape=shape,
                            dtype=type1)
 
-print(tem1.shape)
-print(tem2.shape)
-
 #compute_temps_for_pwv(tem1,
 #                      tem2,
 #                      locdict_gt4py['coldry'],
@@ -405,11 +404,21 @@ tem2 = np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
 tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
 locdict_gt4py['pwvcm'] = tem0 * indict_gt4py['plvl'][:, :, 0][:, :, None]
 
-print(f"tem1 = {tem1.shape}")
-print(f"tem2 = {tem2.shape}")
-print(locdict_gt4py['pwvcm'])
 
+ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump'
+serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, 'Serialized_rank0')
 
+savepoints = serializer.savepoint_list()
 
+sp = savepoints[6]
+
+valdict = dict()
+
+for var in locvars:
+    valdict[var] = serializer.read(var, sp)
+
+locdict_np = view_gt4py_storage(locdict_gt4py)
+
+compare_data(valdict, locdict_np)
 
 
