@@ -37,9 +37,8 @@ DTYPE_FLT = np.float64
 FIELD_INT = Field[DTYPE_INT]
 FIELD_FLT = Field[DTYPE_FLT]
 
-rebuild = False
+rebuild = True
 backend = "gtc:gt:cpu_ifirst"
-#backend = 'gtx86'
 shape0 = (1, 1, 1)
 shape = (npts, 1, 1)
 shape_nlay = (npts, 1, nlay)
@@ -315,7 +314,7 @@ def compute_temps_for_pwv(tem1: FIELD_FLT,
         tem2[0, 0, 0] += colamt[0, 0, 0][0]
 
 
-
+# Execute code from here
 
 for j in range(nbands):
     get_surface_emissivity(indict_gt4py['semis'],
@@ -390,6 +389,8 @@ tem2 = gt4py.storage.zeros(backend=backend,
                            shape=shape,
                            dtype=type1)
 
+# This stencil below didn't work, but I realized it's just a sum over k. 
+
 #compute_temps_for_pwv(tem1,
 #                      tem2,
 #                      locdict_gt4py['coldry'],
@@ -404,7 +405,7 @@ tem2 = np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
 tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
 locdict_gt4py['pwvcm'] = tem0 * indict_gt4py['plvl'][:, :, 0][:, :, None]
 
-
+# Load serialized data to validate against
 ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump'
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, 'Serialized_rank0')
 
