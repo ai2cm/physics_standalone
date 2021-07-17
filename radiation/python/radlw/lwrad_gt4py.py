@@ -1,4 +1,3 @@
-from dataclasses import fields
 import gt4py
 import os
 import sys
@@ -37,7 +36,8 @@ DTYPE_FLT = np.float64
 FIELD_INT = Field[DTYPE_INT]
 FIELD_FLT = Field[DTYPE_FLT]
 
-rebuild = True
+rebuild = False
+validate = False
 backend = "gtc:gt:cpu_ifirst"
 shape0 = (1, 1, 1)
 shape = (npts, 1, 1)
@@ -86,51 +86,64 @@ print('Done')
 print(' ')
 print('Creating input storages...')
 
+def create_storage_from_array(var, backend, shape, dtype):
+    out = gt4py.storage.from_array(
+            var,
+            backend=backend,
+            default_origin=default_origin,
+            shape=shape,
+            dtype=dtype)
+    return out
+
+def create_storage_zeros(backend, shape, dtype):
+    out = gt4py.storage.zeros(
+            backend=backend,
+            default_origin=default_origin,
+            shape=shape,
+            dtype=dtype)
+    return out
+
+def create_storage_ones(backend, shape, dtype):
+    out = gt4py.storage.ones(
+            backend=backend,
+            default_origin=default_origin,
+            shape=shape,
+            dtype=dtype)
+    return out
+
 indict_gt4py = dict()
 
 for var in invars:
     if var in nlay_vars:
-        indict_gt4py[var] = gt4py.storage.from_array(
-                                indict[var],
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype=type1)
+        indict_gt4py[var] = create_storage_from_array(indict[var],
+                                                      backend,
+                                                      shape_nlay,
+                                                      type1)
     elif var in nlp1_vars:
-        indict_gt4py[var] = gt4py.storage.from_array(
-                                indict[var],
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlp1,
-                                dtype=type1)
+        indict_gt4py[var] = create_storage_from_array(indict[var],
+                                                      backend,
+                                                      shape_nlp1,
+                                                      type1)
     elif var == 'faerlw':
-        indict_gt4py[var] = gt4py.storage.from_array(
-                                indict[var],
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype=type_nbands3)
+        indict_gt4py[var] = create_storage_from_array(indict[var],
+                                                      backend,
+                                                      shape_nlay,
+                                                      type_nbands3)
     elif var == 'semis':
-        indict_gt4py[var] = gt4py.storage.from_array(
-                                indict[var],
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape,
-                                dtype=type1)
+        indict_gt4py[var] = create_storage_from_array(indict[var],
+                                                      backend,
+                                                      shape,
+                                                      type1)
     elif var == 'gasvmr':
-        indict_gt4py[var] = gt4py.storage.from_array(
-                                indict[var],
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype=type_10)
+        indict_gt4py[var] = create_storage_from_array(indict[var],
+                                                      backend,
+                                                      shape_nlay,
+                                                      type_10)
     elif var == 'clouds':
-        indict_gt4py[var] = gt4py.storage.from_array(
-                                indict[var],
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype=type_9)
+        indict_gt4py[var] = create_storage_from_array(indict[var],
+                                                      backend,
+                                                      shape_nlay,
+                                                      type_9)
     else:
         indict_gt4py[var] = indict[var]
 
@@ -148,59 +161,41 @@ locdict_gt4py = dict()
 
 for var in locvars:
     if var  == 'colamt':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype = type_maxgas)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape_nlay,
+                                                  type_maxgas)
     elif var == 'wx':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype=type_maxxsec)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape_nlay,
+                                                  type_maxxsec)
     elif var == 'pwvcm':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape,
-                                dtype=type1)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape,
+                                                  type1)
     elif var == 'tauaer' or var == 'taucld':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype=type_nbands)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape_nlay,
+                                                  type_nbands)
     elif var == 'semiss0':
-        locdict_gt4py[var] = gt4py.storage.ones(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape,
-                                dtype=type_nbands)
+        locdict_gt4py[var] = create_storage_ones(backend,
+                                                 shape,
+                                                 type_nbands)
     elif var == 'semiss':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape,
-                                dtype=type_nbands)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape,
+                                                  type_nbands)
     elif var == 'tz':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlp1,
-                                dtype=type1)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape_nlp1,
+                                                  type1)
     elif var == 'cldfrc':
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlp2,
-                                dtype=type1)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape_nlp2,
+                                                  type1)
     else:
-        locdict_gt4py[var] = gt4py.storage.zeros(
-                                backend=backend,
-                                default_origin=default_origin,
-                                shape=shape_nlay,
-                                dtype = type1)
+        locdict_gt4py[var] = create_storage_zeros(backend,
+                                                  shape_nlay,
+                                                  type1)
 
 print('Done')
 
@@ -303,15 +298,28 @@ def set_clouds(clouds: Field[type_9],
             cda4[0, 0, 0] = clouds[0, 0, 0][8]
         else:
             cda1[0, 0, 0] = clouds[0, 0, 0][1]
+    with computation(PARALLEL), interval(0, 1):
+        cldfrc[0, 0, 0] = 1.0
+
 
 @stencil(backend=backend, rebuild=rebuild)
-def compute_temps_for_pwv(tem1: FIELD_FLT,
+def compute_temps_for_pwv(tem0: FIELD_FLT,
+                          tem1: FIELD_FLT,
                           tem2: FIELD_FLT,
                           coldry: FIELD_FLT,
-                          colamt: Field[type_maxgas]):
-    with computation(FORWARD), interval(...):
-        tem1[0, 0, 0] += coldry[0, 0, 0] + colamt[0, 0, 0][0]
-        tem2[0, 0, 0] += colamt[0, 0, 0][0]
+                          colamt: Field[type_maxgas],
+                          plvl: FIELD_FLT,
+                          pwvcm: FIELD_FLT):
+    with computation(FORWARD), interval(0, 1):
+        tem1[0, 0, 0] = coldry[0, 0, 0] + colamt[0, 0, 0][0]
+        tem2[0, 0, 0] = colamt[0, 0, 0][0]
+    with computation(FORWARD), interval(1, None):
+        tem1[0, 0, 0] = tem1[0, 0, -1] + coldry[0, 0, 0] + colamt[0, 0, 0][0]
+        tem2[0, 0, 0] = tem2[0, 0, -1] + colamt[0, 0, 0][0]
+    with computation(FORWARD), interval(-1, None):
+        tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
+    with computation(FORWARD), interval(0, 1):
+        pwvcm[0, 0, 0] = tem0[0, 0, 0] * plvl[0, 0, 0]
 
 
 # Execute code from here
@@ -323,10 +331,10 @@ for j in range(nbands):
                            value=j,
                            origin=default_origin,
                            domain=domain,
-                           validate_args=True)
+                           validate_args=validate)
 
 
-locdict_gt4py['tz'] = indict_gt4py['tlvl']
+locdict_gt4py['tz'] = indict_gt4py['tlvl'].copy()
 
 tem0 = gt4py.storage.zeros(backend=backend,
                            default_origin=default_origin,
@@ -353,7 +361,7 @@ set_absorbers(indict_gt4py['plyr'],
               locdict_gt4py['wx'],
               origin=default_origin,
               domain=domain2,
-              validate_args=True
+              validate_args=validate
               )
 
 for j in range(nbands):
@@ -362,7 +370,7 @@ for j in range(nbands):
                  value=j,
                  origin=default_origin,
                  domain=domain2,
-                 validate_args=True)
+                 validate_args=validate)
 
 set_clouds(indict_gt4py['clouds'],
            locdict_gt4py['cldfrc'],
@@ -376,34 +384,39 @@ set_clouds(indict_gt4py['clouds'],
            locdict_gt4py['cda4'],
            domain=(npts, 1, 63),
            origin=default_origin,
-           validate_args=True)
+           validate_args=validate)
 
-locdict_gt4py['cldfrc'][:, 0, 0] = 1.0
-
-tem1 = gt4py.storage.zeros(backend=backend,
+tem0 = gt4py.storage.zeros(backend=backend,
                            default_origin=default_origin,
                            shape=shape,
                            dtype=type1)
+tem1 = gt4py.storage.zeros(backend=backend,
+                           default_origin=default_origin,
+                           shape=shape_nlay,
+                           dtype=type1)
 tem2 = gt4py.storage.zeros(backend=backend,
                            default_origin=default_origin,
-                           shape=shape,
+                           shape=shape_nlay,
                            dtype=type1)
 
 # This stencil below didn't work, but I realized it's just a sum over k. 
 
-#compute_temps_for_pwv(tem1,
-#                      tem2,
-#                      locdict_gt4py['coldry'],
-#                      locdict_gt4py['colamt'],
-#                      origin=default_origin,
-#                      domain=domain,
-#                      validate_args=True)
+compute_temps_for_pwv(tem0,
+                      tem1,
+                      tem2,
+                      locdict_gt4py['coldry'],
+                      locdict_gt4py['colamt'],
+                      indict_gt4py['plvl'],
+                      locdict_gt4py['pwvcm'],
+                      origin=default_origin,
+                      domain=domain,
+                      validate_args=True)
 
-tem1 = np.sum(locdict_gt4py['coldry'], 2)[:, :, None] + np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
-tem2 = np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
+#tem1 = np.sum(locdict_gt4py['coldry'], 2)[:, :, None] + np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
+#tem2 = np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
 
-tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
-locdict_gt4py['pwvcm'] = tem0 * indict_gt4py['plvl'][:, :, 0][:, :, None]
+#tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
+#locdict_gt4py['pwvcm'] = tem0 * indict_gt4py['plvl'][:, :, 0][:, :, None]
 
 # Load serialized data to validate against
 ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump'
@@ -420,6 +433,12 @@ for var in locvars:
 
 locdict_np = view_gt4py_storage(locdict_gt4py)
 
-compare_data(valdict, locdict_np)
+# compare_data(valdict, locdict_np)
+
+print(f"local = {locdict_np['pwvcm']}")
+print(' ')
+print(f"val = {valdict['pwvcm']}")
+
+print(tem2[:, :, -1])
 
 
