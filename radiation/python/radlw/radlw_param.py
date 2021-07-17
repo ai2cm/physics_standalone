@@ -68,3 +68,13 @@ wvnlw2 = np.array([350.,  500.,  630.,  700.,  820.,  980., 1080., 1180.,
 
 delwave = np.array([340., 150., 130.,  70., 120., 160., 100., 100., 210.,
            90., 320., 280., 170., 130., 220., 650.])
+
+ipat = [1, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5]
+
+# absrain is the rain drop absorption coefficient \f$(m^{2}/g)\f$ .
+absrain = 0.33e-3       # ncar coeff
+
+# abssnow0 is the snow flake absorption coefficient (micron), fu coeff
+abssnow0 = 1.5          # fu   coeff
+# abssnow1 is the snow flake absorption coefficient \f$(m^{2}/g)\f$, ncar coeff
+abssnow1 = 2.34e-3      # ncar coeff
