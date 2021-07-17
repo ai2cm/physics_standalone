@@ -55,6 +55,8 @@ def compare_data(exp_data, ref_data):
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
 
+total_time = 0.
+time = 0.
 
 for tile in range(6):
 
@@ -69,6 +71,8 @@ for tile in range(6):
     savepoints = serializer.savepoint_list()
 
     savepoint2 = serializer2.savepoint_list()
+
+
 
     ser_count = 0
     isready = False
@@ -91,10 +95,11 @@ for tile in range(6):
             in_data_fpvs = data_dict_from_var_list(IN_VARS_FPVS, serializer2, savepoint2[0])
 
             # run Python version
-            out_data = noah_lsm.run(in_data, in_data_fpvs, tile, ser_count)
+            time, out_data = noah_lsm.run(in_data, in_data_fpvs, tile, ser_count)
 
             isready = True
             ser_count += 1
+            total_time += time
 
         if sp.name.startswith("sfc_drv-out"):
 
@@ -110,4 +115,6 @@ for tile in range(6):
             compare_data(out_data, ref_data)
 
             isready = False
+
+print("total time: ", total_time, "s")
 

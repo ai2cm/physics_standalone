@@ -2,6 +2,7 @@
 
 import numpy as np
 from physcons import *
+import timeit
 
 OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy",
             "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx",
@@ -18,32 +19,37 @@ def run(in_dict, in_dict2, tile, i):
         out_dict[key] = in_dict[key].copy()
         del in_dict[key]
 
+    tic = timeit.default_timer()
+
     sfc_drv(tile, i, **in_dict, **in_dict2, **out_dict)
+
+    toc = timeit.default_timer()
+    elapsed_time = toc - tic
     # sfc_drv(**in_dict, **in_dict2, **in_dict3, **out_dict)
 
-    return out_dict
+    return elapsed_time, out_dict
 
 
 def sfc_drv(tile, ser_count,
-    # inputs
-    im, km, ps, t1, q1, soiltyp, vegtype, sigmaf,
-    sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,
-    prsl1, prslki, zf, land, wind, slopetyp,
-    shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,
-    lheatstrg, isot, ivegsrc,
-    bexppert, xlaipert, vegfpert, pertvegf,
-    # Inputs to probe for port
-    # weasd_ref,
-    # parameters for fpvs
-    c1xpvs, c2xpvs, tbpvs,
-    # in/outs
-    weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
-    canopy, trans, tsurf, zorl,
-    # outputs
-    sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,
-    cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,
-    smcwlt2, smcref2, wet1
-):
+            # inputs
+            im, km, ps, t1, q1, soiltyp, vegtype, sigmaf,
+            sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,
+            prsl1, prslki, zf, land, wind, slopetyp,
+            shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,
+            lheatstrg, isot, ivegsrc,
+            bexppert, xlaipert, vegfpert, pertvegf,
+            # Inputs to probe for port
+            # weasd_ref,
+            # parameters for fpvs
+            c1xpvs, c2xpvs, tbpvs,
+            # in/outs
+            weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,
+            canopy, trans, tsurf, zorl,
+            # outputs
+            sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,
+            cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,
+            smcwlt2, smcref2, wet1
+            ):
     # --- ... subprograms called: ppfbet, sflx
 
     # Fortran starts with one, python with zero
@@ -121,7 +127,7 @@ def sfc_drv(tile, ser_count,
     qs1[i] = fpvs(c1xpvs, c2xpvs, tbpvs, t1[i])
     qs1[i] = np.maximum(eps*qs1[i] / (prsl1[i]+epsm1*qs1[i]), 1.e-8)
     q0[i] = np.minimum(qs1[i], q0[i])
-
+    
     zsoil[i, :] = zsoil_noah[:]
 
     first_iter = True
@@ -129,6 +135,8 @@ def sfc_drv(tile, ser_count,
     for i in range(0, im):
         if not(flag_iter[i] and land[i]):
             continue
+        if i == 145:
+            hallo = 0.
 
     # 1. configuration information
         couple = 1
@@ -199,6 +207,7 @@ def sfc_drv(tile, ser_count,
         z0 = zorl[i]/100.       # outside sflx, roughness uses cm as unit
         bexpp = bexppert[i]
         xlaip = xlaipert[i]
+        
 
         # call noah lsm
         # TODO: shdfac, snowh are marked as output variables but are declared before. In sflx shdfac value is used.
@@ -679,6 +688,7 @@ def canres(
     part[1:] = ((zsoil[1:nroot] - zsoil[:nroot-1])/zsoil[nroot-1]) * gx[1:]
 
     rcsoil = max(np.sum(part), 0.0001)
+    sum = np.sum(part)
 
     # determine canopy resistance due to all factors
     rc = rsmin / (xlai*rcs*rct*rcq*rcsoil)
@@ -1198,7 +1208,6 @@ def snopac(
             sneqv = 0.10
             snowh = 0.50
             sncovr = 1.0
-        
 
     return prcp1, cmc, t1, stc, sncovr, sneqv, sndens, snowh, sh2o, tbot, \
         smc, ssoil, runoff1, runoff2, runoff3, edir, ec, et, ett, \
@@ -1438,7 +1447,7 @@ def smflx(
     else:
         rhstt, runoff1, runoff2, ai, bi, ci = srt(nsoil, edir1, et1, sh2o, sh2o, pcpdrp, zsoil, dwsat,
                                                   dksat, smcmax, bexp, dt, smcwlt, slope, kdt, frzx, sice)
-
+        
         sh2o, runoff3, smc, cmc, rhstt, ai, bi, ci = sstep(nsoil, sh2o, rhsct, dt, smcmax, cmcmax, zsoil, sice,
                                                            cmc, rhstt, ai, bi, ci)
 
@@ -1555,8 +1564,8 @@ def frh2o(tkelv, smc, sh2o, smcmax, bexp, psis, i):
     while nlog < 10 and j.any():
         nlog += 1
 
-        df = np.log((psis*gs2/lsubf) * ((1.0 + ck*swl[j])**2.0) * (smcmax /
-                                                                   (smc[j] - swl[j]))**bx) - np.log(-(tkelv[j] - tfreez) / tkelv[j])
+        df = np.log((psis*gs2/lsubf) * ((1.0 + ck*swl[j])**2.0) * (
+            smcmax / (smc[j] - swl[j]))**bx) - np.log(-(tkelv[j] - tfreez) / tkelv[j])
 
         denom = 2.0*ck/(1.0 + ck*swl[j]) + bx/(smc[j] - swl[j])
         swlk = swl[j] - df / denom
@@ -1721,7 +1730,7 @@ def hrtice(
 
     # the remaining soil layers, repeating the above process
     denom = 0.5 * (zsoil[:-2] - zsoil[2:])
-    dtsdz2 = (zsoil[1:-1] - zsoil[2:]) / denom
+    dtsdz2 = (stc[1:-1] - stc[2:]) / denom
     ddz2 = 2.0 / (zsoil[:-2] - zsoil[2:])
     ci[1:-1] = -df1*ddz2 / ((zsoil[:-2] - zsoil[1:-1])*hcpct)
 
@@ -1884,7 +1893,7 @@ def srt(
             j = np.arange(ialp1) + 1
             j_factorial = np.array([np.math.factorial(i) for i in j])
             sum = 1. + np.sum(np.power(acrt, cvfrz - j) /
-                         (np.math.factorial(ialp1)/j_factorial))
+                              (np.math.factorial(ialp1)/j_factorial))
 
             fcr = 1. - np.exp(-acrt) * sum
 
@@ -1981,7 +1990,7 @@ def sstep(
         sh2oout[k] = sh2oin[k] + ci[k] + wplus/ddz[k]
         stot = sh2oout[k] + sice[k]
 
-        if stot > smcmax: 
+        if stot > smcmax:
             wplus = (stot-smcmax)*ddz[k]
         else:
             wplus = 0.
@@ -2023,7 +2032,7 @@ def tmpavg(
     tup, tm, tdn, zsoil, nsoil, i
 ):
     # --- ... subprograms called: none
- 
+
     tavg = np.zeros(nsoil)
 
     dz = np.append(-zsoil[0], zsoil[:-1] - zsoil[1:])
@@ -2043,20 +2052,20 @@ def tmpavg(
     xdn = dzh[j] - (tfreez - tm[j]) * dzh[j] / (tdn[j] - tm[j])
     tavg[j] = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup-xdn)+tdn[j]*xdn) / dz[j]
 
-    j = i &(tup < tfreez) & (tm >= tfreez) & (tdn >= tfreez)
+    j = i & (tup < tfreez) & (tm >= tfreez) & (tdn >= tfreez)
     xup = (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
     tavg[j] = 0.5*(tup[j]*xup + tfreez*(2.*dz[j]-xup)) / dz[j]
 
     j = i & (tup >= tfreez) & (tm < tfreez) & (tdn < tfreez)
     xup = dzh[j] - (tfreez - tup[j]) * dzh[j] / (tm[j] - tup[j])
     tavg[j] = 0.5*(tfreez * (dz[j] - xup) + tm[j] *
-                (dzh[j] + xup) + tdn[j] * dzh[j]) / dz[j]
+                   (dzh[j] + xup) + tdn[j] * dzh[j]) / dz[j]
 
     j = i & (tup >= tfreez) & (tm < tfreez) & (tdn >= tfreez)
     xup = dzh[j] - (tfreez-tup[j]) * dzh[j] / (tm[j]-tup[j])
     xdn = (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
     tavg[j] = 0.5 * (tfreez*(2. * dz[j] - xup - xdn) +
-                  tm[j] * (xup + xdn)) / dz[j]
+                     tm[j] * (xup + xdn)) / dz[j]
 
     j = i & (tup >= tfreez) & (tm >= tfreez) & (tdn < tfreez)
     xdn = dzh[j] - (tfreez-tm[j]) * dzh[j] / (tdn[j]-tm[j])
@@ -2137,6 +2146,8 @@ def init_array(shape, mode):
     return arr
 
 # TODO - this should be moved into a shared physics functions module
+
+
 def fpvs(c1xpvs, c2xpvs, tbpvs, t):
     nxpvs = 7501.
     xj = np.minimum(np.maximum(c1xpvs+c2xpvs*t, 1.), nxpvs)
