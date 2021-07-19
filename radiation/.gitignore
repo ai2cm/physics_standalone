@@ -1,5 +1,9 @@
-*/.dace.conf
+.dace.conf
 */_dace*
 *.F90
 *.o
 *.mod
+*.dat
+*.sdfg
+*.json
+*.x

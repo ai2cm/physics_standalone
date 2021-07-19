@@ -2,6 +2,7 @@ import gt4py
 import os
 import sys
 import numpy as np
+import gt4py.gtscript as gtscript
 from gt4py.gtscript import FORWARD, PARALLEL, Field, computation, interval, stencil
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
@@ -35,12 +36,14 @@ DTYPE_INT = np.int32
 DTYPE_FLT = np.float64
 FIELD_INT = Field[DTYPE_INT]
 FIELD_FLT = Field[DTYPE_FLT]
+FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
 
 rebuild = False
 validate = False
 backend = "gtc:gt:cpu_ifirst"
 shape0 = (1, 1, 1)
 shape = (npts, 1, 1)
+shape_2D = (npts, 1)
 shape_nlay = (npts, 1, nlay)
 shape_nlp1 = (npts, 1, nlp1)
 shape_nlp2 = (npts, 1, nlp1+1)
@@ -170,7 +173,7 @@ for var in locvars:
                                                   type_maxxsec)
     elif var == 'pwvcm':
         locdict_gt4py[var] = create_storage_zeros(backend,
-                                                  shape,
+                                                  shape_2D,
                                                   type1)
     elif var == 'tauaer' or var == 'taucld':
         locdict_gt4py[var] = create_storage_zeros(backend,
@@ -303,23 +306,23 @@ def set_clouds(clouds: Field[type_9],
 
 
 @stencil(backend=backend, rebuild=rebuild)
-def compute_temps_for_pwv(tem0: FIELD_FLT,
-                          tem1: FIELD_FLT,
-                          tem2: FIELD_FLT,
+def compute_temps_for_pwv(tem00: FIELD_2D,
+                          tem11: FIELD_FLT,
+                          tem22: FIELD_FLT,
                           coldry: FIELD_FLT,
                           colamt: Field[type_maxgas],
                           plvl: FIELD_FLT,
-                          pwvcm: FIELD_FLT):
+                          pwvcm: FIELD_2D):
     with computation(FORWARD), interval(0, 1):
-        tem1[0, 0, 0] = coldry[0, 0, 0] + colamt[0, 0, 0][0]
-        tem2[0, 0, 0] = colamt[0, 0, 0][0]
+        tem11[0, 0, 0] = coldry[0, 0, 0] + colamt[0, 0, 0][0]
+        tem22[0, 0, 0] = colamt[0, 0, 0][0]
     with computation(FORWARD), interval(1, None):
-        tem1[0, 0, 0] = tem1[0, 0, -1] + coldry[0, 0, 0] + colamt[0, 0, 0][0]
-        tem2[0, 0, 0] = tem2[0, 0, -1] + colamt[0, 0, 0][0]
+        tem11[0, 0, 0] = tem11[0, 0, -1] + coldry[0, 0, 0] + colamt[0, 0, 0][0]
+        tem22[0, 0, 0] = tem22[0, 0, -1] + colamt[0, 0, 0][0]
     with computation(FORWARD), interval(-1, None):
-        tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
+        tem00 = 10.0 * tem22 / (amdw * tem11 * con_g)
     with computation(FORWARD), interval(0, 1):
-        pwvcm[0, 0, 0] = tem0[0, 0, 0] * plvl[0, 0, 0]
+        pwvcm[0, 0] = tem00[0, 0] * plvl[0, 0, 0]
 
 
 # Execute code from here
@@ -382,63 +385,48 @@ set_clouds(indict_gt4py['clouds'],
            locdict_gt4py['cda2'],
            locdict_gt4py['cda3'],
            locdict_gt4py['cda4'],
-           domain=(npts, 1, 63),
+           domain=domain2,
            origin=default_origin,
            validate_args=validate)
 
-tem0 = gt4py.storage.zeros(backend=backend,
+tem00 = gt4py.storage.zeros(backend=backend,
                            default_origin=default_origin,
-                           shape=shape,
+                           shape=shape_2D,
                            dtype=type1)
-tem1 = gt4py.storage.zeros(backend=backend,
+tem11 = gt4py.storage.zeros(backend=backend,
                            default_origin=default_origin,
                            shape=shape_nlay,
                            dtype=type1)
-tem2 = gt4py.storage.zeros(backend=backend,
+tem22 = gt4py.storage.zeros(backend=backend,
                            default_origin=default_origin,
                            shape=shape_nlay,
                            dtype=type1)
 
 # This stencil below didn't work, but I realized it's just a sum over k. 
 
-compute_temps_for_pwv(tem0,
-                      tem1,
-                      tem2,
+compute_temps_for_pwv(tem00,
+                      tem11,
+                      tem22,
                       locdict_gt4py['coldry'],
                       locdict_gt4py['colamt'],
                       indict_gt4py['plvl'],
                       locdict_gt4py['pwvcm'],
                       origin=default_origin,
-                      domain=domain,
-                      validate_args=True)
-
-#tem1 = np.sum(locdict_gt4py['coldry'], 2)[:, :, None] + np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
-#tem2 = np.sum(locdict_gt4py['colamt'][:, :, :, 0], 2)[:, :, None]
-
-#tem0 = 10.0 * tem2 / (amdw * tem1 * con_g)
-#locdict_gt4py['pwvcm'] = tem0 * indict_gt4py['plvl'][:, :, 0][:, :, None]
+                      domain=domain2,
+                      validate_args=validate)
 
 # Load serialized data to validate against
 ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump'
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, 'Serialized_rank0')
-
 savepoints = serializer.savepoint_list()
-
 sp = savepoints[6]
 
 valdict = dict()
-
 for var in locvars:
     valdict[var] = serializer.read(var, sp)
 
 locdict_np = view_gt4py_storage(locdict_gt4py)
 
-# compare_data(valdict, locdict_np)
-
-print(f"local = {locdict_np['pwvcm']}")
-print(' ')
-print(f"val = {valdict['pwvcm']}")
-
-print(tem1[:, :, -1])
+compare_data(valdict, locdict_np)
 
 
