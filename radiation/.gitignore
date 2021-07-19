@@ -1,0 +1,5 @@
+*/.dace.conf
+*/_dace*
+*.F90
+*.o
+*.mod
