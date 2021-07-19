@@ -5,7 +5,7 @@ from gt4py import gtscript
 prefix = "sfc_sice"
 BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "numpy"
 REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else False
-IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
+IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else False
 
 DTYPE_INT = np.int32
 DTYPE_FLT = np.float64
