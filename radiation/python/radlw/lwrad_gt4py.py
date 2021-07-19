@@ -439,6 +439,6 @@ print(f"local = {locdict_np['pwvcm']}")
 print(' ')
 print(f"val = {valdict['pwvcm']}")
 
-print(tem2[:, :, -1])
+print(tem1[:, :, -1])
 
 
