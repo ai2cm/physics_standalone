@@ -1,3 +1,15 @@
+import numpy as np
+import xarray as xr
+import os
+import sys
+sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+from radlw_param import (ngb, ngptlw, nspa, nspb, oneminus,
+                        ng01, ng02, ng03, ng04, ng05, ng06, ng07, ng08,
+                        ng09, ng10, ng11, ng12, ng13, ng14, ng15, ng16,
+                        ns01, ns02, ns03, ns04, ns05, ns06, ns07, ns08,
+                        ns09, ns10, ns11, ns12, ns13, ns14, ns15, ns16)
+
+
 def taumol(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
            rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
            selffac,selffrac,indself,forfac,forfrac,indfor,
@@ -120,22 +132,88 @@ def taumol(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #
     #===> ...  begin here
     #
-    taugb01()
-    taugb02()
-    taugb03()
-    taugb04()
-    taugb05()
-    taugb06()
-    taugb07()
-    taugb08()
-    taugb09()
-    taugb10()
-    taugb11()
-    taugb12()
-    taugb13()
-    taugb14()
-    taugb15()
-    taugb16()
+    taug, fracs = taugb01(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay)
+    taug, fracs, tauself = taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs, tauself)
+    taug, fracs = taugb04(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb05(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb06(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb10(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb11(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb12(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs, taufor = taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb14(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs, taufor)
+    taug, fracs = taugb15(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+    taug, fracs = taugb16(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+                          rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+                          selffac,selffrac,indself,forfac,forfrac,indfor,
+                          minorfrac,scaleminor,scaleminorn2,indminor,
+                          nlay, taug, fracs)
+
+    tautot = np.zeros((ngptlw, nlay))
 
     #  ---  combine gaseous and aerosol optical depths
 
@@ -145,10 +223,16 @@ def taumol(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         for k in range(nlay):
             tautot[ig, k] = taug[ig, k] + tauaer[ib, k]
 
+    return fracs, tautot
+
     # band 1:  10-350 cm-1 (low key - h2o; low minor - n2);
     #  (high key - h2o; high minor - n2)         
 
-def taugb01():
+def taugb01(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay):
     #  ------------------------------------------------------------------  !
     #  written by eli j. mlawer, atmospheric & environmental research.     !
     #  revised by michael j. iacono, atmospheric & environmental research. !
@@ -166,6 +250,18 @@ def taugb01():
     #     upper - n2, p = 142.5490 mbar, t = 215.70 k
 
     #  --- ...  lower atmosphere loop
+
+    taug = np.zeros((ngptlw, nlay))
+    fracs = np.zeros((ngptlw, nlay))
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb01_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    ka_mn2 = ds['ka_mn2']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
 
     for k in range(laytrop):
         ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[0] + 1
@@ -234,7 +330,11 @@ def taugb01():
 
 
 # Band 2:  350-500 cm-1 (low key - h2o; high key - h2o)
-def taugb02():
+def taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay):
     #  ------------------------------------------------------------------  !
     #     band 2:  350-500 cm-1 (low key - h2o; high key - h2o)            !
     #  ------------------------------------------------------------------  !
@@ -242,6 +342,18 @@ def taugb02():
     #===> ...  begin here
     #
     #  --- ...  lower atmosphere loop
+
+    taug = np.zeros((ngptlw, nlay))
+    fracs = np.zeros((ngptlw, nlay))
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb02_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    ka_mn2 = ds['ka_mn2']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
 
     for k in range(laytrop):
         ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[1] + 1
@@ -291,9 +403,15 @@ def taugb02():
 
             fracs[ns02+ig, k] = fracrefb[ig]
 
+    return taug, fracs, tauself
+
 # Band 3:  500-630 cm-1 (low key - h2o,co2; low minor - n2o);
 #                        (high key - h2o,co2; high minor - n2o)
-def taugb03():
+def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs, tauself):
     #  ------------------------------------------------------------------  !
     #     band 3:  500-630 cm-1 (low key - h2o,co2; low minor - n2o)       !
     #                           (high key - h2o,co2; high minor - n2o)     !
@@ -305,6 +423,19 @@ def taugb03():
     #  --- ...  minor gas mapping levels:
     #     lower - n2o, p = 706.272 mbar, t = 278.94 k
     #     upper - n2o, p = 95.58 mbar, t = 215.7 k
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb03_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    ka_mn2o = ds['ka_mn2o']
+    kb_mn2o = ds['kb_mn2o']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
 
     refrat_planck_a = chi_mls[0, 8]/chi_mls[1, 8]    # P = 212.725 mb
     refrat_planck_b = chi_mls[0, 12]/chi_mls[1, 12]  # P = 95.58   mb
@@ -566,16 +697,34 @@ def taugb03():
             fracs[ns03+ig, k] = fracrefb[ig, jpl] + fpl * \
                 (fracrefb[ig, jplp] - fracrefb[ig, jpl])
 
+    return taug, fracs
+
 
 # Band 4:  630-700 cm-1 (low key - h2o,co2; high key - o3,co2)
 #----------------------------------
-def taugb04():
+def taugb04(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 4:  630-700 cm-1 (low key - h2o,co2; high key - o3,co2)     !
     #  ------------------------------------------------------------------  !
     #
     #===> ...  begin here
     #
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb04_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+
     refrat_planck_a = chi_mls[0, 10]/chi_mls[1, 10]     # P = 142.5940 mb
     refrat_planck_b = chi_mls[2, 12]/chi_mls[1, 12]     # P = 95.58350 mb
 
@@ -586,14 +735,14 @@ def taugb04():
         specparm = colamt[k, 0] / speccomb
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
-        fs = mod(specmult, f_one)
+        fs = specmult % 1.0
         ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[3] + js
 
         speccomb1 = colamt[k, 0] + rfrate[k, 0, 1]*colamt[k, 1]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
-        fs1 = mod(specmult1, f_one)
+        fs1 = specmult1 % 1.0
         ind1 = ( jp[k]*5 + (jt1[k]-1)) * nspa[3] + js1
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 1]
@@ -784,9 +933,15 @@ def taugb04():
         taug[ns04+13, k] = taug[ns04+13, k] * 0.88
         taug[ns04+14, k] = taug[ns04+14, k] * 0.943
 
+    return taug, fracs
+
 # Band 5:  700-820 cm-1 (low key - h2o,co2; low minor - o3, ccl4) 
 #                       (high key - o3,co2)                 
-def taugb05():
+def taugb05(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 5:  700-820 cm-1 (low key - h2o,co2; low minor - o3, ccl4)  !
     #                           (high key - o3,co2)                        !
@@ -800,6 +955,19 @@ def taugb05():
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower/upper atmosphere.
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb05_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+    ka_mo3 = ds['ka_mo3']
+    ccl4 = ds['ccl4']
 
     refrat_planck_a = chi_mls[0, 4]/chi_mls[1, 4]      # P = 473.420 mb
     refrat_planck_b = chi_mls[2, 42]/chi_mls[1, 42]    # P = 0.2369  mb
@@ -1018,9 +1186,15 @@ def taugb05():
             fracs[ns05+ig, k] = fracrefb[ig, jpl] + fpl * \
                 (fracrefb[ig, jplp] - fracrefb[ig, jpl])
 
+    return taug, fracs
+
 # Band 6:  820-980 cm-1 (low key - h2o; low minor - co2) 
 #                       (high key - none; high minor - cfc11, cfc12)
-def taugb06():
+def taugb06(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 6:  820-980 cm-1 (low key - h2o; low minor - co2)           !
     #                           (high key - none; high minor - cfc11, cfc12)
@@ -1029,6 +1203,18 @@ def taugb06():
     #  --- ...  minor gas mapping level:
     #     lower - co2, p = 706.2720 mb, t = 294.2 k
     #     upper - cfc11, cfc12
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb06_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    fracrefa = ds['fracrefa']
+    ka_mco2 = ds['ka_mco2']
+    cfc11adj = ds['cfc11adj']
+    cfc12 = ds['cfc12']
 
     #  --- ...  lower atmosphere loop
 
@@ -1081,9 +1267,15 @@ def taugb06():
             taug[ns06+ig, k] = wx[k, 1]*cfc11adj[ig] + wx[k, 2]*cfc12[ig]
             fracs[ns06+ig, k] = fracrefa[ig]
 
+    return taug, fracs
+
 # Band 7:  980-1080 cm-1 (low key - h2o,o3; low minor - co2)
 #                        (high key - o3; high minor - co2)
-def taugb07():
+def taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 7:  980-1080 cm-1 (low key - h2o,o3; low minor - co2)       !
     #                            (high key - o3; high minor - co2)         !
@@ -1095,6 +1287,19 @@ def taugb07():
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower atmosphere.
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb07_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+    ka_mco2 = ds['ka_mco2']
+    kb_mco2 = ds['kb_mco2']
 
     refrat_planck_a = chi_mls[0, 2]/chi_mls[2, 2]     # P = 706.2620 mb
     refrat_m_a = chi_mls[0, 2]/chi_mls[2, 2]          # P = 706.2720 mb
@@ -1309,10 +1514,16 @@ def taugb07():
         taug[ns07+10, k] = taug[ns07+10, k] * 0.99
         taug[ns07+11, k] = taug[ns07+11, k] * 0.855
 
+    return taug, fracs
+
 
 # Band 8:  1080-1180 cm-1 (low key - h2o; low minor - co2,o3,n2o) 
 #                         (high key - o3; high minor - co2, n2o) 
-def taugb08():
+def taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 8:  1080-1180 cm-1 (low key - h2o; low minor - co2,o3,n2o)  !
     #                             (high key - o3; high minor - co2, n2o)   !
@@ -1324,6 +1535,24 @@ def taugb08():
     #     lower - cfc12,cfc11
     #     upper - co2, p = 35.1632 mb, t = 223.28 k
     #     upper - n2o, p = 8.716e-2 mb, t = 226.03 k
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb08_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+    ka_mo3 = ds['ka_mo3']
+    ka_mco2 = ds['ka_mco2']
+    kb_mco2 = ds['kb_mco2']
+    cfc12 = ds['cfc12']
+    ka_mn2o = ds['ka_mn2o']
+    kb_mn2o = ds['kb_mn2o']
+    cfc22adj = ds['cfc22adj']
 
     #  --- ...  lower atmosphere loop
 
@@ -1410,10 +1639,16 @@ def taugb08():
 
             fracs[ns08+ig, k] = fracrefb[ig]
 
+    return taug, fracs
+
 
 # Band 9:  1180-1390 cm-1 (low key - h2o,ch4; low minor - n2o)
 #                         (high key - ch4; high minor - n2o)  
-def taugb09():
+def taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 9:  1180-1390 cm-1 (low key - h2o,ch4; low minor - n2o)     !
     #                             (high key - ch4; high minor - n2o)       !
@@ -1422,6 +1657,19 @@ def taugb09():
     #  --- ...  minor gas mapping level :
     #     lower - n2o, p = 706.272 mbar, t = 278.94 k
     #     upper - n2o, p = 95.58 mbar, t = 215.7 k
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb09_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+    ka_mn2o = ds['ka_mn2o']
+    kb_mn2o = ds['kb_mn2o']
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower/upper atmosphere.
@@ -1626,11 +1874,29 @@ def taugb09():
 
             fracs[ns09+ig, k] = fracrefb[ig]
 
+    return taug, fracs
+
 # Band 10:  1390-1480 cm-1 (low key - h2o; high key - h2o)
-def taugb10():
+def taugb10(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 10:  1390-1480 cm-1 (low key - h2o; high key - h2o)         !
     #  ------------------------------------------------------------------  !
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb10_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
@@ -1679,9 +1945,15 @@ def taugb10():
 
             fracs[ns10+ig, k] = fracrefb[ig]
 
+    return taug, fracs
+
 # Band 11:  1480-1800 cm-1 (low - h2o; low minor - o2) 
 #                          (high key - h2o; high minor - o2)   
-def taugb11():
+def taugb11(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 11:  1480-1800 cm-1 (low - h2o; low minor - o2)             !
     #                              (high key - h2o; high minor - o2)       !
@@ -1690,6 +1962,16 @@ def taugb11():
     #  --- ...  minor gas mapping level :
     #     lower - o2, p = 706.2720 mbar, t = 278.94 k
     #     upper - o2, p = 4.758820 mbarm t = 250.85 k
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb11_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+    ka_mo2 = ds['ka_mo2']
+    kb_mo2 = ds['kb_mo2']
 
     #  --- ...  lower atmosphere loop
 
@@ -1751,11 +2033,26 @@ def taugb11():
 
             fracs[ns11+ig, k] = fracrefb[ig]
 
+    return taug, fracs
+
 # Band 12:  1800-2080 cm-1 (low - h2o,co2; high - nothing)
-def taugb12():
+def taugb12(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 12:  1800-2080 cm-1 (low - h2o,co2; high - nothing)         !
     #  ------------------------------------------------------------------  !
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb12_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    fracrefa = ds['fracrefa']
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower/upper atmosphere.
@@ -1909,8 +2206,14 @@ def taugb12():
             taug[ns12+ig, k] = 0.0
             fracs[ns12+ig, k] = 0.0
 
+    return taug, fracs
+
 # Band 13:  2080-2250 cm-1 (low key-h2o,n2o; high minor-o3 minor)
-def taugb13():
+def taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 13:  2080-2250 cm-1 (low key-h2o,n2o; high minor-o3 minor)  !
     #  ------------------------------------------------------------------  !
@@ -1919,6 +2222,19 @@ def taugb13():
     #     lower - co2, p = 1053.63 mb, t = 294.2 k
     #     lower - co, p = 706 mb, t = 278.94 k
     #     upper - o3, p = 95.5835 mb, t = 215.7 k
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb13_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+    ka_mco2 = ds['ka_mco2']
+    ka_mco = ds['ka_mco']
+    kb_mo3 = ds['kb_mco3']
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower/upper atmosphere.
@@ -2122,11 +2438,26 @@ def taugb13():
 
             fracs[ns13+ig, k] =  fracrefb[ig]
 
+    return taug, fracs, taufor
+
 # Band 14:  2250-2380 cm-1 (low - co2; high - co2) 
-def taugb14():
+def taugb14(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs, taufor):
     #  ------------------------------------------------------------------  !
     #     band 14:  2250-2380 cm-1 (low - co2; high - co2)                 !
     #  ------------------------------------------------------------------  !
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb14_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
@@ -2170,9 +2501,15 @@ def taugb14():
 
             fracs[ns14+ig, k] = fracrefb[ig]
 
+    return taug, fracs
+
 # Band 15:  2380-2600 cm-1 (low - n2o,co2; low minor - n2) 
 #                          (high - nothing)     
-def taugb15():
+def taugb15(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 15:  2380-2600 cm-1 (low - n2o,co2; low minor - n2)         !
     #                              (high - nothing)                        !
@@ -2180,6 +2517,16 @@ def taugb15():
 
     #  --- ...  minor gas mapping level :
     #     lower - nitrogen continuum, P = 1053., T = 294.
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb15_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    fracrefa = ds['fracrefa']
+    ka_mn2 = ds['ka_mn2']
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower atmosphere.
@@ -2349,12 +2696,30 @@ def taugb15():
 
             fracs[ns15+ig, k] = 0.0
 
+    return taug, fracs
+
 
 # Band 16:  2600-3250 cm-1 (low key- h2o,ch4; high key - ch4)
-def taugb16():
+def taugb16(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
+           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
+           selffac,selffrac,indself,forfac,forfrac,indfor,
+           minorfrac,scaleminor,scaleminorn2,indminor,
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 16:  2600-3250 cm-1 (low key- h2o,ch4; high key - ch4)      !
     #  ------------------------------------------------------------------  !
+
+    dsc = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    chi_mls = dsc['chi_mls']
+
+    ds = xr.open_dataset('../lookupdata/radlw_kgb16_data.nc')
+    selfref = ds['selfref']
+    forref = ds['forref']
+    absa = ds['absa']
+    absb = ds['absb']
+    fracrefa = ds['fracrefa']
+    fracrefb = ds['fracrefb']
+
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower atmosphere.
 
@@ -2513,3 +2878,5 @@ def taugb16():
                  fac01[k]*absb[ig, ind1] + fac11[k]*absb[ig, ind1p])
 
             fracs[ns16+ig, k] = fracrefb[ig]
+
+    return taug, fracs

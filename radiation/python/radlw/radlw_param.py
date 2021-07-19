@@ -21,44 +21,50 @@ nplnk  = 181
 NBDLW = nbands
 
 # \name Number of g-point in each band
-NG01=10
-NG02=12
-NG03=16
-NG04=14
-NG05=16
-NG06=8
-NG07=12
-NG08=8
-NG09=12
-NG10=6
-NG11=8
-NG12=8
-NG13=4
-NG14=2
-NG15=2
-NG16=2
+ng01=10
+ng02=12
+ng03=16
+ng04=14
+ng05=16
+ng06=8
+ng07=12
+ng08=8
+ng09=12
+ng10=6
+ng11=8
+ng12=8
+ng13=4
+ng14=2
+ng15=2
+ng16=2
 
 # \name Begining index of each band
-NS01=0
-NS02=10
-NS03=22
-NS04=38
-NS05=52
-NS06=68
-NS07=76
-NS08=88
-NS09=96
-NS10=108
-NS11=114,        
-NS12=122
-NS13=130
-NS14=134
-NS15=136
-NS16=138
+ns01=0
+ns02=10
+ns03=22
+ns04=38
+ns05=52
+ns06=68
+ns07=76
+ns08=88
+ns09=96
+ns10=108
+ns11=114,        
+ns12=122
+ns13=130
+ns14=134
+ns15=136
+ns16=138
 
 # band indices for each g-point
-NGB = [10*1, 12*2, 16*3, 14*4, 16*5, 8*6, 12*7,  8*8, 12*9,
+ngb = [10*1, 12*2, 16*3, 14*4, 16*5, 8*6, 12*7,  8*8, 12*9,
        6*10, 8*11, 8*12, 4*13, 2*14, 2*15, 2*16]  
+
+nspa = [1, 1, 9, 9, 9, 1, 9, 1, 9, 1, 1, 9, 9, 1, 9, 9]
+nspb = [1, 1, 5, 5, 5, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0]
+
+eps = 1.e-6
+oneminus = 1-eps
 
 # Band spectrum structures (wavenumber is 1/cm
 wvnlw1 = np.array([10.,  350.,  500.,  630.,  700.,  820.,  980., 1080.,
