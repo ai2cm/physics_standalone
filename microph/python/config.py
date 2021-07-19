@@ -5,7 +5,7 @@ from gt4py import gtscript
 prefix = "cloud_mp"
 ### SERIALIZATION ###
 
-IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
+IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else False
 
 # Path of serialbox directory
 if IS_DOCKER:
