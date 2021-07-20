@@ -1913,10 +1913,12 @@ def init(
             dtdz1 = dt2 / (zi[0, 0, 1] - zi[0, 0, 0])
             ustar = sqrt(stress[0, 0, 0])
 
+    with computation(PARALLEL):
         with interval(0, -2):
             dw2 = (u1[0, 0, 0] - u1[0, 0, 1]) ** 2 + (v1[0, 0, 0] - v1[0, 0, 1]) ** 2
             shr2 = max(dw2, dw2min) * rdzt[0, 0, 0] * rdzt[0, 0, 0]
 
+    with computation(PARALLEL):
         with interval(...):
             rbup = rbsoil[0, 0, 0]
 
@@ -2993,6 +2995,7 @@ def part14(
             if dspheat:
                 tdt = tdt[0, 0, 0] + dspfac * (diss[0, 0, 0] / cp)
 
+    with computation(PARALLEL):
         with interval(0, 1):
             ad = 1.0 + dtdz1[0, 0, 0] * stress[0, 0, 0] / spd1[0, 0, 0]
             f1 = u1[0, 0, 0]

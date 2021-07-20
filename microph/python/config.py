@@ -5,7 +5,7 @@ from gt4py import gtscript
 prefix = "cloud_mp"
 ### SERIALIZATION ###
 
-IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
+IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else False
 
 # Path of serialbox directory
 if IS_DOCKER:
@@ -130,7 +130,7 @@ FIELD_FLT = gtscript.Field[DTYPE_FLT]
 
 # GT4PY parameters
 BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "gtx86"
-REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else True
+REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else False
 DEBUG_MODE = (
     (os.getenv("DEBUG_MODE") == "True") if ("DEBUG_MODE" in os.environ) else False
 )
