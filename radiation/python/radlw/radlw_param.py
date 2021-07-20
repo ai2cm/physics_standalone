@@ -10,7 +10,7 @@ ngptlw = 140
 # lookup table dimension
 ntbl = 10000   
 # max num of absorbing gases
-macgas = 7      
+maxgas = 7      
 # num of halocarbon gasees
 maxxsec = 4     
 # num of ref rates of binary species
@@ -84,3 +84,10 @@ absrain = 0.33e-3       # ncar coeff
 abssnow0 = 1.5          # fu   coeff
 # abssnow1 is the snow flake absorption coefficient \f$(m^{2}/g)\f$, ncar coeff
 abssnow1 = 2.34e-3      # ncar coeff
+
+a0 = [1.66,  1.55,  1.58,  1.66,  1.54, 1.454,  1.89,  1.33,
+      1.668,  1.66,  1.66,  1.66,  1.66,  1.66,  1.66,  1.66]
+a1 = [0.00,  0.25,  0.22,  0.00,  0.13, 0.446, -0.10,  0.40,
+      -0.006,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00]
+a2 = [0.00, -12.0, -11.7,  0.00, -0.72,-0.243,  0.19,-0.062,
+      0.414,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00]

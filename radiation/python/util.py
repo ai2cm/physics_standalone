@@ -50,3 +50,28 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
     else:
         if not flag:
             print(f"Output data does not match reference data for field {wrong}!")
+
+def create_storage_from_array(var, backend, shape, dtype):
+    out = gt4py.storage.from_array(
+            var,
+            backend=backend,
+            default_origin=default_origin,
+            shape=shape,
+            dtype=dtype)
+    return out
+
+def create_storage_zeros(backend, shape, dtype):
+    out = gt4py.storage.zeros(
+            backend=backend,
+            default_origin=default_origin,
+            shape=shape,
+            dtype=dtype)
+    return out
+
+def create_storage_ones(backend, shape, dtype):
+    out = gt4py.storage.ones(
+            backend=backend,
+            default_origin=default_origin,
+            shape=shape,
+            dtype=dtype)
+    return out

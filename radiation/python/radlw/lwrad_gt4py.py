@@ -6,7 +6,13 @@ import gt4py.gtscript as gtscript
 from gt4py.gtscript import FORWARD, PARALLEL, Field, computation, interval, stencil
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
-from util import view_gt4py_storage, compare_data
+from radlw_param import a0, a1, a2, nbands, maxgas, maxxsec, eps
+from util import view_gt4py_storage, compare_data, create_storage_from_array, create_storage_zeros, create_storage_ones
+from config import (npts, nlay, nlp1, ilwrgas, ilwcliq, DTYPE_FLT, DTYPE_INT,
+                    FIELD_FLT, FIELD_2D, FIELD_INT, shape0, shape, shape_2D,
+                    shape_nlay, shape_nlp1, shape_nlp2, default_origin,
+                    type1, type_nbands, type_nbands3, type_maxgas, type_maxxsec,
+                    type_9, type_10, domain, domain2)
 
 os.environ["DYLD_LIBRARY_PATH"]="/Users/AndrewP/Documents/code/serialbox2/install/lib"
 
@@ -14,47 +20,14 @@ SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-eps = 1e-6
-npts = 24
-nbands = 16
-nlay = 63
-nlp1 = 64
-maxgas = 7
-ilwrgas = 1
-ilwcliq = 1
-maxxsec = 4
-
-domain = (npts, 1, 1)
-domain2 = (npts, 1, nlay)
-
 amdw = con_amd/con_amw
 amdo3 = con_amd/con_amo3
 
 semiss0_np = np.ones(nbands)
 
-DTYPE_INT = np.int32
-DTYPE_FLT = np.float64
-FIELD_INT = Field[DTYPE_INT]
-FIELD_FLT = Field[DTYPE_FLT]
-FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
-
 rebuild = False
 validate = False
 backend = "gtc:gt:cpu_ifirst"
-shape0 = (1, 1, 1)
-shape = (npts, 1, 1)
-shape_2D = (npts, 1)
-shape_nlay = (npts, 1, nlay)
-shape_nlp1 = (npts, 1, nlp1)
-shape_nlp2 = (npts, 1, nlp1+1)
-default_origin = (0, 0, 0)
-type1 = np.float64
-type_nbands = (np.float64, (nbands,))
-type_nbands3 = (np.float64, (nbands, 3))
-type_maxgas = (np.float64, (maxgas,))
-type_maxxsec = (np.float64, (maxxsec,))
-type_9 = (np.float64, (9,))
-type_10 = (np.float64, (10,))
 
 ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data'
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, 'Generator_rank0')
@@ -88,31 +61,6 @@ for var in invars:
 print('Done')
 print(' ')
 print('Creating input storages...')
-
-def create_storage_from_array(var, backend, shape, dtype):
-    out = gt4py.storage.from_array(
-            var,
-            backend=backend,
-            default_origin=default_origin,
-            shape=shape,
-            dtype=dtype)
-    return out
-
-def create_storage_zeros(backend, shape, dtype):
-    out = gt4py.storage.zeros(
-            backend=backend,
-            default_origin=default_origin,
-            shape=shape,
-            dtype=dtype)
-    return out
-
-def create_storage_ones(backend, shape, dtype):
-    out = gt4py.storage.ones(
-            backend=backend,
-            default_origin=default_origin,
-            shape=shape,
-            dtype=dtype)
-    return out
 
 indict_gt4py = dict()
 
@@ -158,7 +106,7 @@ locvars = ['pavel', 'tavel', 'delp', 'colbrd', 'h2ovmr',
            'o3vmr', 'coldry', 'colamt', 'temcol', 'tauaer',
            'taucld', 'semiss0', 'semiss', 'tz', 'dz', 'wx',
            'cldfrc', 'clwp', 'ciwp', 'relw', 'reiw', 'cda1', 'cda2',
-           'cda3', 'cda4', 'pwvcm']
+           'cda3', 'cda4', 'pwvcm', 'secdiff']
 
 locdict_gt4py = dict()
 
@@ -183,7 +131,7 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_ones(backend,
                                                  shape,
                                                  type_nbands)
-    elif var == 'semiss':
+    elif var == 'semiss' or var == 'secdiff':
         locdict_gt4py[var] = create_storage_zeros(backend,
                                                   shape,
                                                   type_nbands)
@@ -423,10 +371,51 @@ sp = savepoints[6]
 
 valdict = dict()
 for var in locvars:
-    valdict[var] = serializer.read(var, sp)
+    if var != 'secdiff':
+        valdict[var] = serializer.read(var, sp)
 
 locdict_np = view_gt4py_storage(locdict_gt4py)
 
-compare_data(valdict, locdict_np)
+# compare_data(valdict, locdict_np)
+
+# Start second loop here
+
+# @stencil(backend=backend, rebuild=rebuild)
+# def compute_broadening_gases(colamt: Field[type_maxgas],
+#                              coldry: FIELD_FLT,
+#                              colbrd: FIELD_FLT):
+
+print(locdict_gt4py['secdiff'].shape)
+
+A0 = create_storage_from_array(a0, backend, (1, 1, 1), type_nbands)
+A1 = create_storage_from_array(a1, backend, (1, 1, 1), type_nbands)
+A2 = create_storage_from_array(np.exp(a2), backend, (1, 1, 1), type_nbands)
+
+tem1 = 1.80
+tem2 = 1.50
+@stencil(backend=backend, rebuild=rebuild)
+def compute_diffusivity_angle_adj(secdiff: Field[type_nbands],
+                                  A0: Field[type_nbands],
+                                  A1: Field[type_nbands],
+                                  expval: FIELD_2D,
+                                  value: int):
+    with computation(PARALLEL), interval(...):
+        if j == 1 or j == 4 or j == 10:
+            secdiff[0, 0, 0][value] = 1.66
+        else:
+            secdiff[0, 0, 0][value] = min(tem1, max(tem2, A0[0, 0, 0][value]+A1[0, 0, 0][value] * \
+                expval))
+
+
+
+for j in range(nbands):
+    compute_diffusivity_angle_adj(locdict_gt4py['secdiff'],
+                                  A0,
+                                  A1,
+                                  np.exp(a2[j]*locdict_gt4py['pwvcm']),
+                                  value=j,
+                                  domain=domain,
+                                  origin=default_origin,
+                                  validate_args=validate)
 
 
