@@ -45,13 +45,4 @@ for var in invars:
 for var in flgvars:
     indict[var] = serializer.read(var, savepoints[0])
 
-print(f"jdat = {indict['jdat']}")
-
-
-radupdate(indict['idat'], indict['jdat'], indict['fhswr'], indict['dtf'],
-          indict['lsswr'], indict['me'],
-          indict['ictm'], indict['isol'], indict['iaer'],
-          indict['ntoz'], indict['ico2'], indict['month0'],
-          indict['iyear0'], indict['monthd'],
-          indict['loz1st'], indict['kyrsav'], indict['kyrstr'], indict['kyrend'],
-          indict['iyr_sav'])
+soldict, aerdict, gasdict, loz1st = radupdate(indict)

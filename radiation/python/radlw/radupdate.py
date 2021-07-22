@@ -1,3 +1,4 @@
+from inspect import getabsfile
 import os
 import sys
 import numpy as np
@@ -8,10 +9,7 @@ from sol_update import sol_update
 from aer_update import aer_update
 from gas_update import gas_update
 
-def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
-              ictmflg, isolar, iaerflg,
-              ioznflg, ico2flg, month0, iyear0, monthd,
-              loz1st, kyrsav, kyrstr, kyrend, iyr_sav):
+def radupdate(indict):
     # =================   subprogram documentation block   ================ !
     #                                                                       !
     # subprogram:   radupdate   calls many update subroutines to check and  !
@@ -71,6 +69,26 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
     #  ===================================================================  !
     #
 
+    idate = indict['idat']
+    jdate = indict['jdat']
+    deltsw = indict['fhswr']
+    deltim = indict['dtf']
+    lsswr = indict['lsswr']
+    me = indict['me']
+    ictmflg = indict['ictm']
+    isolar = indict['isol']
+    iaerflg = indict['iaer']
+    ioznflg = indict['ntoz']
+    ico2flg = indict['ico2']
+    month0 = indict['month0']
+    iyear0 = indict['iyear0']
+    monthd = indict['monthd']
+    loz1st = indict['loz1st']
+    kyrsav = indict['kyrsav']
+    kyrstr = indict['kyrstr']
+    kyrend = indict['kyrend']
+    iyr_sav = indict['iyr_sav']
+
     smon_sav = con_solr*np.ones(12)
 
     # -# Set up time stamp at fcst time and that for green house gases
@@ -115,16 +133,16 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
 
         print(f'lsol_chg = {lsol_chg}')
 
-        slag, sdec, cdec, solcon = sol_update(jdate,
-                                              kyear,
-                                              deltsw,
-                                              deltim,
-                                              lsol_chg,
-                                              me,
-                                              isolar,
-                                              solar_file,
-                                              iyr_sav,
-                                              smon_sav)
+        soldict = sol_update(jdate,
+                             kyear,
+                             deltsw,
+                             deltim,
+                             lsol_chg,
+                             me,
+                             isolar,
+                             solar_file,
+                             iyr_sav,
+                             smon_sav)
 
     # -# Call module_radiation_aerosols::aer_update(), monthly update, no
     # time interpolation
@@ -132,14 +150,14 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
         laswflg = (iaerflg % 10) > 0
         lalwflg = (iaerflg/10 % 10) > 0
         lavoflg = iaerflg >= 100
-        kprf, idxcg, cmixg, denng, ivolae = aer_update(iyear,
-                                                       imon,
-                                                       me,
-                                                       lalwflg,
-                                                       laswflg,
-                                                       lavoflg,
-                                                       kyrstr,
-                                                       kyrend)
+        aerdict = aer_update(iyear,
+                             imon,
+                             me,
+                             lalwflg,
+                             laswflg,
+                             lavoflg,
+                             kyrstr,
+                             kyrend)
 #
     # -# Call co2 and other gases update routine:
     # module_radiation_gases::gas_update()
@@ -149,8 +167,19 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
     else:
         lco2_chg = False
 #
-    co2vmr_sav = gco2cyc = gas_update(kyear, kmon, kday, khour, loz1st, lco2_chg, me,
-               ioznflg, ico2flg, ictmflg, kyrsav)
+    gasdict = gas_update(kyear,
+                         kmon,
+                         kday,
+                         khour,
+                         loz1st,
+                         lco2_chg,
+                         me,
+                         ioznflg,
+                         ico2flg,
+                         ictmflg,
+                         kyrsav)
 #
     if loz1st:
         loz1st = False
+
+    return soldict, aerdict, gasdict, loz1st

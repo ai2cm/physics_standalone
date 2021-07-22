@@ -255,4 +255,8 @@ def gas_update(iyear, imon, iday, ihour, loz1st, ldoco2, me,
 
             gco2cyc = np.zeros(12)
 
-        return co2vmr_sav, gco2cyc
+        outdict = dict()
+        outdict['co2vmr_sav'] = co2vmr_sav
+        outdict['gco2cyc'] = gco2cyc
+
+        return outdict

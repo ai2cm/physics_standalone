@@ -137,6 +137,7 @@ def taumol(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay)
+
     taug, fracs, tauself = taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
@@ -218,10 +219,10 @@ def taumol(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  ---  combine gaseous and aerosol optical depths
 
     for ig in range(ngptlw):
-        ib = ngb[ig]
+       ib = ngb[ig]-1
 
-        for k in range(nlay):
-            tautot[ig, k] = taug[ig, k] + tauaer[ib, k]
+       for k in range(nlay):
+           tautot[ig, k] = taug[ig, k] + tauaer[ib, k]
 
     return fracs, tautot
 
@@ -264,11 +265,11 @@ def taugb01(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     fracrefb = ds['fracrefb']
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[0] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[0] + 1
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[0]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[0]
+        inds = indself[k]-1
+        indf = indfor[k]-1
+        indm = indminor[k]-1
 
         ind0p = ind0 + 1
         ind1p = ind1 + 1
@@ -301,10 +302,10 @@ def taugb01(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[0] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[0] + 1
-        indf = indfor[k]
-        indm = indminor[k]
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[0]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[0]
+        indf = indfor[k]-1
+        indm = indminor[k]-1
 
         ind0p = ind0 + 1
         ind1p = ind1 + 1
@@ -327,6 +328,8 @@ def taugb01(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
 
             fracs[ig, k] = fracrefb[ig]
 
+    return taug, fracs
+
 
 
 # Band 2:  350-500 cm-1 (low key - h2o; high key - h2o)
@@ -334,7 +337,7 @@ def taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
            rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
            selffac,selffrac,indself,forfac,forfrac,indfor,
            minorfrac,scaleminor,scaleminorn2,indminor,
-           nlay):
+           nlay, taug, fracs):
     #  ------------------------------------------------------------------  !
     #     band 2:  350-500 cm-1 (low key - h2o; high key - h2o)            !
     #  ------------------------------------------------------------------  !
@@ -343,23 +346,19 @@ def taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #
     #  --- ...  lower atmosphere loop
 
-    taug = np.zeros((ngptlw, nlay))
-    fracs = np.zeros((ngptlw, nlay))
-
     ds = xr.open_dataset('../lookupdata/radlw_kgb02_data.nc')
     selfref = ds['selfref']
     forref = ds['forref']
-    ka_mn2 = ds['ka_mn2']
     absa = ds['absa']
     absb = ds['absb']
     fracrefa = ds['fracrefa']
     fracrefb = ds['fracrefb']
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[1] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[1] + 1
-        inds = indself[k]
-        indf = indfor[k]
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[1]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[1]
+        inds = indself[k]-1
+        indf = indfor[k]-1
 
         ind0p = ind0 + 1
         ind1p = ind1 + 1
@@ -384,9 +383,9 @@ def taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[1] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[1] + 1
-        indf = indfor[k]
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[1]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[1]
+        indf = indfor[k]-1
 
         ind0p = ind0 + 1
         ind1p = ind1 + 1
@@ -450,30 +449,30 @@ def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0        
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[2] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[2] + js-1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 0, 1]*colamt[k, 1]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[2] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[2] + js1-1
 
         speccomb_mn2o = colamt[k, 0] + refrat_m_a*colamt[k, 1]
         specparm_mn2o = colamt[k, 0] / speccomb_mn2o
         specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
-        jmn2o = 1 + int(specmult_mn2o)
+        jmn2o = 1 + int(specmult_mn2o)-1
         fmn2o = specmult_mn2o % 1.0
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 1]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k]-1
+        indf = indfor[k]-1
+        indm = indminor[k]-1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -484,7 +483,7 @@ def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of n2O by an empirical factor
         #           to obtain the proper contribution.
 
-        p = coldry[k] * chi_mls[3, jp[k]+1]
+        p = coldry[k] * chi_mls[3, jp[k]]
         ratn2o = colamt[k, 3] / p
         if ratn2o > 1.5:
             adjfac = 0.5 + (ratn2o - 0.5)**0.65
@@ -577,7 +576,7 @@ def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         fac211 = fk2*fac11[k]
 
         for ig in range(ng03):
-            auself = selffac[k]* (selfref[ig, inds] + selffrac[k] * \
+            tauself = selffac[k]* (selfref[ig, inds] + selffrac[k] * \
                 (selfref[ig, indsp] - selfref[ig, inds]))
             taufor  = forfac[k] * (forref[ig, indf] + forfrac[k] * \
                 (forref[ig, indfp] - forref[ig, indf]))
@@ -611,29 +610,29 @@ def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 4.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-13)*5 + (jt[k]-1)) * nspb[2] + js
+        ind0 = ((jp[k]-13)*5 + (jt[k]-1)) * nspb[2] + js-1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 0, 1]*colamt[k, 1]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 4.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[2] + js1
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[2] + js1-1
 
         speccomb_mn2o = colamt[k, 0] + refrat_m_b*colamt[k, 1]
         specparm_mn2o = colamt[k, 0] / speccomb_mn2o
         specmult_mn2o = 4.0 * min(specparm_mn2o, oneminus)
-        jmn2o = 1 + int(specmult_mn2o)
+        jmn2o = 1 + int(specmult_mn2o)-1
         fmn2o = specmult_mn2o % 1.0
 
         speccomb_planck = colamt[k, 0] + refrat_planck_b*colamt[k, 1]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 4.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
 
-        indf = indfor[k]
-        indm = indminor[k]
+        indf = indfor[k]-1
+        indm = indminor[k]-1
         indfp = indf + 1
         indmp = indm + 1
         jmn2op= jmn2o+ 1
@@ -652,7 +651,7 @@ def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of N2O by an empirical factor
         #           to obtain the proper contribution.
 
-        p = coldry[k] * chi_mls[3, jp[k]+1]
+        p = coldry[k] * chi_mls[3, jp[k]]
         ratn2o = colamt[k, 3] / p
         if ratn2o > 1.5:
             adjfac = 0.5 + (ratn2o - 0.5)**0.65
@@ -736,23 +735,23 @@ def taugb04(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[3] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[3] + js-1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 0, 1]*colamt[k, 1]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = ( jp[k]*5 + (jt1[k]-1)) * nspa[3] + js1
+        ind1 = ( jp[k]*5 + (jt1[k]-1)) * nspa[3] + js1-1
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 1]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
+        inds = indself[k]-1
+        indf = indfor[k]-1
         indsp = inds + 1
         indfp = indf + 1
         jplp  = jpl  + 1
@@ -870,19 +869,19 @@ def taugb04(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 4.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-13)*5 + (jt[k]-1)) * nspb[3] + js
+        ind0 = ((jp[k]-13)*5 + (jt[k]-1)) * nspb[3] + js-1
 
         speccomb1 = colamt[k, 2] + rfrate[k, 5, 1]*colamt[k, 1]
         specparm1 = colamt[k, 2] / speccomb1
         specmult1 = 4.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[3] + js1
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[3] + js1-1
 
         speccomb_planck = colamt[k, 2] + refrat_planck_b*colamt[k, 1]
         specparm_planck = colamt[k, 2] / speccomb_planck
         specmult_planck = 4.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
         jplp = jpl + 1
 
@@ -925,13 +924,13 @@ def taugb04(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #  --- ...  empirical modification to code to improve stratospheric cooling rates
         #           for co2. revised to apply weighting for g-point reduction in this band.
 
-        taug[ns04+ 8, k] = taug[ns04+ 8, k] * 0.92
-        taug[ns04+ 9, k] = taug[ns04+ 9, k] * 0.88
-        taug[ns04+10, k] = taug[ns04+10, k] * 1.07
-        taug[ns04+11, k] = taug[ns04+11, k] * 1.1
-        taug[ns04+12, k] = taug[ns04+12, k] * 0.99
-        taug[ns04+13, k] = taug[ns04+13, k] * 0.88
-        taug[ns04+14, k] = taug[ns04+14, k] * 0.943
+        taug[ns04+ 7, k] = taug[ns04+ 7, k] * 0.92
+        taug[ns04+ 8, k] = taug[ns04+ 8, k] * 0.88
+        taug[ns04+9, k] = taug[ns04+9, k] * 1.07
+        taug[ns04+10, k] = taug[ns04+10, k] * 1.1
+        taug[ns04+11, k] = taug[ns04+11, k] * 0.99
+        taug[ns04+12, k] = taug[ns04+12, k] * 0.88
+        taug[ns04+13, k] = taug[ns04+13, k] * 0.943
 
     return taug, fracs
 
@@ -981,30 +980,30 @@ def taugb05(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[4] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[4] + js-1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 0, 1]*colamt[k, 1]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[4] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[4] + js1-1
 
         speccomb_mo3 = colamt[k, 0] + refrat_m_a*colamt[k, 1]
         specparm_mo3 = colamt[k, 0] / speccomb_mo3
         specmult_mo3 = 8.0 * min(specparm_mo3, oneminus)
-        jmo3 = 1 + int(specmult_mo3)
+        jmo3 = 1 + int(specmult_mo3)-1
         fmo3 = specmult_mo3 % 1.0
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 1]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k]-1
+        indf = indfor[k]-1
+        indm = indminor[k]-1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -1112,7 +1111,7 @@ def taugb05(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                 (ka_mo3[ig, jmo3p, indmp] - ka_mo3[ig, jmo3, indmp])
             abso3   = o3m1 + minorfrac[k]*(o3m2 - o3m1)
 
-            taug(ns05+ig,k) = speccomb * \
+            taug[ns05+ig, k] = speccomb * \
                 (fac000*absa[ig, id000] + fac010*absa[ig, id010] + \
                 fac100*absa[ig, id100] + fac110*absa[ig, id110] + \
                 fac200*absa[ig, id200] + fac210*absa[ig, id210]) + \
@@ -1133,19 +1132,19 @@ def taugb05(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 4.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-13)*5 + (jt[k]-1)) * nspb[4] + js
+        ind0 = ((jp[k]-13)*5 + (jt[k]-1)) * nspb[4] + js-1
 
         speccomb1 = colamt[k, 2] + rfrate[k, 5, 1]*colamt[k, 1]
         specparm1 = colamt[k, 2] / speccomb1
         specmult1 = 4.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[4] + js1
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[4] + js1-1
 
         speccomb_planck = colamt[k, 2] + refrat_planck_b*colamt[k, 1]
         specparm_planck = colamt[k, 2] / speccomb_planck
         specmult_planck = 4.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
         jplp= jpl + 1
 
@@ -1219,12 +1218,12 @@ def taugb06(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[5] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[5] + 1
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[5]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[5]
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k]-1
+        indf = indfor[k]-1
+        indm = indminor[k]-1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -1312,30 +1311,30 @@ def taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[6] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[6] + js-1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 1, 1]*colamt[k, 2]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[6] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[6] + js1-1
 
         speccomb_mco2 = colamt[k, 0] + refrat_m_a*colamt[k, 2]
         specparm_mco2 = colamt[k, 0] / speccomb_mco2
         specmult_mco2 = 8.0 * min(specparm_mco2, oneminus)
-        jmco2 = 1 + int(specmult_mco2)
+        jmco2 = 1 + int(specmult_mco2)-1
         fmco2 = specmult_mco2 % 1.0
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 2]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck)-1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k]-1
+        indf = indfor[k]-1
+        indm = indminor[k]-1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -1348,7 +1347,7 @@ def taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of CO2 by an empirical factor
         #           to obtain the proper contribution.
 
-        temp   = coldry[k] * chi_mls[1, jp[k]+1]
+        temp   = coldry[k] * chi_mls[1, jp[k]]
         ratco2 = colamt[k, 1] / temp
         if ratco2 > 3.0:
             adjfac = 3.0 + (ratco2-3.0)**0.79
@@ -1477,7 +1476,7 @@ def taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #           to obtain the proper contribution.
 
     for k in range(laytrop, nlay):
-        temp   = coldry[k] * chi_mls[1, jp[k]+1]
+        temp   = coldry[k] * chi_mls[1, jp[k]]
         ratco2 = colamt[k, 1] / temp
         if ratco2 > 3.0:
             adjfac = 2.0 + (ratco2-2.0)**0.79
@@ -1485,10 +1484,10 @@ def taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         else:
             adjcolco2 = colamt[k, 1]
 
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[6] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[6] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[6]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[6]
 
-        indm = indminor[k]
+        indm = indminor[k]-1
         indmp = indm + 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
@@ -1507,12 +1506,12 @@ def taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #  --- ...  empirical modification to code to improve stratospheric cooling rates
         #           for o3.  revised to apply weighting for g-point reduction in this band.
 
-        taug[ns07+ 6, k] = taug[ns07+ 6, k] * 0.92
-        taug[ns07+ 7, k] = taug[ns07+ 7, k] * 0.88
-        taug[ns07+ 8, k] = taug[ns07+ 8, k] * 1.07
-        taug[ns07+ 9, k] = taug[ns07+ 9, k] * 1.1
-        taug[ns07+10, k] = taug[ns07+10, k] * 0.99
-        taug[ns07+11, k] = taug[ns07+11, k] * 0.855
+        taug[ns07+ 5, k] = taug[ns07+ 5, k] * 0.92
+        taug[ns07+ 6, k] = taug[ns07+ 6, k] * 0.88
+        taug[ns07+ 7, k] = taug[ns07+ 7, k] * 1.07
+        taug[ns07+ 8, k] = taug[ns07+ 8, k] * 1.1
+        taug[ns07+ 9, k] = taug[ns07+ 9, k] * 0.99
+        taug[ns07+10, k] = taug[ns07+10, k] * 0.855
 
     return taug, fracs
 
@@ -1557,12 +1556,12 @@ def taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[7] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[7] + 1
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[7]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[7]
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
+        indm = indminor[k] - 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indsp = inds + 1
@@ -1573,7 +1572,7 @@ def taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of co2 by an empirical factor
         #           to obtain the proper contribution.
 
-        temp   = coldry[k] * chi_mls[1, jp[k]+1]
+        temp   = coldry[k] * chi_mls[1, jp[k]]
         ratco2 = colamt[k, 1] / temp
         if ratco2 > 3.0:
             adjfac = 2.0 + (ratco2-2.0)**0.65
@@ -1593,7 +1592,7 @@ def taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
             absn2o  = (ka_mn2o[ig, indm] + minorfrac[k] * \
                 (ka_mn2o[ig, indmp] - ka_mn2o[ig, indm]))
 
-            taug[ns08+ig, k] = colamt(k,1) * \
+            taug[ns08+ig, k] = colamt[k, 0] * \
                 (fac00[k]*absa[ig, ind0] + fac10[k]*absa[ig, ind0p] + \
                 fac01[k]*absa[ig, ind1] + fac11[k]*absa[ig, ind1p]) + \
                 tauself+taufor + adjcolco2*absco2 + \
@@ -1605,10 +1604,10 @@ def taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[7] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[7] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[7]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[7]
 
-        indm = indminor[k]
+        indm = indminor[k]-1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indmp = indm + 1
@@ -1617,7 +1616,7 @@ def taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of co2 by an empirical factor
         #           to obtain the proper contribution.
 
-        temp   = coldry[k] * chi_mls[1, jp[k]+1]
+        temp   = coldry[k] * chi_mls[1, jp[k]]
         ratco2 = colamt[k, 1] / temp
         if ratco2 > 3.0:
             adjfac = 2.0 + (ratco2-2.0)**0.65
@@ -1685,30 +1684,30 @@ def taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[8] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[8] + js - 1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 3, 1]*colamt[k, 4]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[8] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[8] + js1 - 1
 
         speccomb_mn2o = colamt[k, 0] + refrat_m_a*colamt[k, 4]
         specparm_mn2o = colamt[k, 0] / speccomb_mn2o
         specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
-        jmn2o = 1 + int(specmult_mn2o)
+        jmn2o = 1 + int(specmult_mn2o) - 1
         fmn2o = specmult_mn2o % 1.0
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 4]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck) - 1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
+        indm = indminor[k] - 1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -1719,7 +1718,7 @@ def taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of n2o by an empirical factor
         #           to obtain the proper contribution.
 
-        temp   = coldry[k] * chi_mls[3, jp[k]+1]
+        temp   = coldry[k] * chi_mls[3, jp[k]]
         ratn2o = colamt[k, 3] / temp
         if ratn2o > 1.5:
             adjfac = 0.5 + (ratn2o-0.5)**0.65
@@ -1843,10 +1842,10 @@ def taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
 
     #  --- ...  upper atmosphere loop
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[8] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[8] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[8]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[8]
 
-        indm = indminor[k]
+        indm = indminor[k]-1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indmp = indm + 1
@@ -1855,7 +1854,7 @@ def taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         #           a minor species, adjust the column amount of n2o by an empirical factor
         #           to obtain the proper contribution.
 
-        temp   = coldry[k] * chi_mls[3, jp[k]+1]
+        temp   = coldry[k] * chi_mls[3, jp[k]]
         ratn2o = colamt[k, 3] / temp
         if ratn2o > 1.5:
             adjfac = 0.5 + (ratn2o - 0.5)**0.65
@@ -1900,11 +1899,11 @@ def taugb10(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[9] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[9] + 1
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[9]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[9]
 
-        inds = indself[k]
-        indf = indfor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indsp = inds + 1
@@ -1926,10 +1925,10 @@ def taugb10(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[9] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[9] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[9]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[9]
 
-        indf = indfor[k]
+        indf = indfor[k] - 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indfp = indf + 1
@@ -1976,12 +1975,12 @@ def taugb11(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[10] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[10] + 1
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[10]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[10]
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
+        indm = indminor[k] - 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indsp = inds + 1
@@ -2008,11 +2007,11 @@ def taugb11(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[10] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[10] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[10]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[10]
 
-        indf = indfor[k]
-        indm = indminor[k]
+        indf = indfor[k] - 1
+        indm = indminor[k] - 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indfp = indf + 1
@@ -2067,25 +2066,25 @@ def taugb12(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[11] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[11] + js - 1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 0, 1]*colamt[k, 1]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[11] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[11] + js1 - 1
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 1]
         specparm_planck = colamt[k, 0] / speccomb_planck
         if specparm_planck >= oneminus:
             specparm_planck = oneminus
         specmult_planck = 8.0 * specparm_planck
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck) - 1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
         indsp = inds + 1
         indfp = indf + 1
         jplp  = jpl  + 1
@@ -2234,7 +2233,7 @@ def taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     fracrefb = ds['fracrefb']
     ka_mco2 = ds['ka_mco2']
     ka_mco = ds['ka_mco']
-    kb_mo3 = ds['kb_mco3']
+    kb_mo3 = ds['kb_mo3']
 
     #  --- ...  calculate reference ratio to be used in calculation of Planck
     #           fraction in lower/upper atmosphere.
@@ -2251,19 +2250,19 @@ def taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[12] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[12] + js - 1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 2, 1]*colamt[k, 3]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[12] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[12] + js1 - 1
 
         speccomb_mco2 = colamt[k, 0] + refrat_m_a*colamt[k, 3]
         specparm_mco2 = colamt[k, 0] / speccomb_mco2
         specmult_mco2 = 8.0 * min(specparm_mco2, oneminus)
-        jmco2 = 1 + int(specmult_mco2)
+        jmco2 = 1 + int(specmult_mco2) - 1
         fmco2 = specmult_mco2 % 1.0
 
         #  --- ...  in atmospheres where the amount of co2 is too great to be considered
@@ -2273,18 +2272,18 @@ def taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         speccomb_mco = colamt[k, 0] + refrat_m_a3*colamt[k, 3]
         specparm_mco = colamt[k, 0] / speccomb_mco
         specmult_mco = 8.0 * min(specparm_mco, oneminus)
-        jmco = 1 + int(specmult_mco)
+        jmco = 1 + int(specmult_mco) - 1
         fmco = specmult_mco % 1.0
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 3]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck) - 1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
+        indm = indminor[k] - 1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -2427,7 +2426,7 @@ def taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        indm = indminor[k]
+        indm = indminor[k] - 1
         indmp = indm + 1
 
         for ig in range(ng13):
@@ -2461,11 +2460,11 @@ def taugb14(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  lower atmosphere loop
 
     for k in range(laytrop):
-        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[13] + 1
-        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[13] + 1
+        ind0 = ((jp[k]-1)*5 + (jt [k]-1)) * nspa[13]
+        ind1 = ( jp[k]   *5 + (jt1[k]-1)) * nspa[13]
 
-        inds = indself[k]
-        indf = indfor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
         ind0p = ind0 + 1
         ind1p = ind1 + 1
         indsp = inds + 1
@@ -2474,7 +2473,7 @@ def taugb14(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         for ig in range(ng14):
             tauself = selffac[k] * (selfref[ig, inds] + selffrac[k] * \
                 (selfref[ig, indsp] - selfref[ig, inds]))
-            aufor  = forfac[k] * (forref[ig, indf] + forfrac[k] * \
+            taufor  = forfac[k] * (forref[ig, indf] + forfrac[k] * \
                 (forref[ig, indfp] - forref[ig, indf])) 
 
             taug[ns14+ig, k] = colamt[k, 1] * \
@@ -2488,8 +2487,8 @@ def taugb14(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[13] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[13] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[13]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[13]
 
         ind0p = ind0 + 1
         ind1p = ind1 + 1
@@ -2542,32 +2541,32 @@ def taugb15(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[14] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[14] + js - 1
 
-        speccomb1 = colamt[k, 3] + rfrate[k, 4, 2]*colamt[k, 1]
+        speccomb1 = colamt[k, 3] + rfrate[k, 4, 1]*colamt[k, 1]
         specparm1 = colamt[k, 3] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[14] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[14] + js1 - 1
 
         speccomb_mn2 = colamt[k, 3] + refrat_m_a*colamt[k, 1]
         specparm_mn2 = colamt[k, 3] / speccomb_mn2
         specmult_mn2 = 8.0 * min(specparm_mn2, oneminus)
-        jmn2 = 1 + int(specmult_mn2)
+        jmn2 = 1 + int(specmult_mn2) - 1
         fmn2 = specmult_mn2 % 1.0
 
         speccomb_planck = colamt[k, 3] + refrat_planck_a*colamt[k, 1]
         specparm_planck = colamt[k, 3] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck) - 1
         fpl = specmult_planck % 1.0
 
         scalen2 = colbrd[k] * scaleminor[k]
 
-        inds = indself[k]
-        indf = indfor[k]
-        indm = indminor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
+        indm = indminor[k] - 1
         indsp = inds + 1
         indfp = indf + 1
         indmp = indm + 1
@@ -2733,23 +2732,23 @@ def taugb16(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
         specmult = 8.0 * min(specparm, oneminus)
         js = 1 + int(specmult)
         fs = specmult % 1.0
-        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[15] + js
+        ind0 = ((jp[k]-1)*5 + (jt[k]-1)) * nspa[15] + js - 1
 
         speccomb1 = colamt[k, 0] + rfrate[k, 3, 1]*colamt[k, 4]
         specparm1 = colamt[k, 0] / speccomb1
         specmult1 = 8.0 * min(specparm1, oneminus)
         js1 = 1 + int(specmult1)
         fs1 = specmult1 % 1.0
-        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[15] + js1
+        ind1 = (jp[k]*5 + (jt1[k]-1)) * nspa[15] + js1 - 1
 
         speccomb_planck = colamt[k, 0] + refrat_planck_a*colamt[k, 4]
         specparm_planck = colamt[k, 0] / speccomb_planck
         specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + int(specmult_planck)
+        jpl = 1 + int(specmult_planck) - 1
         fpl = specmult_planck % 1.0
 
-        inds = indself[k]
-        indf = indfor[k]
+        inds = indself[k] - 1
+        indf = indfor[k] - 1
         indsp = inds + 1
         indfp = indf + 1
         jplp  = jpl  + 1
@@ -2866,8 +2865,8 @@ def taugb16(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #  --- ...  upper atmosphere loop
 
     for k in range(laytrop, nlay):
-        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[15] + 1
-        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[15] + 1
+        ind0 = ((jp[k]-13)*5 + (jt [k]-1)) * nspb[15]
+        ind1 = ((jp[k]-12)*5 + (jt1[k]-1)) * nspb[15]
 
         ind0p = ind0 + 1
         ind1p = ind1 + 1

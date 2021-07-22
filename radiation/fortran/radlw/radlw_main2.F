@@ -1118,6 +1118,24 @@
 !! fractions for each longwave spectral band.
       lab_do_iplon4 : do iplon = 1, npts
 
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-taumol-input-"//trim(ser_count_str)
+  !$ser data laytrop=laytrop pavel=pavel coldry=coldry
+  !$ser data colamt=colamt colbrd=colbrd wx=wx
+  !$ser data tauaer=tauaer rfrate=rfrate fac00=fac00
+  !$ser data fac01=fac01 fac10=fac10 fac11=fac11
+  !$ser data jp=jp jt=jt jt1=jt1
+  !$ser data selffac=selffac selffrac=selffrac
+  !$ser data indself=indself forfac=forfac forfrac=forfrac
+  !$ser data indfor=indfor minorfrac=minorfrac
+  !$ser data scaleminor=scaleminor scaleminorn2=scaleminorn2
+  !$ser data indminor=indminor nlay=nlay fracs=fracs
+  !$ser data tautot=tautot 
+!$ser verbatim end if
+
         call taumol                                                     &
 !  ---  inputs:
      &     ( laytrop(iplon),pavel(iplon, :),coldry(iplon, :),                  &
@@ -1129,7 +1147,7 @@
      &       forfac(iplon,:),forfrac(iplon,:),indfor(iplon,:),          &
      &       minorfrac(iplon,:),scaleminor(iplon,:),                    &
      &       scaleminorn2(iplon,:),indminor(iplon,:),                   &
-     &       nlay,                                                      &
+     &       nlay,  iplon,  ser_count,                                                  &
 !  ---  outputs:
      &       fracs(iplon,:,:), tautot(iplon,:,:)                                              &
      &     )
@@ -3765,7 +3783,7 @@
      &       rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,                  &
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor,                &
-     &       nlay,                                                      &
+     &       nlay, iplon,  ser_count,                                                 &
      &       fracs, tautot                                              & !  ---  outputs
      &     )
 
@@ -3883,7 +3901,7 @@
 !  ******************************************************************   !
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, laytrop
+      integer, intent(in) :: nlay, laytrop, iplon, ser_count
 
       integer, dimension(nlay), intent(in) :: jp, jt, jt1, indself,     &
      &       indfor, indminor
@@ -3907,6 +3925,8 @@
 
 !  ---  locals
       real (kind=kind_phys), dimension(ngptlw,nlay) :: taug
+
+      character(len=6) :: ser_count_str
 
       integer :: ib, ig, k
 !
@@ -3938,6 +3958,14 @@
           tautot(ig,k) = taug(ig,k) + tauaer(ib,k)
         enddo
       enddo
+
+      !$ser verbatim if (iplon==1) then
+        !$ser mode write
+        !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+        !$ser verbatim write(*,*) 'iplon = ', iplon
+        !$ser savepoint "lw_taumol_out"//trim(ser_count_str)
+        !$ser data tautotout=tautot fracsout=fracs
+      !$ser verbatim endif
 
 ! =================
       contains

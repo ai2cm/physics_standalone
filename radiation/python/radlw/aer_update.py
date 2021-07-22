@@ -45,7 +45,14 @@ def aer_update(iyear, imon, me, lalwflg, laswflg, lavoflg, kyrstr,
     if lavoflg:
         ivolae = volc_update(imon, iyear, kyrstr, kyrend, me)
 
-    return kprfg, idxcg, cmixg, denng, ivolae
+    outdict = dict()
+    outdict['kprfg'] = kprfg
+    outdict['idxcg'] = idxcg
+    outdict['cmixg'] = cmixg
+    outdict['denng'] = denng
+    outdict['ivolae'] = ivolae
+
+    return outdict
    
    
 def trop_update(me, imon):

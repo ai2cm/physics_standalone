@@ -180,7 +180,12 @@ def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname,
               f'{nswr[0]}, {deltim[0]}, {deltsw[0]}, {dtswh[0]}, anginc, nstp =',
               f'{anginc[0]}, {nstp}')
 
-    return slag, sdec, cdec, solcon
+    outdict = dict()
+    outdict['slag'] = slag
+    outdict['sdec'] = sdec
+    outdict['cdec'] = cdec
+    outdict['solcon'] = solcon
+    return outdict
 
 
 def prtime(jd, fjd, dlt, alp, r1, solc, sollag):
