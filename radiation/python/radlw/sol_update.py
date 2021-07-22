@@ -1,10 +1,12 @@
 import numpy as np
 import xarray as xr
 import sys
+import os
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
-from phys_const import con_pi
+from phys_const import con_pi, con_solr
 
-def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname):
+def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname,
+               iyr_sav, smon_sav):
     #  ===================================================================  !
     #                                                                       !
     #  sol_update computes solar parameters at forecast time                !
@@ -74,88 +76,66 @@ def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname)
         if iyr_sav == iyear:   # same year, no new reading necessary
             if isolflg == 4:
                 solc0 = smon_sav[imon]
-            else:                           # need to read in new data
-                iyr_sav = iyear
-                #  --- ...  check to see if the solar constant data file existed
-                file_exist = os.path.isfile(solar_fname)
-
-                if not file_exist:
-                    print(' !!! ERROR! Can not find solar constant file!!!')
-                else:
-                    iyr = iyear
-
-                    ds = xr.open_dataset(solar_fname)
-
-                    iyr1 = ds['iyr1']
-                    iyr2 = ds['iyr2']
-                    icy1 = ds['icy1']
-                    icy2 = ds['icy2']
-                    smean = ds['smean']
-                    cline = ds['cline']
-
+        else:                           # need to read in new data
+            iyr_sav = iyear
+            #  --- ...  check to see if the solar constant data file existed
+            file_exist = os.path.isfile(solar_fname)
+            if not file_exist:
+                print(' !!! ERROR! Can not find solar constant file!!!')
+            else:
+                iyr = iyear
+                ds = xr.open_dataset(solar_fname)
+                iyr1 = ds['yr_start'].data
+                iyr2 = ds['yr_end'].data
+                icy1 = ds['yr_cyc1'].data
+                icy2 = ds['yr_cyc2'].data
+                smean = ds['smean'].data
+                if me == 0:
+                    print('Updating solar constant with cycle approx')
+                    print(f'Opened solar constant data file: {solar_fname}')
+                #  --- ...  check if there is a upper year limit put on the data table
+                if iyr < iyr1:
+                    icy = icy1 - iyr1 + 1    # range of the earlest cycle in data table
+                    while iyr < iyr1:
+                        iyr += icy
                     if me == 0:
-                        print('Updating solar constant with cycle approx')
-                        print(f'Opened solar constant data file: {solar_fname}')
-
-                    #  --- ...  check if there is a upper year limit put on the data table
-
-                    if iyr < iyr1:
-                        icy = icy1 - iyr1 + 1    # range of the earlest cycle in data table
-                        while iyr < iyr1:
-                            iyr += icy
-
-                        if me == 0:
-                            print(f'*** Year {iyear} out of table range!')
-                            print(f'{iyr1}, {iyr2}')
-                            print("Using the closest-cycle year ('{iyr}')")
-
-                    elif iyr > iyr2:
-                        icy = iyr2 - icy2 + 1   # range of the latest cycle in data table
-                        while iyr > iyr2:
-                            iyr -= icy
-
-                        if me == 0:
-                            print(f'*** Year {iyear} out of table range!')
-                            print(f'{iyr1}, {iyr2}')
-                            print(f"Using the closest-cycle year ('{iyr}')")
-
-
-                    #  --- ...  locate the right record for the year of data
-
-                    if isolflg < 4:        # use annual mean data tables
-                        i = iyr2
-                        while i >= iyr1:
-                            jyr = ds['jyr']
-                            solc1 = ds['solc1']
-
-                            if i == iyr and iyr == jyr:
-                                solc0  = smean + solc1
-
-                                if me == 0:
-                                    print('CHECK: Solar constant data used for year')
-                                    print(f'{iyr}, {solc1}, {solc0}')
-                            else:
-                                i -= 1
-                    elif isolflg == 4:   # use monthly mean data tables
-                        i = iyr2
-                        while i >= iyr1:
-                            jyr = ds['jyr']
-                            smon = ds['smon']
-
-                            if i == iyr and iyr == jyr:
-                                for nn in range(12):
-                                    smon_sav[nn] = smean + smon[nn]
-                                solc0 = smean + smon[imon]
-
-                                if me == 0:
-                                    print('CHECK: Solar constant data used for year')
-                                    print(f'{iyr} and month {imon}')
+                        print(f'*** Year {iyear} out of table range!')
+                        print(f'{iyr1}, {iyr2}')
+                        print("Using the closest-cycle year ('{iyr}')")
+                elif iyr > iyr2:
+                    icy = iyr2 - icy2 + 1   # range of the latest cycle in data table
+                    while iyr > iyr2:
+                        iyr -= icy
+                    if me == 0:
+                        print(f'*** Year {iyear} out of table range!')
+                        print(f'{iyr1}, {iyr2}')
+                        print(f"Using the closest-cycle year ('{iyr}')")
+                #  --- ...  locate the right record for the year of data
+                if isolflg < 4:        # use annual mean data tables
+                    solc1 = ds['solc1'].sel(year=iyr).data
+                    solc0 = smean + solc1
+                    if me == 0:
+                        print('CHECK: Solar constant data used for year',
+                              f'{iyr}, {solc1}, {solc0}')
+                elif isolflg == 4:   # use monthly mean data tables
+                    i = iyr2
+                    while i >= iyr1:
+                        jyr = ds['jyr']
+                        smon = ds['smon']
+                        if i == iyr and iyr == jyr:
+                            for nn in range(12):
+                                smon_sav[nn] = smean + smon[nn]
+                            solc0 = smean + smon[imon]
+                            if me == 0:
+                                print('CHECK: Solar constant data used for year')
+                                print(f'{iyr} and month {imon}')
 
                             else:                               
                                 i -= 1
+    else:
+        solc0 = con_solr
 
     #  --- ...  calculate forecast julian day and fraction of julian day
-
     jd1 = iw3jdn(iyear, imon, iday)
 
     #  --- ...  unlike in normal applications, where day starts from 0 hr,
@@ -170,10 +150,10 @@ def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname)
     fjd1 += jd1
 
     jd  = int(fjd1)
-    fjd -= jd
+    fjd = fjd1 - jd
 
     # -# Call solar()
-    r1, dlt, alp = solar(jd, fjd)
+    r1, dlt, alp, sollag, sindec, cosdec = solar(jd, fjd)
 
     #  --- ...  calculate sun-earth distance adjustment factor appropriate to date
     solcon = solc0 / (r1*r1)
@@ -185,11 +165,11 @@ def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname)
     #  --- ...  diagnostic print out
 
     if me == 0:
-        prtime(jd, fjd, dlt, alp, r1, solcon)
+        prtime(jd, fjd, dlt, alp, r1, solcon, sollag)
 
     #  --- ...  setting up calculation parameters used by subr coszmn
 
-    nswr  = max(1, round(deltsw/deltim))   # number of mdl t-step per sw call
+    nswr  = max(1, np.round(deltsw/deltim))   # number of mdl t-step per sw call
     dtswh = deltsw / f3600                 # time length in hours
 
     nstp = max(6, nswr)
@@ -197,13 +177,13 @@ def sol_update(jdate, kyear, deltsw, deltim, lsol_chg, me, isolflg, solar_fname)
 
     if me == 0:
         print('for cosz calculations: nswr,deltim,deltsw,dtswh =',
-              f'{nswr}, {deltim}, {deltsw}, {dtswh}, anginc, nstp =',
-              f'{anginc}, {nstp}')
+              f'{nswr[0]}, {deltim[0]}, {deltsw[0]}, {dtswh[0]}, anginc, nstp =',
+              f'{anginc[0]}, {nstp}')
 
     return slag, sdec, cdec, solcon
 
 
-def prtime(jd, fjd, dlt, alp, r1, solc):
+def prtime(jd, fjd, dlt, alp, r1, solc, sollag):
     #  ===================================================================  !
     #                                                                       !
     #  prtime prints out forecast date, time, and astronomy quantities.     !
@@ -246,12 +226,12 @@ def prtime(jd, fjd, dlt, alp, r1, solc):
     if fjd >= 0.5:
         jda = jd + 1
         mfjd= round(fjd*1440.0)
-        ihr = mfjd / 60 - 12
+        ihr = mfjd // 60 - 12
         xmin= float(mfjd) - (ihr + 12)*sixty
     else:
         jda = jd
         mfjd= round(fjd*1440.0)
-        ihr = mfjd / 60 + 12
+        ihr = mfjd // 60 + 12
         xmin= float(mfjd) - (ihr - 12)*sixty
 
     #  --- ...  get forecast year, month, and day from julian day
@@ -261,9 +241,9 @@ def prtime(jd, fjd, dlt, alp, r1, solc):
     #  -- ...  compute solar parameters
 
     dltd = np.rad2deg(dlt)
-    ltd  = dltd
+    ltd  = int(dltd)
     dltm = sixty * (np.abs(dltd) - abs(float(ltd)))
-    ltm  = dltm
+    ltm  = int(dltm)
     dlts = sixty * (dltm - float(ltm))
 
     if ((dltd < 0.0) and (ltd == 0.0)):
@@ -272,24 +252,26 @@ def prtime(jd, fjd, dlt, alp, r1, solc):
         dsig = sigb
 
     halp = 6.0 * alp / hpi
-    ihalp= halp
+    ihalp= int(halp)
     ymin = np.abs(halp - float(ihalp)) * sixty
-    iyy  = ymin
+    iyy  = int(ymin)
     asec = (ymin - float(iyy)) * sixty
 
     eqt  = 228.55735 * sollag
     eqsec= sixty * eqt
 
-    print(f'0 FORECAST DATE {iday},{imon},{iyear} AT {ihr} HRS, {xmin} MINS',
-          f'JULIAN DAY {jd} PLUS {fjd}')
+    print(f'0 FORECAST DATE {iday},{month[imon-1]},{iyear} AT {ihr} HRS, {xmin} MINS',
+          f'  JULIAN DAY {jd} PLUS {fjd}')
 
-    print(f'RADIUS VECTOR {r1} RIGHT ASCENSION OF SUN',
-          f'{halp} HRS, OR {ihalp} HRS {iyy} MINS {asec} SECS')
+    print(f'  RADIUS VECTOR {r1}') 
+    print(f'  RIGHT ASCENSION OF SUN {halp} HRS, OR {ihalp} HRS {iyy} MINS {asec} SECS')
 
-    print(f'DECLINATION OF THE SUN {dltd} DEGS, OR {dsig}',
-          f'{ltd} DEGS {ltm} MINS {dlts} SECS/  EQUATION OF TIME',
-          f'{eqt} MINS, OR {eqsec} SECS, OR {sollag} RADIANS',
-          f'SOLAR CONSTANT {solc} (DISTANCE AJUSTED)')
+    print(f'  DECLINATION OF THE SUN {dltd} DEGS, OR {dsig}',
+          f'  {ltd} DEGS {ltm} MINS {dlts} SECS')
+    print(f'  EQUATION OF TIME {eqt} MINS, OR {eqsec} SECS, OR {sollag} RADIANS')
+    print(f'  SOLAR CONSTANT {solc} (DISTANCE AJUSTED)')
+    print(' ')
+    print(' ')
 
 
 def solar(jd, fjd):
@@ -320,11 +302,11 @@ def solar(jd, fjd):
     #
 
     #  ---  locals:
-    parcyear = 365.25   # days of year
-    parccr   = 1.3e-6   # iteration limit
-    partpp   = 1.55     # days between epoch and
-    parsvt6  = 78.035   # days between perihelion passage
-    parjdor  = 2415020  # jd of epoch which is january
+    cyear = 365.25   # days of year
+    ccr   = 1.3e-6   # iteration limit
+    tpp   = 1.55     # days between epoch and
+    svt6  = 78.035   # days between perihelion passage
+    jdor  = 2415020  # jd of epoch which is january
 
     tpi = 2. * con_pi
 
@@ -345,7 +327,7 @@ def solar(jd, fjd):
     angin= 23.452294 - (0.0130125 + 0.164e-5 * t1) * t1
 
     ador = jdor
-    doe = ador + (svt6 * cyear) / (year - tyear)
+    jdoe = ador + (svt6 * cyear) / (year - tyear)
 
     # --- ...  deleqn is updated svt6 for current date
 
@@ -418,31 +400,33 @@ def solar(jd, fjd):
          sun = sun + tpi
     sollag = sun - alp - 0.03255
 
-    return r1, dlt, alp
+    return r1, dlt, alp, sollag, sindec, cosdec
 
+def integer_divide_towards_zero(a, b):
+    return -(-a // b) if a < 0 else a // b
 
 def iw3jdn(iyear, month, iday):
 
-    iw3jdn = iday - 32075 + 1461 * (iyear + 4800 + (month - 14) / 12) / 4 + \
-        367 * (month - 2 - (month -14) / 12 * 12) / 12 - \
-        3 * ((iyear + 4900 + (month - 14) / 12) / 100) / 4
+    iw3jdn = iday - 32075 + integer_divide_towards_zero(1461 * (iyear + 4800 + integer_divide_towards_zero((month - 14), 12)), 4) + \
+        integer_divide_towards_zero(367 * (month - 2 - integer_divide_towards_zero((month -14), 12) * 12), 12) - \
+        integer_divide_towards_zero(3 * (integer_divide_towards_zero((iyear + 4900 + integer_divide_towards_zero((month - 14), 12)), 100)), 4)
 
-    return iw3jdn
+    return int(iw3jdn)
 
 
 def w3fs26(JLDAYN):
     L = JLDAYN + 68569
-    N = 4 * L / 146097
-    L = L - (146097 * N + 3) / 4
-    I = 4000 * (L + 1) / 1461001
-    L = L - 1461 * I / 4 + 31
-    J = 80 * L / 2447
-    IDAY   = L - 2447 * J / 80
-    L      = J / 11
-    MONTH  = J + 2 - 12 * L
-    IYEAR  = 100 * (N - 49) + I + L
-    IDAYWK = ((JLDAYN + 1) % 7) + 1
-    IDAYYR = JLDAYN - \
-        (-31739 +1461 * (IYEAR+4799) / 4 - 3 * ((IYEAR+4899)/100)/4)
+    N = int(4 * L // 146097)
+    L = int(L - (146097 * N + 3) // 4)
+    I = int(4000 * (L + 1) // 1461001)
+    L = int(L - 1461 * I // 4 + 31)
+    J = int(80 * L // 2447)
+    IDAY   = int(L - 2447 * J // 80)
+    L      = int(J // 11)
+    MONTH  = int(J + 2 - 12 * L)
+    IYEAR  = int(100 * (N - 49) + I + L)
+    IDAYWK = int(((JLDAYN + 1) % 7) + 1)
+    IDAYYR = int(JLDAYN - \
+        (-31739 +1461 * (IYEAR+4799) // 4 - 3 * ((IYEAR+4899)//100)//4))
 
     return IYEAR, MONTH, IDAY, IDAYWK, IDAYYR

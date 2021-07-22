@@ -1,5 +1,17 @@
+import os
+import sys
+import numpy as np
+sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+from radphysparam import solar_file
+from phys_const import con_solr
+from sol_update import sol_update
+from aer_update import aer_update
+from gas_update import gas_update
+
 def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
-              slag, sdec, cdec, solcon):
+              ictmflg, isolar, iaerflg,
+              ioznflg, ico2flg, month0, iyear0, monthd,
+              loz1st, kyrsav, kyrstr, kyrend, iyr_sav):
     # =================   subprogram documentation block   ================ !
     #                                                                       !
     # subprogram:   radupdate   calls many update subroutines to check and  !
@@ -59,6 +71,8 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
     #  ===================================================================  !
     #
 
+    smon_sav = con_solr*np.ones(12)
+
     # -# Set up time stamp at fcst time and that for green house gases
     # (currently co2 only)
     # --- ...  time stamp at fcst time
@@ -99,20 +113,34 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
 
         iyear0 = iyear
 
+        print(f'lsol_chg = {lsol_chg}')
+
         slag, sdec, cdec, solcon = sol_update(jdate,
                                               kyear,
                                               deltsw,
                                               deltim,
                                               lsol_chg,
                                               me,
-                                              isolflg,
-                                              solar_fname)
+                                              isolar,
+                                              solar_file,
+                                              iyr_sav,
+                                              smon_sav)
 
     # -# Call module_radiation_aerosols::aer_update(), monthly update, no
     # time interpolation
     if lmon_chg:
-        aer_update(iyear, imon, me)
-
+        laswflg = (iaerflg % 10) > 0
+        lalwflg = (iaerflg/10 % 10) > 0
+        lavoflg = iaerflg >= 100
+        kprf, idxcg, cmixg, denng, ivolae = aer_update(iyear,
+                                                       imon,
+                                                       me,
+                                                       lalwflg,
+                                                       laswflg,
+                                                       lavoflg,
+                                                       kyrstr,
+                                                       kyrend)
+#
     # -# Call co2 and other gases update routine:
     # module_radiation_gases::gas_update()
     if monthd != kmon:
@@ -120,8 +148,9 @@ def radupdate(idate, jdate, deltsw, deltim, lsswr, me,
         lco2_chg = True
     else:
         lco2_chg = False
-
-    gas_update(kyear, kmon, kday, khour, loz1st, lco2_chg, me)
-
+#
+    co2vmr_sav = gco2cyc = gas_update(kyear, kmon, kday, khour, loz1st, lco2_chg, me,
+               ioznflg, ico2flg, ictmflg, kyrsav)
+#
     if loz1st:
         loz1st = False

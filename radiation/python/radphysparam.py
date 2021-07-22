@@ -113,7 +113,7 @@ lalw1bd = False
 isolar  = 0
 
 # external solar constant data table,solarconstant_noaa_a0.txt
-solar_file = 'solarconstant_noaa_a0.txt'
+solar_file = 'solarconstant_noaa_an.nc'
 
 # ............................................. !
 #   -2.2- For module radiation_aerosols
@@ -171,7 +171,7 @@ ioznflg = 1
 # external co2 global annual mean data tb: co2historicaldata_glob.txt
 # external co2 user defined data table: co2userdata.txt
 # external co2 clim monthly cycle data tb: co2monthlycyc.txt
-co2dat_file = 'co2historicaldata_2004.txt'
+co2dat_file = 'co2historicaldata_2004.nc'
 co2gbl_file = 'co2historicaldata_glob.txt'
 co2usr_file = 'co2userdata.txt'
 co2cyc_file = 'co2monthlycyc.txt'

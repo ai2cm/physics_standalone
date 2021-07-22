@@ -5,7 +5,8 @@ import sys
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from radphysparam import aeros_file
 
-def aer_update( iyear, imon, me ):
+def aer_update(iyear, imon, me, lalwflg, laswflg, lavoflg, kyrstr,
+               kyrend):
     #  ================================================================== 
     #                                                                     
     #  aer_update checks and update time varying climatology aerosol      
@@ -38,14 +39,16 @@ def aer_update( iyear, imon, me ):
    
     # -# Call trop_update() to update monthly tropospheric aerosol data.
     if lalwflg or laswflg:
-        trop_update()
+        kprfg, idxcg, cmixg, denng = trop_update(me, imon)
    
     # -# Call volc_update() to update yearly stratospheric volcanic aerosol data.
     if lavoflg:
-        volc_update()
+        ivolae = volc_update(imon, iyear, kyrstr, kyrend, me)
+
+    return kprfg, idxcg, cmixg, denng, ivolae
    
    
-def trop_update():
+def trop_update(me, imon):
     # This subroutine updates the monthly global distribution of aerosol
     # profiles in five degree horizontal resolution.
    
@@ -99,62 +102,25 @@ def trop_update():
         print(f'Requested aerosol data file "{aeros_file}" not found!')
         print('*** Stopped in subroutine trop_update !!')
 
+    kprf = np.zeros((IMXAE, JMXAE))
     idxcg = np.zeros((NXC, IMXAE, JMXAE), dtype=np.int32)
     cmixg = np.zeros((NXC, IMXAE, JMXAE), dtype=np.float64)
     denng = np.zeros((2, IMXAE, JMXAE), dtype=np.float64)
-   
-    #  --- ...  loop over 12 month global distribution
-   
-    for m in range(12):
-   
-           read(NIAERCM,12) cline
-     12    format(a80/)
-   
-           if ( m /= imon ) then
-   !         if ( me == 0 ) print *,'  *** Skipped ',cline
-   
-             do j = 1, JMXAE
-               do i = 1, IMXAE
-                 read(NIAERCM,*) id
-               enddo
-             enddo
-           else
-             if ( me == 0 ) print *,'  --- Reading ',cline
-   
-             do j = 1, JMXAE
-               do i = 1, IMXAE
-                 read(NIAERCM,14) (idxc(k),cmix(k),k=1,NXC),kprf,denn,nc,  &
-        &                         ctyp
-     14          format(5(i2,e11.4),i2,f8.2,i3,1x,a3)
-   
-                 kprfg(i,j)     = kprf
-                 denng(1,i,j)   = denn       ! num density of 1st layer
-                 if ( kprf >= 6 ) then
-                   denng(2,i,j) = cmix(NXC)  ! num density of 2dn layer
-                 else
-                   denng(2,i,j) = f_zero
-                 endif
-   
-                 tem = f_one
-                 do k = 1, NXC-1
-                   idxcg(k,i,j) = idxc(k)    ! component index
-                   cmixg(k,i,j) = cmix(k)    ! component mixing ratio
-                   tem          = tem - cmix(k)
-                 enddo
-                 idxcg(NXC,i,j) = idxc(NXC)
-                 cmixg(NXC,i,j) = tem        ! to make sure all add to 1.
-               enddo
-             enddo
-   
-             close (NIAERCM)
-             exit  Lab_do_12mon
-           endif     ! end if_m_block
-   
-         enddo  Lab_do_12mon
+
+    ds = xr.open_dataset(aeros_file)
+    kprfg = ds['kprfg'].data
+    idxcg = ds['idxcg'].data
+    cmixg = ds['cmixg'].data
+    denng = ds['denng'].data
+    cline = ds['cline'].data
+
+    if me == 0:
+        print(f'  --- Reading {cline[imon-1]}')
+
+    return kprfg, idxcg, cmixg, denng  
    
    
-   
-def volc_update():
+def volc_update(imon, iyear, kyrstr, kyrend, me):
     # This subroutine searches historical volcanic data sets to find and
     # read in monthly 45-degree lat-zone band of optical depth.
    
@@ -188,6 +154,8 @@ def volc_update():
    
     #  ---  locals:
     volcano_file = 'volcanic_aerosols_1850-1859.txt'
+    MINVYR = 1850
+    MAXVYR = 1999
     #
     #===>  ...  begin here
     #
@@ -196,13 +164,13 @@ def volc_update():
     if kyrstr <= iyear and iyear <= kyrend:   # use previously input data
         kyrsav = iyear
         return
-    else                                            # need to input new data
+    else:                                            # need to input new data
         kyrsav = iyear
         kyrstr = iyear - iyear % 10
         kyrend = kyrstr + 9
 
         if iyear < MINVYR or iyear > MAXVYR:
-            ivolae += 1            # set as lowest value
+            ivolae = np.ones((12, 4, 10))            # set as lowest value
             if me == 0:
                 print('Request volcanic date out of range,',
                       ' optical depth set to lowest value')
@@ -226,3 +194,5 @@ def volc_update():
         k = (kyrsav % 10) + 1
         print(f'CHECK: Sample Volcanic data used for month, year: {imon}, {iyear}')           
         print(ivolae[kmonsav, :, k])
+
+    return ivolae

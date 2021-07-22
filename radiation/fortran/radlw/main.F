@@ -8,6 +8,7 @@ program test
       use physcons, only : con_g, con_cp, con_avgd, con_amd, &
       con_amw, con_amo3
       use module_radlw_main, only : lwrad
+      use module_radiation_driver, only : radupdate
 
       integer :: im, lmk, lmp, npts, levr, imp_physics
       
@@ -96,13 +97,13 @@ program test
       integer, parameter :: me = 0
       integer :: ictm, isol, ico2, iaer, num_p2d,    &
      &       ntcw, ialb, iems, num_p3d, npdf3d, ntoz, iovr_sw, iovr_lw, &
-     &       isubc_sw, isubc_lw, icliq_sw, iflip, idate(4)
+     &       isubc_sw, isubc_lw, icliq_sw, iflip, idate(4), jdate(4)
       logical :: crick_proof, ccnorm, norad_precip
 
       integer:: idat(8), jdat(8)
       logical :: lsswr
 
-      real (kind=kind_phys) :: deltsw, deltim
+      real (kind=kind_phys) :: fhswr, dtf
 
 !  ---  outputs:
       real (kind=kind_phys) :: slag, sdec, cdec, solcon
@@ -193,9 +194,23 @@ program test
       call check_r_1d(sfcflw%upfx0, upfx0_s_ref, "upfx0_s")
       call check_r_2d(cldtaulw, cldtaulw_ref, "cldtaulw")
       end do
-      !$ser cleanup
+      
 
       end do
+
+      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=0
+      !$ser mode read
+      !$ser savepoint "rad-update"
+      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
+      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
+      
+
+      write(*,*) 'Running update'
+
+      call radupdate (idat, jdat, fhswr, dtf,  lsswr, &
+                      me,   slag, sdec,  cdec, solcon)
+        
+      !$ser cleanup
 
       call cdstop()
 

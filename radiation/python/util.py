@@ -2,6 +2,7 @@ import gt4py
 import numpy as np
 
 BACKEND = "gtc:gt:cpu_ifirst"
+default_origin = (0, 0, 0)
 
 # Cast a dictionary of gt4py storages into dictionary of numpy arrays
 def view_gt4py_storage(gt4py_dict):

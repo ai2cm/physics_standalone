@@ -49,7 +49,7 @@ ns07=76
 ns08=88
 ns09=96
 ns10=108
-ns11=114,        
+ns11=114
 ns12=122
 ns13=130
 ns14=134
@@ -65,6 +65,13 @@ nspb = [1, 1, 5, 5, 5, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0]
 
 eps = 1.e-6
 oneminus = 1-eps
+
+bpade   = 1.0/0.278
+wtdiff = 0.5
+pival = 2.0 * np.arcsin(1.0)
+fluxfac = pival * 2.0e4
+heatfac = con_g * 1.0e-2 / con_cp
+
 
 # Band spectrum structures (wavenumber is 1/cm
 wvnlw1 = np.array([10.,  350.,  500.,  630.,  700.,  820.,  980., 1080.,
@@ -84,6 +91,8 @@ absrain = 0.33e-3       # ncar coeff
 abssnow0 = 1.5          # fu   coeff
 # abssnow1 is the snow flake absorption coefficient \f$(m^{2}/g)\f$, ncar coeff
 abssnow1 = 2.34e-3      # ncar coeff
+
+cldmin = 1.0e-80
 
 a0 = [1.66,  1.55,  1.58,  1.66,  1.54, 1.454,  1.89,  1.33,
       1.668,  1.66,  1.66,  1.66,  1.66,  1.66,  1.66,  1.66]

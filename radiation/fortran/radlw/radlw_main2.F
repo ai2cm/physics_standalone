@@ -1035,14 +1035,24 @@
 
         if ( lcf1 ) then
 
+!$ser verbatim if (iplon == npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lw_cldprop_in_"//trim(ser_count_str)
+  !$ser data cldfrc=cldfrc clwp=clwp relw=relw ciwp=ciwp reiw=reiw cda1=cda1
+  !$ser data cda2=cda2 cda3=cda3 cda4=cda4 nlay=nlay nlp1=nlp1 ipseed=ipseed
+  !$ser data dz=dz delgth=delgth  
+!$ser verbatim endif
+
+
           call cldprop                                                  &
 !  ---  inputs:
-     &     ( cldfrc(iplon, :),clwp(iplon, :),relw(iplon, :),            &
-     &       ciwp(iplon, :),reiw(iplon, :),cda1(iplon, :),              &
-     &       cda2(iplon, :),cda3(iplon, :),cda4(iplon, :),              &
-     &       nlay, nlp1, ipseed(iplon), dz(iplon, :), delgth(iplon),                     &
+     &     ( cldfrc,clwp,relw,            &
+     &       ciwp,reiw,cda1,              &
+     &       cda2,cda3,cda4,              &
+     &       nlay, nlp1, iplon, npts, ipseed, dz, delgth,                     &
 !  ---  outputs:
-     &       cldfmc(iplon, :, :), taucld(iplon, :, :)                                             &
+     &       cldfmc, taucld                                             &
      &     )
 
 !  --- ...  save computed layer cloud optical depth for output
@@ -1509,7 +1519,7 @@
 ! ----------------------------
       subroutine cldprop                                                &
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
-     &       nlay, nlp1, ipseed, dz, de_lgth,                           &
+     &       nlay, nlp1, iplon, npts, ipseed, dz, de_lgth,                           &
      &       cldfmc, taucld                                             & !  ---  outputs
      &     )
 
@@ -1609,25 +1619,26 @@
       use module_radlw_cldprlw
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, nlp1, ipseed
+      integer, intent(in) :: nlay, nlp1, iplon, npts
+      integer, dimension(npts), intent(in) :: ipseed
 
-      real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cfrac
-      real (kind=kind_phys), dimension(nlay),   intent(in) :: cliqp,    &
+      real (kind=kind_phys), dimension(npts,0:nlp1), intent(in) :: cfrac
+      real (kind=kind_phys), dimension(npts, nlay),   intent(in) :: cliqp,    &
      &       reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4, dz
-      real (kind=kind_phys),                    intent(in) :: de_lgth
+      real (kind=kind_phys), dimension(npts), intent(in) :: de_lgth
 
 !  ---  outputs:
-      real (kind=kind_phys), dimension(ngptlw,nlay),intent(out):: cldfmc
-      real (kind=kind_phys), dimension(nbands,nlay),intent(out):: taucld
+      real (kind=kind_phys), dimension(npts,ngptlw,nlay),intent(out):: cldfmc
+      real (kind=kind_phys), dimension(npts,nbands,nlay),intent(out):: taucld
 
 !  ---  locals:
-      real (kind=kind_phys), dimension(nbands) :: tauliq, tauice
-      real (kind=kind_phys), dimension(nlay)   :: cldf
+      real (kind=kind_phys), dimension(npts,nbands) :: tauliq, tauice
+      real (kind=kind_phys), dimension(npts,nlay)   :: cldf
 
-      real (kind=kind_phys) :: dgeice, factor, fint, tauran, tausnw,    &
+      real (kind=kind_phys), dimension(npts) :: dgeice, factor, fint, tauran, tausnw,    &
      &       cldliq, refliq, cldice, refice
 
-      logical :: lcloudy(ngptlw,nlay)
+      logical :: lcloudy(npts,ngptlw,nlay)
       integer :: ia, ib, ig, k, index
 
 !
@@ -1635,13 +1646,13 @@
 !
       do k = 1, nlay
         do ib = 1, nbands
-          taucld(ib,k) = f_zero
+          taucld(iplon,ib,k) = f_zero
         enddo
       enddo
 
       do k = 1, nlay
         do ig = 1, ngptlw
-          cldfmc(ig,k) = f_zero
+          cldfmc(iplon,ig,k) = f_zero
         enddo
       enddo
 
@@ -1657,9 +1668,9 @@
       lab_if_ilwcliq : if (ilwcliq > 0) then
 
         lab_do_k : do k = 1, nlay
-          lab_if_cld : if (cfrac(k) > cldmin) then
+          lab_if_cld : if (cfrac(iplon,k) > cldmin) then
 
-            tauran = absrain * cdat1(k)                      ! ncar formula
+            tauran(iplon) = absrain * cdat1(iplon,k)                      ! ncar formula
 !!          tausnw = abssnow1 * cdat3(k)                     ! ncar formula
 !  ---  if use fu's formula it needs to be normalized by snow density
 !       !not use snow density = 0.1 g/cm**3 = 0.1 g/(mu * m**2)
@@ -1667,44 +1678,44 @@
 !       factor 1.5396=8/(3*sqrt(3)) converts reff to generalized ice particle size
 !       use newer factor value 1.0315
 !       1/(0.9167*1.0315) = 1.05756
-            if (cdat3(k)>f_zero .and. cdat4(k)>10.0_kind_phys) then
-              tausnw = abssnow0*1.05756*cdat3(k)/cdat4(k)      ! fu's formula
+            if (cdat3(iplon,k)>f_zero .and. cdat4(iplon,k)>10.0_kind_phys) then
+              tausnw(iplon) = abssnow0*1.05756*cdat3(iplon,k)/cdat4(iplon,k)      ! fu's formula
             else
-              tausnw = f_zero
+              tausnw(iplon) = f_zero
             endif
 
-            cldliq = cliqp(k)
-            cldice = cicep(k)
+            cldliq(iplon) = cliqp(iplon,k)
+            cldice(iplon) = cicep(iplon,k)
 !           refliq = max(2.5e0, min(60.0e0, reliq(k) ))
 !           refice = max(5.0e0, reice(k) )
-            refliq = reliq(k)
-            refice = reice(k)
+            refliq(iplon) = reliq(iplon,k)
+            refice(iplon) = reice(iplon,k)
 
 !  --- ...  calculation of absorption coefficients due to water clouds.
 
-            if ( cldliq <= f_zero ) then
+            if ( cldliq(iplon) <= f_zero ) then
               do ib = 1, nbands
-                tauliq(ib) = f_zero
+                tauliq(iplon,ib) = f_zero
               enddo
             else
               if ( ilwcliq == 1 ) then
 
-                factor = refliq - 1.5
-                index  = max( 1, min( 57, int( factor ) ))
-                fint   = factor - float(index)
+                factor(iplon) = refliq(iplon) - 1.5
+                index  = max( 1, min( 57, int( factor(iplon) ) ))
+                fint(iplon)   = factor(iplon) - float(index)
 
                 do ib = 1, nbands
-                  tauliq(ib) = max(f_zero, cldliq*(absliq1(index,ib)    &
-     &              + fint*(absliq1(index+1,ib)-absliq1(index,ib)) ))
+                  tauliq(iplon,ib) = max(f_zero, cldliq(iplon)*(absliq1(index,ib)    &
+     &              + fint(iplon)*(absliq1(index+1,ib)-absliq1(index,ib)) ))
                 enddo
               endif   ! end if_ilwcliq_block
             endif   ! end if_cldliq_block
 
 !  --- ...  calculation of absorption coefficients due to ice clouds.
 
-            if ( cldice <= f_zero ) then
+            if ( cldice(iplon) <= f_zero ) then
               do ib = 1, nbands
-                tauice(ib) = f_zero
+                tauice(iplon,ib) = f_zero
               enddo
             else
 
@@ -1712,12 +1723,12 @@
 !           unjustified for large ice particles
 
               if ( ilwcice == 1 ) then
-                refice = min(130.0, max(13.0, real(refice) ))
+                refice(iplon) = min(130.0, max(13.0, real(refice(iplon)) ))
 
                 do ib = 1, nbands
                   ia = ipat(ib)             ! eb_&_c band index for ice cloud coeff
-                  tauice(ib) = max(f_zero, cldice*(absice1(1,ia)        &
-     &                         + absice1(2,ia)/refice) )
+                  tauice(iplon,ib) = max(f_zero, cldice(iplon)*(absice1(1,ia)        &
+     &                         + absice1(2,ia)/refice(iplon)) )
                 enddo
 
 !  --- ...  streamer approach for ice effective radius between 5.0 and 131.0 microns
@@ -1726,13 +1737,13 @@
 
               elseif ( ilwcice == 2 ) then
 
-                factor = (refice - 2.0) / 3.0
-                index  = max( 1, min( 42, int( factor ) ))
-                fint   = factor - float(index)
+                factor(iplon) = (refice(iplon) - 2.0) / 3.0
+                index  = max( 1, min( 42, int( factor(iplon) ) ))
+                fint(iplon)   = factor(iplon) - float(index)
 
                 do ib = 1, nbands
-                  tauice(ib) = max(f_zero, cldice*(absice2(index,ib)    &
-     &              + fint*(absice2(index+1,ib) - absice2(index,ib)) ))
+                  tauice(iplon,ib) = max(f_zero, cldice(iplon)*(absice2(index,ib)    &
+     &              + fint(iplon)*(absice2(index+1,ib) - absice2(index,ib)) ))
                 enddo
 
 !  --- ...  fu's approach for ice effective radius between 4.8 and 135 microns
@@ -1741,21 +1752,21 @@
               elseif ( ilwcice == 3 ) then
 
 !               dgeice = max(5.0, 1.5396*refice)              ! v4.4 value
-                dgeice = max(5.0, 1.0315*refice)              ! v4.71 value
-                factor = (dgeice - 2.0) / 3.0
-                index  = max( 1, min( 45, int( factor ) ))
-                fint   = factor - float(index)
+                dgeice(iplon) = max(5.0, 1.0315*refice(iplon))              ! v4.71 value
+                factor(iplon) = (dgeice(iplon) - 2.0) / 3.0
+                index  = max( 1, min( 45, int( factor(iplon) ) ))
+                fint(iplon)   = factor(iplon) - float(index)
 
                 do ib = 1, nbands
-                  tauice(ib) = max(f_zero, cldice*(absice3(index,ib)    &
-     &              + fint*(absice3(index+1,ib) - absice3(index,ib)) ))
+                  tauice(iplon,ib) = max(f_zero, cldice(iplon)*(absice3(index,ib)    &
+     &              + fint(iplon)*(absice3(index+1,ib) - absice3(index,ib)) ))
                 enddo
 
               endif   ! end if_ilwcice_block
             endif   ! end if_cldice_block
 
             do ib = 1, nbands
-              taucld(ib,k) = tauice(ib) + tauliq(ib) + tauran + tausnw
+              taucld(iplon,ib,k) = tauice(iplon,ib) + tauliq(iplon,ib) + tauran(iplon) + tausnw(iplon)
             enddo
 
           endif  lab_if_cld
@@ -1764,9 +1775,9 @@
       else  lab_if_ilwcliq
 
         do k = 1, nlay
-          if (cfrac(k) > cldmin) then
+          if (cfrac(iplon,k) > cldmin) then
             do ib = 1, nbands
-              taucld(ib,k) = cdat1(k)
+              taucld(iplon,ib,k) = cdat1(iplon,k)
             enddo
           endif
         enddo
@@ -1778,10 +1789,10 @@
 
       if ( isubclw > 0 ) then      ! mcica sub-col clouds approx
         do k = 1, nlay
-          if ( cfrac(k) < cldmin ) then
-            cldf(k) = f_zero
+          if ( cfrac(iplon,k) < cldmin ) then
+            cldf(iplon,k) = f_zero
           else
-            cldf(k) = cfrac(k)
+            cldf(iplon,k) = cfrac(iplon,k)
           endif
         enddo
 
@@ -1789,17 +1800,17 @@
 
         call mcica_subcol                                               &
 !  ---  inputs:
-     &     ( cldf, nlay, ipseed, dz, de_lgth,                           &
+     &     ( cldf(iplon,:), nlay, ipseed(iplon), dz(iplon,:), de_lgth(iplon),                           &
 !  ---  output:
-     &       lcloudy                                                    &
+     &       lcloudy(iplon,:,:)                                                    &
      &     )
 
         do k = 1, nlay
           do ig = 1, ngptlw
-            if ( lcloudy(ig,k) ) then
-              cldfmc(ig,k) = f_one
+            if ( lcloudy(iplon,ig,k) ) then
+              cldfmc(iplon,ig,k) = f_one
             else
-              cldfmc(ig,k) = f_zero
+              cldfmc(iplon,ig,k) = f_zero
             endif
           enddo
         enddo

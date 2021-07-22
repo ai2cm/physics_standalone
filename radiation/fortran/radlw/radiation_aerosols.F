@@ -1977,6 +1977,10 @@
       if ( lalwflg .or. laswflg ) then 
         call trop_update
       endif
+  
+!$ser mode write
+!$ser savepoint 'lw_trop_update_out'
+!$ser data kprfg=kprfg idxcg=idxcg cmixg=cmixg denng=denng
 
 !> -# Call volc_update() to update yearly stratospheric volcanic aerosol data.
       if ( lavoflg ) then             

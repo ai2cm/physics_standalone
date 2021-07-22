@@ -1,8 +1,7 @@
 import os
 import sys
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
-from radphysparam import (solar_file, icldflg)
-from phys_const import con_solr_old, con_solr
+from radphysparam import icldflg
 from sol_init import sol_init
 from aer_init import aer_init
 from cld_init import cld_init
