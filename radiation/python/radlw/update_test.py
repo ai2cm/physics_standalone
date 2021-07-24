@@ -45,4 +45,6 @@ for var in invars:
 for var in flgvars:
     indict[var] = serializer.read(var, savepoints[0])
 
+print(f"ntoz = {indict['ntoz']}")
+
 soldict, aerdict, gasdict, loz1st = radupdate(indict)

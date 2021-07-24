@@ -494,6 +494,8 @@
         endif   lab_ictm
       endif   lab_ico2
 
+      write(*,*) 'LOZ = ', LOZ
+
       return
 !
 !...................................
