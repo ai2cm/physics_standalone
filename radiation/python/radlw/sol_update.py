@@ -314,6 +314,7 @@ def solar(jd, fjd):
     jdor  = 2415020  # jd of epoch which is january
 
     tpi = 2. * con_pi
+    degrad = 180.0/con_pi
 
     #===>  ...  begin here
 
@@ -332,14 +333,14 @@ def solar(jd, fjd):
     angin= 23.452294 - (0.0130125 + 0.164e-5 * t1) * t1
 
     ador = jdor
-    jdoe = ador + (svt6 * cyear) / (year - tyear)
+    jdoe = int(ador + (svt6 * cyear) / (year - tyear))
 
     # --- ...  deleqn is updated svt6 for current date
 
     deleqn= float(jdoe - jd) * (year - tyear) / cyear
     year  = year + 365.0
-    sni   = np.sin( np.deg2rad(angin))
-    tini  = 1.0 / np.tan(np.deg2rad(angin))
+    sni   = np.sin(angin/degrad)
+    tini  = 1.0 / np.tan(angin/degrad)
     er    = np.sqrt( (1.0 + ec) / (1.0 - ec) )
     qq    = deleqn * tpi / year
 
@@ -403,6 +404,12 @@ def solar(jd, fjd):
     sun = tpi * (date - deleqn) / year
     if sun < 0.0:
          sun = sun + tpi
+
+    print(f'tyear = {tyear}')
+    print(f'jdoe = {jdoe}')
+    print(f'deleqn = {deleqn}')
+    print(f'sun = {sun}')
+    print(f'alp = {alp}')
     sollag = sun - alp - 0.03255
 
     return r1, dlt, alp, sollag, sindec, cosdec

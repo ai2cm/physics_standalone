@@ -1,13 +1,11 @@
-from inspect import getabsfile
-import os
 import sys
 import numpy as np
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
-from radphysparam import solar_file
 from phys_const import con_solr
-from sol_update import sol_update
-from aer_update import aer_update
-from gas_update import gas_update
+
+from radiation_astronomy import AstronomyClass
+from radiation_aerosols import AerosolClass
+from radiation_gases import GasClass
 
 def radupdate(indict):
     # =================   subprogram documentation block   ================ !
@@ -84,12 +82,6 @@ def radupdate(indict):
     iyear0 = indict['iyear0']
     monthd = indict['monthd']
     loz1st = indict['loz1st']
-    kyrsav = indict['kyrsav']
-    kyrstr = indict['kyrstr']
-    kyrend = indict['kyrend']
-    iyr_sav = indict['iyr_sav']
-
-    smon_sav = con_solr*np.ones(12)
 
     # -# Set up time stamp at fcst time and that for green house gases
     # (currently co2 only)
@@ -133,31 +125,24 @@ def radupdate(indict):
 
         print(f'lsol_chg = {lsol_chg}')
 
-        soldict = sol_update(jdate,
-                             kyear,
-                             deltsw,
-                             deltim,
-                             lsol_chg,
-                             me,
-                             isolar,
-                             solar_file,
-                             iyr_sav,
-                             smon_sav)
+        sol = AstronomyClass(me, isolar)
 
+        slag, sdec, cdec, solcon = sol.sol_update(jdate,
+                                                  kyear,
+                                                  deltsw,
+                                                  deltim,
+                                                  lsol_chg, me)
+        soldict = {'slag': slag, 'sdec': sdec, 'cdec': cdec, 'solcon': solcon}
+#
     # -# Call module_radiation_aerosols::aer_update(), monthly update, no
     # time interpolation
     if lmon_chg:
-        laswflg = (iaerflg % 10) > 0
-        lalwflg = (iaerflg/10 % 10) > 0
-        lavoflg = iaerflg >= 100
-        aerdict = aer_update(iyear,
-                             imon,
-                             me,
-                             lalwflg,
-                             laswflg,
-                             lavoflg,
-                             kyrstr,
-                             kyrend)
+
+        NLAY = 63
+
+        aer = AerosolClass(NLAY, me, iaerflg)
+        aer.aer_update(iyear, imon, me)
+        aerdict = aer.return_updatedata()
 #
     # -# Call co2 and other gases update routine:
     # module_radiation_gases::gas_update()
@@ -166,19 +151,17 @@ def radupdate(indict):
         lco2_chg = True
     else:
         lco2_chg = False
-#
-    gasdict = gas_update(kyear,
-                         kmon,
-                         kday,
-                         khour,
-                         loz1st,
-                         lco2_chg,
-                         me,
-                         ioznflg,
-                         ico2flg,
-                         ictmflg,
-                         kyrsav)
-#
+
+    gas = GasClass(me, ioznflg, ico2flg, ictmflg)
+    gas.gas_update(kyear,
+                   kmon,
+                   kday,
+                   khour,
+                   loz1st,
+                   lco2_chg,
+                   me)
+    gasdict = gas.return_updatedata()
+
     if loz1st:
         loz1st = False
 

@@ -81,6 +81,11 @@ class GasClass():
         outdict = {'co2cyc_sav': 0}
         return outdict
 
+    def return_updatedata(self):
+        outdict = {'co2vmr_sav': self.co2vmr_sav,
+                   'gco2cyc': self.gco2cyc}
+        return outdict
+
     def gas_update(self, iyear, imon, iday, ihour, loz1st, ldoco2, me):
         #  ===================================================================  !
         #                                                                       !
@@ -256,8 +261,8 @@ class GasClass():
 
             #  --- ...  set up input data file name
 
-            cfile1 = self.co2dat_file
-            cfile1 = self.co2dat_file[:18] + str(idyr) + self.co2dat_file[22:]
+            cfile1 = co2dat_file
+            cfile1 = co2dat_file[:18] + str(idyr) + co2dat_file[22:]
 
             #  --- ... check to see if requested co2 data file existed
 
@@ -328,4 +333,4 @@ class GasClass():
                 gco2cyc = np.zeros(12)
 
             self.co2vmr_sav = co2vmr_sav
-            self.gco2cyc = self.gco2cyc
+            self.gco2cyc = gco2cyc

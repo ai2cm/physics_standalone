@@ -96,6 +96,11 @@ class AerosolClass():
         self.lmap_new = True
         self.NLAY = NLAY
 
+        self.kyrstr = 1
+        self.kyrend = 1
+        self.kyrsav = 1
+        self.kmonsav = 1
+
         self.haer = np.zeros((self.NDM, self.NAE))
         self.prsref = np.zeros((self.NDM, self.NAE))
         self.sigref = np.zeros((self.NDM, self.NAE))
@@ -192,6 +197,14 @@ class AerosolClass():
                    'haer': self.haer,
                    'eirfwv': self.eirfwv,
                    'solfwv': self.solfwv}
+        return outdict
+
+    def return_updatedata(self):
+        outdict = {'kprfg': self.kprfg,
+                   'idxcg': self.idxcg,
+                   'cmixg': self.cmixg,
+                   'denng': self.denng,
+                   'ivolae': self.ivolae}
         return outdict
 
     def wrt_aerlog(self):
@@ -870,3 +883,182 @@ class AerosolClass():
                     sumk += self.straext0[ni]*self.eirwaer[nb, ni]
 
                 self.extstra[ib] = sumk * rirbd
+
+    def aer_update(self, iyear, imon, me):
+        #  ================================================================== 
+        #                                                                     
+        #  aer_update checks and update time varying climatology aerosol      
+        #    data sets.                                                       
+        #                                                                     
+        #  inputs:                                          size              
+        #     iyear   - 4-digit calender year                 1               
+        #     imon    - month of the year                     1               
+        #     me      - print message control flag            1               
+        #                                                                     
+        #  outputs: ( none )                                                  
+        #                                                                     
+        #  external module variables: (in physparam)                          
+        #     lalwflg     - control flag for tropospheric lw aerosol          
+        #     laswflg     - control flag for tropospheric sw aerosol          
+        #     lavoflg     - control flag for stratospheric volcanic aerosol   
+        #                                                                     
+        #  usage:    call aero_update                                         
+        #                                                                     
+        #  subprograms called:  trop_update, volc_update                      
+        #                                                                     
+        #  ================================================================== 
+        #
+        #===> ...  begin here
+        #
+
+        self.iyear = iyear
+        self.imon = imon
+        self.me = me
+
+        if self.imon < 1 or self.imon > 12:
+            print('***** ERROR in specifying requested month !!! ',
+                f'imon = {imon}')
+            print('***** STOPPED in subroutinte aer_update !!!')
+    
+        # -# Call trop_update() to update monthly tropospheric aerosol data.
+        if self.lalwflg or self.laswflg:
+            self.trop_update()
+    
+        # -# Call volc_update() to update yearly stratospheric volcanic aerosol data.
+        if self.lavoflg:
+            self.volc_update()
+    
+    
+    def trop_update(self):
+        # This subroutine updates the monthly global distribution of aerosol
+        # profiles in five degree horizontal resolution.
+    
+        #  ==================================================================  !
+        #                                                                      !
+        #  subprogram : trop_update                                            !
+        #                                                                      !
+        #    updates the  monthly global distribution of aerosol profiles in   !
+        #    five degree horizontal resolution.                                !
+        #                                                                      !
+        #  ====================  defination of variables  ===================  !
+        #                                                                      !
+        #  inputs:  (in-scope variables, module constants)                     !
+        #   imon     - integer, month of the year                              !
+        #   me       - integer, print message control flag                     !
+        #                                                                      !
+        #  outputs: (module variables)                                         !
+        #                                                                      !
+        #  external module variables: (in physparam)                           !
+        #    aeros_file   - external aerosol data file name                    !
+        #                                                                      !
+        #  internal module variables:                                          !
+        #    kprfg (    IMXAE*JMXAE)   - aeros profile index                   !
+        #    idxcg (NXC*IMXAE*JMXAE)   - aeros component index                 !
+        #    cmixg (NXC*IMXAE*JMXAE)   - aeros component mixing ratio          !
+        #    denng ( 2 *IMXAE*JMXAE)   - aerosols number density               !
+        #                                                                      !
+        #    NIAERCM      - unit number for input data set                     !
+        #                                                                      !
+        #  subroutines called: none                                            !
+        #                                                                      !
+        #  usage:    call trop_update                                          !
+        #                                                                      !
+        #  ==================================================================  !
+        #
+        #
+        #===>  ...  begin here
+        #
+        #  --- ...  reading climatological aerosols data
+
+        file_exist = os.path.isfile(aeros_file)
+    
+        if file_exist:
+            if self.me == 0:
+                print(f'Opened aerosol data file: {aeros_file}')
+        else:
+            print(f'Requested aerosol data file "{aeros_file}" not found!')
+            print('*** Stopped in subroutine trop_update !!')
+
+        ds = xr.open_dataset(aeros_file)
+        self.kprfg = ds['kprfg'].data
+        self.idxcg = ds['idxcg'].data
+        self.cmixg = ds['cmixg'].data
+        self.denng = ds['denng'].data
+        cline = ds['cline'].data
+
+        if self.me == 0:
+            print(f'  --- Reading {cline[self.imon-1]}') 
+    
+    
+    def volc_update(self):
+        # This subroutine searches historical volcanic data sets to find and
+        # read in monthly 45-degree lat-zone band of optical depth.
+    
+        #  ==================================================================  !
+        #                                                                      !
+        #  subprogram : volc_update                                            !
+        #                                                                      !
+        #    searches historical volcanic data sets to find and read in        !
+        #    monthly 45-degree lat-zone band data of optical depth.            !
+        #                                                                      !
+        #  ====================  defination of variables  ===================  !
+        #                                                                      !
+        #  inputs:  (in-scope variables, module constants)                     !
+        #   iyear    - integer, 4-digit calender year                 1        !
+        #   imon     - integer, month of the year                     1        !
+        #   me       - integer, print message control flag            1        !
+        #   NIAERCM  - integer, unit number for input data set        1        !
+        #                                                                      !
+        #  outputs: (module variables)                                         !
+        #   ivolae   - integer, monthly, 45-deg lat-zone volc odp      12*4*10 !
+        #   kyrstr   - integer, starting year of data in the input file        !
+        #   kyrend   - integer, ending   year of data in the input file        !
+        #   kyrsav   - integer, the year of data in use in the input file      !
+        #   kmonsav  - integer, the month of data in use in the input file     !
+        #                                                                      !
+        #  subroutines called: none                                            !
+        #                                                                      !
+        #  usage:    call volc_aerinit                                         !
+        #                                                                      !
+        #  ==================================================================  !
+    
+        #  ---  locals:
+        volcano_file = 'volcanic_aerosols_1850-1859.txt'
+        #
+        #===>  ...  begin here
+        #
+        self.kmonsav = self.imon
+    
+        if self.kyrstr <= self.iyear and self.iyear <= self.kyrend:   # use previously input data
+            self.kyrsav = self.iyear
+            return
+        else:                                            # need to input new data
+            self.kyrsav = self.iyear
+            self.kyrstr = self.iyear - self.iyear % 10
+            self.kyrend = self.kyrstr + 9
+
+            if self.iyear < self.MINVYR or self.iyear > self.MAXVYR:
+                self.ivolae = np.ones((12, 4, 10))            # set as lowest value
+                if self.me == 0:
+                    print('Request volcanic date out of range,',
+                        ' optical depth set to lowest value')
+            else:
+                file_exist = os.path.isfile(volcano_file)
+                if file_exist:
+                    ds = xr.open_dataset(volcano_file)
+                    cline = ds['cline']
+                    #  ---  check print
+                    if self.me == 0:
+                        print(f'Opened volcanic data file: {volcano_file}')
+                        print(cline)
+    
+                    self.ivolae = ds['ivolae']
+                else:
+                    print(f'Requested volcanic data file "{volcano_file}" not found!')
+                    print('*** Stopped in subroutine VOLC_AERINIT !!')
+
+        #  ---  check print
+        if self.me == 0:
+            k = (self.kyrsav % 10) + 1
+            print(f'CHECK: Sample Volcanic data used for month, year: {self.imon}, {self.iyear}')           
+            print(self.ivolae[self.kmonsav, :, k])

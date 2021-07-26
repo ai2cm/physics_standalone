@@ -207,7 +207,7 @@ program test
 
       write(*,*) 'Running update'
 
-      call radupdate (idat, jdat, fhswr, dtf,  lsswr, &
+      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
                       me,   slag, sdec,  cdec, solcon)
         
       !$ser cleanup
