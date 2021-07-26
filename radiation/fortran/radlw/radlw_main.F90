@@ -288,8 +288,8 @@ USE m_serialize, ONLY: &
   fs_read_field, &
   fs_create_savepoint
 USE utils_ppser, ONLY:  &
-  ppser_set_mode, &
   ppser_get_mode, &
+  ppser_set_mode, &
   ppser_savepoint, &
   ppser_serializer, &
   ppser_serializer_ref, &

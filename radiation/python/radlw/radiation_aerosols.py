@@ -4,9 +4,9 @@ import os
 import sys
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from radlw_param import NBDLW, wvnlw1, wvnlw2
-from radsw_param import NBDSW, wvnum1, wvnum2
+from radsw_param import NBDSW, wvnum1, wvnum2, NSWSTR
 from phys_const import con_pi, con_plnk, con_c, con_boltz, con_t0c
-from radphysparam import aeros_file
+from radphysparam import aeros_file, iaermdl, lalw1bd
 
 class AerosolClass():
     VTAGAER = 'NCEP-Radiation_aerosols  v5.2  Jan 2013 '
@@ -86,7 +86,7 @@ class AerosolClass():
 
     wvn550 = 1.0e4/0.55
 
-    def __init__(self, me, iaerflg):
+    def __init__(self, NLAY, me, iaerflg):
         self.NSWBND = NBDSW
         self.NLWBND = NBDLW
         self.NSWLWBD = NBDSW*NBDLW
@@ -94,6 +94,7 @@ class AerosolClass():
         self.laswflg = True
         self.lavoflg = True
         self.lmap_new = True
+        self.NLAY = NLAY
 
         self.haer = np.zeros((self.NDM, self.NAE))
         self.prsref = np.zeros((self.NDM, self.NAE))
@@ -128,7 +129,7 @@ class AerosolClass():
             self.NSWBND = 0
 
         if self.lalwflg:
-            if self.lalw1bd:
+            if lalw1bd:
                 self.NLWBND = 1
             else:
                 self.NLWBND = NBDLW
@@ -145,7 +146,7 @@ class AerosolClass():
         # note: for result consistency, the defalt opac-clim aeros setting still use
         #       old spectral band mapping. use iaermdl=5 to use new mapping method
 
-        if self.iaermdl == 0:                    # opac-climatology scheme
+        if iaermdl == 0:                    # opac-climatology scheme
             self.lmap_new = False
 
             self.wvn_sw1[1:NBDSW-1] = self.wvn_sw1[1:NBDSW-1] + 1
@@ -162,20 +163,36 @@ class AerosolClass():
 
             # -# Call clim_aerinit() to invoke tropospheric aerosol initialization.
 
-            if self.iaermdl == 0 or self.iaermdl == 5:      # opac-climatology scheme
+            if iaermdl == 0 or iaermdl == 5:      # opac-climatology scheme
 
                 self.clim_aerinit()
 
             else:
                 if me == 0:
                     print('!!! ERROR in aerosol model scheme selection',
-                          f' iaermdl = {self.iaermdl}')
+                          f' iaermdl = {iaermdl}')
 
         # -# Call set_volcaer() to invoke stratospheric volcanic aerosol
         # initialization.
 
         if self.lavoflg:
             self.ivolae = np.zeros((12,4,10))
+
+    def return_initdata(self):
+        outdict = {'extrhi': self.extrhi,
+                   'scarhi': self.scarhi,
+                   'ssarhi': self.ssarhi,
+                   'asyrhi': self.asyrhi,
+                   'extrhd': self.extrhd,
+                   'scarhd': self.scarhd,
+                   'ssarhd': self.ssarhd,
+                   'asyrhd': self.asyrhd,
+                   'extstra': self.extstra,
+                   'prsref': self.prsref,
+                   'haer': self.haer,
+                   'eirfwv': self.eirfwv,
+                   'solfwv': self.solfwv}
+        return outdict
 
     def wrt_aerlog(self):
         #  ==================================================================  !
@@ -204,18 +221,18 @@ class AerosolClass():
 
         print(self.VTAGAER)    # print out version tag
 
-        if self.iaermdl == 0 or self.iaermdl == 5:
+        if iaermdl == 0 or iaermdl == 5:
             print('- Using OPAC-seasonal climatology for tropospheric',
                   ' aerosol effect')
-        elif self.iaermdl == 1:
+        elif iaermdl == 1:
             print('- Using GOCART-climatology for tropospheric',
                    ' aerosol effect')
-        elif self.iaermdl == 2:
+        elif iaermdl == 2:
             print(' - Using GOCART-prognostic aerosols for tropospheric',
                   ' aerosol effect')
         else:
             print('!!! ERROR in selection of aerosol model scheme',
-                  f' IAER_MDL = {self.iaermdl}')
+                  f' IAER_MDL = {iaermdl}')
 
         print(f'IAER={self.iaerflg},  LW-trop-aer={self.lalwflg}',
               f'SW-trop-aer={self.laswflg}, Volc-aer={self.lavoflg}')
@@ -238,7 +255,7 @@ class AerosolClass():
                       ' aerosol properties to SW input are set to zeros')
 
             if self.lalwflg:          # check for lw effect
-                if self.lalw1bd:
+                if lalw1bd:
                     print('- Compute 1 broad-band aerosol optical',
                           ' properties for LW input parameters')
                 else:
@@ -491,7 +508,7 @@ class AerosolClass():
             wve = self.wvn_sw1[0]
             nv_aod = 1
             for ib in range(1, self.NSWBND):
-                mb = ib + self.NSWSTR - 1
+                mb = ib + NSWSTR - 1
                 if self.wvn_sw2[mb] >= self.wvn550 and self.wvn550 >= self.wvn_sw1[mb]:
                     nv_aod = ib                  # sw band number covering 550nm wavelenth
 
@@ -504,7 +521,7 @@ class AerosolClass():
 
 #!$o    mp parallel do private(ib,mb,ii,iw1,iw2,iw,sumsol,fac,tmp,ibs,ibe)
             for ib in range(self.NSWBND):
-                mb = ib + self.NSWSTR - 1
+                mb = ib + NSWSTR - 1
                 ii = 0
                 iw1 = round(self.wvn_sw1[mb])
                 iw2 = round(self.wvn_sw2[mb])
@@ -634,229 +651,222 @@ class AerosolClass():
         # -# Call optavg() to compute spectral band mean properties for each
         # species.
 
-        out_dict = optavg(laswflg, lalwflg, solbnd, solwaer, nv1, nv2, nr1, nr2,
-                          rhidext0, rhidsca0, rhidssa0, rhidasy0,
-                          rhdpext0, rhdpsca0, rhdpssa0, rhdpasy0, straext0,
-                          extrhi, scarhi, ssarhi, asyrhi,
-                          extrhd, scarhd, ssarhd, asyrhd, extstra,
-                          eirbnd, eirwaer)
-
         self.prsref = prsref
         self.haer = haer
+        self.solbnd = solbnd
+        self.solwaer = solwaer
+        self.nv1 = nv1
+        self.nv2 = nv2
+        self.nr1 = nr1
+        self.nr2 = nr2
+        self.rhidext0 = rhidext0
+        self.rhidsca0 = rhidsca0
+        self.rhidssa0 = rhidssa0
+        self.rhidasy0 = rhidasy0
+        self.rhdpext0 = rhdpext0
+        self.rhdpsca0 = rhdpsca0
+        self.rhdpssa0 = rhdpssa0
+        self.rhdpasy0 = rhdpasy0
+        self.straext0 = straext0
+        self.extrhi = extrhi
+        self.scarhi = scarhi
+        self.ssarhi = ssarhi
+        self.asyrhi = asyrhi
+        self.extrhd = extrhd
+        self.scarhd = scarhd
+        self.ssarhd = ssarhd
+        self.asyrhd = asyrhd
+        self.extstra = extstra
+        self.eirbnd = eirbnd
+        self.eirwaer = eirwaer
 
-        return out_dict
+        self.optavg()
     
 
-# This subroutine computes mean aerosols optical properties over each
-# SW radiation spectral band for each of the species components. This
-# program follows GFDL's approach for thick cloud optical property in
-# SW radiation scheme (2000).
-def optavg(laswflg, lalwflg, solbnd, solwaer, nv1, nv2, nr1, nr2,
-           rhidext0, rhidsca0, rhidssa0, rhidasy0,
-           rhdpext0, rhdpsca0, rhdpssa0, rhdpasy0, straext0,
-           extrhi, scarhi, ssarhi, asyrhi,
-           extrhd, scarhd, ssarhd, asyrhd, extstra,
-           eirbnd, eirwaer):
-    # ==================================================================== !
-    #                                                                      !
-    # subprogram: optavg                                                   !
-    #                                                                      !
-    #   compute mean aerosols optical properties over each sw radiation    !
-    #   spectral band for each of the species components.  This program    !
-    #   follows gfdl's approach for thick cloud opertical property in      !
-    #   sw radiation scheme (2000).                                        !
-    #                                                                      !
-    #  ====================  defination of variables  ===================  !
-    #                                                                      !
-    # major input variables:                                               !
-    #   nv1,nv2 (NSWBND) - start/end spectral band indices of aerosol data !
-    #                      for each sw radiation spectral band             !
-    #   nr1,nr2 (NLWBND) - start/end spectral band indices of aerosol data !
-    #                      for each ir radiation spectral band             !
-    #   solwaer (NSWBND,NAERBND)                                           !
-    #                    - solar flux weight over each sw radiation band   !
-    #                      vs each aerosol data spectral band              !
-    #   eirwaer (NLWBND,NAERBND)                                           !
-    #                    - ir flux weight over each lw radiation band      !
-    #                      vs each aerosol data spectral band              !
-    #   solbnd  (NSWBND) - solar flux weight over each sw radiation band   !
-    #   eirbnd  (NLWBND) - ir flux weight over each lw radiation band      !
-    #   NSWBND           - total number of sw spectral bands               !
-    #   NLWBND           - total number of lw spectral bands               !
-    #                                                                      !
-    # external module variables:  (in physparam)                           !
-    #   laswflg          - control flag for sw spectral region             !
-    #   lalwflg          - control flag for lw spectral region             !
-    #                                                                      !
-    # output variables: (to module variables)                              !
-    #                                                                      !
-    #  ==================================================================  !    #
+    # This subroutine computes mean aerosols optical properties over each
+    # SW radiation spectral band for each of the species components. This
+    # program follows GFDL's approach for thick cloud optical property in
+    # SW radiation scheme (2000).
+    def optavg(self):
+        # ==================================================================== !
+        #                                                                      !
+        # subprogram: optavg                                                   !
+        #                                                                      !
+        #   compute mean aerosols optical properties over each sw radiation    !
+        #   spectral band for each of the species components.  This program    !
+        #   follows gfdl's approach for thick cloud opertical property in      !
+        #   sw radiation scheme (2000).                                        !
+        #                                                                      !
+        #  ====================  defination of variables  ===================  !
+        #                                                                      !
+        # major input variables:                                               !
+        #   nv1,nv2 (NSWBND) - start/end spectral band indices of aerosol data !
+        #                      for each sw radiation spectral band             !
+        #   nr1,nr2 (NLWBND) - start/end spectral band indices of aerosol data !
+        #                      for each ir radiation spectral band             !
+        #   solwaer (NSWBND,NAERBND)                                           !
+        #                    - solar flux weight over each sw radiation band   !
+        #                      vs each aerosol data spectral band              !
+        #   eirwaer (NLWBND,NAERBND)                                           !
+        #                    - ir flux weight over each lw radiation band      !
+        #                      vs each aerosol data spectral band              !
+        #   solbnd  (NSWBND) - solar flux weight over each sw radiation band   !
+        #   eirbnd  (NLWBND) - ir flux weight over each lw radiation band      !
+        #   NSWBND           - total number of sw spectral bands               !
+        #   NLWBND           - total number of lw spectral bands               !
+        #                                                                      !
+        # external module variables:  (in physparam)                           !
+        #   laswflg          - control flag for sw spectral region             !
+        #   lalwflg          - control flag for lw spectral region             !
+        #                                                                      !
+        # output variables: (to module variables)                              !
+        #                                                                      !
+        #  ==================================================================  !    #
 
-    #  --- ...  loop for each sw radiation spectral band
+        #  --- ...  loop for each sw radiation spectral band
 
-    NSWBND = NBDSW
-    NLWBND = NBDLW
-    NCM1 = 6
-    NRHLEV = 8
-    NCM2 = 4
+        print(f'laswflg = {self.laswflg}, lalwflg = {self.lalwflg}')
 
-    print(f'laswflg = {laswflg}, lalwflg = {lalwflg}')
+        if self.laswflg:
 
-    if laswflg:
+            for nb in range(self.NSWBND):
+                rsolbd = 1.0 / self.solbnd[nb]
 
-        for nb in range(NSWBND):
-            rsolbd = 1.0 / solbnd[nb]
+                #  ---  for rh independent aerosol species
 
-            #  ---  for rh independent aerosol species
-
-            for nc in range(NCM1):        #  ---  for rh independent aerosol species
-                sumk    = 0.0
-                sums    = 0.0
-                sumok   = 0.0
-                sumokg  = 0.0
-                sumreft = 0.0
-
-                for ni in range(nv1[nb], nv2[nb]+1):
-                    sp = np.sqrt((1.0 - rhidssa0[ni, nc]) / \
-                        (1.0 - rhidssa0[ni, nc]*rhidasy0[ni, nc]))
-                    reft = (1.0 - sp) / (1.0 + sp)
-                    sumreft = sumreft + reft*solwaer[nb, ni]
-
-                    sumk  = sumk  + rhidext0[ni, nc]*solwaer[nb, ni]
-                    sums  = sums  + rhidsca0[ni, nc]*solwaer[nb, ni]
-                    sumok = sumok + rhidssa0[ni, nc]*solwaer[nb, ni] * rhidext0[ni, nc]
-                    sumokg = sumokg  + rhidssa0[ni, nc]*solwaer[nb, ni] * \
-                        rhidext0[ni, nc]*rhidasy0[ni, nc]
-
-                refb = sumreft * rsolbd
-
-                extrhi[nc, nb] = sumk   * rsolbd
-                scarhi[nc, nb] = sums   * rsolbd
-                asyrhi[nc, nb] = sumokg / (sumok + 1.0e-10)
-                ssarhi[nc, nb] = 4.0*refb / \
-                    ((1.0+refb)**2 - asyrhi[nc, nb]*(1.0-refb)**2)
-
-
-            for nc in range(NCM2):        #  ---  for rh dependent aerosols species
-                for nh in range(NRHLEV):
+                for nc in range(self.NCM1):        #  ---  for rh independent aerosol species
                     sumk    = 0.0
                     sums    = 0.0
                     sumok   = 0.0
                     sumokg  = 0.0
                     sumreft = 0.0
 
-                    for ni in range(nv1[nb], nv2[nb]+1):
-                        sp = np.sqrt((1.0 - rhdpssa0[ni, nh, nc]) / \
-                            (1.0 - rhdpssa0[ni, nh, nc]*rhdpasy0[ni, nh, nc]))
+                    for ni in range(self.nv1[nb], self.nv2[nb]+1):
+                        sp = np.sqrt((1.0 - self.rhidssa0[ni, nc]) / \
+                            (1.0 - self.rhidssa0[ni, nc]*self.rhidasy0[ni, nc]))
                         reft = (1.0 - sp) / (1.0 + sp)
-                        sumreft = sumreft + reft*solwaer[nb, ni]
+                        sumreft = sumreft + reft*self.solwaer[nb, ni]
 
-                        sumk  = sumk  + rhdpext0[ni, nh, nc]*solwaer[nb, ni]
-                        sums  = sums  + rhdpsca0[ni, nh, nc]*solwaer[nb, ni]
-                        sumok = sumok + rhdpssa0[ni, nh, nc]*solwaer[nb, ni] * \
-                            rhdpext0[ni, nh, nc]
-                        sumokg = sumokg + rhdpssa0[ni, nh, nc]*solwaer[nb, ni] * \
-                            rhdpext0[ni, nh, nc]*rhdpasy0[ni, nh, nc]
+                        sumk  = sumk  + self.rhidext0[ni, nc]*self.solwaer[nb, ni]
+                        sums  = sums  + self.rhidsca0[ni, nc]*self.solwaer[nb, ni]
+                        sumok = sumok + self.rhidssa0[ni, nc]*self.solwaer[nb, ni] * self.rhidext0[ni, nc]
+                        sumokg = sumokg  + self.rhidssa0[ni, nc]*self.solwaer[nb, ni] * \
+                            self.rhidext0[ni, nc]*self.rhidasy0[ni, nc]
 
                     refb = sumreft * rsolbd
 
-                    extrhd[nh, nc, nb] = sumk   * rsolbd
-                    scarhd[nh, nc, nb] = sums   * rsolbd
-                    asyrhd[nh, nc, nb] = sumokg / (sumok + 1.0e-10)
-                    ssarhd[nh, nc, nb] = 4.0*refb / \
-                        ((1.0+refb)**2 - asyrhd[nh, nc, nb]*(1.0-refb)**2)
+                    self.extrhi[nc, nb] = sumk   * rsolbd
+                    self.scarhi[nc, nb] = sums   * rsolbd
+                    self.asyrhi[nc, nb] = sumokg / (sumok + 1.0e-10)
+                    self.ssarhi[nc, nb] = 4.0*refb / \
+                        ((1.0+refb)**2 - self.asyrhi[nc, nb]*(1.0-refb)**2)
 
-            #  ---  for stratospheric background aerosols
 
-            sumk = 0.0
-            for ni in range(nv1[nb], nv2[nb]+1):
-                sumk += straext0[ni]*solwaer[nb, ni]
+                for nc in range(self.NCM2):        #  ---  for rh dependent aerosols species
+                    for nh in range(self.NRHLEV):
+                        sumk    = 0.0
+                        sums    = 0.0
+                        sumok   = 0.0
+                        sumokg  = 0.0
+                        sumreft = 0.0
 
-            extstra[nb] = sumk * rsolbd
+                        for ni in range(self.nv1[nb], self.nv2[nb]+1):
+                            sp = np.sqrt((1.0 - self.rhdpssa0[ni, nh, nc]) / \
+                                (1.0 - self.rhdpssa0[ni, nh, nc]*self.rhdpasy0[ni, nh, nc]))
+                            reft = (1.0 - sp) / (1.0 + sp)
+                            sumreft = sumreft + reft*self.solwaer[nb, ni]
 
-    #  --- ...  loop for each lw radiation spectral band
+                            sumk  = sumk  + self.rhdpext0[ni, nh, nc]*self.solwaer[nb, ni]
+                            sums  = sums  + self.rhdpsca0[ni, nh, nc]*self.solwaer[nb, ni]
+                            sumok = sumok + self.rhdpssa0[ni, nh, nc]*self.solwaer[nb, ni] * \
+                                self.rhdpext0[ni, nh, nc]
+                            sumokg = sumokg + self.rhdpssa0[ni, nh, nc]*self.solwaer[nb, ni] * \
+                                self.rhdpext0[ni, nh, nc]*self.rhdpasy0[ni, nh, nc]
 
-    if lalwflg:
-        for nb in range(NLWBND):
-            ib = NSWBND + nb
-            rirbd = 1.0 / eirbnd[nb]
+                        refb = sumreft * rsolbd
 
-            for nc in range(NCM1):        #  ---  for rh independent aerosol species
-                sumk    = 0.0
-                sums    = 0.0
-                sumok   = 0.0
-                sumokg  = 0.0
-                sumreft = 0.0
+                        self.extrhd[nh, nc, nb] = sumk   * rsolbd
+                        self.scarhd[nh, nc, nb] = sums   * rsolbd
+                        self.asyrhd[nh, nc, nb] = sumokg / (sumok + 1.0e-10)
+                        self.ssarhd[nh, nc, nb] = 4.0*refb / \
+                            ((1.0+refb)**2 - self.asyrhd[nh, nc, nb]*(1.0-refb)**2)
 
-                for ni in range(nr1[nb], nr2[nb]+1):
-                    sp = np.sqrt((1.0 - rhidssa0[ni, nc]) / \
-                        (1.0 - rhidssa0[ni, nc]*rhidasy0[ni, nc]))
-                    reft = (1.0 - sp) / (1.0 + sp)
-                    sumreft = sumreft + reft*eirwaer[nb, ni]
+                #  ---  for stratospheric background aerosols
 
-                    sumk  = sumk  + rhidext0[ni, nc]*eirwaer[nb, ni]
-                    sums  = sums  + rhidsca0[ni, nc]*eirwaer[nb, ni]
-                    sumok = sumok + rhidssa0[ni, nc]*eirwaer[nb, ni] * \
-                        rhidext0[ni, nc]
-                    sumokg += rhidssa0[ni, nc]*eirwaer[nb, ni] * \
-                        rhidext0[ni, nc]*rhidasy0[ni, nc]
+                sumk = 0.0
+                for ni in range(self.nv1[nb], self.nv2[nb]+1):
+                    sumk += self.straext0[ni]*self.solwaer[nb, ni]
 
-                refb = sumreft * rirbd
+                self.extstra[nb] = sumk * rsolbd
 
-                extrhi[nc, ib] = sumk   * rirbd
-                scarhi[nc, ib] = sums   * rirbd
-                asyrhi[nc, ib] = sumokg / (sumok + 1.0e-10)
-                ssarhi[nc, ib] = 4.0*refb / \
-                    ((1.0+refb)**2 - asyrhi[nc, ib]*(1.0-refb)**2)
+        #  --- ...  loop for each lw radiation spectral band
 
-            for nc in range(NCM2):  #  ---  for rh dependent aerosols species
-                for nh in range(NRHLEV):
+        if self.lalwflg:
+            for nb in range(self.NLWBND):
+                ib = self.NSWBND + nb
+                rirbd = 1.0 / self.eirbnd[nb]
+
+                for nc in range(self.NCM1):        #  ---  for rh independent aerosol species
                     sumk    = 0.0
                     sums    = 0.0
                     sumok   = 0.0
                     sumokg  = 0.0
                     sumreft = 0.0
 
-                    for ni in range(nr1[nb], nr2[nb]+1):
-                        sp = np.sqrt((1.0 - rhdpssa0[ni, nh, nc]) / \
-                            (1.0 - rhdpssa0[ni, nh, nc]*rhdpasy0[ni, nh, nc]))
+                    for ni in range(self.nr1[nb], self.nr2[nb]+1):
+                        sp = np.sqrt((1.0 - self.rhidssa0[ni, nc]) / \
+                            (1.0 - self.rhidssa0[ni, nc]*self.rhidasy0[ni, nc]))
                         reft = (1.0 - sp) / (1.0 + sp)
-                        sumreft = sumreft + reft*eirwaer[nb, ni]
+                        sumreft = sumreft + reft*self.eirwaer[nb, ni]
 
-                        sumk  = sumk  + rhdpext0[ni, nh, nc]*eirwaer[nb, ni]
-                        sums  = sums  + rhdpsca0[ni, nh, nc]*eirwaer[nb, ni]
-                        sumok = sumok + rhdpssa0[ni, nh, nc]*eirwaer[nb, ni] * \
-                            rhdpext0[ni, nh, nc]
-                        sumokg += rhdpssa0[ni, nh, nc]*eirwaer[nb, ni] * \
-                            rhdpext0[ni, nh, nc]*rhdpasy0[ni, nh, nc]
+                        sumk  = sumk  + self.rhidext0[ni, nc]*self.eirwaer[nb, ni]
+                        sums  = sums  + self.rhidsca0[ni, nc]*self.eirwaer[nb, ni]
+                        sumok = sumok + self.rhidssa0[ni, nc]*self.eirwaer[nb, ni] * \
+                            self.rhidext0[ni, nc]
+                        sumokg += self.rhidssa0[ni, nc]*self.eirwaer[nb, ni] * \
+                            self.rhidext0[ni, nc]*self.rhidasy0[ni, nc]
 
                     refb = sumreft * rirbd
 
-                    extrhd[nh, nc, ib] = sumk   * rirbd
-                    scarhd[nh, nc, ib] = sums   * rirbd
-                    asyrhd[nh, nc, ib] = sumokg / (sumok + 1.0e-10)
-                    ssarhd[nh, nc, ib] = 4.0*refb / \
-                        ((1.0+refb)**2 - asyrhd[nh, nc, ib]*(1.0-refb)**2)
+                    self.extrhi[nc, ib] = sumk   * rirbd
+                    self.scarhi[nc, ib] = sums   * rirbd
+                    self.asyrhi[nc, ib] = sumokg / (sumok + 1.0e-10)
+                    self.ssarhi[nc, ib] = 4.0*refb / \
+                        ((1.0+refb)**2 - self.asyrhi[nc, ib]*(1.0-refb)**2)
 
-            #  ---  for stratospheric background aerosols
+                for nc in range(self.NCM2):  #  ---  for rh dependent aerosols species
+                    for nh in range(self.NRHLEV):
+                        sumk    = 0.0
+                        sums    = 0.0
+                        sumok   = 0.0
+                        sumokg  = 0.0
+                        sumreft = 0.0
 
-            sumk = 0.0
-            for ni in range(nr1[nb], nr2[nb]+1):
-                sumk += straext0[ni]*eirwaer[nb, ni]
+                        for ni in range(self.nr1[nb], self.nr2[nb]+1):
+                            sp = np.sqrt((1.0 - self.rhdpssa0[ni, nh, nc]) / \
+                                (1.0 - self.rhdpssa0[ni, nh, nc]*self.rhdpasy0[ni, nh, nc]))
+                            reft = (1.0 - sp) / (1.0 + sp)
+                            sumreft = sumreft + reft*self.eirwaer[nb, ni]
 
-            extstra[ib] = sumk * rirbd
+                            sumk  = sumk  + self.rhdpext0[ni, nh, nc]*self.eirwaer[nb, ni]
+                            sums  = sums  + self.rhdpsca0[ni, nh, nc]*self.eirwaer[nb, ni]
+                            sumok = sumok + self.rhdpssa0[ni, nh, nc]*self.eirwaer[nb, ni] * \
+                                self.rhdpext0[ni, nh, nc]
+                            sumokg += self.rhdpssa0[ni, nh, nc]*self.eirwaer[nb, ni] * \
+                                self.rhdpext0[ni, nh, nc]*self.rhdpasy0[ni, nh, nc]
 
-    out_dict = dict()
-    out_dict['extrhi'] = extrhi
-    out_dict['scarhi'] = scarhi
-    out_dict['ssarhi'] = ssarhi
-    out_dict['asyrhi'] = asyrhi
+                        refb = sumreft * rirbd
 
-    out_dict['extstra'] = extstra
+                        self.extrhd[nh, nc, ib] = sumk   * rirbd
+                        self.scarhd[nh, nc, ib] = sums   * rirbd
+                        self.asyrhd[nh, nc, ib] = sumokg / (sumok + 1.0e-10)
+                        self.ssarhd[nh, nc, ib] = 4.0*refb / \
+                            ((1.0+refb)**2 - self.asyrhd[nh, nc, ib]*(1.0-refb)**2)
 
-    out_dict['extrhd'] = extrhd
-    out_dict['scarhd'] = scarhd
-    out_dict['ssarhd'] = ssarhd
-    out_dict['asyrhd'] = asyrhd
+                #  ---  for stratospheric background aerosols
 
-    return out_dict
+                sumk = 0.0
+                for ni in range(self.nr1[nb], self.nr2[nb]+1):
+                    sumk += self.straext0[ni]*self.eirwaer[nb, ni]
+
+                self.extstra[ib] = sumk * rirbd

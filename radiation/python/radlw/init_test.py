@@ -24,7 +24,7 @@ serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 
-print(savepoints2)
+# print(savepoints2[6])
 
 invars = ['si', 'levr', 'ictm', 'isol', 'ico2', 'iaer', 'ialb', 'iems', 'ntcw',
           'num_p2d', 'num_p3d', 'npdf3d', 'ntoz', 'iovr_sw', 'iovr_lw',

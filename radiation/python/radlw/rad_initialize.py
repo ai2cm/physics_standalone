@@ -2,13 +2,13 @@ import os
 import sys
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from radphysparam import icldflg
-from sol_init import sol_init
-from aer_init import aer_init
-from cld_init import cld_init
-from sfc_init import sfc_init
-from rlwinit import rlwinit
-from rswinit import rswinit
-from gas_init import gas_init
+from radiation_astronomy import AstronomyClass
+from radiation_aerosols import AerosolClass
+from radiation_clouds import CloudClass
+from radiation_gases import GasClass
+from radiation_sfc import SurfaceClass
+from radlw_main import RadLWClass
+from radsw_main import RadSWClass
 # use module_radiation_driver, only : radinit
 
 def rad_initialize(indict):
@@ -419,19 +419,27 @@ def radinit(si,
 
     # -# Initialization
     #  --- ...  astronomy initialization routine
-    sol_dict = sol_init(me, isolar)
+    sol = AstronomyClass(me, isolar)
+    sol_dict = sol.return_initdata()
     print(' ')
-    aer_dict = aer_init(NLAY, me, iaerflg)    #  --- ...  aerosols initialization routine
+    aer = AerosolClass(NLAY, me, iaerflg)
+    aer_dict = aer.return_initdata()    #  --- ...  aerosols initialization routine
     print(' ')
-    gas_dict = gas_init(me, ioznflg, ico2flg, ictmflg)          #  --- ...  co2 and other gases initialization routine
+    gas = GasClass(me, ioznflg, ico2flg, ictmflg)
+    gas_dict = gas.return_initdata()          #  --- ...  co2 and other gases initialization routine
     print(' ')
-    sfc_dict = sfc_init(me, ialbflg, iemsflg)          #  --- ...  surface initialization routine
+    sfc = SurfaceClass(me, ialbflg, iemsflg)
+    sfc_dict = sfc.return_initdata()          #  --- ...  surface initialization routine
     print(' ')
-    cld_dict = cld_init(si, NLAY, imp_physics, me, ivflip, icldflg) #  --- ...  cloud initialization routine
+    cld = CloudClass(si, NLAY, imp_physics, me, ivflip, icldflg,
+                     iovrsw, iovrlw)
+    cld_dict = cld.return_initdata() #  --- ...  cloud initialization routine
     print(' ')
-    rlw_dict = rlwinit(me, tau_tbl, exp_tbl, tfn_tbl)            #  --- ...  lw radiation initialization routine
+    rlw = RadLWClass(me, iovrlw, isubclw)
+    rlw_dict = rlw.return_initdata()            #  --- ...  lw radiation initialization routine
     print(' ')
-    rsw_dict = rswinit(me, iovrsw, isubcsw, iswcliq, exp_tbl)            #  --- ...  sw radiation initialization routine
+    rsw = RadSWClass(me, iovrsw, isubcsw, iswcliq, exp_tbl)
+    rsw_dict = rsw.return_initdata()            #  --- ...  sw radiation initialization routine
     print(' ')
 
     return aer_dict, sol_dict, gas_dict, sfc_dict, cld_dict, rlw_dict, rsw_dict

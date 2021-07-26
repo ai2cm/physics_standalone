@@ -116,6 +116,10 @@ class AstronomyClass():
                 print(f'Using the default solar constant value = {self.solc0}',
                       f' reset control flag isolflg={self.isolflg}')
 
+    def return_initdata(self):
+        outdict = {'solar_fname': self.solar_fname}
+        return outdict
+
     def sol_update(self, jdate, kyear, deltsw, deltim, lsol_chg, me):
         #  ===================================================================  !
         #                                                                       !
