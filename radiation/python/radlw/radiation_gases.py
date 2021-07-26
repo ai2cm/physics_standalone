@@ -4,13 +4,30 @@ import os
 import sys
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from radphysparam import co2cyc_file, co2gbl_file, co2dat_file
+from phys_const import con_pi
 
 class GasClass():
     VTAGGAS = 'NCEP-Radiation_gases     v5.1  Nov 2012'
+    NF_VGAS = 10
     IMXCO2 = 24
     JMXCO2 = 12
     co2vmr_def = 350.0e-6
     MINYEAR = 1957
+
+    resco2 = 15.0
+    raddeg = 180.0/con_pi
+    prsco2 = 788.0
+    hfpi = 0.5(con_pi)
+
+    n2ovmr_def = 0.31e-6
+    ch4vmr_def = 1.50e-6
+    o2vmr_def  = 0.209
+    covmr_def  = 1.50e-8
+    f11vmr_def = 3.520e-10  
+    f12vmr_def = 6.358e-10  
+    f22vmr_def = 1.500e-10 
+    cl4vmr_def = 1.397e-10
+    f113vmr_def = 8.2000e-11 
 
     def __init__(self, me, iozn, ico2, ictm):
         self.kyrsav = 0

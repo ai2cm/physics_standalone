@@ -18,8 +18,6 @@ class RadLWClass():
     VTAGLW='NCEP LW v5.1  Nov 2012 -RRTMG-LW v4.82'
     expeps = 1.e-20
 
-    f_one = 1.0
-    f_zero = 0.0
     bpade   = 1.0/0.278
     eps = 1.0e-6
     oneminus = 1.0-eps
@@ -27,6 +25,7 @@ class RadLWClass():
     stpfac = 296.0/1013.0
     wtdiff = 0.5
     tblint = ntbl
+    
     amdw = con_amd/con_amw
     amdo3 = con_amd/con_amo3
 
