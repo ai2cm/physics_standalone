@@ -137,6 +137,8 @@ program test
         !$ser data ccnorm=ccnorm norad_precip=norad_precip idate=idate iflip=iflip
       ! Initialization
 
+      write(*,*) 'isubc_lw = ',isubc_lw
+
       call rad_initialize(si,  levr,         ictm,    isol,      &
                           ico2,        iaer,         ialb,    iems,      &
                           ntcw,        num_p2d,      num_p3d, npdf3d,    &

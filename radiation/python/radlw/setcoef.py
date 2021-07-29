@@ -256,6 +256,7 @@ ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
+print(savepoints[10])
 
 # print(savepoints)
 
@@ -271,12 +272,12 @@ indict = dict()
 outdict = dict()
 
 for var in invars:
-    tmp = serializer.read(var, savepoints[0])
+    tmp = serializer.read(var, savepoints[10])
 
     indict[var] = tmp
 
 for var in outvars:
-    tmp = serializer.read(var, savepoints[1])
+    tmp = serializer.read(var, savepoints[11])
 
     outdict[var] = tmp
 
@@ -317,7 +318,7 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
                     print(f"Successfully validated {var}!")
         else:
             if not np.allclose(
-                data[var], ref_data[var], rtol=1e-11, atol=1.0e-10, equal_nan=True
+                data[var], ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
             ):
 
                 wrong.append(var)

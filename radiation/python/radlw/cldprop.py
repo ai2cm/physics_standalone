@@ -130,7 +130,7 @@ def cldprop(cfrac, cliqp, reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4,
    
     if ilwcliq > 0:
         for k in range(nlay):
-            if cfrac[k] > cldmin:
+            if cfrac[k+1] > cldmin:
                 tauran = absrain * cdat1[k]                      # ncar formula
 
                 #  ---  if use fu's formula it needs to be normalized by snow density
@@ -211,7 +211,7 @@ def cldprop(cfrac, cliqp, reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4,
         else:
    
             for k in range(nlay):
-                if cfrac[k] > cldmin:
+                if cfrac[k+1] > cldmin:
                     for ib in range(nbands):
                         taucld[ib, k] = cdat1[k]
    
@@ -220,7 +220,7 @@ def cldprop(cfrac, cliqp, reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4,
    
     if isubclw > 0:    # mcica sub-col clouds approx
         for k in range(nlay):
-            if cfrac[k] < cldmin:
+            if cfrac[k+1] < cldmin:
                 cldf[k] = 0.0
             else:
                 cldf[k] = cfrac[k]

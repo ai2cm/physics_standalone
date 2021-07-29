@@ -283,13 +283,13 @@
 
 #ifdef SERIALIZE
 USE m_serialize, ONLY: &
-  fs_add_savepoint_metainfo, &
-  fs_write_field, &
   fs_read_field, &
+  fs_write_field, &
+  fs_add_savepoint_metainfo, &
   fs_create_savepoint
 USE utils_ppser, ONLY:  &
-  ppser_get_mode, &
   ppser_set_mode, &
+  ppser_get_mode, &
   ppser_savepoint, &
   ppser_serializer, &
   ppser_serializer_ref, &
@@ -1070,13 +1070,113 @@ USE utils_ppser, ONLY:  &
 
         if ( lcf1 ) then
 
+#ifdef SERIALIZE
+if (iplon == 3) then
+! file: radlw_main.F lineno: #1050
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1053
+call fs_create_savepoint("lwrad-cldprop-input-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1054
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cldfrc', cldfrc)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'clwp', clwp)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'relw', relw)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'ciwp', ciwp)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'reiw', reiw)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cda1', cda1)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfrc', cldfrc)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'clwp', clwp)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'relw', relw)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'ciwp', ciwp)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'reiw', reiw)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda1', cda1)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfrc', cldfrc, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'clwp', clwp, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'relw', relw, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'ciwp', ciwp, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'reiw', reiw, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda1', cda1, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1055
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cda2', cda2)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cda3', cda3)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cda4', cda4)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlay', nlay)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlp1', nlp1)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'ipseed', ipseed(iplon))
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda2', cda2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda3', cda3)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda4', cda4)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'ipseed', ipseed(iplon))
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda2', cda2, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda3', cda3, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cda4', cda4, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'ipseed', ipseed(iplon), ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1056
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'dz', dz)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'delgth', delgth)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cldfmc', cldfmc)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'taucld', taucld)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'dz', dz)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'delgth', delgth)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'dz', dz, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'delgth', delgth, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld, ppser_zrperturb)
+END SELECT
+end if
+#endif
+
           call cldprop                                                  &
 !  ---  inputs:
-     &     ( cldfrc,clwp,relw,ciwp,reiw,cda1,cda2,cda3,cda4,            &
-     &       nlay, nlp1, ipseed(iplon), dz, delgth,                     &
+     &     ( ser_count,cldfrc,clwp,relw,ciwp,reiw,cda1,cda2,cda3,cda4,            &
+     &       nlay, nlp1, ipseed(iplon), dz, delgth, iplon,                    &
 !  ---  outputs:
      &       cldfmc, taucld                                             &
      &     )
+
+#ifdef SERIALIZE
+if (iplon == 3) then
+! file: radlw_main.F lineno: #1068
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1071
+call fs_create_savepoint("lwrad-cldprop-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1072
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cldfmc', cldfmc)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'taucld', taucld)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld, ppser_zrperturb)
+END SELECT
+end if
+#endif
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band-7 is apprx 10mu channel (or use spectral mean of bands 6-8)
@@ -1111,13 +1211,13 @@ USE utils_ppser, ONLY:  &
 !!    radiative transfer calculations.
 #ifdef SERIALIZE
 if (iplon == 1) then
-! file: radlw_main.F lineno: #1089
+! file: radlw_main.F lineno: #1107
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
 write(*,*) 'iplon = ', iplon
-! file: radlw_main.F lineno: #1092
+! file: radlw_main.F lineno: #1110
 call fs_create_savepoint("lwrad-setcoef-input-"//trim(ser_count_str), ppser_savepoint)
-! file: radlw_main.F lineno: #1093
+! file: radlw_main.F lineno: #1111
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'pavel', pavel)
@@ -1138,7 +1238,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'stemp', stemp, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'h2ovmr', h2ovmr, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1094
+! file: radlw_main.F lineno: #1112
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'colamt', colamt)
@@ -1174,13 +1274,13 @@ end if
 
 #ifdef SERIALIZE
 if (iplon == 1) then
-! file: radlw_main.F lineno: #1108
+! file: radlw_main.F lineno: #1126
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
 write(*,*) 'iplon = ', iplon
-! file: radlw_main.F lineno: #1111
+! file: radlw_main.F lineno: #1129
 call fs_create_savepoint("lwrad-setcoef-output-"//trim(ser_count_str), ppser_savepoint)
-! file: radlw_main.F lineno: #1112
+! file: radlw_main.F lineno: #1130
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'laytrop', laytrop)
@@ -1204,7 +1304,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt', jt, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt1', jt1, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1113
+! file: radlw_main.F lineno: #1131
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'rfrate', rfrate)
@@ -1225,7 +1325,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac10', fac10, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac11', fac11, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1114
+! file: radlw_main.F lineno: #1132
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'selffac', selffac)
@@ -1243,7 +1343,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indself', indself, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfac', forfac, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1115
+! file: radlw_main.F lineno: #1133
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'forfrac', forfrac)
@@ -1261,7 +1361,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'minorfrac', minorfrac, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminor', scaleminor, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1116
+! file: radlw_main.F lineno: #1134
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'scaleminorn2', scaleminorn2)
@@ -1303,6 +1403,167 @@ end if
 !> -# Call taumol() to calculte the gaseous optical depths and Plank 
 !! fractions for each longwave spectral band.
 
+#ifdef SERIALIZE
+if (iplon == 3) then
+! file: radlw_main.F lineno: #1165
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1168
+call fs_create_savepoint("lwrad-taumol-input-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1169
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'laytrop', laytrop)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'pavel', pavel)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'coldry', coldry)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'laytrop', laytrop)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pavel', pavel)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'coldry', coldry)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'laytrop', laytrop, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pavel', pavel, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'coldry', coldry, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1170
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'colamt', colamt)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'colbrd', colbrd)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'wx', wx)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colamt', colamt)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colbrd', colbrd)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'wx', wx)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colamt', colamt, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'colbrd', colbrd, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'wx', wx, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1171
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tauaer', tauaer)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'rfrate', rfrate)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac00', fac00)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tauaer', tauaer)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'rfrate', rfrate)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac00', fac00)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tauaer', tauaer, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'rfrate', rfrate, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac00', fac00, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1172
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac01', fac01)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac10', fac10)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fac11', fac11)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac01', fac01)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac10', fac10)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac11', fac11)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac01', fac01, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac10', fac10, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fac11', fac11, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1173
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'jp', jp)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'jt', jt)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'jt1', jt1)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jp', jp)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt', jt)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt1', jt1)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jp', jp, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt', jt, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'jt1', jt1, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1174
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'selffac', selffac)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'selffrac', selffrac)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffac', selffac)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffrac', selffrac)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffac', selffac, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'selffrac', selffrac, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1175
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'indself', indself)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'forfac', forfac)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'forfrac', forfrac)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indself', indself)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfac', forfac)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfrac', forfrac)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indself', indself, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfac', forfac, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'forfrac', forfrac, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1176
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'indfor', indfor)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'minorfrac', minorfrac)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indfor', indfor)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'minorfrac', minorfrac)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indfor', indfor, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'minorfrac', minorfrac, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1177
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'scaleminor', scaleminor)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'scaleminorn2', scaleminorn2)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminor', scaleminor)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminorn2', scaleminorn2)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminor', scaleminor, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'scaleminorn2', scaleminorn2, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1178
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'indminor', indminor)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlay', nlay)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fracs', fracs)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indminor', indminor)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'indminor', indminor, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1179
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tautot', tautot)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautot', tautot)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautot', tautot, ppser_zrperturb)
+END SELECT
+end if
+#endif
+
         call taumol                                                     &
 !  ---  inputs:
      &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
@@ -1313,6 +1574,29 @@ end if
 !  ---  outputs:
      &       fracs, tautot                                              &
      &     )
+
+#ifdef SERIALIZE
+if (iplon == 3) then
+! file: radlw_main.F lineno: #1194
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1197
+call fs_create_savepoint("lwrad-taumol-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1198
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fracsout', fracs)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tautotout', tautot)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracsout', fracs)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautotout', tautot)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracsout', fracs, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautotout', tautot, ppser_zrperturb)
+END SELECT
+end if
+#endif
 
 !     if (lprnt) then
 !     print *,' after taumol'
@@ -1363,6 +1647,101 @@ end if
 
         else
 
+#ifdef SERIALIZE
+if (iplon==3) then
+! file: radlw_main.F lineno: #1251
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1254
+call fs_create_savepoint("lwrad-rtrnmc-input-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1255
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'semiss', semiss)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'delp', delp)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'cldfmc', cldfmc)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'taucld', taucld)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'semiss', semiss)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'delp', delp)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'semiss', semiss, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'delp', delp, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1256
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tautot', tautot)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'pklay', pklay)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'pklev', pklev)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fracs', fracs)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautot', tautot)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklay', pklay)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklev', pklev)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautot', tautot, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklay', pklay, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklev', pklev, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1257
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'secdiff', secdiff)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlay', nlay)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'nlp1', nlp1)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'secdiff', secdiff)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'secdiff', secdiff, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1258
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totuflux', totuflux)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totdflux', totdflux)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'htr', htr)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuflux', totuflux)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdflux', totdflux)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htr', htr)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuflux', totuflux, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdflux', totdflux, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htr', htr, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1259
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totuclfl', totuclfl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totdclfl', totdclfl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'htrcl', htrcl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'htrb', htrb)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuclfl', totuclfl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdclfl', totdclfl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrcl', htrcl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrb', htrb)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuclfl', totuclfl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdclfl', totdclfl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrcl', htrcl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrb', htrb, ppser_zrperturb)
+END SELECT
+endif
+#endif
+
           call rtrnmc                                                   &
 !  ---  inputs:
      &     ( semiss,delp,cldfmc,taucld,tautot,pklay,pklev,              &
@@ -1370,6 +1749,50 @@ end if
 !  ---  outputs:
      &       totuflux,totdflux,htr, totuclfl,totdclfl,htrcl, htrb       &
      &     )
+
+#ifdef SERIALIZE
+if (iplon==3) then
+! file: radlw_main.F lineno: #1271
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1274
+call fs_create_savepoint("lwrad-rtrnmc-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1275
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totuflux', totuflux)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totdflux', totdflux)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'htr', htr)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuflux', totuflux)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdflux', totdflux)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htr', htr)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuflux', totuflux, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdflux', totdflux, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htr', htr, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1276
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totuclfl', totuclfl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'totdclfl', totdclfl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'htrcl', htrcl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'htrb', htrb)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuclfl', totuclfl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdclfl', totdclfl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrcl', htrcl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrb', htrb)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totuclfl', totuclfl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdclfl', totdclfl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrcl', htrcl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htrb', htrb, ppser_zrperturb)
+END SELECT
+endif
+#endif
 
         endif   ! end if_isubclw_block
 
@@ -1661,11 +2084,11 @@ end if
       enddo
 
 #ifdef SERIALIZE
-! file: radlw_main.F lineno: #1503
+! file: radlw_main.F lineno: #1568
 call ppser_set_mode(0)
-! file: radlw_main.F lineno: #1504
+! file: radlw_main.F lineno: #1569
 call fs_create_savepoint("lw_rlwinit_out", ppser_savepoint)
-! file: radlw_main.F lineno: #1505
+! file: radlw_main.F lineno: #1570
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'semiss0', semiss0)
@@ -1683,7 +2106,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'heatfac', heatfac, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'exp_tbl', exp_tbl, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1506
+! file: radlw_main.F lineno: #1571
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'tau_tbl', tau_tbl)
@@ -1732,8 +2155,8 @@ END SELECT
 !> @{
 ! ----------------------------
       subroutine cldprop                                                &
-     &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
-     &       nlay, nlp1, ipseed, dz, de_lgth,                           &
+     &     ( ser_count, cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
+     &       nlay, nlp1, ipseed, dz, de_lgth, iplon,                          &
      &       cldfmc, taucld                                             & !  ---  outputs
      &     )
 
@@ -1834,13 +2257,17 @@ END SELECT
 
 !  ---  inputs:
 #ifdef SERIALIZE
-      integer :: nlay, nlp1, ipseed
+      integer :: nlay, nlp1, ipseed, ser_count, iplon
 #else
-      integer, intent(in) :: nlay, nlp1, ipseed
+      integer, intent(in) :: nlay, nlp1, ipseed, ser_count, iplon
 #endif
 
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cfrac
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: cliqp,    &
+#else
       real (kind=kind_phys), dimension(nlay),   intent(in) :: cliqp,    &
+#endif
      &       reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4, dz
       real (kind=kind_phys),                    intent(in) :: de_lgth
 
@@ -1857,6 +2284,7 @@ END SELECT
 
       logical :: lcloudy(ngptlw,nlay)
       integer :: ia, ib, ig, k, index
+      character(len=6) :: ser_count_str
 
 !
 !===> ...  begin here
@@ -2017,10 +2445,30 @@ END SELECT
 
         call mcica_subcol                                               &
 !  ---  inputs:
-     &     ( cldf, nlay, ipseed, dz, de_lgth,                           &
+     &     ( ser_count, cldf, nlay, ipseed, dz, de_lgth, iplon,         &
 !  ---  output:
      &       lcloudy                                                    &
      &     )
+
+#ifdef SERIALIZE
+if (iplon==1) then
+! file: radlw_main.F lineno: #1896
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #1899
+call fs_create_savepoint("lwrad-mcica_subcol-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1900
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'lcloudy', lcloudy)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'lcloudy', lcloudy)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'lcloudy', lcloudy, ppser_zrperturb)
+END SELECT
+endif
+#endif
 
         do k = 1, nlay
           do ig = 1, ngptlw
@@ -2047,7 +2495,7 @@ END SELECT
 !!\param lcloudy     sub-colum cloud profile flag array
 ! ----------------------------------
       subroutine mcica_subcol                                           &
-     &    ( cldf, nlay, ipseed, dz, de_lgth,                            &!  ---  inputs
+     &    ( ser_count, cldf, nlay, ipseed, dz, de_lgth, iplon,                           &!  ---  inputs
      &      lcloudy                                                     & !  ---  outputs
      &    )
 
@@ -2076,12 +2524,16 @@ END SELECT
 
 !  ---  inputs:
 #ifdef SERIALIZE
-      integer :: nlay, ipseed
+      integer :: nlay, ipseed, ser_count, iplon
 #else
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, iplon
 #endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: cldf, dz
+#else
       real (kind=kind_phys), dimension(nlay), intent(in) :: cldf, dz
+#endif
       real (kind=kind_phys),                  intent(in) :: de_lgth
 
 !  ---  outputs:
@@ -2095,6 +2547,8 @@ END SELECT
       type (random_stat) :: stat          ! for thread safe random generator
 
       integer :: k, n, k1
+      character(len=6) :: ser_count_str
+      character(len=2) :: iplon_str
 !
 !===> ...  begin here
 !
@@ -2132,6 +2586,8 @@ END SELECT
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
+
+          write(*,*) 'test = ', rand2d(1)
 
           k1 = 0
           do n = 1, ngptlw
@@ -2721,13 +3177,33 @@ END SELECT
       integer, intent(in) :: nlay, nlp1
 #endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(0:nlp1) :: cldfrc
+#else
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cldfrc
+#endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands) :: semiss,   &
+#else
       real (kind=kind_phys), dimension(nbands), intent(in) :: semiss,   &
+#endif
      &       secdif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: delp
+#else
       real (kind=kind_phys), dimension(nlay),   intent(in) :: delp
+#endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,nlay):: taucld
+#else
       real (kind=kind_phys), dimension(nbands,nlay),intent(in):: taucld
+#endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(ngptlw,nlay):: fracs, &
+#else
       real (kind=kind_phys), dimension(ngptlw,nlay),intent(in):: fracs, &
+#endif
      &       tautot
 
 #ifdef SERIALIZE
@@ -3111,13 +3587,33 @@ END SELECT
       integer, intent(in) :: nlay, nlp1
 #endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(0:nlp1) :: cldfrc
+#else
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cldfrc
+#endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands) :: semiss,   &
+#else
       real (kind=kind_phys), dimension(nbands), intent(in) :: semiss,   &
+#endif
      &       secdif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: delp
+#else
       real (kind=kind_phys), dimension(nlay),   intent(in) :: delp
+#endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,nlay):: taucld
+#else
       real (kind=kind_phys), dimension(nbands,nlay),intent(in):: taucld
+#endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(ngptlw,nlay):: fracs, &
+#else
       real (kind=kind_phys), dimension(ngptlw,nlay),intent(in):: fracs, &
+#endif
      &       tautot
 
 #ifdef SERIALIZE
@@ -3714,12 +4210,28 @@ END SELECT
       integer, intent(in) :: nlay, nlp1
 #endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands) :: semiss,   &
+#else
       real (kind=kind_phys), dimension(nbands), intent(in) :: semiss,   &
+#endif
      &       secdif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay) :: delp
+#else
       real (kind=kind_phys), dimension(nlay),   intent(in) :: delp
+#endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,nlay):: taucld
+#else
       real (kind=kind_phys), dimension(nbands,nlay),intent(in):: taucld
+#endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(ngptlw,nlay):: fracs, &
+#else
       real (kind=kind_phys), dimension(ngptlw,nlay),intent(in):: fracs, &
+#endif
      &       tautot, cldfmc
 
 #ifdef SERIALIZE
@@ -4174,9 +4686,17 @@ END SELECT
 #else
       real (kind=kind_phys), dimension(nlay,maxgas), intent(in):: colamt
 #endif
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nlay,maxxsec):: wx
+#else
       real (kind=kind_phys), dimension(nlay,maxxsec),intent(in):: wx
+#endif
 
+#ifdef SERIALIZE
+      real (kind=kind_phys), dimension(nbands,nlay):: tauaer
+#else
       real (kind=kind_phys), dimension(nbands,nlay), intent(in):: tauaer
+#endif
 
       real (kind=kind_phys), dimension(nlay,nrates,2), intent(in) ::    &
      &       rfrate
