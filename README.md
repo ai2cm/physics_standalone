@@ -61,7 +61,12 @@ python -m gt4py.gt_src_manager install
 pip install .
 ```
 
-If data input to initialize physics does not come from serialbox, an example is provided in `physics/examples/run.py`, which uses `xarray` to read in a netcdf file and intialize the microphysics routine. To run the example file, make sure to execute `get_data.sh`.
+If data input to initialize physics does not come from serialbox, an example is provided in `physics/examples/run.py`, which reads in a netcdf file, transforms to a dictionary, then intializes the microphysics routine. To run the example file, make sure to execute `get_data.sh`. The `numpy` backend in `gt4py` is used by default, to switch to a different backend:
+```
+export BACKEND=gtx86
+or
+export BACKEND=gtcuda
+```
 
 ## Code coverage
 
