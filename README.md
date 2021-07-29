@@ -24,6 +24,7 @@ After that:
 cd <parameterization>
 ./get_data.sh
 cd ../runfile
+export IS_DOCKER=True
 python physics.py <parameterization> <backend> <--data_dir> <--select_tile> <--select_sp>
 ```
 
@@ -41,9 +42,26 @@ python physics.py microph gtx86 --select_tile=0 --select_sp=cloud_mp-in-000000
 
 Note: You may have to adapt the `Makefile` to point to your serialbox installation if it is not installed under `/usr/local/serialbox`.
 
-## Running without docker
+## Running without docker and serialbox
 
 If you prefer to work without a Docker environment, you can ignore the `./build.sh` and `./enter.sh` commands.
+
+### Setup
+
+We recommend creating a new virtual environment for any project:
+```
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+# install gt4py
+git clone https://github.com/VulcanClimateModeling/gt4py.git
+pip install ./gt4py # pip install -e ./gt4py[cudaXX]
+python -m gt4py.gt_src_manager install
+# install physics standalone
+pip install .
+```
+
+If data input to initialize physics does not come from serialbox, an example is provided in `physics/examples/run.py`, which uses `xarray` to read in a netcdf file and intialize the microphysics routine. To run the example file, make sure to execute `get_data.sh`.
 
 ## Code coverage
 
