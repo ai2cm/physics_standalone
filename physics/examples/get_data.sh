@@ -1,0 +1,1 @@
+wget "ftp://ftp.cscs.ch/in/put/abc/cosmo/fuo/physics_standalone/netcdf/microph/c48_standard_tile_1.nc"
