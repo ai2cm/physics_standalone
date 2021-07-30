@@ -1247,11 +1247,12 @@
 
         else
 
-!$ser verbatim if (iplon==3) then
+!$ser verbatim if (iplon==npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-rtrnmc-input-"//trim(ser_count_str)
+  !$ser data exp_tbl=exp_tbl tfn_tbl=tfn_tbl tau_tbl=tau_tbl
   !$ser data semiss=semiss delp=delp cldfmc=cldfmc taucld=taucld
   !$ser data tautot=tautot pklay=pklay pklev=pklev fracs=fracs
   !$ser data secdiff=secdiff nlay=nlay nlp1=nlp1
@@ -1267,7 +1268,7 @@
      &       totuflux,totdflux,htr, totuclfl,totdclfl,htrcl, htrb       &
      &     )
 
-!$ser verbatim if (iplon==3) then
+!$ser verbatim if (iplon==npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser verbatim write(*,*) 'iplon = ', iplon

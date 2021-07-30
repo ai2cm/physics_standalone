@@ -255,7 +255,7 @@ class RadLWClass():
             for i in range(npts):
                 ipseed[i] = icseed[i]
 
-        for iplon in range(npts):
+        for iplon in range(npts-1, npts):
             print(f"iplon = {iplon}")
             if sfemis[iplon] > self.eps and sfemis[iplon] <= 1.0:
                 for j in range(nbands):
@@ -499,6 +499,7 @@ class RadLWClass():
                                          nlay,
                                          nlp1)
             else:
+                start = time.time()
                 (totuflux,
                      totdflux,
                      htr,
@@ -515,7 +516,10 @@ class RadLWClass():
                                          fracs,
                                          secdiff,
                                          nlay,
-                                         nlp1)
+                                         nlp1,
+                                         iplon)
+                end = time.time()
+                print(f"rtrnmc time = {end-start}")
             print("Done")
             print(" ")
 
@@ -1577,7 +1581,7 @@ class RadLWClass():
         return totuflux, totdflux, htr, totuclfl, totdclfl, htrcl, htrb
 
     def rtrnmc(self, semiss, delp, cldfmc, taucld, tautot, pklay, pklev, fracs,
-               secdif, nlay, nlp1):
+               secdif, nlay, nlp1, iplon):
         #  ===================  program usage description  ===================  !
         # purpose:  compute the upward/downward radiative fluxes, and heating   !
         # rates for both clear or cloudy atmosphere.  clouds are treated with   !
@@ -1753,7 +1757,6 @@ class RadLWClass():
                 trngas[k] = trng
 
                 #  --- ...  total sky, gases+clouds contribution
-
                 clfm = cldfmc[ig, k]
                 if clfm >= self.eps:
                     #  --- ...  cloudy layer

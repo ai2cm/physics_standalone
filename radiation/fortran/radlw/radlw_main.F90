@@ -288,8 +288,8 @@ USE m_serialize, ONLY: &
   fs_add_savepoint_metainfo, &
   fs_create_savepoint
 USE utils_ppser, ONLY:  &
-  ppser_set_mode, &
   ppser_get_mode, &
+  ppser_set_mode, &
   ppser_savepoint, &
   ppser_serializer, &
   ppser_serializer_ref, &
@@ -1648,7 +1648,7 @@ end if
         else
 
 #ifdef SERIALIZE
-if (iplon==3) then
+if (iplon==npts) then
 ! file: radlw_main.F lineno: #1251
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
@@ -1656,6 +1656,21 @@ write(*,*) 'iplon = ', iplon
 ! file: radlw_main.F lineno: #1254
 call fs_create_savepoint("lwrad-rtrnmc-input-"//trim(ser_count_str), ppser_savepoint)
 ! file: radlw_main.F lineno: #1255
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'exp_tbl', exp_tbl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tfn_tbl', tfn_tbl)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tau_tbl', tau_tbl)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'exp_tbl', exp_tbl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tfn_tbl', tfn_tbl)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tau_tbl', tau_tbl)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'exp_tbl', exp_tbl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tfn_tbl', tfn_tbl, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tau_tbl', tau_tbl, ppser_zrperturb)
+END SELECT
+! file: radlw_main.F lineno: #1256
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'semiss', semiss)
@@ -1673,7 +1688,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'cldfmc', cldfmc, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taucld', taucld, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1256
+! file: radlw_main.F lineno: #1257
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'tautot', tautot)
@@ -1691,7 +1706,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'pklev', pklev, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1257
+! file: radlw_main.F lineno: #1258
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'secdiff', secdiff)
@@ -1706,7 +1721,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlay', nlay, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'nlp1', nlp1, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1258
+! file: radlw_main.F lineno: #1259
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'totuflux', totuflux)
@@ -1721,7 +1736,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdflux', totdflux, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htr', htr, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1259
+! file: radlw_main.F lineno: #1260
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'totuclfl', totuclfl)
@@ -1751,14 +1766,14 @@ endif
      &     )
 
 #ifdef SERIALIZE
-if (iplon==3) then
-! file: radlw_main.F lineno: #1271
+if (iplon==npts) then
+! file: radlw_main.F lineno: #1272
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
 write(*,*) 'iplon = ', iplon
-! file: radlw_main.F lineno: #1274
-call fs_create_savepoint("lwrad-rtrnmc-output-"//trim(ser_count_str), ppser_savepoint)
 ! file: radlw_main.F lineno: #1275
+call fs_create_savepoint("lwrad-rtrnmc-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1276
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'totuflux', totuflux)
@@ -1773,7 +1788,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'totdflux', totdflux, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'htr', htr, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1276
+! file: radlw_main.F lineno: #1277
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'totuclfl', totuclfl)
@@ -2084,11 +2099,11 @@ endif
       enddo
 
 #ifdef SERIALIZE
-! file: radlw_main.F lineno: #1568
-call ppser_set_mode(0)
 ! file: radlw_main.F lineno: #1569
-call fs_create_savepoint("lw_rlwinit_out", ppser_savepoint)
+call ppser_set_mode(0)
 ! file: radlw_main.F lineno: #1570
+call fs_create_savepoint("lw_rlwinit_out", ppser_savepoint)
+! file: radlw_main.F lineno: #1571
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'semiss0', semiss0)
@@ -2106,7 +2121,7 @@ SELECT CASE ( ppser_get_mode() )
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'heatfac', heatfac, ppser_zrperturb)
     call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'exp_tbl', exp_tbl, ppser_zrperturb)
 END SELECT
-! file: radlw_main.F lineno: #1571
+! file: radlw_main.F lineno: #1572
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'tau_tbl', tau_tbl)
@@ -2452,13 +2467,13 @@ END SELECT
 
 #ifdef SERIALIZE
 if (iplon==1) then
-! file: radlw_main.F lineno: #1896
+! file: radlw_main.F lineno: #1897
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
 write(*,*) 'iplon = ', iplon
-! file: radlw_main.F lineno: #1899
-call fs_create_savepoint("lwrad-mcica_subcol-output-"//trim(ser_count_str), ppser_savepoint)
 ! file: radlw_main.F lineno: #1900
+call fs_create_savepoint("lwrad-mcica_subcol-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #1901
 SELECT CASE ( ppser_get_mode() )
   CASE(0)
     call fs_write_field(ppser_serializer, ppser_savepoint, 'lcloudy', lcloudy)

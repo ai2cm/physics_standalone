@@ -174,14 +174,14 @@ program test
                      clouds, icsdlw, faerlw, semis,   &
                      tsfg, dz, delp, de_lgth,                     &
                      im, lmk, lmp, lprnt,                   &
-                     htlwc, topflw, sfcflw, cldtaulw)        !  ---  outputs
+                     htlwc, topflw, sfcflw, cldtaulw, htlw0)        !  ---  outputs
 
 !$ser mode write
 !$ser savepoint "lwrad-check-"//trim(ser_count_str)
 !$ser data htlwc=htlwc upfxc_t=topflw%upfxc upfx0_t=topflw%upfx0
 !$ser data upfxc_s=sfcflw%upfxc upfx0_s=sfcflw%upfx0
 !$ser data dnfxc_s=sfcflw%dnfxc dnfx0_s=sfcflw%dnfx0
-!$ser data cldtaulw=cldtaulw
+!$ser data cldtaulw=cldtaulw htlw0=htlw0
 
 !$ser mode read
 !$ser savepoint "lwrad-out-"//trim(ser_count_str)
