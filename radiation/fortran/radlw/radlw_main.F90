@@ -284,12 +284,12 @@
 #ifdef SERIALIZE
 USE m_serialize, ONLY: &
   fs_read_field, &
+  fs_create_savepoint, &
   fs_write_field, &
-  fs_add_savepoint_metainfo, &
-  fs_create_savepoint
+  fs_add_savepoint_metainfo
 USE utils_ppser, ONLY:  &
-  ppser_get_mode, &
   ppser_set_mode, &
+  ppser_get_mode, &
   ppser_savepoint, &
   ppser_serializer, &
   ppser_serializer_ref, &
@@ -1404,7 +1404,7 @@ end if
 !! fractions for each longwave spectral band.
 
 #ifdef SERIALIZE
-if (iplon == 3) then
+if (iplon == 1) then
 ! file: radlw_main.F lineno: #1165
 call ppser_set_mode(0)
 write(ser_count_str, '(i6.6)') ser_count
@@ -1566,11 +1566,11 @@ end if
 
         call taumol                                                     &
 !  ---  inputs:
-     &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
+     &     ( ser_count,laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
      &       rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,                  &
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor,                &
-     &       nlay,                                                      &
+     &       nlay, iplon,                                                      &
 !  ---  outputs:
      &       fracs, tautot                                              &
      &     )
@@ -4552,11 +4552,11 @@ endif
 !!\param tautot           total optical depth (gas+aerosols)
 ! ----------------------------------
       subroutine taumol                                                 &
-     &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              & !  ---  inputs
+     &     ( ser_count,laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              & !  ---  inputs
      &       rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,                  &
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor,                &
-     &       nlay,                                                      &
+     &       nlay, iplon,                                                     &
      &       fracs, tautot                                              & !  ---  outputs
      &     )
 
@@ -4675,9 +4675,9 @@ endif
 
 !  ---  inputs:
 #ifdef SERIALIZE
-      integer :: nlay, laytrop
+      integer :: nlay, laytrop, ser_count, iplon
 #else
-      integer, intent(in) :: nlay, laytrop
+      integer, intent(in) :: nlay, laytrop, ser_count, iplon
 #endif
 
 #ifdef SERIALIZE
@@ -4724,6 +4724,7 @@ endif
       real (kind=kind_phys), dimension(ngptlw,nlay) :: taug
 
       integer :: ib, ig, k
+      character(len=6) :: ser_count_str
 !
 !===> ...  begin here
 !
@@ -4938,6 +4939,32 @@ endif
           fracs(ns02+ig,k) = fracrefb(ig)
         enddo
       enddo
+
+#ifdef SERIALIZE
+if (iplon == 1) then
+! file: radlw_main.F lineno: #4228
+call ppser_set_mode(0)
+write(ser_count_str, '(i6.6)') ser_count
+write(*,*) 'iplon = ', iplon
+! file: radlw_main.F lineno: #4231
+call fs_create_savepoint("lwrad-taugb02-output-"//trim(ser_count_str), ppser_savepoint)
+! file: radlw_main.F lineno: #4232
+SELECT CASE ( ppser_get_mode() )
+  CASE(0)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'fracs', fracs)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'tautot', tautot)
+    call fs_write_field(ppser_serializer, ppser_savepoint, 'taug', taug)
+  CASE(1)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautot', tautot)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taug', taug)
+  CASE(2)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'fracs', fracs, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'tautot', tautot, ppser_zrperturb)
+    call fs_read_field(ppser_serializer_ref, ppser_savepoint, 'taug', taug, ppser_zrperturb)
+END SELECT
+end if
+#endif
 
 ! ..................................
       end subroutine taugb02
