@@ -256,7 +256,6 @@ ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
-print(savepoints[10])
 
 # print(savepoints)
 
@@ -272,12 +271,12 @@ indict = dict()
 outdict = dict()
 
 for var in invars:
-    tmp = serializer.read(var, savepoints[10])
+    tmp = serializer.read(var, serializer.savepoint['lwrad-setcoef-input-000000'])
 
     indict[var] = tmp
 
 for var in outvars:
-    tmp = serializer.read(var, savepoints[11])
+    tmp = serializer.read(var, serializer.savepoint['lwrad-setcoef-output-000000'])
 
     outdict[var] = tmp
 
