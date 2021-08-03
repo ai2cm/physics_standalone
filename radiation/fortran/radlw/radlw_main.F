@@ -4532,14 +4532,6 @@
         enddo
       enddo
 
-!$ser verbatim if (iplon == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
-  !$ser savepoint "lwrad-taugb03-output-"//trim(ser_count_str)
-  !$ser data fracs=fracs tautot=tautot taug=taug
-!$ser verbatim end if
-
 ! ..................................
       end subroutine taugb03
 ! ----------------------------------
@@ -4783,6 +4775,14 @@
         taug(ns04+13,k) = taug(ns04+13,k) * 0.88
         taug(ns04+14,k) = taug(ns04+14,k) * 0.943
       enddo
+
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-taugb04-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
 
 ! ..................................
       end subroutine taugb04
