@@ -5407,6 +5407,14 @@
         taug(ns07+11,k) = taug(ns07+11,k) * 0.855
       enddo
 
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-taugb07-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
+
 ! ..................................
       end subroutine taugb07
 ! ----------------------------------
