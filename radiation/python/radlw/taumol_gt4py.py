@@ -18,7 +18,7 @@ sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/p
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 from radlw.radlw_param import (nrates, nspa, nspb, ng01, ng02, ng03, ng04, ng05,
-                               ns02, ns03, ns04, ns05, oneminus)
+                               ng06, ns02, ns03, ns04, ns05, ns06, oneminus)
 
 np.set_printoptions(precision=15)
 
@@ -1335,6 +1335,108 @@ def taugb05(pavel: FIELD_FLT,
                 (fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl])
 
 
+@stencil(backend=backend, rebuild=rebuild, externals={'nspa': nspa[5],
+                                                      'nspb': nspb[5],
+                                                      'laytrop': indict['laytrop'],
+                                                      'ng06': ng06,
+                                                      'ns06': ns06,
+                                                      'nlay': nlay,
+                                                      'oneminus': oneminus})
+def taugb06(pavel: FIELD_FLT,
+            coldry: FIELD_FLT,
+            colamt: Field[type_maxgas],
+            colbrd: FIELD_FLT,
+            wx: Field[type_maxxsec],
+            tauaer: Field[type_nbands],
+            rfrate: Field[(np.float64, (nrates, 2))],
+            fac00: FIELD_FLT,
+            fac01: FIELD_FLT,
+            fac10: FIELD_FLT,
+            fac11: FIELD_FLT,
+            jp: FIELD_INT,
+            jt: FIELD_INT,
+            jt1: FIELD_INT,
+            selffac: FIELD_FLT,
+            selffrac: FIELD_FLT,
+            indself: FIELD_INT,
+            forfac: FIELD_FLT,
+            forfrac: FIELD_FLT,
+            indfor: FIELD_INT,
+            minorfrac: FIELD_FLT,
+            scaleminor: FIELD_FLT,
+            scaleminorn2: FIELD_FLT,
+            indminor: FIELD_INT,
+            fracs: Field[type_ngptlw],
+            tautot: Field[type_ngptlw],
+            taug: Field[type_ngptlw],
+            absa: Field[(DTYPE_FLT, (ng06, 65))],
+            selfref: Field[(DTYPE_FLT, (ng06, 10))],
+            forref: Field[(DTYPE_FLT, (ng06, 4))],
+            fracrefa: Field[(DTYPE_FLT, (ng06,))],
+            ka_mco2: Field[(DTYPE_FLT, (ng06, 19))],
+            cfc11adj: Field[(DTYPE_FLT, (ng06,))],
+            cfc12: Field[(DTYPE_FLT, (ng06,))],
+            chi_mls: Field[(DTYPE_FLT, (7, 59))],
+            ind0: FIELD_INT,
+            ind0p: FIELD_INT,
+            ind1: FIELD_INT,
+            ind1p: FIELD_INT,
+            inds: FIELD_INT,
+            indsp: FIELD_INT,
+            indf: FIELD_INT,
+            indfp: FIELD_INT,
+            indm: FIELD_INT,
+            indmp: FIELD_INT,
+            pp: FIELD_FLT,
+            corradj: FIELD_FLT,
+            scalen2: FIELD_FLT,
+            tauself: FIELD_FLT,
+            taufor: FIELD_FLT):
+    from __externals__ import nspa, nspb, laytrop, ng06, nlay, ns06, oneminus
+    with computation(PARALLEL), interval(0, laytrop):
+        ind0 = ((jp-1)*5 + (jt -1)) * nspa
+        ind1 = ( jp   *5 + (jt1-1)) * nspa
+
+        inds = indself - 1
+        indf = indfor - 1
+        indm = indminor - 1
+        indsp = inds + 1
+        indfp = indf + 1
+        indmp = indm + 1
+        ind0p = ind0 + 1
+        ind1p = ind1 + 1
+
+        temp   = coldry * chi_mls[0, 0, 0][1, jp]
+        ratco2 = colamt[0, 0, 0][1] / temp
+        if ratco2 > 3.0:
+            adjfac = 2.0 + (ratco2-2.0)**0.77
+            adjcolco2 = adjfac * temp
+        else:
+            adjcolco2 = colamt[0, 0, 0][1]
+
+        for ig in range(ng06):
+            tauself = selffac * (selfref[0, 0, 0][ig, inds] + selffrac * \
+                (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds]))
+            taufor  = forfac * (forref[0, 0, 0][ig, indf] + forfrac * \
+                (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf]))
+            absco2  = ka_mco2[0, 0, 0][ig, indm] + minorfrac * \
+                (ka_mco2[0, 0, 0][ig, indmp] - ka_mco2[0, 0, 0][ig, indm])
+
+            taug[0, 0, 0][ns06+ig] = colamt[0, 0, 0][0] * \
+                (fac00*absa[0, 0, 0][ig, ind0] + fac10*absa[0, 0, 0][ig, ind0p] + \
+                 fac01*absa[0, 0, 0][ig, ind1] + fac11*absa[0, 0, 0][ig, ind1p]) + \
+                tauself + taufor + adjcolco2*absco2 + \
+                wx[0, 0, 0][1]*cfc11adj[0, 0, 0][ig] + wx[0, 0, 0][2]*cfc12[0, 0, 0][ig]
+
+            fracs[0, 0, 0][ns06+ig] = fracrefa[0, 0, 0][ig]
+
+    with computation(PARALLEL), interval(laytrop, nlay):
+        for ig2 in range(ng06):
+            taug[0, 0, 0][ns06+ig2] = wx[0, 0, 0][1]*cfc11adj[0, 0, 0][ig2] + wx[0, 0, 0][2]*cfc12[0, 0, 0][ig2]
+
+            fracs[0, 0, 0][ns06+ig2] = fracrefa[0, 0, 0][ig2]
+
+
 
 lookupdict_gt4py = loadlookupdata('kgb01')
 
@@ -1692,6 +1794,66 @@ taugb05(indict_gt4py['pavel'],
 end = time.time()
 print(f"Elapsed time = {end-start}")
 
+
+lookupdict_gt4py = loadlookupdata('kgb06')
+
+start = time.time()
+taugb06(indict_gt4py['pavel'],
+        indict_gt4py['coldry'],
+        indict_gt4py['colamt'],
+        indict_gt4py['colbrd'],
+        indict_gt4py['wx'],
+        indict_gt4py['tauaer'],
+        indict_gt4py['rfrate'],
+        indict_gt4py['fac00'],
+        indict_gt4py['fac01'],
+        indict_gt4py['fac10'],
+        indict_gt4py['fac11'],
+        indict_gt4py['jp'],
+        indict_gt4py['jt'],
+        indict_gt4py['jt1'],
+        indict_gt4py['selffac'],
+        indict_gt4py['selffrac'],
+        indict_gt4py['indself'],
+        indict_gt4py['forfac'],
+        indict_gt4py['forfrac'],
+        indict_gt4py['indfor'],
+        indict_gt4py['minorfrac'],
+        indict_gt4py['scaleminor'],
+        indict_gt4py['scaleminorn2'],
+        indict_gt4py['indminor'],
+        indict_gt4py['fracs'],
+        indict_gt4py['tautot'],
+        taug,
+        lookupdict_gt4py['absa'],
+        lookupdict_gt4py['selfref'],
+        lookupdict_gt4py['forref'],
+        lookupdict_gt4py['fracrefa'],
+        lookupdict_gt4py['ka_mco2'],
+        lookupdict_gt4py['cfc11adj'],
+        lookupdict_gt4py['cfc12'],
+        lookupdict_gt4py['chi_mls'],
+        locdict_gt4py['ind0'],
+        locdict_gt4py['ind0p'],
+        locdict_gt4py['ind1'],
+        locdict_gt4py['ind1p'],
+        locdict_gt4py['inds'],
+        locdict_gt4py['indsp'],
+        locdict_gt4py['indf'],
+        locdict_gt4py['indfp'],
+        locdict_gt4py['indm'],
+        locdict_gt4py['indmp'],
+        locdict_gt4py['pp'],
+        locdict_gt4py['corradj'],
+        locdict_gt4py['scalen2'],
+        locdict_gt4py['tauself'],
+        locdict_gt4py['taufor'],
+        domain=domain2,
+        origin=default_origin,
+        validate_args=validate)
+end = time.time()
+print(f"Elapsed time = {end-start}")
+
 outdict_gt4py = {'fracs': indict_gt4py['fracs'][-1, :, :, :].squeeze().T,
                  'tautot': indict_gt4py['tautot'][-1, :, :, :].squeeze().T,
                  'taug': taug[-1, :, :, :].squeeze().T}
@@ -1700,7 +1862,7 @@ outvars = ['fracs', 'tautot', 'taug']
 
 outdict_val = dict()
 for var in outvars:
-    outdict_val[var] = serializer.read(var, serializer.savepoint['lwrad-taugb05-output-000000'])
+    outdict_val[var] = serializer.read(var, serializer.savepoint['lwrad-taugb06-output-000000'])
 
 compare_data(outdict_val, outdict_gt4py)
 
