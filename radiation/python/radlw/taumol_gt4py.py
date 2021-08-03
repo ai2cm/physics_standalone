@@ -3,23 +3,30 @@ import os
 import sys
 import time
 import numpy as np
-from numpy.lib.npyio import load
 import xarray as xr
 import gt4py.gtscript as gtscript
-from gt4py.gtscript import FORWARD, BACKWARD, PARALLEL, Field, computation, interval, stencil, exp
+from gt4py.gtscript import (FORWARD,
+                            BACKWARD,
+                            PARALLEL,
+                            Field,
+                            computation,
+                            interval,
+                            stencil,
+                            exp,
+                            mod)
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
-from radlw_param import nrates, nspa, nspb, ng01, ng02, ns02
+from radlw.radlw_param import nrates, nspa, nspb, ng01, ng02, ng03, ns02, ns03, oneminus
 
-os.environ["DYLD_LIBRARY_PATH"]="/Users/AndrewP/Documents/code/serialbox2/install/lib"
+np.set_printoptions(precision=15)
 
 SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 rebuild = False
-validate = True
+validate = False
 backend = "gtc:gt:cpu_ifirst"
 
 invars = ['laytrop', 'pavel', 'coldry', 'colamt', 'colbrd', 'wx', 'tauaer',
@@ -33,7 +40,7 @@ fltvars = ['pavel', 'coldry', 'colamt', 'colbrd', 'fac00', 'fac01', 'fac10', 'fa
            'selffac', 'selffrac', 'forfac', 'forfrac', 'minorfrac', 'scaleminor',
            'scaleminorn2']
 
-ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump'
+ddir = '../../fortran/radlw/dump'
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, 'Serialized_rank0')
 
 savepoints = serializer.savepoint_list()
@@ -42,7 +49,7 @@ savepoints = serializer.savepoint_list()
 indict = dict()
 
 for var in invars:
-    tmp = serializer.read(var, savepoints[10])
+    tmp = serializer.read(var, serializer.savepoint['lwrad-taumol-input-000000'])
     if var == 'colamt' or var == 'wx':
         indict[var] = np.tile(tmp[None, None, :, :], (npts, 1, 1, 1))
     elif var == 'tauaer' or var == 'fracs' or var == 'tautot':
@@ -101,7 +108,9 @@ taug = create_storage_zeros(backend,
 locdict_gt4py = dict()
 
 locvars_int = ['ind0', 'ind0p', 'ind1', 'ind1p', 'inds', 'indsp', 'indf', 'indfp',
-               'indm', 'indmp']
+               'indm', 'indmp', 'js', 'js1', 'jmn2o', 'jmn2op', 'jpl', 'jplp',
+               'id000', 'id010', 'id100', 'id110', 'id200', 'id210', 'id001',
+               'id011', 'id101', 'id111', 'id201', 'id211']
 locvars_flt = ['pp', 'corradj', 'scalen2', 'tauself', 'taufor', 'taun2']
 
 for var in locvars_int:
@@ -118,16 +127,27 @@ def loadlookupdata(name):
     ds = xr.open_dataset('../lookupdata/radlw_'+name+'_data.nc')
 
     for var in ds.data_vars.keys():
-        print(f"{var} = {ds.data_vars[var].shape}")
+        # print(f"{var} = {ds.data_vars[var].shape}")
         if len(ds.data_vars[var].shape) == 1:
             lookupdict[var] = np.tile(ds[var].data[None, None, None, :], (npts, 1, nlay, 1))
         elif len(ds.data_vars[var].shape) == 2:
             lookupdict[var] = np.tile(ds[var].data[None, None, None, :, :], (npts, 1, nlay, 1, 1))
+        elif len(ds.data_vars[var].shape) == 3:
+            lookupdict[var] = np.tile(ds[var].data[None, None, None, :, :, :], (npts, 1, nlay, 1, 1, 1))
 
         lookupdict_gt4py[var] = create_storage_from_array(lookupdict[var],
                                                           backend,
                                                           shape_nlay,
-                                                          (np.float64, ds.data_vars[var].shape))
+                                                          (np.float64, ds[var].shape))
+
+    ds2 = xr.open_dataset('../lookupdata/radlw_ref_data.nc')
+    tmp = np.tile(ds2['chi_mls'].data[None, None, None, :, :], (npts, 1, nlay, 1, 1))
+
+    lookupdict_gt4py['chi_mls'] = create_storage_from_array(tmp,
+                                                            backend,
+                                                            shape_nlay,
+                                                            (np.float64, ds2['chi_mls'].shape))
+
     return lookupdict_gt4py
 
 
@@ -353,6 +373,364 @@ def taugb02(pavel: FIELD_FLT,
 
             fracs[0, 0, 0][ns02+ig2] = fracrefb[0, 0, 0][ig2]
 
+
+@stencil(backend=backend, rebuild=rebuild, externals={'nspa': nspa[2],
+                                                      'nspb': nspb[2],
+                                                      'laytrop': indict['laytrop'],
+                                                      'ng03': ng03,
+                                                      'ns03': ns03,
+                                                      'nlay': nlay,
+                                                      'oneminus': oneminus})
+def taugb03(pavel: FIELD_FLT,
+            coldry: FIELD_FLT,
+            colamt: Field[type_maxgas],
+            colbrd: FIELD_FLT,
+            wx: Field[type_maxxsec],
+            tauaer: Field[type_nbands],
+            rfrate: Field[(np.float64, (nrates, 2))],
+            fac00: FIELD_FLT,
+            fac01: FIELD_FLT,
+            fac10: FIELD_FLT,
+            fac11: FIELD_FLT,
+            jp: FIELD_INT,
+            jt: FIELD_INT,
+            jt1: FIELD_INT,
+            selffac: FIELD_FLT,
+            selffrac: FIELD_FLT,
+            indself: FIELD_INT,
+            forfac: FIELD_FLT,
+            forfrac: FIELD_FLT,
+            indfor: FIELD_INT,
+            minorfrac: FIELD_FLT,
+            scaleminor: FIELD_FLT,
+            scaleminorn2: FIELD_FLT,
+            indminor: FIELD_INT,
+            fracs: Field[type_ngptlw],
+            tautot: Field[type_ngptlw],
+            taug: Field[type_ngptlw],
+            absa: Field[(DTYPE_FLT, (ng03, 585))],
+            absb: Field[(DTYPE_FLT, (ng03, 1175))],
+            selfref: Field[(DTYPE_FLT, (ng03, 10))],
+            forref: Field[(DTYPE_FLT, (ng03, 4))],
+            fracrefa: Field[(DTYPE_FLT, (ng03, 9))],
+            fracrefb: Field[(DTYPE_FLT, (ng03, 5))],
+            ka_mn2o: Field[(DTYPE_FLT, (ng03, 9, 19))],
+            kb_mn2o: Field[(DTYPE_FLT, (ng03, 5, 19))],
+            chi_mls: Field[(DTYPE_FLT, (7, 59))],
+            ind0: FIELD_INT,
+            ind0p: FIELD_INT,
+            ind1: FIELD_INT,
+            ind1p: FIELD_INT,
+            inds: FIELD_INT,
+            indsp: FIELD_INT,
+            indf: FIELD_INT,
+            indfp: FIELD_INT,
+            indm: FIELD_INT,
+            indmp: FIELD_INT,
+            pp: FIELD_FLT,
+            corradj: FIELD_FLT,
+            scalen2: FIELD_FLT,
+            tauself: FIELD_FLT,
+            taufor: FIELD_FLT,
+            taun2: FIELD_FLT,
+            js: FIELD_INT,
+            js1: FIELD_INT,
+            jmn2o: FIELD_INT,
+            jmn2op: FIELD_INT,
+            jpl: FIELD_INT,
+            jplp: FIELD_INT,
+            id000: FIELD_INT,
+            id010: FIELD_INT,
+            id100: FIELD_INT,
+            id110: FIELD_INT,
+            id200: FIELD_INT,
+            id210: FIELD_INT,
+            id001: FIELD_INT,
+            id011: FIELD_INT,
+            id101: FIELD_INT,
+            id111: FIELD_INT,
+            id201: FIELD_INT,
+            id211: FIELD_INT):
+    from __externals__ import nspa, nspb, laytrop, ng03, nlay, ns03, oneminus
+    with computation(PARALLEL), interval(0, laytrop):
+        #  --- ...  minor gas mapping levels:
+        #     lower - n2o, p = 706.272 mbar, t = 278.94 k
+        #     upper - n2o, p = 95.58 mbar, t = 215.7 k
+
+        refrat_planck_a = chi_mls[0, 0, 0][0, 8]/chi_mls[0, 0, 0][1, 8]
+        refrat_planck_b = chi_mls[0, 0, 0][0, 12]/chi_mls[0, 0, 0][1, 12]
+        refrat_m_a = chi_mls[0, 0, 0][0, 2]/chi_mls[0, 0, 0][1, 2]
+        refrat_m_b = chi_mls[0, 0, 0][0, 12]/chi_mls[0, 0, 0][1, 12]
+
+        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0]*colamt[0, 0, 0][1]
+        specparm = colamt[0, 0, 0][0] / speccomb
+        specmult = 8.0 * min(specparm, oneminus)
+        js = 1 + specmult
+        fs = mod(specmult, 1.0)
+        ind0 = ((jp-1)*5 + (jt-1)) * nspa + js - 1
+
+        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1]*colamt[0, 0, 0][1]
+        specparm1 = colamt[0, 0, 0][0] / speccomb1
+        specmult1 = 8.0 * min(specparm1, oneminus)
+        js1 = 1 + specmult1
+        fs1 = mod(specmult1, 1.0)
+        ind1 = (jp*5 + (jt1-1)) * nspa + js1 - 1
+
+        speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_a*colamt[0, 0, 0][1]
+        specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
+        specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
+        jmn2o = 1 + specmult_mn2o - 1
+        fmn2o = mod(specmult_mn2o, 1.0)
+
+        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a*colamt[0, 0, 0][1]
+        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+        specmult_planck = 8.0 * min(specparm_planck, oneminus)
+        jpl = 1 + specmult_planck - 1
+        fpl = mod(specmult_planck, 1.0)
+
+        inds = indself - 1
+        indf = indfor - 1
+        indm = indminor - 1
+        indsp = inds + 1
+        indfp = indf + 1
+        indmp = indm + 1
+        jmn2op= jmn2o+ 1
+        jplp  = jpl  + 1
+
+        #  --- ...  in atmospheres where the amount of n2O is too great to be considered
+        #           a minor species, adjust the column amount of n2O by an empirical factor
+        #           to obtain the proper contribution.
+
+        p = coldry * chi_mls[0, 0, 0][3, jp]
+        ratn2o = colamt[0, 0 ,0][3] / p
+        if ratn2o > 1.5:
+            adjfac = 0.5 + (ratn2o - 0.5)**0.65
+            adjcoln2o = adjfac * p
+        else:
+            adjcoln2o = colamt[0, 0, 0][3]
+
+        id000 = id000
+        id010 = id010
+        id100 = id100
+        id110 = id110
+        id200 = id200
+        id210 = id210
+
+        id001 = id001
+        id011 = id011
+        id101 = id101
+        id111 = id111
+        id201 = id201
+        id211 = id211
+
+        if specparm < 0.125:
+            p = fs - 1.0
+            p4 = p**4
+            fk0 = p4
+            fk1 = 1.0 - p - 2.0*p4
+            fk2 = p + p4
+            id000 = ind0
+            id010 = ind0 + 9
+            id100 = ind0 + 1
+            id110 = ind0 +10
+            id200 = ind0 + 2
+            id210 = ind0 +11
+        elif specparm > 0.875:
+            p = -fs
+            p4 = p**4
+            fk0 = p4
+            fk1 = 1.0 - p - 2.0*p4
+            fk2 = p + p4
+            id000 = ind0 + 1
+            id010 = ind0 +10
+            id100 = ind0*1
+            id110 = ind0 + 9
+            id200 = ind0 - 1
+            id210 = ind0 + 8
+        else:
+            fk0 = 1.0 - fs
+            fk1 = fs
+            fk2 = 0.0
+            id000 = ind0*1
+            id010 = ind0 + 9
+            id100 = ind0 + 1
+            id110 = ind0 +10
+            id200 = ind0*1
+            id210 = ind0*1
+
+        fac000 = fk0*fac00
+        fac100 = fk1*fac00
+        fac200 = fk2*fac00
+        fac010 = fk0*fac10
+        fac110 = fk1*fac10
+        fac210 = fk2*fac10
+
+        if specparm1 < 0.125:
+            p = fs1 - 1.0
+            p4 = p**4
+            fk0 = p4
+            fk1 = 1.0 - p - 2.0*p4
+            fk2 = p + p4
+            id001 = ind1
+            id011 = ind1 + 9
+            id101 = ind1 + 1
+            id111 = ind1 +10
+            id201 = ind1 + 2
+            id211 = ind1 +11
+        elif specparm1 > 0.875:
+            p = -fs1
+            p4 = p**4
+            fk0 = p4
+            fk1 = 1.0 - p - 2.0*p4
+            fk2 = p + p4
+            id001 = ind1 + 1
+            id011 = ind1 +10
+            id101 = ind1
+            id111 = ind1 + 9
+            id201 = ind1 - 1
+            id211 = ind1 + 8
+        else:
+            fk0 = 1.0 - fs1
+            fk1 = fs1
+            fk2 = 0.0
+            id001 = ind1
+            id011 = ind1 + 9
+            id101 = ind1 + 1
+            id111 = ind1 +10
+            id201 = ind1
+            id211 = ind1
+
+        fac001 = fk0*fac01
+        fac101 = fk1*fac01
+        fac201 = fk2*fac01
+        fac011 = fk0*fac11
+        fac111 = fk1*fac11
+        fac211 = fk2*fac11
+
+        for ig in range(ng03):
+            tauself = selffac* (selfref[0, 0, 0][ig, inds] + selffrac * \
+                (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds]))
+            taufor  = forfac * (forref[0, 0, 0][ig, indf] + forfrac * \
+                (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf]))
+            n2om1   = ka_mn2o[0, 0, 0][ig, jmn2o, indm] + fmn2o * \
+                (ka_mn2o[0, 0, 0][ig, jmn2op, indm] - ka_mn2o[0, 0, 0][ig, jmn2o, indm])
+            n2om2   = ka_mn2o[0, 0, 0][ig, jmn2o, indmp] + fmn2o * \
+                (ka_mn2o[0, 0, 0][ig, jmn2op, indmp] - ka_mn2o[0, 0, 0][ig, jmn2o, indmp])
+            absn2o  = n2om1 + minorfrac * (n2om2 - n2om1)
+
+            tau_major = speccomb * \
+                (fac000*absa[0, 0, 0][ig, id000] + fac010*absa[0, 0, 0][ig, id010] + \
+                 fac100*absa[0, 0, 0][ig, id100] + fac110*absa[0, 0, 0][ig, id110] + \
+                fac200*absa[0, 0, 0][ig, id200] + fac210*absa[0, 0, 0][ig, id210])
+
+            tau_major1 = speccomb1 * \
+                (fac001*absa[0, 0, 0][ig, id001] + fac011*absa[0, 0, 0][ig, id011] + \
+                 fac101*absa[0, 0, 0][ig, id101] + fac111*absa[0, 0, 0][ig, id111] + \
+                fac201*absa[0, 0, 0][ig, id201] + fac211*absa[0, 0, 0][ig, id211])
+
+            taug[0, 0, 0][ns03+ig] = tau_major + tau_major1 + tauself + taufor + \
+                adjcoln2o*absn2o
+
+            fracs[0, 0, 0][ns03+ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * \
+                (fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl])
+
+    with computation(PARALLEL), interval(laytrop, nlay):
+
+        refrat_planck_a = chi_mls[0, 0, 0][0, 8]/chi_mls[0, 0, 0][1, 8]
+        refrat_planck_b = chi_mls[0, 0, 0][0, 12]/chi_mls[0, 0, 0][1, 12]
+        refrat_m_a = chi_mls[0, 0, 0][0, 2]/chi_mls[0, 0, 0][1, 2]
+        refrat_m_b = chi_mls[0, 0, 0][0, 12]/chi_mls[0, 0, 0][1, 12]
+
+        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0]*colamt[0, 0, 0][1]
+        specparm = colamt[0, 0, 0][0] / speccomb
+        specmult = 4.0 * min(specparm, oneminus)
+        js = 1 + specmult
+        fs = mod(specmult, 1.0)
+        ind0 = ((jp-13)*5 + (jt-1)) * nspb + js - 1
+
+        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1]*colamt[0, 0, 0][1]
+        specparm1 = colamt[0, 0, 0][0] / speccomb1
+        specmult1 = 4.0 * min(specparm1, oneminus)
+        js1 = 1 + specmult1
+        fs1 = mod(specmult1, 1.0)
+        ind1 = ((jp-12)*5 + (jt1-1)) * nspb + js1 - 1
+
+        speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_b*colamt[0, 0, 0][1]
+        specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
+        specmult_mn2o = 4.0 * min(specparm_mn2o, oneminus)
+        jmn2o = 1 + specmult_mn2o - 1
+        fmn2o = mod(specmult_mn2o, 1.0)
+
+        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_b*colamt[0, 0, 0][1]
+        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+        specmult_planck = 4.0 * min(specparm_planck, oneminus)
+        jpl = 1 + specmult_planck - 1
+        fpl = mod(specmult_planck, 1.0)
+
+        indf = indfor - 1
+        indm = indminor - 1
+        indfp = indf + 1
+        indmp = indm + 1
+        jmn2op= jmn2o+ 1
+        jplp  = jpl  + 1
+
+        id000 = ind0
+        id010 = ind0 + 5
+        id100 = ind0 + 1
+        id110 = ind0 + 6
+        id001 = ind1
+        id011 = ind1 + 5
+        id101 = ind1 + 1
+        id111 = ind1 + 6
+
+        #  --- ...  in atmospheres where the amount of n2o is too great to be considered
+        #           a minor species, adjust the column amount of N2O by an empirical factor
+        #           to obtain the proper contribution.
+
+        p = coldry * chi_mls[0, 0, 0][3, jp]
+        ratn2o = colamt[0, 0, 0][3] / p
+        if ratn2o > 1.5:
+            adjfac = 0.5 + (ratn2o - 0.5)**0.65
+            adjcoln2o = adjfac * p
+        else:
+            adjcoln2o = colamt[0, 0, 0][3]
+
+        fk0 = 1.0 - fs
+        fk1 = fs
+        fac000 = fk0*fac00
+        fac010 = fk0*fac10
+        fac100 = fk1*fac00
+        fac110 = fk1*fac10
+
+        fk0 = 1.0 - fs1
+        fk1 = fs1
+        fac001 = fk0*fac01
+        fac011 = fk0*fac11
+        fac101 = fk1*fac01
+        fac111 = fk1*fac11
+
+        for ig2 in range(ng03):
+            taufor = forfac * (forref[0, 0, 0][ig2, indf] + forfrac * \
+                (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])) 
+            n2om1  = kb_mn2o[0, 0, 0][ig2, jmn2o, indm] + fmn2o * \
+                (kb_mn2o[0, 0, 0][ig2, jmn2op, indm] - kb_mn2o[0, 0, 0][ig2, jmn2o, indm])
+            n2om2  = kb_mn2o[0, 0, 0][ig2, jmn2o, indmp] + fmn2o * \
+                (kb_mn2o[0, 0, 0][ig2, jmn2op, indmp] - kb_mn2o[0, 0, 0][ig2, jmn2o, indmp])
+            absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
+
+            tau_major = speccomb * \
+                (fac000*absb[0, 0, 0][ig2, id000] + fac010*absb[0, 0, 0][ig2, id010] + \
+                 fac100*absb[0, 0, 0][ig2, id100] + fac110*absb[0, 0, 0][ig2, id110])
+
+            tau_major1 = speccomb1 * \
+                (fac001*absb[0, 0, 0][ig2, id001] + fac011*absb[0, 0, 0][ig2, id011] + \
+                 fac101*absb[0, 0, 0][ig2, id101] + fac111*absb[0, 0, 0][ig2, id111])
+
+            taug[0, 0, 0][ns03+ig2] = tau_major + tau_major1 + taufor + adjcoln2o*absn2o            
+
+            fracs[0, 0, 0][ns03+ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * \
+                (fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl])
+
 lookupdict_gt4py = loadlookupdata('kgb01')
 
 start = time.time()
@@ -471,23 +849,107 @@ taugb02(indict_gt4py['pavel'],
 end = time.time()
 print(f"Elapsed time = {end-start}")
 
+lookupdict_gt4py = loadlookupdata('kgb03')
+# print(lookupdict_gt4py)
+
+start = time.time()
+taugb03(indict_gt4py['pavel'],
+        indict_gt4py['coldry'],
+        indict_gt4py['colamt'],
+        indict_gt4py['colbrd'],
+        indict_gt4py['wx'],
+        indict_gt4py['tauaer'],
+        indict_gt4py['rfrate'],
+        indict_gt4py['fac00'],
+        indict_gt4py['fac01'],
+        indict_gt4py['fac10'],
+        indict_gt4py['fac11'],
+        indict_gt4py['jp'],
+        indict_gt4py['jt'],
+        indict_gt4py['jt1'],
+        indict_gt4py['selffac'],
+        indict_gt4py['selffrac'],
+        indict_gt4py['indself'],
+        indict_gt4py['forfac'],
+        indict_gt4py['forfrac'],
+        indict_gt4py['indfor'],
+        indict_gt4py['minorfrac'],
+        indict_gt4py['scaleminor'],
+        indict_gt4py['scaleminorn2'],
+        indict_gt4py['indminor'],
+        indict_gt4py['fracs'],
+        indict_gt4py['tautot'],
+        taug,
+        lookupdict_gt4py['absa'],
+        lookupdict_gt4py['absb'],
+        lookupdict_gt4py['selfref'],
+        lookupdict_gt4py['forref'],
+        lookupdict_gt4py['fracrefa'],
+        lookupdict_gt4py['fracrefb'],
+        lookupdict_gt4py['ka_mn2o'],
+        lookupdict_gt4py['kb_mn2o'],
+        lookupdict_gt4py['chi_mls'],
+        locdict_gt4py['ind0'],
+        locdict_gt4py['ind0p'],
+        locdict_gt4py['ind1'],
+        locdict_gt4py['ind1p'],
+        locdict_gt4py['inds'],
+        locdict_gt4py['indsp'],
+        locdict_gt4py['indf'],
+        locdict_gt4py['indfp'],
+        locdict_gt4py['indm'],
+        locdict_gt4py['indmp'],
+        locdict_gt4py['pp'],
+        locdict_gt4py['corradj'],
+        locdict_gt4py['scalen2'],
+        locdict_gt4py['tauself'],
+        locdict_gt4py['taufor'],
+        locdict_gt4py['taun2'],
+        locdict_gt4py['js'],
+        locdict_gt4py['js1'],
+        locdict_gt4py['jmn2o'],
+        locdict_gt4py['jmn2op'],
+        locdict_gt4py['jpl'],
+        locdict_gt4py['jplp'],
+        locdict_gt4py['id000'],
+        locdict_gt4py['id010'],
+        locdict_gt4py['id100'],
+        locdict_gt4py['id110'],
+        locdict_gt4py['id200'],
+        locdict_gt4py['id210'],
+        locdict_gt4py['id001'],
+        locdict_gt4py['id011'],
+        locdict_gt4py['id101'],
+        locdict_gt4py['id111'],
+        locdict_gt4py['id201'],
+        locdict_gt4py['id211'],
+        domain=domain2,
+        origin=default_origin,
+        validate_args=validate)
+end = time.time()
+print(f"Elapsed time = {end-start}")
+
 outdict_gt4py = {'fracs': indict_gt4py['fracs'][-1, :, :, :].squeeze().T,
                  'tautot': indict_gt4py['tautot'][-1, :, :, :].squeeze().T,
                  'taug': taug[-1, :, :, :].squeeze().T}
-
-print(outdict_gt4py['fracs'].shape)
     
 outvars = ['fracs', 'tautot', 'taug']
 
-print(f"savepoint = {savepoints[11]}")
-
 outdict_val = dict()
 for var in outvars:
-    outdict_val[var] = serializer.read(var, savepoints[11])
+    outdict_val[var] = serializer.read(var, serializer.savepoint['lwrad-taugb03-output-000000'])
 
 compare_data(outdict_val, outdict_gt4py)
 
-# print(f"Fortran = {outdict_val['taug'][0, :]}")
+#print(f"ind0 = {locdict_gt4py['ind0']}")
 # print(f"Python = {outdict_gt4py['taug'][0, :]}")
 # 
-# print(f"Difference = {(outdict_val['taug'] - outdict_gt4py['taug']).max()}")
+# print(indict_gt4py['laytrop'])
+# print(f"Difference = {(outdict_val['taug'][ns03 + 5, :40] - outdict_gt4py['taug'][ns03 + 5, :40])}")
+# print(' ')
+# print(f"Fortran = {outdict_val['taug'][ns03, :40]}")
+# print(' ')
+# print(f"Python = {outdict_gt4py['taug'][ns03, :40]}")
+# print(' ')
+# # 
+# print(f"jpl = {locdict_gt4py['tau_major'][0, :, :40]}")

@@ -1,5 +1,7 @@
 FROM ubuntu:latest
 
+# this is a comment
+
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
   && apt-get install -y \
@@ -43,9 +45,6 @@ ENV TZ=US/Pacific
 RUN echo $TZ > /etc/timezone && \
     dpkg-reconfigure --frontend noninteractive tzdata
 
-# install some python packages
-RUN pip install numpy
-
 # install serialbox from source
 COPY serialbox /serialbox
 RUN cd /serialbox && \
@@ -60,8 +59,11 @@ RUN cd /serialbox && \
     /bin/rm -rf /serialbox
 
 # install gt4py
-RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@develop && \
-    python -m gt4py.gt_src_manager install
+RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@v32 && \
+    python -m gt4py.gt_src_manager install -m 2
+
+# install some python packages
+RUN pip install numpy xarray[complete]
 
 # add default user
 ARG USER=user
