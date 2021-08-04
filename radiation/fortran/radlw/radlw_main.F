@@ -1185,7 +1185,7 @@
      &       fracs, tautot                                              &
      &     )
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "lwrad-taumol-output-"//trim(ser_count_str)

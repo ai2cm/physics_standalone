@@ -7,13 +7,11 @@ import xarray as xr
 import gt4py.gtscript as gtscript
 from gt4py.gtscript import (
     FORWARD,
-    BACKWARD,
     PARALLEL,
     Field,
     computation,
     interval,
     stencil,
-    exp,
     mod,
 )
 
@@ -24,6 +22,7 @@ from radlw.radlw_param import (
     nrates,
     nspa,
     nspb,
+    ngb,
     ng01,
     ng02,
     ng03,
@@ -57,8 +56,6 @@ from radlw.radlw_param import (
     ns16,
     oneminus,
 )
-
-np.set_printoptions(precision=15)
 
 SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
@@ -97,6 +94,7 @@ invars = [
     "nlay",
     "fracs",
     "tautot",
+    "NGB",
 ]
 
 integervars = ["jp", "jt", "jt1", "indself", "indfor", "indminor"]
@@ -126,22 +124,33 @@ savepoints = serializer.savepoint_list()
 indict = dict()
 
 for var in invars:
-    tmp = serializer.read(var, serializer.savepoint["lwrad-taumol-input-000000"])
-    if var == "colamt" or var == "wx":
-        indict[var] = np.tile(tmp[None, None, :, :], (npts, 1, 1, 1))
-    elif var == "tauaer" or var == "fracs" or var == "tautot":
-        indict[var] = np.tile(tmp.T[None, None, :, :], (npts, 1, 1, 1))
-    elif var == "rfrate":
-        indict[var] = np.tile(tmp[None, None, :, :, :], (npts, 1, 1, 1, 1))
-    elif var in integervars or var in fltvars:
-        indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
+    if var == "NGB":
+        indict[var] = np.tile(np.array(ngb)[None, None, :], (npts, 1, 1))
     else:
-        indict[var] = tmp[0]
+        tmp = serializer.read(var, serializer.savepoint["lwrad-taumol-input-000000"])
+        if var == "colamt" or var == "wx":
+            indict[var] = np.tile(tmp[None, None, :, :], (npts, 1, 1, 1))
+        elif var == "tauaer" or var == "fracs" or var == "tautot":
+            indict[var] = np.tile(tmp.T[None, None, :, :], (npts, 1, 1, 1))
+        elif var == "rfrate":
+            indict[var] = np.tile(tmp[None, None, :, :, :], (npts, 1, 1, 1, 1))
+        elif var in integervars or var in fltvars:
+            indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
+        else:
+            indict[var] = tmp[0]
 
 indict_gt4py = dict()
 
 for var in invars:
-    if var == "colamt":
+    if var == "NGB":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var],
+            backend,
+            shape_2D,
+            (DTYPE_INT, (ngptlw,)),
+            default_origin=(0, 0),
+        )
+    elif var == "colamt":
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlay, type_maxgas
         )
@@ -170,11 +179,10 @@ for var in invars:
     else:
         indict_gt4py[var] = indict[var]
 
-taug = create_storage_zeros(backend, shape_nlay, type_ngptlw)
-
 locdict_gt4py = dict()
 
 locvars_int = [
+    "ib",
     "ind0",
     "ind0p",
     "ind1",
@@ -213,6 +221,7 @@ locvars_int = [
     "jmn2p",
 ]
 locvars_flt = [
+    "taug",
     "pp",
     "corradj",
     "scalen2",
@@ -237,10 +246,16 @@ locvars_flt = [
 ]
 
 for var in locvars_int:
-    locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
+    if var == "ib":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_INT)
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
 
 for var in locvars_flt:
-    locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
+    if var == "taug":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_ngptlw)
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
 
 
 def loadlookupdata(name):
@@ -3946,6 +3961,23 @@ def taugb16(
             fracs[0, 0, 0][ns16 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
+@stencil(backend=backend, rebuild=rebuild, externals={"ngptlw": ngptlw})
+def combine_optical_depth(
+    NGB: Field[gtscript.IJ, (DTYPE_INT, (ngptlw,))],
+    ib: FIELD_2DINT,
+    taug: Field[type_ngptlw],
+    tauaer: Field[type_nbands],
+    tautot: Field[type_ngptlw],
+):
+    from __externals__ import ngptlw
+
+    with computation(FORWARD), interval(...):
+        for ig in range(ngptlw):
+            ib = NGB[0, 0][ig] - 1
+
+            tautot[0, 0, 0][ig] = taug[0, 0, 0][ig] + tauaer[0, 0, 0][ib]
+
+
 print("Loading lookup table data . . .")
 lookupdict_gt4py1 = loadlookupdata("kgb01")
 lookupdict_gt4py2 = loadlookupdata("kgb02")
@@ -3991,7 +4023,7 @@ taugb01(
     indict_gt4py["scaleminorn2"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py1["absa"],
     lookupdict_gt4py1["absb"],
     lookupdict_gt4py1["selfref"],
@@ -4041,7 +4073,7 @@ taugb02(
     indict_gt4py["forfrac"],
     indict_gt4py["indfor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py2["absa"],
     lookupdict_gt4py2["absb"],
     lookupdict_gt4py2["selfref"],
@@ -4087,7 +4119,7 @@ taugb03(
     indict_gt4py["minorfrac"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py3["absa"],
     lookupdict_gt4py3["absb"],
     lookupdict_gt4py3["selfref"],
@@ -4150,7 +4182,7 @@ taugb04(
     indict_gt4py["forfrac"],
     indict_gt4py["indfor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py4["absa"],
     lookupdict_gt4py4["absb"],
     lookupdict_gt4py4["selfref"],
@@ -4210,7 +4242,7 @@ taugb05(
     indict_gt4py["minorfrac"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py5["absa"],
     lookupdict_gt4py5["absb"],
     lookupdict_gt4py5["selfref"],
@@ -4277,7 +4309,7 @@ taugb06(
     indict_gt4py["minorfrac"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py6["absa"],
     lookupdict_gt4py6["selfref"],
     lookupdict_gt4py6["forref"],
@@ -4326,7 +4358,7 @@ taugb07(
     indict_gt4py["minorfrac"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py7["absa"],
     lookupdict_gt4py7["absb"],
     lookupdict_gt4py7["selfref"],
@@ -4394,7 +4426,7 @@ taugb08(
     indict_gt4py["minorfrac"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py8["absa"],
     lookupdict_gt4py8["absb"],
     lookupdict_gt4py8["selfref"],
@@ -4450,7 +4482,7 @@ taugb09(
     indict_gt4py["minorfrac"],
     indict_gt4py["indminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py9["absa"],
     lookupdict_gt4py9["absb"],
     lookupdict_gt4py9["selfref"],
@@ -4515,7 +4547,7 @@ taugb10(
     indict_gt4py["forfrac"],
     indict_gt4py["indfor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py10["absa"],
     lookupdict_gt4py10["absb"],
     lookupdict_gt4py10["selfref"],
@@ -4560,7 +4592,7 @@ taugb11(
     indict_gt4py["indminor"],
     indict_gt4py["scaleminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py11["absa"],
     lookupdict_gt4py11["absb"],
     lookupdict_gt4py11["selfref"],
@@ -4607,7 +4639,7 @@ taugb12(
     indict_gt4py["forfrac"],
     indict_gt4py["indfor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py12["absa"],
     lookupdict_gt4py12["selfref"],
     lookupdict_gt4py12["forref"],
@@ -4666,7 +4698,7 @@ taugb13(
     indict_gt4py["indminor"],
     indict_gt4py["minorfrac"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py13["absa"],
     lookupdict_gt4py13["selfref"],
     lookupdict_gt4py13["forref"],
@@ -4730,7 +4762,7 @@ taugb14(
     indict_gt4py["forfrac"],
     indict_gt4py["indfor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py14["absa"],
     lookupdict_gt4py14["absb"],
     lookupdict_gt4py14["selfref"],
@@ -4777,7 +4809,7 @@ taugb15(
     indict_gt4py["minorfrac"],
     indict_gt4py["scaleminor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py15["absa"],
     lookupdict_gt4py15["selfref"],
     lookupdict_gt4py15["forref"],
@@ -4839,7 +4871,7 @@ taugb16(
     indict_gt4py["forfrac"],
     indict_gt4py["indfor"],
     indict_gt4py["fracs"],
-    taug,
+    locdict_gt4py["taug"],
     lookupdict_gt4py16["absa"],
     lookupdict_gt4py16["absb"],
     lookupdict_gt4py16["selfref"],
@@ -4893,23 +4925,33 @@ taugb16(
     validate_args=validate,
 )
 end = time.time()
-end0 = time.time()
 print(f"Elapsed time = {end-start}")
+
+combine_optical_depth(
+    indict_gt4py["NGB"],
+    locdict_gt4py["ib"],
+    locdict_gt4py["taug"],
+    indict_gt4py["tauaer"],
+    indict_gt4py["tautot"],
+    domain=domain2,
+    origin=default_origin,
+    validate_args=validate,
+)
 print(" ")
+end0 = time.time()
 print(f"Total time taken = {end0 - start0}")
 
 outdict_gt4py = {
     "fracs": indict_gt4py["fracs"][-1, :, :, :].squeeze().T,
     "tautot": indict_gt4py["tautot"][-1, :, :, :].squeeze().T,
-    "taug": taug[-1, :, :, :].squeeze().T,
 }
 
-outvars = ["fracs", "tautot", "taug"]
+outvars = ["fracsout", "tautotout"]
 
 outdict_val = dict()
 for var in outvars:
-    outdict_val[var] = serializer.read(
-        var, serializer.savepoint["lwrad-taugb16-output-000000"]
+    outdict_val[var[:-3]] = serializer.read(
+        var, serializer.savepoint["lwrad-taumol-output-000000"]
     )
 
 compare_data(outdict_val, outdict_gt4py)
