@@ -4818,6 +4818,8 @@ class RadLWClass():
         fac111 = fk11 * fac11[:laytrop]
         fac211 = fk21 * fac11[:laytrop]
 
+        
+
         for ig in range(ng16):
             tauself = selffac[:laytrop]* (selfref[ig, inds] + selffrac[:laytrop] * \
                 (selfref[ig, indsp] - selfref[ig, inds]))
@@ -4836,6 +4838,8 @@ class RadLWClass():
 
             fracs[ns16+ig, :laytrop] = fracrefa[ig, jpl] + fpl * \
                 (fracrefa[ig, jplp] - fracrefa[ig, jpl])
+
+        print(f"tauself = {tauself}")
 
         #  --- ...  upper atmosphere loop
         ind0 = ((jp[laytrop:nlay]-13)*5 + (jt [laytrop:nlay]-1)) * self.nspb[15]
