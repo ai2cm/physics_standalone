@@ -6388,13 +6388,6 @@
         enddo
       enddo
 
-!$ser verbatim if (iplon == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "lwrad-taugb13-output-"//trim(ser_count_str)
-  !$ser data fracs=fracs tautot=tautot taug=taug
-!$ser verbatim end if
-
 ! ..................................
       end subroutine taugb13
 ! ----------------------------------
@@ -6463,6 +6456,13 @@
           fracs(ns14+ig,k) = fracrefb(ig)
         enddo
       enddo
+
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-taugb14-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
 
 ! ..................................
       end subroutine taugb14

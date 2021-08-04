@@ -2811,6 +2811,86 @@ def taugb13(coldry: FIELD_FLT,
             fracs[0, 0, 0][ns13+ig2] =  fracrefb[0, 0, 0][ig2]
 
 
+@stencil(backend=backend, rebuild=rebuild, externals={'nspa': nspa[13],
+                                                      'nspb': nspb[13],
+                                                      'laytrop': indict['laytrop'],
+                                                      'ng14': ng14,
+                                                      'ns14': ns14,
+                                                      'nlay': nlay,
+                                                      'oneminus': oneminus})
+def taugb14(colamt: Field[type_maxgas],
+            fac00: FIELD_FLT,
+            fac01: FIELD_FLT,
+            fac10: FIELD_FLT,
+            fac11: FIELD_FLT,
+            jp: FIELD_INT,
+            jt: FIELD_INT,
+            jt1: FIELD_INT,
+            selffac: FIELD_FLT,
+            selffrac: FIELD_FLT,
+            indself: FIELD_INT,
+            forfac: FIELD_FLT,
+            forfrac: FIELD_FLT,
+            indfor: FIELD_INT,
+            fracs: Field[type_ngptlw],
+            taug: Field[type_ngptlw],
+            absa: Field[(DTYPE_FLT, (ng11, 65))],
+            absb: Field[(DTYPE_FLT, (ng11, 235))],
+            selfref: Field[(DTYPE_FLT, (ng11, 10))],
+            forref: Field[(DTYPE_FLT, (ng11, 4))],
+            fracrefa: Field[(DTYPE_FLT, (ng11,))],
+            fracrefb: Field[(DTYPE_FLT, (ng11,))],
+            ind0: FIELD_INT,
+            ind0p: FIELD_INT,
+            ind1: FIELD_INT,
+            ind1p: FIELD_INT,
+            inds: FIELD_INT,
+            indsp: FIELD_INT,
+            indf: FIELD_INT,
+            indfp: FIELD_INT,
+            tauself: FIELD_FLT,
+            taufor: FIELD_FLT):
+    from __externals__ import nspa, nspb, laytrop, ng14, nlay, ns14, oneminus
+    with computation(PARALLEL), interval(0, laytrop):
+        ind0 = ((jp-1)*5 + (jt -1)) * nspa
+        ind1 = ( jp   *5 + (jt1-1)) * nspa
+
+        inds = indself - 1
+        indf = indfor - 1
+        ind0p = ind0 + 1
+        ind1p = ind1 + 1
+        indsp = inds + 1
+        indfp = indf + 1
+
+        for ig in range(ng14):
+            tauself = selffac * (selfref[0, 0, 0][ig, inds] + selffrac * \
+                (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds]))
+            taufor  = forfac * (forref[0, 0, 0][ig, indf] + forfrac * \
+                (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])) 
+
+            taug[0, 0, 0][ns14+ig] = colamt[0, 0, 0][1] * \
+                (fac00*absa[0, 0, 0][ig, ind0] + fac10*absa[0, 0, 0][ig, ind0p] + \
+                 fac01*absa[0, 0, 0][ig, ind1] + fac11*absa[0, 0, 0][ig, ind1p]) + \
+                tauself + taufor
+
+            fracs[0, 0, 0][ns14+ig] = fracrefa[0, 0, 0][ig]
+
+    with computation(PARALLEL), interval(laytrop, nlay):
+        ind0 = ((jp-13)*5 + (jt -1)) * nspb
+        ind1 = ((jp-12)*5 + (jt1-1)) * nspb
+
+        ind0p = ind0 + 1
+        ind1p = ind1 + 1
+
+        for ig2 in range(ng14):
+            taug[0, 0, 0][ns14+ig2] = colamt[0, 0, 0][1] * \
+                (fac00*absb[0, 0, 0][ig2, ind0] + fac10*absb[0, 0, 0][ig2, ind0p] + \
+                 fac01*absb[0, 0, 0][ig2, ind1] + fac11*absb[0, 0, 0][ig2, ind1p])
+
+            fracs[0, 0, 0][ns14+ig2] = fracrefb[0, 0, 0][ig2]
+        
+
+
 
 lookupdict_gt4py = loadlookupdata('kgb01')
 
@@ -3647,6 +3727,47 @@ taugb13(indict_gt4py['coldry'],
 end = time.time()
 print(f"Elapsed time = {end-start}")
 
+lookupdict_gt4py = loadlookupdata('kgb14')
+
+start = time.time()
+taugb14(indict_gt4py['colamt'],
+        indict_gt4py['fac00'],
+        indict_gt4py['fac01'],
+        indict_gt4py['fac10'],
+        indict_gt4py['fac11'],
+        indict_gt4py['jp'],
+        indict_gt4py['jt'],
+        indict_gt4py['jt1'],
+        indict_gt4py['selffac'],
+        indict_gt4py['selffrac'],
+        indict_gt4py['indself'],
+        indict_gt4py['forfac'],
+        indict_gt4py['forfrac'],
+        indict_gt4py['indfor'],
+        indict_gt4py['fracs'],
+        taug,
+        lookupdict_gt4py['absa'],
+        lookupdict_gt4py['absb'],
+        lookupdict_gt4py['selfref'],
+        lookupdict_gt4py['forref'],
+        lookupdict_gt4py['fracrefa'],
+        lookupdict_gt4py['fracrefb'],
+        locdict_gt4py['ind0'],
+        locdict_gt4py['ind0p'],
+        locdict_gt4py['ind1'],
+        locdict_gt4py['ind1p'],
+        locdict_gt4py['inds'],
+        locdict_gt4py['indsp'],
+        locdict_gt4py['indf'],
+        locdict_gt4py['indfp'],
+        locdict_gt4py['tauself'],
+        locdict_gt4py['taufor'],
+        domain=domain2,
+        origin=default_origin,
+        validate_args=validate)
+end = time.time()
+print(f"Elapsed time = {end-start}")
+
 outdict_gt4py = {'fracs': indict_gt4py['fracs'][-1, :, :, :].squeeze().T,
                  'tautot': indict_gt4py['tautot'][-1, :, :, :].squeeze().T,
                  'taug': taug[-1, :, :, :].squeeze().T}
@@ -3655,7 +3776,7 @@ outvars = ['fracs', 'tautot', 'taug']
 
 outdict_val = dict()
 for var in outvars:
-    outdict_val[var] = serializer.read(var, serializer.savepoint['lwrad-taugb13-output-000000'])
+    outdict_val[var] = serializer.read(var, serializer.savepoint['lwrad-taugb14-output-000000'])
 
 compare_data(outdict_val, outdict_gt4py)
 
