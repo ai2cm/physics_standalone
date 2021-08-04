@@ -1931,7 +1931,7 @@
 !! @{
 !-----------------------------------
       subroutine aer_update                                             &
-     &     ( iyear, imon, me ) !  ---  inputs:
+     &     ( ser_count, iyear, imon, me ) !  ---  inputs:
 !  ---  outputs: ( to module variables )
 
 !  ==================================================================  !
@@ -1958,11 +1958,12 @@
 !  ==================================================================  !
 
 !  ---  inputs:
-      integer,  intent(in) :: iyear, imon, me
+      integer,  intent(in) :: iyear, imon, me, ser_count
 
 !  ---  output: ( none )
 
 !  ---  locals: ( none )
+      character(len=6) :: ser_count_str
 !
 !===> ...  begin here
 !
@@ -1977,15 +1978,16 @@
       if ( lalwflg .or. laswflg ) then 
         call trop_update
       endif
-  
-!$ser mode write
-!$ser savepoint 'lw_trop_update_out'
-!$ser data kprfg=kprfg idxcg=idxcg cmixg=cmixg denng=denng
 
 !> -# Call volc_update() to update yearly stratospheric volcanic aerosol data.
       if ( lavoflg ) then             
         call volc_update
       endif
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser savepoint "lw_aer_update_out"//trim(ser_count_str)
+!$ser data kprfg=kprfg idxcg=idxcg cmixg=cmixg denng=denng ivolae=ivolae
 
 
 ! =================

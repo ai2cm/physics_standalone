@@ -1046,13 +1046,31 @@
 
         if ( lcf1 ) then
 
+!$ser verbatim if (iplon == 3) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-cldprop-input-"//trim(ser_count_str)
+  !$ser data cldfrc=cldfrc clwp=clwp relw=relw ciwp=ciwp reiw=reiw cda1=cda1
+  !$ser data cda2=cda2 cda3=cda3 cda4=cda4 nlay=nlay nlp1=nlp1 ipseed=ipseed(iplon)
+  !$ser data dz=dz delgth=delgth cldfmc=cldfmc taucld=taucld
+!$ser verbatim end if
+
           call cldprop                                                  &
 !  ---  inputs:
-     &     ( cldfrc,clwp,relw,ciwp,reiw,cda1,cda2,cda3,cda4,            &
-     &       nlay, nlp1, ipseed(iplon), dz, delgth,                     &
+     &     ( ser_count,cldfrc,clwp,relw,ciwp,reiw,cda1,cda2,cda3,cda4,            &
+     &       nlay, nlp1, ipseed(iplon), dz, delgth, iplon,                    &
 !  ---  outputs:
      &       cldfmc, taucld                                             &
      &     )
+
+!$ser verbatim if (iplon == 3) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-cldprop-output-"//trim(ser_count_str)
+  !$ser data cldfmc=cldfmc taucld=taucld
+!$ser verbatim end if
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band-7 is apprx 10mu channel (or use spectral mean of bands 6-8)
@@ -1143,6 +1161,24 @@
 !> -# Call taumol() to calculte the gaseous optical depths and Plank 
 !! fractions for each longwave spectral band.
 
+!$ser verbatim if (iplon == 3) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-taumol-input-"//trim(ser_count_str)
+  !$ser data laytrop=laytrop pavel=pavel coldry=coldry
+  !$ser data colamt=colamt colbrd=colbrd wx=wx
+  !$ser data tauaer=tauaer rfrate=rfrate fac00=fac00
+  !$ser data fac01=fac01 fac10=fac10 fac11=fac11
+  !$ser data jp=jp jt=jt jt1=jt1
+  !$ser data selffac=selffac selffrac=selffrac
+  !$ser data indself=indself forfac=forfac forfrac=forfrac
+  !$ser data indfor=indfor minorfrac=minorfrac
+  !$ser data scaleminor=scaleminor scaleminorn2=scaleminorn2
+  !$ser data indminor=indminor nlay=nlay fracs=fracs
+  !$ser data tautot=tautot 
+!$ser verbatim end if
+
         call taumol                                                     &
 !  ---  inputs:
      &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
@@ -1153,6 +1189,14 @@
 !  ---  outputs:
      &       fracs, tautot                                              &
      &     )
+
+!$ser verbatim if (iplon == 3) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-taumol-output-"//trim(ser_count_str)
+  !$ser data fracsout=fracs tautotout=tautot 
+!$ser verbatim end if
 
 !     if (lprnt) then
 !     print *,' after taumol'
@@ -1203,6 +1247,19 @@
 
         else
 
+!$ser verbatim if (iplon==npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-rtrnmc-input-"//trim(ser_count_str)
+  !$ser data exp_tbl=exp_tbl tfn_tbl=tfn_tbl tau_tbl=tau_tbl
+  !$ser data semiss=semiss delp=delp cldfmc=cldfmc taucld=taucld
+  !$ser data tautot=tautot pklay=pklay pklev=pklev fracs=fracs
+  !$ser data secdiff=secdiff nlay=nlay nlp1=nlp1
+  !$ser data totuflux=totuflux totdflux=totdflux htr=htr 
+  !$ser data totuclfl=totuclfl totdclfl=totdclfl htrcl=htrcl htrb=htrb
+!$ser verbatim endif
+
           call rtrnmc                                                   &
 !  ---  inputs:
      &     ( semiss,delp,cldfmc,taucld,tautot,pklay,pklev,              &
@@ -1210,6 +1267,15 @@
 !  ---  outputs:
      &       totuflux,totdflux,htr, totuclfl,totdclfl,htrcl, htrb       &
      &     )
+
+!$ser verbatim if (iplon==npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-rtrnmc-output-"//trim(ser_count_str)
+  !$ser data totuflux=totuflux totdflux=totdflux htr=htr 
+  !$ser data totuclfl=totuclfl totdclfl=totdclfl htrcl=htrcl htrb=htrb
+!$ser verbatim endif
 
         endif   ! end if_isubclw_block
 
@@ -1540,8 +1606,8 @@
 !> @{
 ! ----------------------------
       subroutine cldprop                                                &
-     &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
-     &       nlay, nlp1, ipseed, dz, de_lgth,                           &
+     &     ( ser_count, cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
+     &       nlay, nlp1, ipseed, dz, de_lgth, iplon,                          &
      &       cldfmc, taucld                                             & !  ---  outputs
      &     )
 
@@ -1641,7 +1707,7 @@
       use module_radlw_cldprlw
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, nlp1, ipseed
+      integer, intent(in) :: nlay, nlp1, ipseed, ser_count, iplon
 
       real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cfrac
       real (kind=kind_phys), dimension(nlay),   intent(in) :: cliqp,    &
@@ -1661,6 +1727,7 @@
 
       logical :: lcloudy(ngptlw,nlay)
       integer :: ia, ib, ig, k, index
+      character(len=6) :: ser_count_str
 
 !
 !===> ...  begin here
@@ -1821,10 +1888,18 @@
 
         call mcica_subcol                                               &
 !  ---  inputs:
-     &     ( cldf, nlay, ipseed, dz, de_lgth,                           &
+     &     ( ser_count, cldf, nlay, ipseed, dz, de_lgth, iplon,         &
 !  ---  output:
      &       lcloudy                                                    &
      &     )
+
+!$ser verbatim if (iplon==1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-mcica_subcol-output-"//trim(ser_count_str)
+  !$ser data lcloudy=lcloudy
+!$ser verbatim endif
 
         do k = 1, nlay
           do ig = 1, ngptlw
@@ -1851,7 +1926,7 @@
 !!\param lcloudy     sub-colum cloud profile flag array
 ! ----------------------------------
       subroutine mcica_subcol                                           &
-     &    ( cldf, nlay, ipseed, dz, de_lgth,                            &!  ---  inputs
+     &    ( ser_count, cldf, nlay, ipseed, dz, de_lgth, iplon,                           &!  ---  inputs
      &      lcloudy                                                     & !  ---  outputs
      &    )
 
@@ -1879,7 +1954,7 @@
       implicit none
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, iplon
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cldf, dz
       real (kind=kind_phys),                  intent(in) :: de_lgth
@@ -1895,6 +1970,8 @@
       type (random_stat) :: stat          ! for thread safe random generator
 
       integer :: k, n, k1
+      character(len=6) :: ser_count_str
+      character(len=2) :: iplon_str
 !
 !===> ...  begin here
 !
@@ -1932,6 +2009,8 @@
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
+
+          write(*,*) 'test = ', rand2d(1)
 
           k1 = 0
           do n = 1, ngptlw

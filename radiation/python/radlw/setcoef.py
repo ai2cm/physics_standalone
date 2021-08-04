@@ -271,12 +271,12 @@ indict = dict()
 outdict = dict()
 
 for var in invars:
-    tmp = serializer.read(var, savepoints[0])
+    tmp = serializer.read(var, serializer.savepoint['lwrad-setcoef-input-000000'])
 
     indict[var] = tmp
 
 for var in outvars:
-    tmp = serializer.read(var, savepoints[1])
+    tmp = serializer.read(var, serializer.savepoint['lwrad-setcoef-output-000000'])
 
     outdict[var] = tmp
 
@@ -317,7 +317,7 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
                     print(f"Successfully validated {var}!")
         else:
             if not np.allclose(
-                data[var], ref_data[var], rtol=1e-11, atol=1.0e-10, equal_nan=True
+                data[var], ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
             ):
 
                 wrong.append(var)

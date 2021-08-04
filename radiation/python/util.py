@@ -52,7 +52,7 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
         if not flag:
             print(f"Output data does not match reference data for field {wrong}!")
 
-def create_storage_from_array(var, backend, shape, dtype):
+def create_storage_from_array(var, backend, shape, dtype, default_origin=default_origin):
     out = gt4py.storage.from_array(
             var,
             backend=backend,

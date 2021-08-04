@@ -44,7 +44,7 @@ class AstronomyClass():
             if me == 0:
                 print(f'- Using new fixed solar constant = {self.solc0}')
         elif isolar == 1:        # noaa ann-mean tsi in absolute scale
-            self.solar_fname = solar_file[:14] + 'noaa_a0.txt' + solar_file[26:]
+            self.solar_fname = solar_file[:14] + 'noaa_a0.nc' + solar_file[26:]
 
             if me == 0:
                 print('- Using NOAA annual mean TSI table in ABS scale',
@@ -60,7 +60,7 @@ class AstronomyClass():
                           f' reset control flag isolflg={self.isolflg}')
 
         elif isolar == 2:        # noaa ann-mean tsi in tim scale
-            self.solar_fname = solar_file[:14] + 'noaa_an.txt' + solar_file[26:]
+            self.solar_fname = solar_file[:14] + 'noaa_an.nc' + solar_file[26:]
 
             if me == 0:
                 print(' - Using NOAA annual mean TSI table in TIM scale',
@@ -76,7 +76,7 @@ class AstronomyClass():
                           f' reset control flag isolflg={self.isolflg}')
 
         elif isolar == 3:        # cmip5 ann-mean tsi in tim scale
-            self.solar_fname = solar_file[:14] + 'cmip_an.txt' + solar_file[26:]
+            self.solar_fname = solar_file[:14] + 'cmip_an.nc' + solar_file[26:]
 
             if me == 0:
                 print('- Using CMIP5 annual mean TSI table in TIM scale',
@@ -92,7 +92,7 @@ class AstronomyClass():
                           f' reset control flag isolflg={self.isolflg}')
 
         elif isolar == 4:      # cmip5 mon-mean tsi in tim scale
-            self.solar_fname = solar_file[:14] + 'cmip_mn.txt' + solar_file[26:]
+            self.solar_fname = solar_file[:14] + 'cmip_mn.nc' + solar_file[26:]
 
             if me == 0:
                 print('- Using CMIP5 monthly mean TSI table in TIM scale',
@@ -115,6 +115,10 @@ class AstronomyClass():
                       f' source, ISOL = {isolar}')
                 print(f'Using the default solar constant value = {self.solc0}',
                       f' reset control flag isolflg={self.isolflg}')
+
+    def return_initdata(self):
+        outdict = {'solar_fname': self.solar_fname}
+        return outdict
 
     def sol_update(self, jdate, kyear, deltsw, deltim, lsol_chg, me):
         #  ===================================================================  !
@@ -182,6 +186,8 @@ class AstronomyClass():
         imin  = jdate[5]
         isec  = jdate[6]
 
+        print(self.solar_fname)
+
         if lsol_chg:   # get solar constant from data table
             if self.iyr_sav == iyear:   # same year, no new reading necessary
                 if self.isolflg == 4:
@@ -189,7 +195,7 @@ class AstronomyClass():
             else:                           # need to read in new data
                 iyr_sav = iyear
                 #  --- ...  check to see if the solar constant data file existed
-                file_exist = os.path.isfile(self.olar_fname)
+                file_exist = os.path.isfile(self.solar_fname)
                 if not file_exist:
                     print(' !!! ERROR! Can not find solar constant file!!!')
                 else:
@@ -442,7 +448,7 @@ class AstronomyClass():
         angin= 23.452294 - (0.0130125 + 0.164e-5 * t1) * t1
 
         ador = jdor
-        jdoe = ador + (svt6 * cyear) / (year - tyear)
+        jdoe = int(ador + (svt6 * cyear) / (year - tyear))
 
         # --- ...  deleqn is updated svt6 for current date
 

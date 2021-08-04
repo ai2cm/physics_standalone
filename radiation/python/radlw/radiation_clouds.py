@@ -69,6 +69,10 @@ class CloudClass():
             llyr = kl
 
         self.llyr = llyr
+
+    def return_initdata(self):
+        outdict = {'llyr': self.llyr}
+        return outdict
         
 
 

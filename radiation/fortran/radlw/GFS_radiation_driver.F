@@ -673,7 +673,7 @@
 !> \section gen_radupdate General Algorithm
 !> @{
 !-----------------------------------
-      subroutine radupdate( idate,jdate,deltsw,deltim,lsswr, me,        &
+      subroutine radupdate( ser_count, idate,jdate,deltsw,deltim,lsswr, me,        &
      &                      slag,sdec,cdec,solcon)
 !...................................
 
@@ -738,7 +738,7 @@
       implicit none
 
 !  ---  inputs:
-      integer, intent(in) :: idate(:), jdate(:), me
+      integer, intent(in) :: idate(:), jdate(:), me, ser_count
       logical, intent(in) :: lsswr
 
       real (kind=kind_phys), intent(in) :: deltsw, deltim
@@ -801,7 +801,7 @@
 
         call sol_update                                                 &
 !  ---  inputs:
-     &     ( jdate,kyear,deltsw,deltim,lsol_chg, me,                    &
+     &     ( ser_count,jdate,kyear,deltsw,deltim,lsol_chg, me,                    &
 !  ---  outputs:
      &       slag,sdec,cdec,solcon                                      &
      &     )
@@ -811,7 +811,7 @@
 !> -# Call module_radiation_aerosols::aer_update(), monthly update, no
 !! time interpolation
       if ( lmon_chg ) then
-        call aer_update ( iyear, imon, me )
+        call aer_update ( ser_count, iyear, imon, me )
       endif
 
 !> -# Call co2 and other gases update routine:
@@ -823,7 +823,7 @@
         lco2_chg = .false.
       endif
 
-      call gas_update ( kyear,kmon,kday,khour,loz1st,lco2_chg, me )
+      call gas_update ( ser_count,kyear,kmon,kday,khour,loz1st,lco2_chg, me )
 
       if ( loz1st ) loz1st = .false.
 

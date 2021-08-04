@@ -515,7 +515,7 @@
 !! @{
 !-----------------------------------
       subroutine gas_update                                             &
-     &     ( iyear, imon, iday, ihour, loz1st, ldoco2, me )!  ---  inputs
+     &     ( ser_count, iyear, imon, iday, ihour, loz1st, ldoco2, me )!  ---  inputs
 !  ---  outputs: ( none )
 
 !  ===================================================================  !
@@ -577,7 +577,7 @@
       implicit none
 
 !  ---  inputs:
-      integer, intent(in) :: iyear, imon, iday, ihour, me
+      integer, intent(in) :: iyear, imon, iday, ihour, me, ser_count
 
       logical, intent(in) :: loz1st, ldoco2
 
@@ -589,6 +589,7 @@
 
       integer    :: i, id, j, l, iyr, imo, iyr1, iyr2, jyr, idyr
       integer, save :: mdays(13), midmon=15, midm=15, midp=45
+      character(len=6) :: ser_count_str
 !  ---  number of days in a month
       data mdays / 31,28,31,30,31,30,31,31,30,31,30,31,30 /
 
@@ -877,6 +878,11 @@
         close ( NICO2CN )
 
       endif  Lab_if_idyr
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser savepoint "lw_gas_update_out"//trim(ser_count_str)
+!$ser data co2vmr_sav=co2vmr_sav gco2cyc=gco2cyc
 
       return
 !

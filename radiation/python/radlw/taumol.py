@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 import os
 import sys
+import time
 sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
 from radlw_param import (ngb, ngptlw, nspa, nspb, oneminus,
                         ng01, ng02, ng03, ng04, ng05, ng06, ng07, ng08,
@@ -132,87 +133,183 @@ def taumol(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
     #
     #===> ...  begin here
     #
+
+    print("Running taugb01")
+    start = time.time()
     taug, fracs = taugb01(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
 
+    print("Running taugb02")
+    start = time.time()
     taug, fracs, tauself = taugb02(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb03")
+    start = time.time()
+
     taug, fracs = taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs, tauself)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb04")
+    start = time.time()
     taug, fracs = taugb04(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb05")
+    start = time.time()
     taug, fracs = taugb05(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb06")
+    start = time.time()
     taug, fracs = taugb06(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb07")
+    start = time.time()
     taug, fracs = taugb07(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb08")
+    start = time.time()
     taug, fracs = taugb08(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb09")
+    start = time.time()
     taug, fracs = taugb09(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb10")
+    start = time.time()
     taug, fracs = taugb10(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb11")
+    start = time.time()
     taug, fracs = taugb11(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb12")
+    start = time.time()
     taug, fracs = taugb12(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb13")
+    start = time.time()
     taug, fracs, taufor = taugb13(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb14")
+    start = time.time()
     taug, fracs = taugb14(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs, taufor)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb15")
+    start = time.time()
     taug, fracs = taugb15(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
+
+    print("Running taugb16")
+    start = time.time()
     taug, fracs = taugb16(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
                           rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,
                           selffac,selffrac,indself,forfac,forfrac,indfor,
                           minorfrac,scaleminor,scaleminorn2,indminor,
                           nlay, taug, fracs)
+    end = time.time()
+    print(f"Elapsed time = {end-start}")
+    print(' ')
 
     tautot = np.zeros((ngptlw, nlay))
 
@@ -525,6 +622,8 @@ def taugb03(laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,
             id110 = ind0 +10
             id200 = ind0
             id210 = ind0
+
+        print(f"id000 = {id000}")
 
         fac000 = fk0*fac00[k]
         fac100 = fk1*fac00[k]

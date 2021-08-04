@@ -322,7 +322,7 @@
 !! @{
 !-----------------------------------
       subroutine sol_update                                             &
-     &     ( jdate,kyear,deltsw,deltim,lsol_chg, me,                    &     !  ---  inputs
+     &     ( ser_count, jdate,kyear,deltsw,deltim,lsol_chg, me,                    &     !  ---  inputs
      &       slag, sdec, cdec, solcon                                   &     !  ---  outputs
      &      )
 
@@ -375,7 +375,7 @@
       implicit none
 
 !  ---  input:
-      integer, intent(in) :: jdate(:), kyear, me
+      integer, intent(in) :: jdate(:), kyear, me, ser_count
       logical, intent(in) :: lsol_chg
 
       real (kind=kind_phys), intent(in) :: deltsw, deltim
@@ -397,6 +397,7 @@
 
       logical :: file_exist
       character :: cline*60
+      character(len=6) :: ser_count_str
 !
 !===>  ...  begin here
 !
@@ -624,8 +625,10 @@
      &          nswr,deltim,deltsw,dtswh,'  anginc,nstp =',anginc,nstp
       endif
 
-!     if (me == 0) print*,'in sol_update completed sr solar'
-!
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser savepoint "lw_sol_update_out"//trim(ser_count_str)
+!$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
       return
 !...................................
       end subroutine sol_update
@@ -785,6 +788,12 @@
       sun  = tpi * (date - deleqn) / year
       if (sun < 0.0) sun = sun + tpi
       sollag = sun - alp - 0.03255e0
+
+      write(*,*) 'tyear = ',tyear
+      write(*,*) 'jdoe = ',jdoe
+      write(*,*) 'deleqn = ',deleqn
+      write(*,*) 'sun = ',sun
+      write(*,*) 'alp = ',alp
 !
       return
 !...................................
