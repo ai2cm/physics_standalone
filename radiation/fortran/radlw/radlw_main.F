@@ -1046,10 +1046,9 @@
 
         if ( lcf1 ) then
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-cldprop-input-"//trim(ser_count_str)
   !$ser data cldfrc=cldfrc clwp=clwp relw=relw ciwp=ciwp reiw=reiw cda1=cda1
   !$ser data cda2=cda2 cda3=cda3 cda4=cda4 nlay=nlay nlp1=nlp1 ipseed=ipseed(iplon)
@@ -1064,10 +1063,9 @@
      &       cldfmc, taucld                                             &
      &     )
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-cldprop-output-"//trim(ser_count_str)
   !$ser data cldfmc=cldfmc taucld=taucld
 !$ser verbatim end if
@@ -1106,7 +1104,6 @@
 !$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-setcoef-input-"//trim(ser_count_str)
   !$ser data pavel=pavel tavel=tavel tz=tz stemp=stemp h2ovmr=h2ovmr 
   !$ser data colamt=colamt coldry=coldry colbrd=colbrd nlay=nlay nlp1=nlp1
@@ -1125,7 +1122,6 @@
 !$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-setcoef-output-"//trim(ser_count_str)
   !$ser data laytrop=laytrop pklay=pklay pklev=pklev jp=jp jt=jt jt1=jt1
   !$ser data rfrate=rfrate fac00=fac00 fac01=fac01 fac10=fac10 fac11=fac11
@@ -1164,7 +1160,6 @@
 !$ser verbatim if (iplon == 3) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-taumol-input-"//trim(ser_count_str)
   !$ser data laytrop=laytrop pavel=pavel coldry=coldry
   !$ser data colamt=colamt colbrd=colbrd wx=wx
@@ -1193,7 +1188,6 @@
 !$ser verbatim if (iplon == 3) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-taumol-output-"//trim(ser_count_str)
   !$ser data fracsout=fracs tautotout=tautot 
 !$ser verbatim end if
@@ -1250,7 +1244,6 @@
 !$ser verbatim if (iplon==npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-rtrnmc-input-"//trim(ser_count_str)
   !$ser data exp_tbl=exp_tbl tfn_tbl=tfn_tbl tau_tbl=tau_tbl
   !$ser data semiss=semiss delp=delp cldfmc=cldfmc taucld=taucld
@@ -1271,7 +1264,6 @@
 !$ser verbatim if (iplon==npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-rtrnmc-output-"//trim(ser_count_str)
   !$ser data totuflux=totuflux totdflux=totdflux htr=htr 
   !$ser data totuclfl=totuclfl totdclfl=totdclfl htrcl=htrcl htrb=htrb
@@ -1884,7 +1876,7 @@
           endif
         enddo
 
-!  --- ...  call sub-column cloud generator
+!     --- ...  call sub-column cloud generator
 
         call mcica_subcol                                               &
 !  ---  inputs:
@@ -1896,7 +1888,6 @@
 !$ser verbatim if (iplon==1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-mcica_subcol-output-"//trim(ser_count_str)
   !$ser data lcloudy=lcloudy
 !$ser verbatim endif
@@ -2009,8 +2000,6 @@
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
-
-          write(*,*) 'test = ', rand2d(1)
 
           k1 = 0
           do n = 1, ngptlw

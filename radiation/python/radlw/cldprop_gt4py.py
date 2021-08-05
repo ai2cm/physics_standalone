@@ -19,7 +19,7 @@ from gt4py.gtscript import (
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from phys_const import con_amw, con_amd, con_amo3
 from radlw_param import ngptlw, nbands, abssnow0, absrain, ipat, cldmin
-from radphysparam import ilwcice, isubclw
+from radphysparam import ilwcice, ilwcliq
 from util import (
     view_gt4py_storage,
     compare_data,
@@ -39,14 +39,11 @@ ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
 
-amdw = con_amd / con_amw
-amdo3 = con_amd / con_amo3
-
-semiss0_np = np.ones(nbands)
-
 rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
+
+isubclw = 2
 
 invars = [
     "nlay",
@@ -98,6 +95,18 @@ for var in invars:
     else:
         indict[var] = tmp
 
+# Read in 2-D array of random numbers used in mcica_subcol, this will change
+# in the future once there is a solution for the RNG in python/gt4py
+ds = xr.open_dataset("../lookupdata/rand2d.nc")
+rand2d = ds["rand2d"][0, :].data
+cdfunc = np.reshape(rand2d, (ngptlw, nlay), order="C")
+cdfunc = np.append(
+    np.insert(cdfunc, 0, np.zeros((1, 1)), axis=1),
+    np.zeros((cdfunc.shape[0], 1)),
+    axis=1,
+)
+indict["cdfunc"] = np.tile(cdfunc.T[None, None, :, :], (npts, 1, 1, 1))
+
 
 indict_gt4py = dict()
 
@@ -121,6 +130,9 @@ for var in invars:
     else:
         indict_gt4py[var] = indict[var]
 
+indict_gt4py["cdfunc"] = create_storage_from_array(
+    indict["cdfunc"], backend, shape_nlp2, type_ngptlw
+)
 
 locvars = [
     "tauliq",
@@ -136,6 +148,9 @@ locvars = [
     "cldice",
     "refice",
     "index",
+    "ia",
+    "lcloudy",
+    "tem1",
 ]
 bandvars = ["tauliq", "tauice"]
 
@@ -144,18 +159,24 @@ locdict_gt4py = dict()
 for var in locvars:
     if var in bandvars:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp2, type_nbands)
-    elif var == "index":
+    elif var == "lcloudy":
+        locdict_gt4py[var] = create_storage_zeros(
+            backend, shape_nlp2, (DTYPE_INT, (ngptlw))
+        )
+    elif var == "index" or var == "ia":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp2, DTYPE_INT)
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp2, DTYPE_FLT)
 
+
+# Read in lookup table data for cldprop calculations
 ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
 
-absliq1 = ds["absliq1"]
-absice0 = ds["absice0"]
-absice1 = ds["absice1"]
-absice2 = ds["absice2"]
-absice3 = ds["absice3"]
+absliq1 = ds["absliq1"].data
+absice0 = ds["absice0"].data
+absice1 = ds["absice1"].data
+absice2 = ds["absice2"].data
+absice3 = ds["absice3"].data
 
 lookup_dict = dict()
 lookup_dict["absliq1"] = create_storage_from_array(
@@ -178,13 +199,16 @@ lookup_dict["ipat"] = create_storage_from_array(
 )
 
 
-@gtscript.function
-def mcica_subcol(cldf, nlay, ipseed, dz, de_lgth):
-    lcloudy = True
-    return lcloudy
-
-
-@gtscript.stencil(backend=backend, rebuild=rebuild, externals={"nbands": nbands})
+@gtscript.stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "nbands": nbands,
+        "ilwcliq": ilwcliq,
+        "ngptlw": ngptlw,
+        "isubclw": isubclw,
+    },
+)
 def cldprop(
     cfrac: FIELD_FLT,
     cliqp: FIELD_FLT,
@@ -196,11 +220,9 @@ def cldprop(
     cdat3: FIELD_FLT,
     cdat4: FIELD_FLT,
     dz: FIELD_FLT,
-    de_lgth: FIELD_2D,
     cldfmc: Field[type_ngptlw],
     taucld: Field[type_nbands],
     absliq1: Field[(DTYPE_FLT, (58, nbands))],
-    absice0: Field[(DTYPE_FLT, (2,))],
     absice1: Field[(DTYPE_FLT, (2, 5))],
     absice2: Field[(DTYPE_FLT, (43, nbands))],
     absice3: Field[(DTYPE_FLT, (46, nbands))],
@@ -218,10 +240,16 @@ def cldprop(
     cldice: FIELD_FLT,
     refice: FIELD_FLT,
     index: FIELD_INT,
+    ia: FIELD_INT,
+    lcloudy: Field[(DTYPE_INT, (ngptlw,))],
+    cdfunc: Field[type_ngptlw],
+    tem1: FIELD_FLT,
 ):
-    from __externals__ import nbands
+    from __externals__ import nbands, ilwcliq, ngptlw, isubclw
 
     with computation(FORWARD), interval(1, -1):
+        # Workaround for bug where variables first used inside if statements cause
+        # problems. Can be removed after next tag of gt4py is released
         tauliq = tauliq
         tauice = tauice
         cldf = cldf
@@ -266,22 +294,114 @@ def cldprop(
                 else:
                     if ilwcliq == 1:
                         factor = refliq - 1.5
-                        index = max(1, min(57, factor))
-                        fint = factor - index
+                        index = max(1, min(57, factor)) - 1
+                        fint = factor - (index + 1)
 
                         for ib in range(nbands):
-                            tauliq[0, 0, 0][ib] = max(
-                                0.0,
-                                cldliq
+                            tmp = cldliq * (
+                                absliq1[0, 0, 0][index, ib]
+                                + fint
                                 * (
-                                    absliq1[0, 0, 0][index, ib]
-                                    + fint
-                                    * (
-                                        absliq1[0, 0, 0][index + 1, ib]
-                                        - absliq1[0, 0, 0][index, ib]
-                                    )
-                                ),
+                                    absliq1[0, 0, 0][index + 1, ib]
+                                    - absliq1[0, 0, 0][index, ib]
+                                )
                             )
+                            # workaround since max doesn't work in for loop in if statement
+                            tauliq[0, 0, 0][ib] = tmp if tmp > 0.0 else 0.0
+
+                if cldice <= 0.0:
+                    for ib2 in range(nbands):
+                        tauice[0, 0, 0][ib2] = 0.0
+                else:
+                    if ilwcice == 1:
+                        refice = min(130.0, max(13.0, refice))
+
+                        for ib3 in range(nbands):
+                            ia = ipat[0, 0, 0][ib3] - 1
+                            tmp = cldice * (
+                                absice1[0, 0, 0][0, ia]
+                                + absice1[0, 0, 0][1, ia] / refice
+                            )
+                            # workaround since max doesn't work in for loop in if statement
+                            tauice[0, 0, 0][ib3] = tmp if tmp > 0.0 else 0.0
+                    elif ilwcice == 2:
+                        factor = (refice - 2.0) / 3.0
+                        index = max(1, min(42, factor)) - 1
+                        fint = factor - (index + 1)
+
+                        for ib4 in range(nbands):
+                            tmp = cldice * (
+                                absice2[0, 0, 0][index, ib4]
+                                + fint
+                                * (
+                                    absice2[0, 0, 0][index + 1, ib4]
+                                    - absice2[0, 0, 0][index, ib4]
+                                )
+                            )
+                            # workaround since max doesn't work in for loop in if statement
+                            tauice[0, 0, 0][ib4] = tmp if tmp > 0.0 else 0.0
+
+                    elif ilwcice == 3:
+                        dgeice = max(5.0, 1.0315 * refice)  # v4.71 value
+                        factor = (dgeice - 2.0) / 3.0
+                        index = max(1, min(45, factor)) - 1
+                        fint = factor - (index + 1)
+
+                        for ib5 in range(nbands):
+                            tmp = cldice * (
+                                absice3[0, 0, 0][index, ib5]
+                                + fint
+                                * (
+                                    absice3[0, 0, 0][index + 1, ib5]
+                                    - absice3[0, 0, 0][index, ib5]
+                                )
+                            )
+                            # workaround since max doesn't work in for loop in if statement
+                            tauice[0, 0, 0][ib5] = tmp if tmp > 0.0 else 0.0
+
+                for ib6 in range(nbands):
+                    taucld[0, 0, 0][ib6] = (
+                        tauice[0, 0, 0][ib6] + tauliq[0, 0, 0][ib6] + tauran + tausnw
+                    )
+
+        else:
+            if cfrac > cldmin:
+                for ib7 in range(nbands):
+                    taucld[0, 0, 0][ib7] = cdat1
+
+        if isubclw > 0:
+            if cfrac < cldmin:
+                cldf = 0.0
+            else:
+                cldf = cfrac
+
+    # This section builds mcica_subcol from the fortran into cldprop.
+    # Here I've read in the generated random numbers until we figure out
+    # what to do with them. This will definitely need to change in future.
+    # Only the iovrlw = 1 option is ported from Fortran
+    with computation(PARALLEL), interval(2, -1):
+        tem1 = 1.0 - cldf[0, 0, -1]
+
+        for n in range(ngptlw):
+            if cdfunc[0, 0, -1][n] > tem1:
+                cdfunc[0, 0, 0][n] = cdfunc[0, 0, -1][n]
+            else:
+                cdfunc[0, 0, 0][n] = cdfunc[0, 0, 0][n] * tem1
+
+    with computation(PARALLEL), interval(1, -1):
+        tem1 = 1.0 - cldf[0, 0, 0]
+
+        for n2 in range(ngptlw):
+            if cdfunc[0, 0, 0][n2] >= tem1:
+                lcloudy[0, 0, 0][n2] = 1
+            else:
+                lcloudy[0, 0, 0][n2] = 0
+
+        for n3 in range(ngptlw):
+            if lcloudy[0, 0, 0][n3] == 1:
+                cldfmc[0, 0, 0][n3] = 1.0
+            else:
+                cldfmc[0, 0, 0][n3] = 0.0
 
 
 cldprop(
@@ -295,11 +415,9 @@ cldprop(
     indict_gt4py["cda3"],
     indict_gt4py["cda4"],
     indict_gt4py["dz"],
-    indict_gt4py["delgth"],
     indict_gt4py["cldfmc"],
     indict_gt4py["taucld"],
     lookup_dict["absliq1"],
-    lookup_dict["absice0"],
     lookup_dict["absice1"],
     lookup_dict["absice2"],
     lookup_dict["absice3"],
@@ -317,10 +435,24 @@ cldprop(
     locdict_gt4py["cldice"],
     locdict_gt4py["refice"],
     locdict_gt4py["index"],
+    locdict_gt4py["ia"],
+    locdict_gt4py["lcloudy"],
+    indict_gt4py["cdfunc"],
+    locdict_gt4py["tem1"],
     domain=(npts, 1, nlp1 + 1),
     origin=default_origin,
     validate_args=validate,
 )
 
-print(locdict_gt4py["index"])
-print(locdict_gt4py["fint"])
+outdict_gt4py = dict()
+outdict_val = dict()
+
+outvars = ["cldfmc", "taucld"]
+
+for var in outvars:
+    outdict_gt4py[var] = indict_gt4py[var][0, :, 1:-1, :].squeeze().T
+    outdict_val[var] = serializer.read(
+        var, serializer.savepoint["lwrad-cldprop-output-000000"]
+    )
+
+compare_data(outdict_gt4py, outdict_val)
