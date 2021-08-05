@@ -20,8 +20,6 @@ from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 from radlw_param import ngb, bpade, ntbl, eps, wtdiff, fluxfac, heatfac
 
-os.environ["DYLD_LIBRARY_PATH"] = "/Users/AndrewP/Documents/code/serialbox2/install/lib"
-
 SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
@@ -54,14 +52,15 @@ invars = [
     "htrb",
 ]
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
+
+ddir = "../../fortran/radlw/dump"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
 
 savepoints = serializer.savepoint_list()
 
 indict = dict()
 for var in invars:
-    tmp = serializer.read(var, savepoints[14])
+    tmp = serializer.read(var, serializer.savepoint["lwrad-rtrnmc-input-000000"])
     if var == "semiss" or var == "secdiff" or var[-3:] == "tbl":
         indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     elif var == "htrb":
@@ -190,7 +189,7 @@ lhlw0 = True
 
 @stencil(
     backend,
-    rebuild=False,
+    rebuild=rebuild,
     externals={
         "rec_6": rec_6,
         "bpade": bpade,
@@ -290,6 +289,7 @@ def rtrnmc(
                 tblind[0, 0, 0][ig0] = odepth[0, 0, 0][ig0] / (
                     bpade + odepth[0, 0, 0][ig0]
                 )
+                # Currently itgas needs to be a storage, and can't be a local temporary.
                 itgas[0, 0, 0][ig0] = tblint * tblind[0, 0, 0][ig0] + 0.5
                 trng[0, 0, 0][ig0] = exp_tbl[0, 0, 0][itgas[0, 0, 0][ig0]]
                 atrgas[0, 0, 0][ig0] = 1.0 - trng[0, 0, 0][ig0]
@@ -720,6 +720,8 @@ for var in outdict_np.keys():
 
 outdict_val = dict()
 for var in outvars:
-    outdict_val[var] = serializer.read(var, savepoints[15])
+    outdict_val[var] = serializer.read(
+        var, serializer.savepoint["lwrad-rtrnmc-output-000000"]
+    )
 
 compare_data(outdict_np, outdict_val)
