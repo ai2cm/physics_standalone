@@ -1,6 +1,7 @@
 import gt4py
 import os
 import sys
+import time
 from gt4py import type_hints
 import numpy as np
 import xarray as xr
@@ -404,6 +405,7 @@ def cldprop(
                 cldfmc[0, 0, 0][n3] = 0.0
 
 
+start = time.time()
 cldprop(
     indict_gt4py["cldfrc"],
     indict_gt4py["clwp"],
@@ -443,6 +445,8 @@ cldprop(
     origin=default_origin,
     validate_args=validate,
 )
+end = time.time()
+print(f"Elapsed time = {end-start}")
 
 outdict_gt4py = dict()
 outdict_val = dict()
