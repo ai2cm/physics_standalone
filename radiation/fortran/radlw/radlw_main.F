@@ -1157,7 +1157,7 @@
 !> -# Call taumol() to calculte the gaseous optical depths and Plank 
 !! fractions for each longwave spectral band.
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "lwrad-taumol-input-"//trim(ser_count_str)
@@ -1176,16 +1176,16 @@
 
         call taumol                                                     &
 !  ---  inputs:
-     &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
+     &     ( ser_count,laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              &
      &       rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,                  &
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor,                &
-     &       nlay,                                                      &
+     &       nlay, iplon,                                                      &
 !  ---  outputs:
      &       fracs, tautot                                              &
      &     )
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "lwrad-taumol-output-"//trim(ser_count_str)
@@ -3849,11 +3849,11 @@
 !!\param tautot           total optical depth (gas+aerosols)
 ! ----------------------------------
       subroutine taumol                                                 &
-     &     ( laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              & !  ---  inputs
+     &     ( ser_count,laytrop,pavel,coldry,colamt,colbrd,wx,tauaer,              & !  ---  inputs
      &       rfrate,fac00,fac01,fac10,fac11,jp,jt,jt1,                  &
      &       selffac,selffrac,indself,forfac,forfrac,indfor,            &
      &       minorfrac,scaleminor,scaleminorn2,indminor,                &
-     &       nlay,                                                      &
+     &       nlay, iplon,                                                     &
      &       fracs, tautot                                              & !  ---  outputs
      &     )
 
@@ -3971,7 +3971,7 @@
 !  ******************************************************************   !
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, laytrop
+      integer, intent(in) :: nlay, laytrop, ser_count, iplon
 
       integer, dimension(nlay), intent(in) :: jp, jt, jt1, indself,     &
      &       indfor, indminor
@@ -3997,6 +3997,7 @@
       real (kind=kind_phys), dimension(ngptlw,nlay) :: taug
 
       integer :: ib, ig, k
+      character(len=6) :: ser_count_str
 !
 !===> ...  begin here
 !
@@ -4764,6 +4765,13 @@
         taug(ns04+14,k) = taug(ns04+14,k) * 0.943
       enddo
 
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-taugb04-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
+
 ! ..................................
       end subroutine taugb04
 ! ----------------------------------
@@ -5115,6 +5123,13 @@
           fracs(ns06+ig,k) = fracrefa(ig)
         enddo
       enddo
+
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-taugb06-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
 
 ! ..................................
       end subroutine taugb06
@@ -5504,6 +5519,13 @@
         enddo
       enddo
 
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-taugb08-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
+
 ! ..................................
       end subroutine taugb08
 ! ----------------------------------
@@ -5829,6 +5851,13 @@
           fracs(ns10+ig,k) = fracrefb(ig)
         enddo
       enddo
+
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-taugb10-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot taug=taug
+!$ser verbatim end if
 
 ! ..................................
       end subroutine taugb10

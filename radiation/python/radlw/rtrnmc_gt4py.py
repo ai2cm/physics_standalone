@@ -52,6 +52,7 @@ invars = [
     "htrb",
 ]
 
+
 ddir = "../../fortran/radlw/dump"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
 
@@ -79,7 +80,7 @@ for var in invars:
         indict[var] = tmp
 
 indict_gt4py = dict()
-type_ntbl = (np.float64, (ntbl + 1,))
+type_ntbl = (DTYPE_FLT, (ntbl + 1,))
 
 for var in invars:
     if var == "semiss" or var == "secdiff":
@@ -93,10 +94,10 @@ for var in invars:
     elif var == "htrb":
         indict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
     elif var[:3] == "tot" or var[:3] == "htr":
-        indict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type1)
+        indict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
     elif var == "delp":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlp1, type1
+            indict[var], backend, shape_nlp1, DTYPE_FLT
         )
     elif var == "taucld":
         indict_gt4py[var] = create_storage_from_array(
@@ -164,7 +165,7 @@ for var in locvars:
     if var[-3:] == "rad":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
     elif var == "fnet" or var == "fnetc" or var == "rfdelp":
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type1)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
     elif var == "itgas" or var == "ittot":
         locdict_gt4py[var] = create_storage_zeros(
             backend, shape_nlp1, (np.int32, (ngptlw,))

@@ -382,7 +382,8 @@ class RadLWClass:
             for i in range(npts):
                 ipseed[i] = icseed[i]
 
-        for iplon in range(0, 1):
+
+        for iplon in range(npts):
             print(f"iplon = {iplon}")
             if sfemis[iplon] > self.eps and sfemis[iplon] <= 1.0:
                 for j in range(nbands):
@@ -6827,7 +6828,6 @@ class RadLWClass:
             print("Not Implemented!!")
 
         elif self.iovrlw == 1:  # max-ran overlap
-
             ds = xr.open_dataset("../lookupdata/rand2d.nc")
             rand2d = ds["rand2d"][iplon, :].data
 
