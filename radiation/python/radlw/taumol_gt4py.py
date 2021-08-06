@@ -261,6 +261,8 @@ for var in locvars_flt:
 def loadlookupdata(name):
     """
     Load lookup table data for the given subroutine
+    This is a workaround for now, in the future this could change to a dictionary
+    or some kind of map object when gt4py gets support for lookup tables
     """
     ds = xr.open_dataset("../lookupdata/radlw_" + name + "_data.nc")
 
@@ -356,92 +358,97 @@ def taugb01(
 ):
     from __externals__ import nspa, nspb, laytrop, ng01, nlay
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
 
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
 
-        pp = pavel
-        scalen2 = colbrd * scaleminorn2
-        if pp < 250.0:
-            corradj = 1.0 - 0.15 * (250.0 - pp) / 154.4
-        else:
-            corradj = 1.0
+            pp = pavel
+            scalen2 = colbrd * scaleminorn2
+            if pp < 250.0:
+                corradj = 1.0 - 0.15 * (250.0 - pp) / 154.4
+            else:
+                corradj = 1.0
 
-        for ig in range(ng01):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            taun2 = scalen2 * (
-                ka_mn2[0, 0, 0][ig, indm]
-                + minorfrac * (ka_mn2[0, 0, 0][ig, indmp] - ka_mn2[0, 0, 0][ig, indm])
-            )
-
-            taug[0, 0, 0][ig] = corradj * (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng01):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-                + taun2
-            )
-
-            fracs[0, 0, 0][ig] = fracrefa[0, 0, 0][ig]
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-        indf = indfor - 1
-        indm = indminor - 1
-
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indfp = indf + 1
-        indmp = indm + 1
-
-        scalen2 = colbrd * scaleminorn2
-        corradj = 1.0 - 0.15 * (pavel / 95.6)
-
-        for ig2 in range(ng01):
-            taufor = forfac * (
-                forref[0, 0, 0][ig2, indf]
-                + forfrac * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
-            )
-            taun2 = scalen2 * (
-                kb_mn2[0, 0, 0][ig2, indm]
-                + minorfrac * (kb_mn2[0, 0, 0][ig2, indmp] - kb_mn2[0, 0, 0][ig2, indm])
-            )
-
-            taug[0, 0, 0][ig2] = corradj * (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + taufor
-                + taun2
-            )
+                taun2 = scalen2 * (
+                    ka_mn2[0, 0, 0][ig, indm]
+                    + minorfrac
+                    * (ka_mn2[0, 0, 0][ig, indmp] - ka_mn2[0, 0, 0][ig, indm])
+                )
 
-            fracs[0, 0, 0][ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ig] = corradj * (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                    + taun2
+                )
+
+                fracs[0, 0, 0][ig] = fracrefa[0, 0, 0][ig]
+
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+            indf = indfor - 1
+            indm = indminor - 1
+
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indfp = indf + 1
+            indmp = indm + 1
+
+            scalen2 = colbrd * scaleminorn2
+            corradj = 1.0 - 0.15 * (pavel / 95.6)
+
+            for ig2 in range(ng01):
+                taufor = forfac * (
+                    forref[0, 0, 0][ig2, indf]
+                    + forfrac
+                    * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
+                )
+                taun2 = scalen2 * (
+                    kb_mn2[0, 0, 0][ig2, indm]
+                    + minorfrac
+                    * (kb_mn2[0, 0, 0][ig2, indmp] - kb_mn2[0, 0, 0][ig2, indm])
+                )
+
+                taug[0, 0, 0][ig2] = corradj * (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + taufor
+                    + taun2
+                )
+
+                fracs[0, 0, 0][ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -494,70 +501,73 @@ def taugb02(
 ):
     from __externals__ import nspa, nspb, laytrop, ng02, nlay, ns02
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
-        inds = indself - 1
-        indf = indfor - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
+            inds = indself - 1
+            indf = indfor - 1
 
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indsp = inds + 1
-        indfp = indf + 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indsp = inds + 1
+            indfp = indf + 1
 
-        corradj = 1.0 - 0.05 * (pavel - 100.0) / 900.0
+            corradj = 1.0 - 0.05 * (pavel - 100.0) / 900.0
 
-        for ig in range(ng02):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-
-            taug[0, 0, 0][ns02 + ig] = corradj * (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng02):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-            )
-
-            fracs[0, 0, 0][ns02 + ig] = fracrefa[0, 0, 0][ig]
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-        indf = indfor - 1
-
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indfp = indf + 1
-
-        for ig2 in range(ng02):
-            taufor = forfac * (
-                forref[0, 0, 0][ig2, indf]
-                + forfrac * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
-            )
-
-            taug[0, 0, 0][ns02 + ig2] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + taufor
-            )
 
-            fracs[0, 0, 0][ns02 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns02 + ig] = corradj * (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                )
+
+                fracs[0, 0, 0][ns02 + ig] = fracrefa[0, 0, 0][ig]
+
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+            indf = indfor - 1
+
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indfp = indf + 1
+
+            for ig2 in range(ng02):
+                taufor = forfac * (
+                    forref[0, 0, 0][ig2, indf]
+                    + forfrac
+                    * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
+                )
+
+                taug[0, 0, 0][ns02 + ig2] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + taufor
+                )
+
+                fracs[0, 0, 0][ns02 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -634,314 +644,319 @@ def taugb03(
 ):
     from __externals__ import nspa, nspb, laytrop, ng03, nlay, ns03, oneminus
 
-    with computation(PARALLEL), interval(0, laytrop):
-        #  --- ...  minor gas mapping levels:
-        #     lower - n2o, p = 706.272 mbar, t = 278.94 k
-        #     upper - n2o, p = 95.58 mbar, t = 215.7 k
+    with computation(PARALLEL):
+        with interval(...):
+            #  --- ...  minor gas mapping levels:
+            #     lower - n2o, p = 706.272 mbar, t = 278.94 k
+            #     upper - n2o, p = 95.58 mbar, t = 215.7 k
 
-        refrat_planck_a = chi_mls[0, 0, 0][0, 8] / chi_mls[0, 0, 0][1, 8]
-        refrat_planck_b = chi_mls[0, 0, 0][0, 12] / chi_mls[0, 0, 0][1, 12]
-        refrat_m_a = chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][1, 2]
-        refrat_m_b = chi_mls[0, 0, 0][0, 12] / chi_mls[0, 0, 0][1, 12]
+            refrat_planck_a = chi_mls[0, 0, 0][0, 8] / chi_mls[0, 0, 0][1, 8]
+            refrat_planck_b = chi_mls[0, 0, 0][0, 12] / chi_mls[0, 0, 0][1, 12]
+            refrat_m_a = chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][1, 2]
+            refrat_m_b = chi_mls[0, 0, 0][0, 12] / chi_mls[0, 0, 0][1, 12]
 
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][1]
-        specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
-        specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
-        jmn2o = 1 + specmult_mn2o - 1
-        fmn2o = mod(specmult_mn2o, 1.0)
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][1]
+            specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
+            specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
+            jmn2o = 1 + specmult_mn2o - 1
+            fmn2o = mod(specmult_mn2o, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jmn2op = jmn2o + 1
-        jplp = jpl + 1
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        #  --- ...  in atmospheres where the amount of n2O is too great to be considered
-        #           a minor species, adjust the column amount of n2O by an empirical factor
-        #           to obtain the proper contribution.
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jmn2op = jmn2o + 1
+            jplp = jpl + 1
 
-        p = coldry * chi_mls[0, 0, 0][3, jp]
-        ratn2o = colamt[0, 0, 0][3] / p
-        if ratn2o > 1.5:
-            adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
-            adjcoln2o = adjfac * p
-        else:
-            adjcoln2o = colamt[0, 0, 0][3]
+            #  --- ...  in atmospheres where the amount of n2O is too great to be considered
+            #           a minor species, adjust the column amount of n2O by an empirical factor
+            #           to obtain the proper contribution.
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            p = coldry * chi_mls[0, 0, 0][3, jp]
+            ratn2o = colamt[0, 0, 0][3] / p
+            if ratn2o > 1.5:
+                adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
+                adjcoln2o = adjfac * p
+            else:
+                adjcoln2o = colamt[0, 0, 0][3]
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p = fs - 1.0
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
+
+            if specparm < 0.125:
+                p = fs - 1.0
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p = -fs
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0 * 1
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk0 = 1.0 - fs
+                fk1 = fs
+                fk2 = 0.0
+                id000 = ind0 * 1
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 * 1
+                id210 = ind0 * 1
+
+            fac000 = fk0 * fac00
+            fac100 = fk1 * fac00
+            fac200 = fk2 * fac00
+            fac010 = fk0 * fac10
+            fac110 = fk1 * fac10
+            fac210 = fk2 * fac10
+
+            if specparm1 < 0.125:
+                p = fs1 - 1.0
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p = -fs1
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk0 = 1.0 - fs1
+                fk1 = fs1
+                fk2 = 0.0
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
+
+            fac001 = fk0 * fac01
+            fac101 = fk1 * fac01
+            fac201 = fk2 * fac01
+            fac011 = fk0 * fac11
+            fac111 = fk1 * fac11
+            fac211 = fk2 * fac11
+
+            for ig in range(ng03):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
+                )
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
+                )
+                n2om1 = ka_mn2o[0, 0, 0][ig, jmn2o, indm] + fmn2o * (
+                    ka_mn2o[0, 0, 0][ig, jmn2op, indm]
+                    - ka_mn2o[0, 0, 0][ig, jmn2o, indm]
+                )
+                n2om2 = ka_mn2o[0, 0, 0][ig, jmn2o, indmp] + fmn2o * (
+                    ka_mn2o[0, 0, 0][ig, jmn2op, indmp]
+                    - ka_mn2o[0, 0, 0][ig, jmn2o, indmp]
+                )
+                absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
+
+                tau_major = speccomb * (
+                    fac000 * absa[0, 0, 0][ig, id000]
+                    + fac010 * absa[0, 0, 0][ig, id010]
+                    + fac100 * absa[0, 0, 0][ig, id100]
+                    + fac110 * absa[0, 0, 0][ig, id110]
+                    + fac200 * absa[0, 0, 0][ig, id200]
+                    + fac210 * absa[0, 0, 0][ig, id210]
+                )
+
+                tau_major1 = speccomb1 * (
+                    fac001 * absa[0, 0, 0][ig, id001]
+                    + fac011 * absa[0, 0, 0][ig, id011]
+                    + fac101 * absa[0, 0, 0][ig, id101]
+                    + fac111 * absa[0, 0, 0][ig, id111]
+                    + fac201 * absa[0, 0, 0][ig, id201]
+                    + fac211 * absa[0, 0, 0][ig, id211]
+                )
+
+                taug[0, 0, 0][ns03 + ig] = (
+                    tau_major + tau_major1 + tauself + taufor + adjcoln2o * absn2o
+                )
+
+                fracs[0, 0, 0][ns03 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 4.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb + js - 1
+
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 4.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb + js1 - 1
+
+            speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_b * colamt[0, 0, 0][1]
+            specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
+            specmult_mn2o = 4.0 * min(specparm_mn2o, oneminus)
+            jmn2o = 1 + specmult_mn2o - 1
+            fmn2o = mod(specmult_mn2o, 1.0)
+
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_b * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 4.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
+
+            indf = indfor - 1
+            indm = indminor - 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jmn2op = jmn2o + 1
+            jplp = jpl + 1
+
             id000 = ind0
-            id010 = ind0 + 9
+            id010 = ind0 + 5
             id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p = -fs
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0 * 1
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
+            id110 = ind0 + 6
+            id001 = ind1
+            id011 = ind1 + 5
+            id101 = ind1 + 1
+            id111 = ind1 + 6
+
+            #  --- ...  in atmospheres where the amount of n2o is too great to be considered
+            #           a minor species, adjust the column amount of N2O by an empirical factor
+            #           to obtain the proper contribution.
+
+            p = coldry * chi_mls[0, 0, 0][3, jp]
+            ratn2o = colamt[0, 0, 0][3] / p
+            if ratn2o > 1.5:
+                adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
+                adjcoln2o = adjfac * p
+            else:
+                adjcoln2o = colamt[0, 0, 0][3]
+
             fk0 = 1.0 - fs
             fk1 = fs
-            fk2 = 0.0
-            id000 = ind0 * 1
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 * 1
-            id210 = ind0 * 1
+            fac000 = fk0 * fac00
+            fac010 = fk0 * fac10
+            fac100 = fk1 * fac00
+            fac110 = fk1 * fac10
 
-        fac000 = fk0 * fac00
-        fac100 = fk1 * fac00
-        fac200 = fk2 * fac00
-        fac010 = fk0 * fac10
-        fac110 = fk1 * fac10
-        fac210 = fk2 * fac10
-
-        if specparm1 < 0.125:
-            p = fs1 - 1.0
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p = -fs1
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
             fk0 = 1.0 - fs1
             fk1 = fs1
-            fk2 = 0.0
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+            fac001 = fk0 * fac01
+            fac011 = fk0 * fac11
+            fac101 = fk1 * fac01
+            fac111 = fk1 * fac11
 
-        fac001 = fk0 * fac01
-        fac101 = fk1 * fac01
-        fac201 = fk2 * fac01
-        fac011 = fk0 * fac11
-        fac111 = fk1 * fac11
-        fac211 = fk2 * fac11
+            for ig2 in range(ng03):
+                taufor = forfac * (
+                    forref[0, 0, 0][ig2, indf]
+                    + forfrac
+                    * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
+                )
+                n2om1 = kb_mn2o[0, 0, 0][ig2, jmn2o, indm] + fmn2o * (
+                    kb_mn2o[0, 0, 0][ig2, jmn2op, indm]
+                    - kb_mn2o[0, 0, 0][ig2, jmn2o, indm]
+                )
+                n2om2 = kb_mn2o[0, 0, 0][ig2, jmn2o, indmp] + fmn2o * (
+                    kb_mn2o[0, 0, 0][ig2, jmn2op, indmp]
+                    - kb_mn2o[0, 0, 0][ig2, jmn2o, indmp]
+                )
+                absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
 
-        for ig in range(ng03):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            n2om1 = ka_mn2o[0, 0, 0][ig, jmn2o, indm] + fmn2o * (
-                ka_mn2o[0, 0, 0][ig, jmn2op, indm] - ka_mn2o[0, 0, 0][ig, jmn2o, indm]
-            )
-            n2om2 = ka_mn2o[0, 0, 0][ig, jmn2o, indmp] + fmn2o * (
-                ka_mn2o[0, 0, 0][ig, jmn2op, indmp] - ka_mn2o[0, 0, 0][ig, jmn2o, indmp]
-            )
-            absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
+                tau_major = speccomb * (
+                    fac000 * absb[0, 0, 0][ig2, id000]
+                    + fac010 * absb[0, 0, 0][ig2, id010]
+                    + fac100 * absb[0, 0, 0][ig2, id100]
+                    + fac110 * absb[0, 0, 0][ig2, id110]
+                )
 
-            tau_major = speccomb * (
-                fac000 * absa[0, 0, 0][ig, id000]
-                + fac010 * absa[0, 0, 0][ig, id010]
-                + fac100 * absa[0, 0, 0][ig, id100]
-                + fac110 * absa[0, 0, 0][ig, id110]
-                + fac200 * absa[0, 0, 0][ig, id200]
-                + fac210 * absa[0, 0, 0][ig, id210]
-            )
+                tau_major1 = speccomb1 * (
+                    fac001 * absb[0, 0, 0][ig2, id001]
+                    + fac011 * absb[0, 0, 0][ig2, id011]
+                    + fac101 * absb[0, 0, 0][ig2, id101]
+                    + fac111 * absb[0, 0, 0][ig2, id111]
+                )
 
-            tau_major1 = speccomb1 * (
-                fac001 * absa[0, 0, 0][ig, id001]
-                + fac011 * absa[0, 0, 0][ig, id011]
-                + fac101 * absa[0, 0, 0][ig, id101]
-                + fac111 * absa[0, 0, 0][ig, id111]
-                + fac201 * absa[0, 0, 0][ig, id201]
-                + fac211 * absa[0, 0, 0][ig, id211]
-            )
+                taug[0, 0, 0][ns03 + ig2] = (
+                    tau_major + tau_major1 + taufor + adjcoln2o * absn2o
+                )
 
-            taug[0, 0, 0][ns03 + ig] = (
-                tau_major + tau_major1 + tauself + taufor + adjcoln2o * absn2o
-            )
-
-            fracs[0, 0, 0][ns03 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-
-        refrat_planck_a = chi_mls[0, 0, 0][0, 8] / chi_mls[0, 0, 0][1, 8]
-        refrat_planck_b = chi_mls[0, 0, 0][0, 12] / chi_mls[0, 0, 0][1, 12]
-        refrat_m_a = chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][1, 2]
-        refrat_m_b = chi_mls[0, 0, 0][0, 12] / chi_mls[0, 0, 0][1, 12]
-
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 4.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb + js - 1
-
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 4.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb + js1 - 1
-
-        speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_b * colamt[0, 0, 0][1]
-        specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
-        specmult_mn2o = 4.0 * min(specparm_mn2o, oneminus)
-        jmn2o = 1 + specmult_mn2o - 1
-        fmn2o = mod(specmult_mn2o, 1.0)
-
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_b * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 4.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
-
-        indf = indfor - 1
-        indm = indminor - 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jmn2op = jmn2o + 1
-        jplp = jpl + 1
-
-        id000 = ind0
-        id010 = ind0 + 5
-        id100 = ind0 + 1
-        id110 = ind0 + 6
-        id001 = ind1
-        id011 = ind1 + 5
-        id101 = ind1 + 1
-        id111 = ind1 + 6
-
-        #  --- ...  in atmospheres where the amount of n2o is too great to be considered
-        #           a minor species, adjust the column amount of N2O by an empirical factor
-        #           to obtain the proper contribution.
-
-        p = coldry * chi_mls[0, 0, 0][3, jp]
-        ratn2o = colamt[0, 0, 0][3] / p
-        if ratn2o > 1.5:
-            adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
-            adjcoln2o = adjfac * p
-        else:
-            adjcoln2o = colamt[0, 0, 0][3]
-
-        fk0 = 1.0 - fs
-        fk1 = fs
-        fac000 = fk0 * fac00
-        fac010 = fk0 * fac10
-        fac100 = fk1 * fac00
-        fac110 = fk1 * fac10
-
-        fk0 = 1.0 - fs1
-        fk1 = fs1
-        fac001 = fk0 * fac01
-        fac011 = fk0 * fac11
-        fac101 = fk1 * fac01
-        fac111 = fk1 * fac11
-
-        for ig2 in range(ng03):
-            taufor = forfac * (
-                forref[0, 0, 0][ig2, indf]
-                + forfrac * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
-            )
-            n2om1 = kb_mn2o[0, 0, 0][ig2, jmn2o, indm] + fmn2o * (
-                kb_mn2o[0, 0, 0][ig2, jmn2op, indm] - kb_mn2o[0, 0, 0][ig2, jmn2o, indm]
-            )
-            n2om2 = kb_mn2o[0, 0, 0][ig2, jmn2o, indmp] + fmn2o * (
-                kb_mn2o[0, 0, 0][ig2, jmn2op, indmp]
-                - kb_mn2o[0, 0, 0][ig2, jmn2o, indmp]
-            )
-            absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
-
-            tau_major = speccomb * (
-                fac000 * absb[0, 0, 0][ig2, id000]
-                + fac010 * absb[0, 0, 0][ig2, id010]
-                + fac100 * absb[0, 0, 0][ig2, id100]
-                + fac110 * absb[0, 0, 0][ig2, id110]
-            )
-
-            tau_major1 = speccomb1 * (
-                fac001 * absb[0, 0, 0][ig2, id001]
-                + fac011 * absb[0, 0, 0][ig2, id011]
-                + fac101 * absb[0, 0, 0][ig2, id101]
-                + fac111 * absb[0, 0, 0][ig2, id111]
-            )
-
-            taug[0, 0, 0][ns03 + ig2] = (
-                tau_major + tau_major1 + taufor + adjcoln2o * absn2o
-            )
-
-            fracs[0, 0, 0][ns03 + ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * (
-                fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl]
-            )
+                fracs[0, 0, 0][ns03 + ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * (
+                    fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl]
+                )
 
 
 @stencil(
@@ -1009,245 +1024,249 @@ def taugb04(
 ):
     from __externals__ import nspa, nspb, laytrop, ng04, nlay, ns04, oneminus
 
-    with computation(PARALLEL), interval(...):
-        refrat_planck_a = (
-            chi_mls[0, 0, 0][0, 10] / chi_mls[0, 0, 0][1, 10]
-        )  # P = 142.5940 mb
-        refrat_planck_b = (
-            chi_mls[0, 0, 0][2, 12] / chi_mls[0, 0, 0][1, 12]
-        )  # P = 95.58350 mb
+    with computation(PARALLEL):
+        with interval(...):
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][0, 10] / chi_mls[0, 0, 0][1, 10]
+            )  # P = 142.5940 mb
+            refrat_planck_b = (
+                chi_mls[0, 0, 0][2, 12] / chi_mls[0, 0, 0][1, 12]
+            )  # P = 95.58350 mb
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        jplp = jpl + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            jplp = jpl + 1
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p = fs - 1.0
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
+            if specparm < 0.125:
+                p = fs - 1.0
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p = -fs
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk0 = 1.0 - fs
+                fk1 = fs
+                fk2 = 0.0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
+
+            fac000 = fk0 * fac00
+            fac100 = fk1 * fac00
+            fac200 = fk2 * fac00
+            fac010 = fk0 * fac10
+            fac110 = fk1 * fac10
+            fac210 = fk2 * fac10
+
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
+
+            if specparm1 < 0.125:
+                p = fs1 - 1.0
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p = -fs1
+                p4 = p ** 4
+                fk0 = p4
+                fk1 = 1.0 - p - 2.0 * p4
+                fk2 = p + p4
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk0 = 1.0 - fs1
+                fk1 = fs1
+                fk2 = 0.0
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
+
+            fac001 = fk0 * fac01
+            fac101 = fk1 * fac01
+            fac201 = fk2 * fac01
+            fac011 = fk0 * fac11
+            fac111 = fk1 * fac11
+            fac211 = fk2 * fac11
+
+            for ig in range(ng04):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
+                )
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
+                )
+
+                tau_major = speccomb * (
+                    fac000 * absa[0, 0, 0][ig, id000]
+                    + fac010 * absa[0, 0, 0][ig, id010]
+                    + fac100 * absa[0, 0, 0][ig, id100]
+                    + fac110 * absa[0, 0, 0][ig, id110]
+                    + fac200 * absa[0, 0, 0][ig, id200]
+                    + fac210 * absa[0, 0, 0][ig, id210]
+                )
+
+                tau_major1 = speccomb1 * (
+                    fac001 * absa[0, 0, 0][ig, id001]
+                    + fac011 * absa[0, 0, 0][ig, id011]
+                    + fac101 * absa[0, 0, 0][ig, id101]
+                    + fac111 * absa[0, 0, 0][ig, id111]
+                    + fac201 * absa[0, 0, 0][ig, id201]
+                    + fac211 * absa[0, 0, 0][ig, id211]
+                )
+
+                taug[0, 0, 0][ns04 + ig] = tau_major + tau_major1 + tauself + taufor
+
+                fracs[0, 0, 0][ns04 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+            speccomb = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][2] / speccomb
+            specmult = 4.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb + js - 1
+
+            speccomb1 = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][2] / speccomb1
+            specmult1 = 4.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb + js1 - 1
+
+            speccomb_planck = colamt[0, 0, 0][2] + refrat_planck_b * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][2] / speccomb_planck
+            specmult_planck = 4.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
+            jplp = jpl + 1
+
             id000 = ind0
-            id010 = ind0 + 9
+            id010 = ind0 + 5
             id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p = -fs
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
+            id110 = ind0 + 6
+            id001 = ind1
+            id011 = ind1 + 5
+            id101 = ind1 + 1
+            id111 = ind1 + 6
+
             fk0 = 1.0 - fs
             fk1 = fs
-            fk2 = 0.0
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+            fac000 = fk0 * fac00
+            fac010 = fk0 * fac10
+            fac100 = fk1 * fac00
+            fac110 = fk1 * fac10
 
-        fac000 = fk0 * fac00
-        fac100 = fk1 * fac00
-        fac200 = fk2 * fac00
-        fac010 = fk0 * fac10
-        fac110 = fk1 * fac10
-        fac210 = fk2 * fac10
-
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
-
-        if specparm1 < 0.125:
-            p = fs1 - 1.0
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p = -fs1
-            p4 = p ** 4
-            fk0 = p4
-            fk1 = 1.0 - p - 2.0 * p4
-            fk2 = p + p4
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
             fk0 = 1.0 - fs1
             fk1 = fs1
-            fk2 = 0.0
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+            fac001 = fk0 * fac01
+            fac011 = fk0 * fac11
+            fac101 = fk1 * fac01
+            fac111 = fk1 * fac11
 
-        fac001 = fk0 * fac01
-        fac101 = fk1 * fac01
-        fac201 = fk2 * fac01
-        fac011 = fk0 * fac11
-        fac111 = fk1 * fac11
-        fac211 = fk2 * fac11
+            for ig2 in range(ng04):
+                tau_major = speccomb * (
+                    fac000 * absb[0, 0, 0][ig2, id000]
+                    + fac010 * absb[0, 0, 0][ig2, id010]
+                    + fac100 * absb[0, 0, 0][ig2, id100]
+                    + fac110 * absb[0, 0, 0][ig2, id110]
+                )
+                tau_major1 = speccomb1 * (
+                    fac001 * absb[0, 0, 0][ig2, id001]
+                    + fac011 * absb[0, 0, 0][ig2, id011]
+                    + fac101 * absb[0, 0, 0][ig2, id101]
+                    + fac111 * absb[0, 0, 0][ig2, id111]
+                )
 
-        for ig in range(ng04):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
+                taug[0, 0, 0][ns04 + ig2] = tau_major + tau_major1
 
-            tau_major = speccomb * (
-                fac000 * absa[0, 0, 0][ig, id000]
-                + fac010 * absa[0, 0, 0][ig, id010]
-                + fac100 * absa[0, 0, 0][ig, id100]
-                + fac110 * absa[0, 0, 0][ig, id110]
-                + fac200 * absa[0, 0, 0][ig, id200]
-                + fac210 * absa[0, 0, 0][ig, id210]
-            )
+                fracs[0, 0, 0][ns04 + ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * (
+                    fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl]
+                )
 
-            tau_major1 = speccomb1 * (
-                fac001 * absa[0, 0, 0][ig, id001]
-                + fac011 * absa[0, 0, 0][ig, id011]
-                + fac101 * absa[0, 0, 0][ig, id101]
-                + fac111 * absa[0, 0, 0][ig, id111]
-                + fac201 * absa[0, 0, 0][ig, id201]
-                + fac211 * absa[0, 0, 0][ig, id211]
-            )
-
-            taug[0, 0, 0][ns04 + ig] = tau_major + tau_major1 + tauself + taufor
-
-            fracs[0, 0, 0][ns04 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        speccomb = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][2] / speccomb
-        specmult = 4.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb + js - 1
-
-        speccomb1 = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][2] / speccomb1
-        specmult1 = 4.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb + js1 - 1
-
-        speccomb_planck = colamt[0, 0, 0][2] + refrat_planck_b * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][2] / speccomb_planck
-        specmult_planck = 4.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
-        jplp = jpl + 1
-
-        id000 = ind0
-        id010 = ind0 + 5
-        id100 = ind0 + 1
-        id110 = ind0 + 6
-        id001 = ind1
-        id011 = ind1 + 5
-        id101 = ind1 + 1
-        id111 = ind1 + 6
-
-        fk0 = 1.0 - fs
-        fk1 = fs
-        fac000 = fk0 * fac00
-        fac010 = fk0 * fac10
-        fac100 = fk1 * fac00
-        fac110 = fk1 * fac10
-
-        fk0 = 1.0 - fs1
-        fk1 = fs1
-        fac001 = fk0 * fac01
-        fac011 = fk0 * fac11
-        fac101 = fk1 * fac01
-        fac111 = fk1 * fac11
-
-        for ig2 in range(ng04):
-            tau_major = speccomb * (
-                fac000 * absb[0, 0, 0][ig2, id000]
-                + fac010 * absb[0, 0, 0][ig2, id010]
-                + fac100 * absb[0, 0, 0][ig2, id100]
-                + fac110 * absb[0, 0, 0][ig2, id110]
-            )
-            tau_major1 = speccomb1 * (
-                fac001 * absb[0, 0, 0][ig2, id001]
-                + fac011 * absb[0, 0, 0][ig2, id011]
-                + fac101 * absb[0, 0, 0][ig2, id101]
-                + fac111 * absb[0, 0, 0][ig2, id111]
-            )
-
-            taug[0, 0, 0][ns04 + ig2] = tau_major + tau_major1
-
-            fracs[0, 0, 0][ns04 + ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * (
-                fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl]
-            )
-
-        taug[0, 0, 0][ns04 + 7] = taug[0, 0, 0][ns04 + 7] * 0.92
-        taug[0, 0, 0][ns04 + 8] = taug[0, 0, 0][ns04 + 8] * 0.88
-        taug[0, 0, 0][ns04 + 9] = taug[0, 0, 0][ns04 + 9] * 1.07
-        taug[0, 0, 0][ns04 + 10] = taug[0, 0, 0][ns04 + 10] * 1.1
-        taug[0, 0, 0][ns04 + 11] = taug[0, 0, 0][ns04 + 11] * 0.99
-        taug[0, 0, 0][ns04 + 12] = taug[0, 0, 0][ns04 + 12] * 0.88
-        taug[0, 0, 0][ns04 + 13] = taug[0, 0, 0][ns04 + 13] * 0.943
+            taug[0, 0, 0][ns04 + 7] = taug[0, 0, 0][ns04 + 7] * 0.92
+            taug[0, 0, 0][ns04 + 8] = taug[0, 0, 0][ns04 + 8] * 0.88
+            taug[0, 0, 0][ns04 + 9] = taug[0, 0, 0][ns04 + 9] * 1.07
+            taug[0, 0, 0][ns04 + 10] = taug[0, 0, 0][ns04 + 10] * 1.1
+            taug[0, 0, 0][ns04 + 11] = taug[0, 0, 0][ns04 + 11] * 0.99
+            taug[0, 0, 0][ns04 + 12] = taug[0, 0, 0][ns04 + 12] * 0.88
+            taug[0, 0, 0][ns04 + 13] = taug[0, 0, 0][ns04 + 13] * 0.943
 
 
 @stencil(
@@ -1324,270 +1343,274 @@ def taugb05(
 ):
     from __externals__ import nspa, nspb, laytrop, ng05, nlay, ns05, oneminus
 
-    with computation(PARALLEL), interval(...):
-        refrat_planck_a = (
-            chi_mls[0, 0, 0][0, 4] / chi_mls[0, 0, 0][1, 4]
-        )  # P = 142.5940 mb
-        refrat_planck_b = (
-            chi_mls[0, 0, 0][2, 42] / chi_mls[0, 0, 0][1, 42]
-        )  # P = 95.58350 mb
-        refrat_m_a = chi_mls[0, 0, 0][0, 6] / chi_mls[0, 0, 0][1, 6]
+    with computation(PARALLEL):
+        with interval(...):
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][0, 4] / chi_mls[0, 0, 0][1, 4]
+            )  # P = 142.5940 mb
+            refrat_planck_b = (
+                chi_mls[0, 0, 0][2, 42] / chi_mls[0, 0, 0][1, 42]
+            )  # P = 95.58350 mb
+            refrat_m_a = chi_mls[0, 0, 0][0, 6] / chi_mls[0, 0, 0][1, 6]
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_mo3 = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][1]
-        specparm_mo3 = colamt[0, 0, 0][0] / speccomb_mo3
-        specmult_mo3 = 8.0 * min(specparm_mo3, oneminus)
-        jmo3 = 1 + specmult_mo3 - 1
-        fmo3 = mod(specmult_mo3, 1.0)
+            speccomb_mo3 = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][1]
+            specparm_mo3 = colamt[0, 0, 0][0] / speccomb_mo3
+            specmult_mo3 = 8.0 * min(specparm_mo3, oneminus)
+            jmo3 = 1 + specmult_mo3 - 1
+            fmo3 = mod(specmult_mo3, 1.0)
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jplp = jpl + 1
-        jmo3p = jmo3 + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jplp = jpl + 1
+            jmo3p = jmo3 + 1
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
+
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
+
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
+
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
+
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
+
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
+
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
+
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
+
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
+
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
+
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
+
+            for ig in range(ng05):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
+                )
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
+                )
+                o3m1 = ka_mo3[0, 0, 0][ig, jmo3, indm] + fmo3 * (
+                    ka_mo3[0, 0, 0][ig, jmo3p, indm] - ka_mo3[0, 0, 0][ig, jmo3, indm]
+                )
+                o3m2 = ka_mo3[0, 0, 0][ig, jmo3, indmp] + fmo3 * (
+                    ka_mo3[0, 0, 0][ig, jmo3p, indmp] - ka_mo3[0, 0, 0][ig, jmo3, indmp]
+                )
+                abso3 = o3m1 + minorfrac * (o3m2 - o3m1)
+
+                taug[0, 0, 0][ns05 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                    + abso3 * colamt[0, 0, 0][2]
+                    + wx[0, 0, 0][0] * ccl4[0, 0, 0][ig]
+                )
+
+                fracs[0, 0, 0][ns05 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+            speccomb = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][2] / speccomb
+            specmult = 4.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb + js - 1
+
+            speccomb1 = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][2] / speccomb1
+            specmult1 = 4.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb + js1 - 1
+
+            speccomb_planck = colamt[0, 0, 0][2] + refrat_planck_b * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][2] / speccomb_planck
+            specmult_planck = 4.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
+            jplp = jpl + 1
 
             id000 = ind0
-            id010 = ind0 + 9
+            id010 = ind0 + 5
             id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            id110 = ind0 + 6
+            id001 = ind1
+            id011 = ind1 + 5
+            id101 = ind1 + 1
+            id111 = ind1 + 6
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
             fk00 = 1.0 - fs
             fk10 = fs
-            fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
-
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
-
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
-
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
-
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
-
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
             fk01 = 1.0 - fs1
             fk11 = fs1
-            fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+            fac000 = fk00 * fac00
+            fac010 = fk00 * fac10
+            fac100 = fk10 * fac00
+            fac110 = fk10 * fac10
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac011 = fk01 * fac11
+            fac101 = fk11 * fac01
+            fac111 = fk11 * fac11
 
-        for ig in range(ng05):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            o3m1 = ka_mo3[0, 0, 0][ig, jmo3, indm] + fmo3 * (
-                ka_mo3[0, 0, 0][ig, jmo3p, indm] - ka_mo3[0, 0, 0][ig, jmo3, indm]
-            )
-            o3m2 = ka_mo3[0, 0, 0][ig, jmo3, indmp] + fmo3 * (
-                ka_mo3[0, 0, 0][ig, jmo3p, indmp] - ka_mo3[0, 0, 0][ig, jmo3, indmp]
-            )
-            abso3 = o3m1 + minorfrac * (o3m2 - o3m1)
-
-            taug[0, 0, 0][ns05 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig2 in range(ng05):
+                taug[0, 0, 0][ns05 + ig2] = (
+                    speccomb
+                    * (
+                        fac000 * absb[0, 0, 0][ig2, id000]
+                        + fac010 * absb[0, 0, 0][ig2, id010]
+                        + fac100 * absb[0, 0, 0][ig2, id100]
+                        + fac110 * absb[0, 0, 0][ig2, id110]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absb[0, 0, 0][ig2, id001]
+                        + fac011 * absb[0, 0, 0][ig2, id011]
+                        + fac101 * absb[0, 0, 0][ig2, id101]
+                        + fac111 * absb[0, 0, 0][ig2, id111]
+                    )
+                    + wx[0, 0, 0][0] * ccl4[0, 0, 0][ig2]
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+
+                fracs[0, 0, 0][ns05 + ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * (
+                    fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl]
                 )
-                + tauself
-                + taufor
-                + abso3 * colamt[0, 0, 0][2]
-                + wx[0, 0, 0][0] * ccl4[0, 0, 0][ig]
-            )
-
-            fracs[0, 0, 0][ns05 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        speccomb = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][2] / speccomb
-        specmult = 4.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb + js - 1
-
-        speccomb1 = colamt[0, 0, 0][2] + rfrate[0, 0, 0][5, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][2] / speccomb1
-        specmult1 = 4.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb + js1 - 1
-
-        speccomb_planck = colamt[0, 0, 0][2] + refrat_planck_b * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][2] / speccomb_planck
-        specmult_planck = 4.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
-        jplp = jpl + 1
-
-        id000 = ind0
-        id010 = ind0 + 5
-        id100 = ind0 + 1
-        id110 = ind0 + 6
-        id001 = ind1
-        id011 = ind1 + 5
-        id101 = ind1 + 1
-        id111 = ind1 + 6
-
-        fk00 = 1.0 - fs
-        fk10 = fs
-
-        fk01 = 1.0 - fs1
-        fk11 = fs1
-
-        fac000 = fk00 * fac00
-        fac010 = fk00 * fac10
-        fac100 = fk10 * fac00
-        fac110 = fk10 * fac10
-
-        fac001 = fk01 * fac01
-        fac011 = fk01 * fac11
-        fac101 = fk11 * fac01
-        fac111 = fk11 * fac11
-
-        for ig2 in range(ng05):
-            taug[0, 0, 0][ns05 + ig2] = (
-                speccomb
-                * (
-                    fac000 * absb[0, 0, 0][ig2, id000]
-                    + fac010 * absb[0, 0, 0][ig2, id010]
-                    + fac100 * absb[0, 0, 0][ig2, id100]
-                    + fac110 * absb[0, 0, 0][ig2, id110]
-                )
-                + speccomb1
-                * (
-                    fac001 * absb[0, 0, 0][ig2, id001]
-                    + fac011 * absb[0, 0, 0][ig2, id011]
-                    + fac101 * absb[0, 0, 0][ig2, id101]
-                    + fac111 * absb[0, 0, 0][ig2, id111]
-                )
-                + wx[0, 0, 0][0] * ccl4[0, 0, 0][ig2]
-            )
-
-            fracs[0, 0, 0][ns05 + ig2] = fracrefb[0, 0, 0][ig2, jpl] + fpl * (
-                fracrefb[0, 0, 0][ig2, jplp] - fracrefb[0, 0, 0][ig2, jpl]
-            )
 
 
 @stencil(
@@ -1647,65 +1670,67 @@ def taugb06(
 ):
     from __externals__ import nspa, nspb, laytrop, ng06, nlay, ns06, oneminus
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
 
-        temp = coldry * chi_mls[0, 0, 0][1, jp]
-        ratco2 = colamt[0, 0, 0][1] / temp
-        if ratco2 > 3.0:
-            adjfac = 2.0 + (ratco2 - 2.0) ** 0.77
-            adjcolco2 = adjfac * temp
-        else:
-            adjcolco2 = colamt[0, 0, 0][1]
+            temp = coldry * chi_mls[0, 0, 0][1, jp]
+            ratco2 = colamt[0, 0, 0][1] / temp
+            if ratco2 > 3.0:
+                adjfac = 2.0 + (ratco2 - 2.0) ** 0.77
+                adjcolco2 = adjfac * temp
+            else:
+                adjcolco2 = colamt[0, 0, 0][1]
 
-        for ig in range(ng06):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            absco2 = ka_mco2[0, 0, 0][ig, indm] + minorfrac * (
-                ka_mco2[0, 0, 0][ig, indmp] - ka_mco2[0, 0, 0][ig, indm]
-            )
-
-            taug[0, 0, 0][ns06 + ig] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng06):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-                + adjcolco2 * absco2
-                + wx[0, 0, 0][1] * cfc11adj[0, 0, 0][ig]
-                + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig]
-            )
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
+                )
+                absco2 = ka_mco2[0, 0, 0][ig, indm] + minorfrac * (
+                    ka_mco2[0, 0, 0][ig, indmp] - ka_mco2[0, 0, 0][ig, indm]
+                )
 
-            fracs[0, 0, 0][ns06 + ig] = fracrefa[0, 0, 0][ig]
+                taug[0, 0, 0][ns06 + ig] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                    + adjcolco2 * absco2
+                    + wx[0, 0, 0][1] * cfc11adj[0, 0, 0][ig]
+                    + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig]
+                )
 
-    with computation(PARALLEL), interval(laytrop, nlay):
-        for ig2 in range(ng06):
-            taug[0, 0, 0][ns06 + ig2] = (
-                wx[0, 0, 0][1] * cfc11adj[0, 0, 0][ig2]
-                + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig2]
-            )
+                fracs[0, 0, 0][ns06 + ig] = fracrefa[0, 0, 0][ig]
 
-            fracs[0, 0, 0][ns06 + ig2] = fracrefa[0, 0, 0][ig2]
+        with interval(laytrop, nlay):
+            for ig2 in range(ng06):
+                taug[0, 0, 0][ns06 + ig2] = (
+                    wx[0, 0, 0][1] * cfc11adj[0, 0, 0][ig2]
+                    + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig2]
+                )
+
+                fracs[0, 0, 0][ns06 + ig2] = fracrefa[0, 0, 0][ig2]
 
 
 @stencil(
@@ -1784,248 +1809,256 @@ def taugb07(
 ):
     from __externals__ import nspa, nspb, laytrop, ng07, nlay, ns07, oneminus
 
-    with computation(PARALLEL), interval(...):
-        refrat_planck_a = (
-            chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][2, 2]
-        )  # P = 706.2620 mb
-        refrat_m_a = chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][2, 2]  # P = 706.2720 mb
+    with computation(PARALLEL):
+        with interval(...):
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][2, 2]
+            )  # P = 706.2620 mb
+            refrat_m_a = (
+                chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][2, 2]
+            )  # P = 706.2720 mb
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][1, 0] * colamt[0, 0, 0][2]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][1, 0] * colamt[0, 0, 0][2]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][1, 1] * colamt[0, 0, 0][2]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][1, 1] * colamt[0, 0, 0][2]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_mco2 = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][2]
-        specparm_mco2 = colamt[0, 0, 0][0] / speccomb_mco2
-        specmult_mco2 = 8.0 * min(specparm_mco2, oneminus)
-        jmco2 = 1 + specmult_mco2 - 1
-        fmco2 = mod(specmult_mco2, 1.0)
+            speccomb_mco2 = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][2]
+            specparm_mco2 = colamt[0, 0, 0][0] / speccomb_mco2
+            specmult_mco2 = 8.0 * min(specparm_mco2, oneminus)
+            jmco2 = 1 + specmult_mco2 - 1
+            fmco2 = mod(specmult_mco2, 1.0)
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][2]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][2]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jplp = jpl + 1
-        jmco2p = jmco2 + 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jplp = jpl + 1
+            jmco2p = jmco2 + 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
 
-        temp = coldry * chi_mls[0, 0, 0][1, jp]
-        ratco2 = colamt[0, 0, 0][1] / temp
-        if ratco2 > 3.0:
-            adjfac = 3.0 + (ratco2 - 3.0) ** 0.79
-            adjcolco2 = adjfac * temp
-        else:
-            adjcolco2 = colamt[0, 0, 0][1]
+            temp = coldry * chi_mls[0, 0, 0][1, jp]
+            ratco2 = colamt[0, 0, 0][1] / temp
+            if ratco2 > 3.0:
+                adjfac = 3.0 + (ratco2 - 3.0) ** 0.79
+                adjcolco2 = adjfac * temp
+            else:
+                adjcolco2 = colamt[0, 0, 0][1]
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
-            fk00 = 1.0 - fs
-            fk10 = fs
-            fk20 = 0.0
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
 
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
 
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
-            fk01 = 1.0 - fs1
-            fk11 = fs1
-            fk21 = 0.0
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
 
-        for ig in range(ng07):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            co2m1 = ka_mco2[0, 0, 0][ig, jmco2, indm] + fmco2 * (
-                ka_mco2[0, 0, 0][ig, jmco2p, indm] - ka_mco2[0, 0, 0][ig, jmco2, indm]
-            )
-            co2m2 = ka_mco2[0, 0, 0][ig, jmco2, indmp] + fmco2 * (
-                ka_mco2[0, 0, 0][ig, jmco2p, indmp] - ka_mco2[0, 0, 0][ig, jmco2, indmp]
-            )
-            absco2 = co2m1 + minorfrac * (co2m2 - co2m1)
-
-            taug[0, 0, 0][ns07 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig in range(ng07):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + tauself
-                + taufor
-                + adjcolco2 * absco2
-            )
-
-            fracs[0, 0, 0][ns07 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        temp = coldry * chi_mls[0, 0, 0][1, jp]
-        ratco2 = colamt[0, 0, 0][1] / temp
-        if ratco2 > 3.0:
-            adjfac = 2.0 + (ratco2 - 2.0) ** 0.79
-            adjcolco2 = adjfac * temp
-        else:
-            adjcolco2 = colamt[0, 0, 0][1]
-
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-
-        indm = indminor - 1
-        indmp = indm + 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-
-        for ig2 in range(ng07):
-            absco2 = kb_mco2[0, 0, 0][ig2, indm] + minorfrac * (
-                kb_mco2[0, 0, 0][ig2, indmp] - kb_mco2[0, 0, 0][ig2, indm]
-            )
-
-            taug[0, 0, 0][ns07 + ig2] = (
-                colamt[0, 0, 0][2]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                co2m1 = ka_mco2[0, 0, 0][ig, jmco2, indm] + fmco2 * (
+                    ka_mco2[0, 0, 0][ig, jmco2p, indm]
+                    - ka_mco2[0, 0, 0][ig, jmco2, indm]
                 )
-                + adjcolco2 * absco2
-            )
+                co2m2 = ka_mco2[0, 0, 0][ig, jmco2, indmp] + fmco2 * (
+                    ka_mco2[0, 0, 0][ig, jmco2p, indmp]
+                    - ka_mco2[0, 0, 0][ig, jmco2, indmp]
+                )
+                absco2 = co2m1 + minorfrac * (co2m2 - co2m1)
 
-            fracs[0, 0, 0][ns07 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns07 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                    + adjcolco2 * absco2
+                )
 
-        taug[0, 0, 0][ns07 + 5] = taug[0, 0, 0][ns07 + 5] * 0.92
-        taug[0, 0, 0][ns07 + 6] = taug[0, 0, 0][ns07 + 6] * 0.88
-        taug[0, 0, 0][ns07 + 7] = taug[0, 0, 0][ns07 + 7] * 1.07
-        taug[0, 0, 0][ns07 + 8] = taug[0, 0, 0][ns07 + 8] * 1.1
-        taug[0, 0, 0][ns07 + 9] = taug[0, 0, 0][ns07 + 9] * 0.99
-        taug[0, 0, 0][ns07 + 10] = taug[0, 0, 0][ns07 + 10] * 0.855
+                fracs[0, 0, 0][ns07 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+            temp = coldry * chi_mls[0, 0, 0][1, jp]
+            ratco2 = colamt[0, 0, 0][1] / temp
+            if ratco2 > 3.0:
+                adjfac = 2.0 + (ratco2 - 2.0) ** 0.79
+                adjcolco2 = adjfac * temp
+            else:
+                adjcolco2 = colamt[0, 0, 0][1]
+
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+
+            indm = indminor - 1
+            indmp = indm + 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+
+            for ig2 in range(ng07):
+                absco2 = kb_mco2[0, 0, 0][ig2, indm] + minorfrac * (
+                    kb_mco2[0, 0, 0][ig2, indmp] - kb_mco2[0, 0, 0][ig2, indm]
+                )
+
+                taug[0, 0, 0][ns07 + ig2] = (
+                    colamt[0, 0, 0][2]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + adjcolco2 * absco2
+                )
+
+                fracs[0, 0, 0][ns07 + ig2] = fracrefb[0, 0, 0][ig2]
+
+            taug[0, 0, 0][ns07 + 5] = taug[0, 0, 0][ns07 + 5] * 0.92
+            taug[0, 0, 0][ns07 + 6] = taug[0, 0, 0][ns07 + 6] * 0.88
+            taug[0, 0, 0][ns07 + 7] = taug[0, 0, 0][ns07 + 7] * 1.07
+            taug[0, 0, 0][ns07 + 8] = taug[0, 0, 0][ns07 + 8] * 1.1
+            taug[0, 0, 0][ns07 + 9] = taug[0, 0, 0][ns07 + 9] * 0.99
+            taug[0, 0, 0][ns07 + 10] = taug[0, 0, 0][ns07 + 10] * 0.855
 
 
 @stencil(
@@ -2091,105 +2124,107 @@ def taugb08(
 ):
     from __externals__ import nspa, nspb, laytrop, ng08, nlay, ns08, oneminus
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
 
-        temp = coldry * chi_mls[0, 0, 0][1, jp]
-        ratco2 = colamt[0, 0, 0][1] / temp
-        if ratco2 > 3.0:
-            adjfac = 2.0 + (ratco2 - 2.0) ** 0.65
-            adjcolco2 = adjfac * temp
-        else:
-            adjcolco2 = colamt[0, 0, 0][1]
+            temp = coldry * chi_mls[0, 0, 0][1, jp]
+            ratco2 = colamt[0, 0, 0][1] / temp
+            if ratco2 > 3.0:
+                adjfac = 2.0 + (ratco2 - 2.0) ** 0.65
+                adjcolco2 = adjfac * temp
+            else:
+                adjcolco2 = colamt[0, 0, 0][1]
 
-        for ig in range(ng08):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            absco2 = ka_mco2[0, 0, 0][ig, indm] + minorfrac * (
-                ka_mco2[0, 0, 0][ig, indmp] - ka_mco2[0, 0, 0][ig, indm]
-            )
-            abso3 = ka_mo3[0, 0, 0][ig, indm] + minorfrac * (
-                ka_mo3[0, 0, 0][ig, indmp] - ka_mo3[0, 0, 0][ig, indm]
-            )
-            absn2o = ka_mn2o[0, 0, 0][ig, indm] + minorfrac * (
-                ka_mn2o[0, 0, 0][ig, indmp] - ka_mn2o[0, 0, 0][ig, indm]
-            )
-
-            taug[0, 0, 0][ns08 + ig] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng08):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-                + adjcolco2 * absco2
-                + colamt[0, 0, 0][2] * abso3
-                + colamt[0, 0, 0][3] * absn2o
-                + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig]
-                + wx[0, 0, 0][3] * cfc22adj[0, 0, 0][ig]
-            )
-
-            fracs[0, 0, 0][ns08 + ig] = fracrefa[0, 0, 0][ig]
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-
-        indm = indminor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indmp = indm + 1
-
-        temp = coldry * chi_mls[0, 0, 0][1, jp]
-        ratco2 = colamt[0, 0, 0][1] / temp
-        if ratco2 > 3.0:
-            adjfac = 2.0 + (ratco2 - 2.0) ** 0.65
-            adjcolco2 = adjfac * temp
-        else:
-            adjcolco2 = colamt[0, 0, 0][1]
-
-        for ig2 in range(ng08):
-            absco2 = kb_mco2[0, 0, 0][ig2, indm] + minorfrac * (
-                kb_mco2[0, 0, 0][ig2, indmp] - kb_mco2[0, 0, 0][ig2, indm]
-            )
-            absn2o = kb_mn2o[0, 0, 0][ig2, indm] + minorfrac * (
-                kb_mn2o[0, 0, 0][ig2, indmp] - kb_mn2o[0, 0, 0][ig2, indm]
-            )
-
-            taug[0, 0, 0][ns08 + ig2] = (
-                colamt[0, 0, 0][2]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + adjcolco2 * absco2
-                + colamt[0, 0, 0][3] * absn2o
-                + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig2]
-                + wx[0, 0, 0][3] * cfc22adj[0, 0, 0][ig2]
-            )
+                absco2 = ka_mco2[0, 0, 0][ig, indm] + minorfrac * (
+                    ka_mco2[0, 0, 0][ig, indmp] - ka_mco2[0, 0, 0][ig, indm]
+                )
+                abso3 = ka_mo3[0, 0, 0][ig, indm] + minorfrac * (
+                    ka_mo3[0, 0, 0][ig, indmp] - ka_mo3[0, 0, 0][ig, indm]
+                )
+                absn2o = ka_mn2o[0, 0, 0][ig, indm] + minorfrac * (
+                    ka_mn2o[0, 0, 0][ig, indmp] - ka_mn2o[0, 0, 0][ig, indm]
+                )
 
-            fracs[0, 0, 0][ns08 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns08 + ig] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                    + adjcolco2 * absco2
+                    + colamt[0, 0, 0][2] * abso3
+                    + colamt[0, 0, 0][3] * absn2o
+                    + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig]
+                    + wx[0, 0, 0][3] * cfc22adj[0, 0, 0][ig]
+                )
+
+                fracs[0, 0, 0][ns08 + ig] = fracrefa[0, 0, 0][ig]
+
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+
+            indm = indminor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indmp = indm + 1
+
+            temp = coldry * chi_mls[0, 0, 0][1, jp]
+            ratco2 = colamt[0, 0, 0][1] / temp
+            if ratco2 > 3.0:
+                adjfac = 2.0 + (ratco2 - 2.0) ** 0.65
+                adjcolco2 = adjfac * temp
+            else:
+                adjcolco2 = colamt[0, 0, 0][1]
+
+            for ig2 in range(ng08):
+                absco2 = kb_mco2[0, 0, 0][ig2, indm] + minorfrac * (
+                    kb_mco2[0, 0, 0][ig2, indmp] - kb_mco2[0, 0, 0][ig2, indm]
+                )
+                absn2o = kb_mn2o[0, 0, 0][ig2, indm] + minorfrac * (
+                    kb_mn2o[0, 0, 0][ig2, indmp] - kb_mn2o[0, 0, 0][ig2, indm]
+                )
+
+                taug[0, 0, 0][ns08 + ig2] = (
+                    colamt[0, 0, 0][2]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + adjcolco2 * absco2
+                    + colamt[0, 0, 0][3] * absn2o
+                    + wx[0, 0, 0][2] * cfc12[0, 0, 0][ig2]
+                    + wx[0, 0, 0][3] * cfc22adj[0, 0, 0][ig2]
+                )
+
+                fracs[0, 0, 0][ns08 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -2268,240 +2303,250 @@ def taugb09(
 ):
     from __externals__ import nspa, nspb, laytrop, ng09, nlay, ns09, oneminus
 
-    with computation(PARALLEL), interval(...):
-        #  --- ...  calculate reference ratio to be used in calculation of Planck
-        #           fraction in lower/upper atmosphere.
+    with computation(PARALLEL):
+        with interval(...):
+            #  --- ...  calculate reference ratio to be used in calculation of Planck
+            #           fraction in lower/upper atmosphere.
 
-        refrat_planck_a = chi_mls[0, 0, 0][0, 8] / chi_mls[0, 0, 0][5, 8]  # P = 212 mb
-        refrat_m_a = chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][5, 2]  # P = 706.272 mb
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][0, 8] / chi_mls[0, 0, 0][5, 8]
+            )  # P = 212 mb
+            refrat_m_a = (
+                chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][5, 2]
+            )  # P = 706.272 mb
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 0] * colamt[0, 0, 0][4]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 0] * colamt[0, 0, 0][4]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 1] * colamt[0, 0, 0][4]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 1] * colamt[0, 0, 0][4]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][4]
-        specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
-        specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
-        jmn2o = 1 + specmult_mn2o - 1
-        fmn2o = mod(specmult_mn2o, 1.0)
+            speccomb_mn2o = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][4]
+            specparm_mn2o = colamt[0, 0, 0][0] / speccomb_mn2o
+            specmult_mn2o = 8.0 * min(specparm_mn2o, oneminus)
+            jmn2o = 1 + specmult_mn2o - 1
+            fmn2o = mod(specmult_mn2o, 1.0)
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][4]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][4]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jplp = jpl + 1
-        jmn2op = jmn2o + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jplp = jpl + 1
+            jmn2op = jmn2o + 1
 
-        temp = coldry * chi_mls[0, 0, 0][3, jp]
-        ratn2o = colamt[0, 0, 0][3] / temp
-        if ratn2o > 1.5:
-            adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
-            adjcoln2o = adjfac * temp
-        else:
-            adjcoln2o = colamt[0, 0, 0][3]
+            temp = coldry * chi_mls[0, 0, 0][3, jp]
+            ratn2o = colamt[0, 0, 0][3] / temp
+            if ratn2o > 1.5:
+                adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
+                adjcoln2o = adjfac * temp
+            else:
+                adjcoln2o = colamt[0, 0, 0][3]
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
-            fk00 = 1.0 - fs
-            fk10 = fs
-            fk20 = 0.0
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
 
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
 
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
-            fk01 = 1.0 - fs1
-            fk11 = fs1
-            fk21 = 0.0
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
 
-        for ig in range(ng09):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            n2om1 = ka_mn2o[0, 0, 0][ig, jmn2o, indm] + fmn2o * (
-                ka_mn2o[0, 0, 0][ig, jmn2op, indm] - ka_mn2o[0, 0, 0][ig, jmn2o, indm]
-            )
-            n2om2 = ka_mn2o[0, 0, 0][ig, jmn2o, indmp] + fmn2o * (
-                ka_mn2o[0, 0, 0][ig, jmn2op, indmp] - ka_mn2o[0, 0, 0][ig, jmn2o, indmp]
-            )
-            absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
-
-            taug[0, 0, 0][ns09 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig in range(ng09):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + tauself
-                + taufor
-                + adjcoln2o * absn2o
-            )
-
-            fracs[0, 0, 0][ns09 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-
-        indm = indminor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indmp = indm + 1
-
-        temp = coldry * chi_mls[0, 0, 0][3, jp]
-        ratn2o = colamt[0, 0, 0][3] / temp
-        if ratn2o > 1.5:
-            adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
-            adjcoln2o = adjfac * temp
-        else:
-            adjcoln2o = colamt[0, 0, 0][3]
-
-        for ig2 in range(ng09):
-            absn2o = kb_mn2o[0, 0, 0][ig2, indm] + minorfrac * (
-                kb_mn2o[0, 0, 0][ig2, indmp] - kb_mn2o[0, 0, 0][ig2, indm]
-            )
-
-            taug[0, 0, 0][ns09 + ig2] = (
-                colamt[0, 0, 0][4]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                n2om1 = ka_mn2o[0, 0, 0][ig, jmn2o, indm] + fmn2o * (
+                    ka_mn2o[0, 0, 0][ig, jmn2op, indm]
+                    - ka_mn2o[0, 0, 0][ig, jmn2o, indm]
                 )
-                + adjcoln2o * absn2o
-            )
+                n2om2 = ka_mn2o[0, 0, 0][ig, jmn2o, indmp] + fmn2o * (
+                    ka_mn2o[0, 0, 0][ig, jmn2op, indmp]
+                    - ka_mn2o[0, 0, 0][ig, jmn2o, indmp]
+                )
+                absn2o = n2om1 + minorfrac * (n2om2 - n2om1)
 
-            fracs[0, 0, 0][ns09 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns09 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                    + adjcoln2o * absn2o
+                )
+
+                fracs[0, 0, 0][ns09 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+
+            indm = indminor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indmp = indm + 1
+
+            temp = coldry * chi_mls[0, 0, 0][3, jp]
+            ratn2o = colamt[0, 0, 0][3] / temp
+            if ratn2o > 1.5:
+                adjfac = 0.5 + (ratn2o - 0.5) ** 0.65
+                adjcoln2o = adjfac * temp
+            else:
+                adjcoln2o = colamt[0, 0, 0][3]
+
+            for ig2 in range(ng09):
+                absn2o = kb_mn2o[0, 0, 0][ig2, indm] + minorfrac * (
+                    kb_mn2o[0, 0, 0][ig2, indmp] - kb_mn2o[0, 0, 0][ig2, indm]
+                )
+
+                taug[0, 0, 0][ns09 + ig2] = (
+                    colamt[0, 0, 0][4]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + adjcoln2o * absn2o
+                )
+
+                fracs[0, 0, 0][ns09 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -2553,68 +2598,71 @@ def taugb10(
 ):
     from __externals__ import nspa, nspb, laytrop, ng10, nlay, ns10, oneminus
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
 
-        inds = indself - 1
-        indf = indfor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indsp = inds + 1
-        indfp = indf + 1
+            inds = indself - 1
+            indf = indfor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indsp = inds + 1
+            indfp = indf + 1
 
-        for ig in range(ng10):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-
-            taug[0, 0, 0][ns10 + ig] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng10):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-            )
-
-            fracs[0, 0, 0][ns10 + ig] = fracrefa[0, 0, 0][ig]
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-
-        indf = indfor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indfp = indf + 1
-
-        for ig2 in range(ng10):
-            taufor = forfac * (
-                forref[0, 0, 0][ig2, indf]
-                + forfrac * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
-            )
-
-            taug[0, 0, 0][ns10 + ig2] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + taufor
-            )
 
-            fracs[0, 0, 0][ns10 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns10 + ig] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                )
+
+                fracs[0, 0, 0][ns10 + ig] = fracrefa[0, 0, 0][ig]
+
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+
+            indf = indfor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indfp = indf + 1
+
+            for ig2 in range(ng10):
+                taufor = forfac * (
+                    forref[0, 0, 0][ig2, indf]
+                    + forfrac
+                    * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
+                )
+
+                taug[0, 0, 0][ns10 + ig2] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + taufor
+                )
+
+                fracs[0, 0, 0][ns10 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -2673,86 +2721,91 @@ def taugb11(
 ):
     from __externals__ import nspa, nspb, laytrop, ng11, nlay, ns11, oneminus
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
 
-        scaleo2 = colamt[0, 0, 0][5] * scaleminor
+            scaleo2 = colamt[0, 0, 0][5] * scaleminor
 
-        for ig in range(ng11):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            tauo2 = scaleo2 * (
-                ka_mo2[0, 0, 0][ig, indm]
-                + minorfrac * (ka_mo2[0, 0, 0][ig, indmp] - ka_mo2[0, 0, 0][ig, indm])
-            )
-
-            taug[0, 0, 0][ns11 + ig] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng11):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-                + tauo2
-            )
-
-            fracs[0, 0, 0][ns11 + ig] = fracrefa[0, 0, 0][ig]
-
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
-
-        indf = indfor - 1
-        indm = indminor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indfp = indf + 1
-        indmp = indm + 1
-
-        scaleo2 = colamt[0, 0, 0][5] * scaleminor
-
-        for ig2 in range(ng11):
-            taufor = forfac * (
-                forref[0, 0, 0][ig2, indf]
-                + forfrac * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
-            )
-            tauo2 = scaleo2 * (
-                kb_mo2[0, 0, 0][ig2, indm]
-                + minorfrac * (kb_mo2[0, 0, 0][ig2, indmp] - kb_mo2[0, 0, 0][ig2, indm])
-            )
-
-            taug[0, 0, 0][ns11 + ig2] = (
-                colamt[0, 0, 0][0]
-                * (
-                    fac00 * absb[0, 0, 0][ig2, ind0]
-                    + fac10 * absb[0, 0, 0][ig2, ind0p]
-                    + fac01 * absb[0, 0, 0][ig2, ind1]
-                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + taufor
-                + tauo2
-            )
+                tauo2 = scaleo2 * (
+                    ka_mo2[0, 0, 0][ig, indm]
+                    + minorfrac
+                    * (ka_mo2[0, 0, 0][ig, indmp] - ka_mo2[0, 0, 0][ig, indm])
+                )
 
-            fracs[0, 0, 0][ns11 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns11 + ig] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                    + tauo2
+                )
+
+                fracs[0, 0, 0][ns11 + ig] = fracrefa[0, 0, 0][ig]
+
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+
+            indf = indfor - 1
+            indm = indminor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indfp = indf + 1
+            indmp = indm + 1
+
+            scaleo2 = colamt[0, 0, 0][5] * scaleminor
+
+            for ig2 in range(ng11):
+                taufor = forfac * (
+                    forref[0, 0, 0][ig2, indf]
+                    + forfrac
+                    * (forref[0, 0, 0][ig2, indfp] - forref[0, 0, 0][ig2, indf])
+                )
+                tauo2 = scaleo2 * (
+                    kb_mo2[0, 0, 0][ig2, indm]
+                    + minorfrac
+                    * (kb_mo2[0, 0, 0][ig2, indmp] - kb_mo2[0, 0, 0][ig2, indm])
+                )
+
+                taug[0, 0, 0][ns11 + ig2] = (
+                    colamt[0, 0, 0][0]
+                    * (
+                        fac00 * absb[0, 0, 0][ig2, ind0]
+                        + fac10 * absb[0, 0, 0][ig2, ind0p]
+                        + fac01 * absb[0, 0, 0][ig2, ind1]
+                        + fac11 * absb[0, 0, 0][ig2, ind1p]
+                    )
+                    + taufor
+                    + tauo2
+                )
+
+                fracs[0, 0, 0][ns11 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -2818,183 +2871,187 @@ def taugb12(
 ):
     from __externals__ import nspa, nspb, laytrop, ng12, nlay, ns12, oneminus
 
-    with computation(PARALLEL), interval(...):
-        refrat_planck_a = chi_mls[0, 0, 0][0, 9] / chi_mls[0, 0, 0][1, 9]
+    with computation(PARALLEL):
+        with interval(...):
+            refrat_planck_a = chi_mls[0, 0, 0][0, 9] / chi_mls[0, 0, 0][1, 9]
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][0, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        if specparm_planck >= oneminus:
-            specparm_planck = oneminus
-        specmult_planck = 8.0 * specparm_planck
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            if specparm_planck >= oneminus:
+                specparm_planck = oneminus
+            specmult_planck = 8.0 * specparm_planck
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        jplp = jpl + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            jplp = jpl + 1
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
-            fk00 = 1.0 - fs
-            fk10 = fs
-            fk20 = 0.0
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
 
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
 
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
-            fk01 = 1.0 - fs1
-            fk11 = fs1
-            fk21 = 0.0
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
 
-        for ig in range(ng12):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-
-            taug[0, 0, 0][ns12 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig in range(ng12):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + tauself
-                + taufor
-            )
 
-            fracs[0, 0, 0][ns12 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
+                taug[0, 0, 0][ns12 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                )
 
-    with computation(PARALLEL), interval(laytrop, nlay):
-        for ig2 in range(ng12):
-            taug[0, 0, 0][ns12 + ig2] = 0.0
-            fracs[0, 0, 0][ns12 + ig2] = 0.0
+                fracs[0, 0, 0][ns12 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+            for ig2 in range(ng12):
+                taug[0, 0, 0][ns12 + ig2] = 0.0
+                fracs[0, 0, 0][ns12 + ig2] = 0.0
 
 
 @stencil(
@@ -3073,240 +3130,246 @@ def taugb13(
 ):
     from __externals__ import nspa, nspb, laytrop, ng13, nlay, ns13, oneminus
 
-    with computation(PARALLEL), interval(...):
-        #  --- ...  calculate reference ratio to be used in calculation of Planck
-        #           fraction in lower/upper atmosphere.
+    with computation(PARALLEL):
+        with interval(...):
+            #  --- ...  calculate reference ratio to be used in calculation of Planck
+            #           fraction in lower/upper atmosphere.
 
-        refrat_planck_a = (
-            chi_mls[0, 0, 0][0, 4] / chi_mls[0, 0, 0][3, 4]
-        )  # P = 473.420 mb (Level 5)
-        refrat_m_a = (
-            chi_mls[0, 0, 0][0, 0] / chi_mls[0, 0, 0][3, 0]
-        )  # P = 1053. (Level 1)
-        refrat_m_a3 = (
-            chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][3, 2]
-        )  # P = 706. (Level 3)
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][0, 4] / chi_mls[0, 0, 0][3, 4]
+            )  # P = 473.420 mb (Level 5)
+            refrat_m_a = (
+                chi_mls[0, 0, 0][0, 0] / chi_mls[0, 0, 0][3, 0]
+            )  # P = 1053. (Level 1)
+            refrat_m_a3 = (
+                chi_mls[0, 0, 0][0, 2] / chi_mls[0, 0, 0][3, 2]
+            )  # P = 706. (Level 3)
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][2, 0] * colamt[0, 0, 0][3]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][2, 0] * colamt[0, 0, 0][3]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][2, 1] * colamt[0, 0, 0][3]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][2, 1] * colamt[0, 0, 0][3]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_mco2 = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][3]
-        specparm_mco2 = colamt[0, 0, 0][0] / speccomb_mco2
-        specmult_mco2 = 8.0 * min(specparm_mco2, oneminus)
-        jmco2 = 1 + specmult_mco2 - 1
-        fmco2 = mod(specmult_mco2, 1.0)
+            speccomb_mco2 = colamt[0, 0, 0][0] + refrat_m_a * colamt[0, 0, 0][3]
+            specparm_mco2 = colamt[0, 0, 0][0] / speccomb_mco2
+            specmult_mco2 = 8.0 * min(specparm_mco2, oneminus)
+            jmco2 = 1 + specmult_mco2 - 1
+            fmco2 = mod(specmult_mco2, 1.0)
 
-        speccomb_mco = colamt[0, 0, 0][0] + refrat_m_a3 * colamt[0, 0, 0][3]
-        specparm_mco = colamt[0, 0, 0][0] / speccomb_mco
-        specmult_mco = 8.0 * min(specparm_mco, oneminus)
-        jmco = 1 + specmult_mco - 1
-        fmco = mod(specmult_mco, 1.0)
+            speccomb_mco = colamt[0, 0, 0][0] + refrat_m_a3 * colamt[0, 0, 0][3]
+            specparm_mco = colamt[0, 0, 0][0] / speccomb_mco
+            specmult_mco = 8.0 * min(specparm_mco, oneminus)
+            jmco = 1 + specmult_mco - 1
+            fmco = mod(specmult_mco, 1.0)
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][3]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][3]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jplp = jpl + 1
-        jmco2p = jmco2 + 1
-        jmcop = jmco + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jplp = jpl + 1
+            jmco2p = jmco2 + 1
+            jmcop = jmco + 1
 
-        temp = coldry * 3.55e-4
-        ratco2 = colamt[0, 0, 0][1] / temp
-        if ratco2 > 3.0:
-            adjfac = 2.0 + (ratco2 - 2.0) ** 0.68
-            adjcolco2 = adjfac * temp
-        else:
-            adjcolco2 = colamt[0, 0, 0][1]
+            temp = coldry * 3.55e-4
+            ratco2 = colamt[0, 0, 0][1] / temp
+            if ratco2 > 3.0:
+                adjfac = 2.0 + (ratco2 - 2.0) ** 0.68
+                adjcolco2 = adjfac * temp
+            else:
+                adjcolco2 = colamt[0, 0, 0][1]
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
-            fk00 = 1.0 - fs
-            fk10 = fs
-            fk20 = 0.0
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
 
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
 
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
-            fk01 = 1.0 - fs1
-            fk11 = fs1
-            fk21 = 0.0
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
 
-        for ig in range(ng13):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            co2m1 = ka_mco2[0, 0, 0][ig, jmco2, indm] + fmco2 * (
-                ka_mco2[0, 0, 0][ig, jmco2p, indm] - ka_mco2[0, 0, 0][ig, jmco2, indm]
-            )
-            co2m2 = ka_mco2[0, 0, 0][ig, jmco2, indmp] + fmco2 * (
-                ka_mco2[0, 0, 0][ig, jmco2p, indmp] - ka_mco2[0, 0, 0][ig, jmco2, indmp]
-            )
-            absco2 = co2m1 + minorfrac * (co2m2 - co2m1)
-            com1 = ka_mco[0, 0, 0][ig, jmco, indm] + fmco * (
-                ka_mco[0, 0, 0][ig, jmcop, indm] - ka_mco[0, 0, 0][ig, jmco, indm]
-            )
-            com2 = ka_mco[0, 0, 0][ig, jmco, indmp] + fmco * (
-                ka_mco[0, 0, 0][ig, jmcop, indmp] - ka_mco[0, 0, 0][ig, jmco, indmp]
-            )
-            absco = com1 + minorfrac * (com2 - com1)
-
-            taug[0, 0, 0][ns13 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig in range(ng13):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + tauself
-                + taufor
-                + adjcolco2 * absco2
-                + colamt[0, 0, 0][6] * absco
-            )
+                co2m1 = ka_mco2[0, 0, 0][ig, jmco2, indm] + fmco2 * (
+                    ka_mco2[0, 0, 0][ig, jmco2p, indm]
+                    - ka_mco2[0, 0, 0][ig, jmco2, indm]
+                )
+                co2m2 = ka_mco2[0, 0, 0][ig, jmco2, indmp] + fmco2 * (
+                    ka_mco2[0, 0, 0][ig, jmco2p, indmp]
+                    - ka_mco2[0, 0, 0][ig, jmco2, indmp]
+                )
+                absco2 = co2m1 + minorfrac * (co2m2 - co2m1)
+                com1 = ka_mco[0, 0, 0][ig, jmco, indm] + fmco * (
+                    ka_mco[0, 0, 0][ig, jmcop, indm] - ka_mco[0, 0, 0][ig, jmco, indm]
+                )
+                com2 = ka_mco[0, 0, 0][ig, jmco, indmp] + fmco * (
+                    ka_mco[0, 0, 0][ig, jmcop, indmp] - ka_mco[0, 0, 0][ig, jmco, indmp]
+                )
+                absco = com1 + minorfrac * (com2 - com1)
 
-            fracs[0, 0, 0][ns13 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
+                taug[0, 0, 0][ns13 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                    + adjcolco2 * absco2
+                    + colamt[0, 0, 0][6] * absco
+                )
 
-    with computation(PARALLEL), interval(laytrop, nlay):
-        indm = indminor - 1
-        indmp = indm + 1
+                fracs[0, 0, 0][ns13 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
 
-        for ig2 in range(ng13):
-            abso3 = kb_mo3[0, 0, 0][ig2, indm] + minorfrac * (
-                kb_mo3[0, 0, 0][ig2, indmp] - kb_mo3[0, 0, 0][ig2, indm]
-            )
+        with interval(laytrop, nlay):
+            indm = indminor - 1
+            indmp = indm + 1
 
-            taug[0, 0, 0][ns13 + ig2] = colamt[0, 0, 0][2] * abso3
+            for ig2 in range(ng13):
+                abso3 = kb_mo3[0, 0, 0][ig2, indm] + minorfrac * (
+                    kb_mo3[0, 0, 0][ig2, indmp] - kb_mo3[0, 0, 0][ig2, indm]
+                )
 
-            fracs[0, 0, 0][ns13 + ig2] = fracrefb[0, 0, 0][ig2]
+                taug[0, 0, 0][ns13 + ig2] = colamt[0, 0, 0][2] * abso3
+
+                fracs[0, 0, 0][ns13 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -3358,57 +3421,59 @@ def taugb14(
 ):
     from __externals__ import nspa, nspb, laytrop, ng14, nlay, ns14, oneminus
 
-    with computation(PARALLEL), interval(0, laytrop):
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa
 
-        inds = indself - 1
-        indf = indfor - 1
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
-        indsp = inds + 1
-        indfp = indf + 1
+            inds = indself - 1
+            indf = indfor - 1
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
+            indsp = inds + 1
+            indfp = indf + 1
 
-        for ig in range(ng14):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-
-            taug[0, 0, 0][ns14 + ig] = (
-                colamt[0, 0, 0][1]
-                * (
-                    fac00 * absa[0, 0, 0][ig, ind0]
-                    + fac10 * absa[0, 0, 0][ig, ind0p]
-                    + fac01 * absa[0, 0, 0][ig, ind1]
-                    + fac11 * absa[0, 0, 0][ig, ind1p]
+            for ig in range(ng14):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + tauself
-                + taufor
-            )
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
+                )
 
-            fracs[0, 0, 0][ns14 + ig] = fracrefa[0, 0, 0][ig]
+                taug[0, 0, 0][ns14 + ig] = (
+                    colamt[0, 0, 0][1]
+                    * (
+                        fac00 * absa[0, 0, 0][ig, ind0]
+                        + fac10 * absa[0, 0, 0][ig, ind0p]
+                        + fac01 * absa[0, 0, 0][ig, ind1]
+                        + fac11 * absa[0, 0, 0][ig, ind1p]
+                    )
+                    + tauself
+                    + taufor
+                )
 
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+                fracs[0, 0, 0][ns14 + ig] = fracrefa[0, 0, 0][ig]
 
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
 
-        for ig2 in range(ng14):
-            taug[0, 0, 0][ns14 + ig2] = colamt[0, 0, 0][1] * (
-                fac00 * absb[0, 0, 0][ig2, ind0]
-                + fac10 * absb[0, 0, 0][ig2, ind0p]
-                + fac01 * absb[0, 0, 0][ig2, ind1]
-                + fac11 * absb[0, 0, 0][ig2, ind1p]
-            )
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
 
-            fracs[0, 0, 0][ns14 + ig2] = fracrefb[0, 0, 0][ig2]
+            for ig2 in range(ng14):
+                taug[0, 0, 0][ns14 + ig2] = colamt[0, 0, 0][1] * (
+                    fac00 * absb[0, 0, 0][ig2, ind0]
+                    + fac10 * absb[0, 0, 0][ig2, ind0p]
+                    + fac01 * absb[0, 0, 0][ig2, ind1]
+                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                )
+
+                fracs[0, 0, 0][ns14 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(
@@ -3485,207 +3550,211 @@ def taugb15(
 ):
     from __externals__ import nspa, nspb, laytrop, ng15, nlay, ns15, oneminus
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL):
+        with interval(...):
 
-        #  --- ...  calculate reference ratio to be used in calculation of Planck
-        #           fraction in lower atmosphere.
+            #  --- ...  calculate reference ratio to be used in calculation of Planck
+            #           fraction in lower atmosphere.
 
-        refrat_planck_a = (
-            chi_mls[0, 0, 0][3, 0] / chi_mls[0, 0, 0][1, 0]
-        )  # P = 1053. mb (Level 1)
-        refrat_m_a = chi_mls[0, 0, 0][3, 0] / chi_mls[0, 0, 0][1, 0]  # P = 1053. mb
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][3, 0] / chi_mls[0, 0, 0][1, 0]
+            )  # P = 1053. mb (Level 1)
+            refrat_m_a = chi_mls[0, 0, 0][3, 0] / chi_mls[0, 0, 0][1, 0]  # P = 1053. mb
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][3] + rfrate[0, 0, 0][4, 0] * colamt[0, 0, 0][1]
-        specparm = colamt[0, 0, 0][3] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][3] + rfrate[0, 0, 0][4, 0] * colamt[0, 0, 0][1]
+            specparm = colamt[0, 0, 0][3] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][3] + rfrate[0, 0, 0][4, 1] * colamt[0, 0, 0][1]
-        specparm1 = colamt[0, 0, 0][3] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][3] + rfrate[0, 0, 0][4, 1] * colamt[0, 0, 0][1]
+            specparm1 = colamt[0, 0, 0][3] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_mn2 = colamt[0, 0, 0][3] + refrat_m_a * colamt[0, 0, 0][1]
-        specparm_mn2 = colamt[0, 0, 0][3] / speccomb_mn2
-        specmult_mn2 = 8.0 * min(specparm_mn2, oneminus)
-        jmn2 = 1 + specmult_mn2 - 1
-        fmn2 = mod(specmult_mn2, 1.0)
+            speccomb_mn2 = colamt[0, 0, 0][3] + refrat_m_a * colamt[0, 0, 0][1]
+            specparm_mn2 = colamt[0, 0, 0][3] / speccomb_mn2
+            specmult_mn2 = 8.0 * min(specparm_mn2, oneminus)
+            jmn2 = 1 + specmult_mn2 - 1
+            fmn2 = mod(specmult_mn2, 1.0)
 
-        speccomb_planck = colamt[0, 0, 0][3] + refrat_planck_a * colamt[0, 0, 0][1]
-        specparm_planck = colamt[0, 0, 0][3] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][3] + refrat_planck_a * colamt[0, 0, 0][1]
+            specparm_planck = colamt[0, 0, 0][3] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        scalen2 = colbrd * scaleminor
+            scalen2 = colbrd * scaleminor
 
-        inds = indself - 1
-        indf = indfor - 1
-        indm = indminor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        indmp = indm + 1
-        jplp = jpl + 1
-        jmn2p = jmn2 + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indm = indminor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            indmp = indm + 1
+            jplp = jpl + 1
+            jmn2p = jmn2 + 1
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
-            fk00 = 1.0 - fs
-            fk10 = fs
-            fk20 = 0.0
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
 
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
 
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
-            fk01 = 1.0 - fs1
-            fk11 = fs1
-            fk21 = 0.0
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
 
-        for ig in range(ng15):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-            n2m1 = ka_mn2[0, 0, 0][ig, jmn2, indm] + fmn2 * (
-                ka_mn2[0, 0, 0][ig, jmn2p, indm] - ka_mn2[0, 0, 0][ig, jmn2, indm]
-            )
-            n2m2 = ka_mn2[0, 0, 0][ig, jmn2, indmp] + fmn2 * (
-                ka_mn2[0, 0, 0][ig, jmn2p, indmp] - ka_mn2[0, 0, 0][ig, jmn2, indmp]
-            )
-            taun2 = scalen2 * (n2m1 + minorfrac * (n2m2 - n2m1))
-
-            taug[0, 0, 0][ns15 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig in range(ng15):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + tauself
-                + taufor
-                + taun2
-            )
+                n2m1 = ka_mn2[0, 0, 0][ig, jmn2, indm] + fmn2 * (
+                    ka_mn2[0, 0, 0][ig, jmn2p, indm] - ka_mn2[0, 0, 0][ig, jmn2, indm]
+                )
+                n2m2 = ka_mn2[0, 0, 0][ig, jmn2, indmp] + fmn2 * (
+                    ka_mn2[0, 0, 0][ig, jmn2p, indmp] - ka_mn2[0, 0, 0][ig, jmn2, indmp]
+                )
+                taun2 = scalen2 * (n2m1 + minorfrac * (n2m2 - n2m1))
 
-            fracs[0, 0, 0][ns15 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
+                taug[0, 0, 0][ns15 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                    + taun2
+                )
 
-    with computation(PARALLEL), interval(laytrop, nlay):
-        for ig2 in range(ng15):
-            taug[0, 0, 0][ns15 + ig2] = 0.0
-            fracs[0, 0, 0][ns15 + ig2] = 0.0
+                fracs[0, 0, 0][ns15 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
+
+        with interval(laytrop, nlay):
+            for ig2 in range(ng15):
+                taug[0, 0, 0][ns15 + ig2] = 0.0
+                fracs[0, 0, 0][ns15 + ig2] = 0.0
 
 
 @stencil(
@@ -3753,6 +3822,8 @@ def taugb16(
     id201: FIELD_INT,
     id211: FIELD_INT,
     fpl: FIELD_FLT,
+    # temporaries below here only necessary to work around a bug in gt4py
+    # hopefully can be removed later
     speccomb: FIELD_FLT,
     speccomb1: FIELD_FLT,
     fac000: FIELD_FLT,
@@ -3770,195 +3841,199 @@ def taugb16(
 ):
     from __externals__ import nspa, nspb, laytrop, ng16, nlay, ns16, oneminus
 
-    with computation(PARALLEL), interval(...):
-        refrat_planck_a = (
-            chi_mls[0, 0, 0][0, 5] / chi_mls[0, 0, 0][5, 5]
-        )  # P = 387. mb (Level 6)
+    with computation(PARALLEL):
+        with interval(...):
+            refrat_planck_a = (
+                chi_mls[0, 0, 0][0, 5] / chi_mls[0, 0, 0][5, 5]
+            )  # P = 387. mb (Level 6)
 
-    with computation(PARALLEL), interval(0, laytrop):
-        speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 0] * colamt[0, 0, 0][4]
-        specparm = colamt[0, 0, 0][0] / speccomb
-        specmult = 8.0 * min(specparm, oneminus)
-        js = 1 + specmult
-        fs = mod(specmult, 1.0)
-        ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
+    with computation(PARALLEL):
+        with interval(0, laytrop):
+            speccomb = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 0] * colamt[0, 0, 0][4]
+            specparm = colamt[0, 0, 0][0] / speccomb
+            specmult = 8.0 * min(specparm, oneminus)
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa + js - 1
 
-        speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 1] * colamt[0, 0, 0][4]
-        specparm1 = colamt[0, 0, 0][0] / speccomb1
-        specmult1 = 8.0 * min(specparm1, oneminus)
-        js1 = 1 + specmult1
-        fs1 = mod(specmult1, 1.0)
-        ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
+            speccomb1 = colamt[0, 0, 0][0] + rfrate[0, 0, 0][3, 1] * colamt[0, 0, 0][4]
+            specparm1 = colamt[0, 0, 0][0] / speccomb1
+            specmult1 = 8.0 * min(specparm1, oneminus)
+            js1 = 1 + specmult1
+            fs1 = mod(specmult1, 1.0)
+            ind1 = (jp * 5 + (jt1 - 1)) * nspa + js1 - 1
 
-        speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][4]
-        specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
-        specmult_planck = 8.0 * min(specparm_planck, oneminus)
-        jpl = 1 + specmult_planck - 1
-        fpl = mod(specmult_planck, 1.0)
+            speccomb_planck = colamt[0, 0, 0][0] + refrat_planck_a * colamt[0, 0, 0][4]
+            specparm_planck = colamt[0, 0, 0][0] / speccomb_planck
+            specmult_planck = 8.0 * min(specparm_planck, oneminus)
+            jpl = 1 + specmult_planck - 1
+            fpl = mod(specmult_planck, 1.0)
 
-        inds = indself - 1
-        indf = indfor - 1
-        indsp = inds + 1
-        indfp = indf + 1
-        jplp = jpl + 1
+            inds = indself - 1
+            indf = indfor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+            jplp = jpl + 1
 
-        id000 = id000
-        id010 = id010
-        id100 = id100
-        id110 = id110
-        id200 = id200
-        id210 = id210
+            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
+            id000 = id000
+            id010 = id010
+            id100 = id100
+            id110 = id110
+            id200 = id200
+            id210 = id210
 
-        if specparm < 0.125:
-            p0 = fs - 1.0
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+            if specparm < 0.125:
+                p0 = fs - 1.0
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0 + 2
-            id210 = ind0 + 11
-        elif specparm > 0.875:
-            p0 = -fs
-            p40 = p0 ** 4
-            fk00 = p40
-            fk10 = 1.0 - p0 - 2.0 * p40
-            fk20 = p0 + p40
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0 + 2
+                id210 = ind0 + 11
+            elif specparm > 0.875:
+                p0 = -fs
+                p40 = p0 ** 4
+                fk00 = p40
+                fk10 = 1.0 - p0 - 2.0 * p40
+                fk20 = p0 + p40
 
-            id000 = ind0 + 1
-            id010 = ind0 + 10
-            id100 = ind0
-            id110 = ind0 + 9
-            id200 = ind0 - 1
-            id210 = ind0 + 8
-        else:
-            fk00 = 1.0 - fs
-            fk10 = fs
-            fk20 = 0.0
+                id000 = ind0 + 1
+                id010 = ind0 + 10
+                id100 = ind0
+                id110 = ind0 + 9
+                id200 = ind0 - 1
+                id210 = ind0 + 8
+            else:
+                fk00 = 1.0 - fs
+                fk10 = fs
+                fk20 = 0.0
 
-            id000 = ind0
-            id010 = ind0 + 9
-            id100 = ind0 + 1
-            id110 = ind0 + 10
-            id200 = ind0
-            id210 = ind0
+                id000 = ind0
+                id010 = ind0 + 9
+                id100 = ind0 + 1
+                id110 = ind0 + 10
+                id200 = ind0
+                id210 = ind0
 
-        fac000 = fk00 * fac00
-        fac100 = fk10 * fac00
-        fac200 = fk20 * fac00
-        fac010 = fk00 * fac10
-        fac110 = fk10 * fac10
-        fac210 = fk20 * fac10
+            fac000 = fk00 * fac00
+            fac100 = fk10 * fac00
+            fac200 = fk20 * fac00
+            fac010 = fk00 * fac10
+            fac110 = fk10 * fac10
+            fac210 = fk20 * fac10
 
-        id001 = id001
-        id011 = id011
-        id101 = id101
-        id111 = id111
-        id201 = id201
-        id211 = id211
+            id001 = id001
+            id011 = id011
+            id101 = id101
+            id111 = id111
+            id201 = id201
+            id211 = id211
 
-        if specparm1 < 0.125:
-            p1 = fs1 - 1.0
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+            if specparm1 < 0.125:
+                p1 = fs1 - 1.0
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1 + 2
-            id211 = ind1 + 11
-        elif specparm1 > 0.875:
-            p1 = -fs1
-            p41 = p1 ** 4
-            fk01 = p41
-            fk11 = 1.0 - p1 - 2.0 * p41
-            fk21 = p1 + p41
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1 + 2
+                id211 = ind1 + 11
+            elif specparm1 > 0.875:
+                p1 = -fs1
+                p41 = p1 ** 4
+                fk01 = p41
+                fk11 = 1.0 - p1 - 2.0 * p41
+                fk21 = p1 + p41
 
-            id001 = ind1 + 1
-            id011 = ind1 + 10
-            id101 = ind1
-            id111 = ind1 + 9
-            id201 = ind1 - 1
-            id211 = ind1 + 8
-        else:
-            fk01 = 1.0 - fs1
-            fk11 = fs1
-            fk21 = 0.0
+                id001 = ind1 + 1
+                id011 = ind1 + 10
+                id101 = ind1
+                id111 = ind1 + 9
+                id201 = ind1 - 1
+                id211 = ind1 + 8
+            else:
+                fk01 = 1.0 - fs1
+                fk11 = fs1
+                fk21 = 0.0
 
-            id001 = ind1
-            id011 = ind1 + 9
-            id101 = ind1 + 1
-            id111 = ind1 + 10
-            id201 = ind1
-            id211 = ind1
+                id001 = ind1
+                id011 = ind1 + 9
+                id101 = ind1 + 1
+                id111 = ind1 + 10
+                id201 = ind1
+                id211 = ind1
 
-        fac001 = fk01 * fac01
-        fac101 = fk11 * fac01
-        fac201 = fk21 * fac01
-        fac011 = fk01 * fac11
-        fac111 = fk11 * fac11
-        fac211 = fk21 * fac11
+            fac001 = fk01 * fac01
+            fac101 = fk11 * fac01
+            fac201 = fk21 * fac01
+            fac011 = fk01 * fac11
+            fac111 = fk11 * fac11
+            fac211 = fk21 * fac11
 
-        for ig in range(ng16):
-            tauself = selffac * (
-                selfref[0, 0, 0][ig, inds]
-                + selffrac * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
-            )
-            taufor = forfac * (
-                forref[0, 0, 0][ig, indf]
-                + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
-            )
-
-            taug[0, 0, 0][ns16 + ig] = (
-                speccomb
-                * (
-                    fac000 * absa[0, 0, 0][ig, id000]
-                    + fac010 * absa[0, 0, 0][ig, id010]
-                    + fac100 * absa[0, 0, 0][ig, id100]
-                    + fac110 * absa[0, 0, 0][ig, id110]
-                    + fac200 * absa[0, 0, 0][ig, id200]
-                    + fac210 * absa[0, 0, 0][ig, id210]
+            for ig in range(ng16):
+                tauself = selffac * (
+                    selfref[0, 0, 0][ig, inds]
+                    + selffrac
+                    * (selfref[0, 0, 0][ig, indsp] - selfref[0, 0, 0][ig, inds])
                 )
-                + speccomb1
-                * (
-                    fac001 * absa[0, 0, 0][ig, id001]
-                    + fac011 * absa[0, 0, 0][ig, id011]
-                    + fac101 * absa[0, 0, 0][ig, id101]
-                    + fac111 * absa[0, 0, 0][ig, id111]
-                    + fac201 * absa[0, 0, 0][ig, id201]
-                    + fac211 * absa[0, 0, 0][ig, id211]
+                taufor = forfac * (
+                    forref[0, 0, 0][ig, indf]
+                    + forfrac * (forref[0, 0, 0][ig, indfp] - forref[0, 0, 0][ig, indf])
                 )
-                + tauself
-                + taufor
-            )
 
-            fracs[0, 0, 0][ns16 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
-                fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
-            )
+                taug[0, 0, 0][ns16 + ig] = (
+                    speccomb
+                    * (
+                        fac000 * absa[0, 0, 0][ig, id000]
+                        + fac010 * absa[0, 0, 0][ig, id010]
+                        + fac100 * absa[0, 0, 0][ig, id100]
+                        + fac110 * absa[0, 0, 0][ig, id110]
+                        + fac200 * absa[0, 0, 0][ig, id200]
+                        + fac210 * absa[0, 0, 0][ig, id210]
+                    )
+                    + speccomb1
+                    * (
+                        fac001 * absa[0, 0, 0][ig, id001]
+                        + fac011 * absa[0, 0, 0][ig, id011]
+                        + fac101 * absa[0, 0, 0][ig, id101]
+                        + fac111 * absa[0, 0, 0][ig, id111]
+                        + fac201 * absa[0, 0, 0][ig, id201]
+                        + fac211 * absa[0, 0, 0][ig, id211]
+                    )
+                    + tauself
+                    + taufor
+                )
 
-    with computation(PARALLEL), interval(laytrop, nlay):
-        ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
-        ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
+                fracs[0, 0, 0][ns16 + ig] = fracrefa[0, 0, 0][ig, jpl] + fpl * (
+                    fracrefa[0, 0, 0][ig, jplp] - fracrefa[0, 0, 0][ig, jpl]
+                )
 
-        ind0p = ind0 + 1
-        ind1p = ind1 + 1
+        with interval(laytrop, nlay):
+            ind0 = ((jp - 13) * 5 + (jt - 1)) * nspb
+            ind1 = ((jp - 12) * 5 + (jt1 - 1)) * nspb
 
-        for ig2 in range(ng16):
-            taug[0, 0, 0][ns16 + ig2] = colamt[0, 0, 0][4] * (
-                fac00 * absb[0, 0, 0][ig2, ind0]
-                + fac10 * absb[0, 0, 0][ig2, ind0p]
-                + fac01 * absb[0, 0, 0][ig2, ind1]
-                + fac11 * absb[0, 0, 0][ig2, ind1p]
-            )
+            ind0p = ind0 + 1
+            ind1p = ind1 + 1
 
-            fracs[0, 0, 0][ns16 + ig2] = fracrefb[0, 0, 0][ig2]
+            for ig2 in range(ng16):
+                taug[0, 0, 0][ns16 + ig2] = colamt[0, 0, 0][4] * (
+                    fac00 * absb[0, 0, 0][ig2, ind0]
+                    + fac10 * absb[0, 0, 0][ig2, ind0p]
+                    + fac01 * absb[0, 0, 0][ig2, ind1]
+                    + fac11 * absb[0, 0, 0][ig2, ind1p]
+                )
+
+                fracs[0, 0, 0][ns16 + ig2] = fracrefb[0, 0, 0][ig2]
 
 
 @stencil(backend=backend, rebuild=rebuild, externals={"ngptlw": ngptlw})
