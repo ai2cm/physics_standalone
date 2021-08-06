@@ -1046,7 +1046,7 @@
 
         if ( lcf1 ) then
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "lwrad-cldprop-input-"//trim(ser_count_str)
@@ -1063,7 +1063,7 @@
      &       cldfmc, taucld                                             &
      &     )
 
-!$ser verbatim if (iplon == 3) then
+!$ser verbatim if (iplon == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "lwrad-cldprop-output-"//trim(ser_count_str)
@@ -1876,7 +1876,7 @@
           endif
         enddo
 
-!  --- ...  call sub-column cloud generator
+!     --- ...  call sub-column cloud generator
 
         call mcica_subcol                                               &
 !  ---  inputs:

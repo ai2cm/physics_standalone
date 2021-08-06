@@ -382,6 +382,7 @@ class RadLWClass:
             for i in range(npts):
                 ipseed[i] = icseed[i]
 
+
         for iplon in range(npts):
             print(f"iplon = {iplon}")
             if sfemis[iplon] > self.eps and sfemis[iplon] <= 1.0:
@@ -525,8 +526,6 @@ class RadLWClass:
                     delgth,
                     iplon,
                 )
-                if iplon == 2:
-                    print(f"cldfmc = {cldfmc}")
                 print("Done")
                 print(" ")
 
@@ -6769,8 +6768,6 @@ class RadLWClass:
                 fracrefa[ig, jplp] - fracrefa[ig, jpl]
             )
 
-        print(f"tauself = {tauself}")
-
         #  --- ...  upper atmosphere loop
         ind0 = ((jp[laytrop:nlay] - 13) * 5 + (jt[laytrop:nlay] - 1)) * self.nspb[15]
         ind1 = ((jp[laytrop:nlay] - 12) * 5 + (jt1[laytrop:nlay] - 1)) * self.nspb[15]
@@ -6831,11 +6828,8 @@ class RadLWClass:
             print("Not Implemented!!")
 
         elif self.iovrlw == 1:  # max-ran overlap
-
             ds = xr.open_dataset("../lookupdata/rand2d.nc")
             rand2d = ds["rand2d"][iplon, :].data
-
-            print(f"test = {rand2d[0]}")
 
             k1 = 0
             for n in range(ngptlw):
