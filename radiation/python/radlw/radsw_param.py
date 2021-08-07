@@ -3,11 +3,11 @@ import numpy as np
 # Parameter constants for SW band structures
 
 # band range lower index
-NBLOW = 16
+nblow = 16
 # band range upper index
-NBHGH = 29
+nbhgh = 29
 # total number of SW bands (14)
-nbands = NBHGH - NBLOW + 1
+nbands = nbhgh - nblow + 1
 # total number of g-point in all bands
 ngptsw = 112
 # maximum number of g-point in one band

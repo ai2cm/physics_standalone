@@ -5,7 +5,7 @@ sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/p
 import numpy as np
 from radphysparam import iswmode, iswrgas, icldflg, iswrate
 from phys_const import con_g, con_cp, con_amd, con_amw, con_amo3, con_avgd
-from radsw_param import ntbmx, ngptsw, nbdsw, maxgas
+from radsw_param import ntbmx, ngptsw, nbdsw, maxgas, nblow, nbhgh
 
 
 class RadSWClass:
@@ -156,6 +156,10 @@ class RadSWClass:
         nlay,
         nlp1,
         lprnt,
+        lhswb,
+        lhsw0,
+        lflxprf,
+        lfdncmp,
     ):
         s0fac = solcon / self.s0
 
@@ -229,6 +233,30 @@ class RadSWClass:
 
         hswc = np.zeros((npts, nlay))
         cldtau = np.zeros((npts, nlay))
+
+        upfxc_t = np.zeros(npts)
+        upfx0_t = np.zeros(npts)
+        dnfxc_t = np.zeros(npts)
+
+        upfxc_s = np.zeros(npts)
+        upfx0_s = np.zeros(npts)
+        dnfxc_s = np.zeros(npts)
+        dnfx0_s = np.zeros(npts)
+
+        upfxc_f = np.zeros((npts, nlp1))
+        upfx0_f = np.zeros((npts, nlp1))
+        dnfxc_f = np.zeros((npts, nlp1))
+        dnfx0_f = np.zeros((npts, nlp1))
+
+        uvbf0 = np.zeros(npts)
+        uvbfc = np.zeros(npts)
+        nirbm = np.zeros(npts)
+        nirdf = np.zeros(npts)
+        visbm = np.zeros(npts)
+        visdf = np.zeros(npts)
+
+        hsw0 = np.zeros((npts, nlay))
+        hswb = np.zeros((npts, nlay, nbdsw))
 
         ipseed = np.zeros(npts)
 
@@ -423,7 +451,7 @@ class RadSWClass:
             nlay,
         )
 
-        if isubcsw <= 0:
+        if self.isubcsw <= 0:
             (
                 fxupc,
                 fxdnc,
@@ -482,7 +510,7 @@ class RadSWClass:
                 sfdf0,
                 suvbfc,
                 suvbf0,
-            ) = spcvrtm(
+            ) = self.spcvrtm(
                 ssolar,
                 cosz1,
                 sntz1,
@@ -544,14 +572,14 @@ class RadSWClass:
 
         #  --- ...  toa and sfc fluxes
 
-        upfxc[j1] = ftoauc
-        dnfxc[j1] = ftoadc
-        upfx0[j1] = ftoau0
+        upfxc_t[j1] = ftoauc
+        dnfxc_t[j1] = ftoadc
+        upfx0_t[j1] = ftoau0
 
-        upfxc[j1] = fsfcuc
-        dnfxc[j1] = fsfcdc
-        upfx0[j1] = fsfcu0
-        dnfx0[j1] = fsfcd0
+        upfxc_s[j1] = fsfcuc
+        dnfxc_s[j1] = fsfcdc
+        upfx0_s[j1] = fsfcu0
+        dnfx0_s[j1] = fsfcd0
 
         #  --- ...  compute heating rates
 
@@ -565,10 +593,10 @@ class RadSWClass:
 
         if lflxprf:
             for k in range(nlp1):
-                upfxc[j1, k] = flxuc[k]
-                dnfxc[j1, k] = flxdc[k]
-                upfx0[j1, k] = flxu0[k]
-                dnfx0[j1, k] = flxd0[k]
+                upfxc_f[j1, k] = flxuc[k]
+                dnfxc_f[j1, k] = flxdc[k]
+                upfx0_f[j1, k] = flxu0[k]
+                dnfx0_f[j1, k] = flxd0[k]
 
         # --- ...  optional clear sky heating rates
 
@@ -588,3 +616,272 @@ class RadSWClass:
                 for k in range(nlay):
                     fnet[k + 1] = fxdnc[k + 1, mb] - fxupc[k + 1, mb]
                     hswb[j1, k, mb] = (fnet[k + 1] - fnet[k]) * rfdelp[k]
+
+    def cldprop(
+        self,
+        cfrac,
+        cliqp,
+        reliq,
+        cicep,
+        reice,
+        cdat1,
+        cdat2,
+        cdat3,
+        cdat4,
+        cf1,
+        nlay,
+        ipseed,
+        dz,
+        delgth,
+    ):
+        cldfmc = np.zeros((nlay, ngptsw))
+        taucw = np.zeros((nlay, nbdsw))
+        ssacw = np.ones((nlay, nbdsw))
+        asycw = np.zeros((nlay, nbdsw))
+        cldfrc = np.zeros(nlay)
+
+        ssaran = np.zeros(nbhgh - nblow)
+        ssasnw = np.zeros(nbhgh - nblow)
+        asyran = np.zeros(nbhgh - nblow)
+        asysnw = np.zeros(nbhgh - nblow)
+        tauliq = np.zeros(nbhgh - nblow)
+        ssaliq = np.zeros(nbhgh - nblow)
+        asyliq = np.zeros(nbhgh - nblow)
+
+        if self.iswcliq > 0:
+            for k in range(nlay):
+                if cfrac[k] > self.ftiny:
+                    cldran = cdat1[k]
+                    cldsnw = cdat3[k]
+                    refsnw = cdat4[k]
+                    dgesnw = 1.0315 * refsnw  # for fu's snow formula
+                    tauran = cldran * a0r
+
+                    if cldsnw > 0.0 and refsnw > 10.0:
+                        tausnw = cldsnw * 1.09087 * (a0s + a1s / dgesnw)  # fu's formula
+                    else:
+                        tausnw = 0.0
+
+                    for ib in range(nblow - 1, nbhgh):
+                        ssaran[ib] = tauran * (1.0 - b0r[ib])
+                        ssasnw[ib] = tausnw * (1.0 - (b0s[ib] + b1s[ib] * dgesnw))
+                        asyran[ib] = ssaran[ib] * c0r[ib]
+                        asysnw[ib] = ssasnw[ib] * c0s[ib]
+
+                    cldliq = cliqp[k]
+                    cldice = cicep[k]
+                    refliq = reliq[k]
+                    refice = reice[k]
+
+                    #  --- ...  calculation of absorption coefficients due to water clouds.
+
+                    if cldliq <= 0.0:
+                        for ib in range(nblow - 1, nbhgh):
+                            tauliq[ib] = 0.0
+                            ssaliq[ib] = 0.0
+                            asyliq[ib] = 0.0
+                    else:
+                        factor = refliq - 1.5
+                        index = max(1, min(57, int(factor))) - 1
+                        fint = factor - float(index + 1)
+
+                        if self.iswcliq == 1:
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoliq = max(
+                                    0.0,
+                                    extliq1[index, ib]
+                                    + fint
+                                    * (extliq1[index + 1, ib] - extliq1[index, ib]),
+                                )
+                                ssacoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaliq1[index, ib]
+                                        + fint
+                                        * (ssaliq1[index + 1, ib] - ssaliq1[index, ib]),
+                                    ),
+                                )
+
+                                asycoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyliq1[index, ib]
+                                        + fint
+                                        * (asyliq1[index + 1, ib] - asyliq1[index, ib]),
+                                    ),
+                                )
+
+                                tauliq[ib] = cldliq * extcoliq
+                                ssaliq[ib] = tauliq[ib] * ssacoliq
+                                asyliq[ib] = ssaliq[ib] * asycoliq
+                        elif self.iswcliq == 2:  # use updated coeffs
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoliq = max(
+                                    0.0,
+                                    extliq2[index, ib]
+                                    + fint
+                                    * (extliq2[index + 1, ib] - extliq2[index, ib]),
+                                )
+                                ssacoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaliq2[index, ib]
+                                        + fint
+                                        * (ssaliq2[index + 1, ib] - ssaliq2[index, ib]),
+                                    ),
+                                )
+
+                                asycoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyliq2[index, ib]
+                                        + fint
+                                        * (asyliq2[index + 1, ib] - asyliq2[index, ib]),
+                                    ),
+                                )
+
+                                tauliq[ib] = cldliq * extcoliq
+                                ssaliq[ib] = tauliq[ib] * ssacoliq
+                                asyliq[ib] = ssaliq[ib] * asycoliq
+
+                    if cldice <= 0.0:
+                        for ib in range(nblow - 1, nbhgh):
+                            tauice[ib] = 0.0
+                            ssaice[ib] = 0.0
+                            asyice[ib] = 0.0
+                    else:
+                        #  --- ...  ebert and curry approach for all particle sizes though somewhat
+                        #           unjustified for large ice particles
+                        if self.iswcice == 1:
+                            refice = min(130.0, max(13.0, refice))
+
+                            for ib in range(nblow - 1, nbhgh):
+                                ia = (
+                                    self.idxebc[ib] - 1
+                                )  # eb_&_c band index for ice cloud coeff
+
+                                extcoice = max(0.0, abari[ia] + bbari[ia] / refice)
+                                ssacoice = max(
+                                    0.0, min(1.0, 1.0 - cbari[ia] - dbari[ia] * refice)
+                                )
+                                asycoice = max(
+                                    0.0, min(1.0, ebari[ia] + fbari[ia] * refice)
+                                )
+
+                                tauice[ib] = cldice * extcoice
+                                ssaice[ib] = tauice[ib] * ssacoice
+                                asyice[ib] = ssaice[ib] * asycoice
+
+                        #  --- ...  streamer approach for ice effective radius between 5.0 and 131.0 microns
+                        elif self.iswcice == 2:
+                            refice = min(131.0, max(5.0, refice))
+
+                            factor = (refice - 2.0) / 3.0
+                            index = max(1, min(42, int(factor))) - 1
+                            fint = factor - float(index + 1)
+
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoice = max(
+                                    0.0,
+                                    extice2(index, ib)
+                                    + fint
+                                    * (extice2[index + 1, ib] - extice2[index, ib]),
+                                )
+                                ssacoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaice2[index, ib]
+                                        + fint
+                                        * (ssaice2[index + 1, ib] - ssaice2[index, ib]),
+                                    ),
+                                )
+                                asycoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyice2[index, ib]
+                                        + fint
+                                        * (asyice2[index + 1, ib] - asyice2[index, ib]),
+                                    ),
+                                )
+
+                                tauice[ib] = cldice * extcoice
+                                ssaice[ib] = tauice[ib] * ssacoice
+                                asyice[ib] = ssaice[ib] * asycoice
+
+                        elif self.iswcice == 3:
+                            dgeice = max(5.0, min(140.0, 1.0315 * refice))
+
+                            factor = (dgeice - 2.0) / 3.0
+                            index = max(1, min(45, int(factor))) - 1
+                            fint = factor - float(index + 1)
+
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoice = max(
+                                    0.0,
+                                    extice3[index, ib]
+                                    + fint
+                                    * (extice3[index + 1, ib] - extice3[index, ib]),
+                                )
+                                ssacoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaice3[index, ib]
+                                        + fint
+                                        * (ssaice3[index + 1, ib] - ssaice3[index, ib]),
+                                    ),
+                                )
+                                asycoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyice3[index, ib]
+                                        + fint
+                                        * (asyice3[index + 1, ib] - asyice3[index, ib]),
+                                    ),
+                                )
+
+                                tauice[ib] = cldice * extcoice
+                                ssaice[ib] = tauice[ib] * ssacoice
+                                asyice[ib] = ssaice[ib] * asycoice
+
+                    for ib in range(nbdsw):
+                        jb = nblow + ib - 2
+                        taucw[k, ib] = tauliq[jb] + tauice[jb] + tauran + tausnw
+                        ssacw[k, ib] = ssaliq[jb] + ssaice[jb] + ssaran[jb] + ssasnw[jb]
+                        asycw[k, ib] = asyliq[jb] + asyice[jb] + asyran[jb] + asysnw[jb]
+        else:
+
+            for k in range(nlay):
+                if cfrac[k] > self.ftiny:
+                    for ib in range(nbdsw):
+                        taucw[k, ib] = cdat1[k]
+                        ssacw[k, ib] = cdat1[k] * cdat2[k]
+                        asycw[k, ib] = ssacw[k, ib] * cdat3[k]
+
+        # if physparam::isubcsw > 0, call mcica_subcol() to distribute
+        #    cloud properties to each g-point.
+
+        if self.isubcsw:
+            cldf = cfrac
+            cldf[cldf < self.ftiny] = 0.0
+
+            lcloudy = self.mcica_subcol(cldf, nlay, ipseed, dz, delgth)
+
+            for ig in range(ngptsw):
+                for k in range(nlay):
+                    if lcloudy[k, ig]:
+                        cldfmc[k, ig] = 1.0
+                    else:
+                        cldfmc = 0.0
+        else:
+            for k in range(nlay):
+                cldfrc[k] = cfrac[k] / cf1
+
+        return taucw, ssacw, asycw, cldfrc, cldfmc
