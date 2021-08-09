@@ -11,19 +11,39 @@ You need the following things installed if you want to run directly on the host 
 
 ## Running
 
+First time only, if you run inside a docker container:
+
+```bash
+./build.sh
+```
+
+After that:
+
 ```bash
 ./enter.sh # only if you are running using the Docker environment
-cd XXX
+cd <parameterization>
 ./get_data.sh
-make
-./main.x
+cd ../runfile
+python physics.py <parameterization> <backend> <--data_dir> <--select_tile> <--select_sp>
+```
+
+By default, `data_dir=../parameterization/data`, `select_tile=All`, and `select_sp=All`.
+
+For example, to validate microphysics using `gtx86` backend for all tiles and savepoints:
+```
+python physics.py microph gtx86
+```
+
+To validate tile 0 and savepoint 0:
+```
+python physics.py microph gtx86 --select_tile=0 --select_sp=cloud_mp-in-000000
 ```
 
 Note: You may have to adapt the `Makefile` to point to your serialbox installation if it is not installed under `/usr/local/serialbox`.
 
-## Docker environment
+## Running without docker
 
-If you prefer to work in a Docker environment, simply type `./build.sh` to build a Docker image that contains everything you need and `./enter` to enter the image with the correct mounted directories to work on the standalone codes.
+If you prefer to work without a Docker environment, you can ignore the `./build.sh` and `./enter.sh` commands.
 
 ## Code coverage
 
