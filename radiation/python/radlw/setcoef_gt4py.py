@@ -340,8 +340,12 @@ def setcoef(
             selffrac = selffrac
             rfrate = rfrate
             chi_mls = chi_mls
+            laytrop = laytrop
 
             if plog > 4.56:
+
+                # compute troposphere mask, True in troposphere, False otherwise
+                laytrop = True
 
                 tem1 = (332.0 - tavel) / 36.0
                 indfor = min(2, max(1, tem1))
@@ -389,6 +393,8 @@ def setcoef(
                 )
 
             else:
+                laytrop = False
+
                 tem1 = (tavel - 188.0) / 36.0
                 indfor = 3
                 forfrac = tem1 - 1.0
@@ -423,10 +429,6 @@ def setcoef(
             jp += 1
             jt += 1
             jt1 += 1
-
-            # compute troposphere mask:
-            # Reverse condition from above so that it is True within the troposphere and False above
-            laytrop = plog >= 4.56
 
 
 setcoef(
@@ -483,14 +485,22 @@ outdict_np = dict()
 outdict_val = dict()
 
 for var in outvars:
+    outdict_val[var] = serializer.read(
+        var, serializer.savepoint["lwrad-setcoef-output-000000"]
+    )
     if var != "laytrop":
         outdict_np[var] = outdict_gt4py[var][0, 0, ...].squeeze().view(np.ndarray)
-        outdict_val[var] = serializer.read(
-            var, serializer.savepoint["lwrad-setcoef-output-000000"]
-        )
         if var == "pklay" or var == "pklev":
             outdict_np[var] = outdict_np[var].T
-        elif var != "laytrop":
+        else:
             outdict_np[var] = outdict_np[var][1:, ...]
+    else:
+        outdict_np[var] = (
+            outdict_gt4py[var][0, :, 1:]
+            .squeeze()
+            .view(np.ndarray)
+            .astype(np.int32)
+            .sum()
+        )
 
 compare_data(outdict_np, outdict_val)
