@@ -142,6 +142,12 @@ if __name__ == "__main__":
         from config import *
         import get_phi_fv3 as phy
 
+    elif args.parameterization == "lsm":
+        LSM_DIR = "../lsm/python/"
+        sys.path.append(LSM_DIR)
+        from config import *
+        import noah_lsm_gt4py as phy
+
     else:
         raise Exception(f"Parameterization {args.parameterization} is not supported")
 
@@ -184,6 +190,17 @@ if __name__ == "__main__":
                 # read serialized input data
                 in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
+                if args.parameterization == "lsm":
+                    serializer2 = ser.Serializer(
+                        ser.OpenModeKind.Read, args.data_dir + "/dump", "Serialized"
+                    )
+
+                    in_data_extra = data_dict_from_var_list(
+                        IN_VARS_FPVS, serializer2, serializer2.savepoint_list()[0]
+                    )
+
+                    in_data.update(in_data_extra)
+
                 out_data = phy.run(in_data, timings)
 
                 isready = True
@@ -210,6 +227,8 @@ if __name__ == "__main__":
         if (args.select_tile == "None") and (args.select_sp == "None"):
             timings["elapsed_time"] = timings["elapsed_time"] / (6 * len(savepoints))
             timings["run_time"] = timings["run_time"] / (6 * len(savepoints))
-        output_file = open("timings_{}_{}.dat".format(args.parameterization, BACKEND), "w")
+        output_file = open(
+            "timings_{}_{}.dat".format(args.parameterization, BACKEND), "w"
+        )
         output_file.write(str(timings["elapsed_time"]) + " " + str(timings["run_time"]))
         output_file.close()
