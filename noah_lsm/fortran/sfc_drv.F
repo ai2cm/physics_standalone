@@ -1,5 +1,5 @@
-       module module_sfc_drv
-       contains
+module module_sfc_drv
+  contains
 !>  \file sfc_drv.f
 !!  This file contains the NOAH land surface scheme.
 !> \defgroup NOAH NOAH Land Surface
@@ -136,170 +136,183 @@
 !  ====================    end of description    =====================  !
 
 !-----------------------------------
-      subroutine sfc_drv                                                &
+ subroutine sfc_drv                                                &
 !...................................
 !  ---  inputs:
-           ( im, km, ps, t1, q1, soiltyp, vegtype, sigmaf,              &
-             sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,          &
-             prsl1, prslki, zf, land, wind, slopetyp,                   &
-             shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,      &
-             lheatstrg, isot, ivegsrc,                                  &
-             bexppert, xlaipert, vegfpert,pertvegf,                     &  ! sfc perts, mgehne
+      ( im, km, ps, t1, q1, soiltyp, vegtype, sigmaf,              &
+        sfcemis, dlwflx, dswsfc, snet, delt, tg3, cm, ch,          &
+        prsl1, prslki, zf, land, wind, slopetyp,                   &
+        shdmin, shdmax, snoalb, sfalb, flag_iter, flag_guess,      &
+        lheatstrg, isot, ivegsrc,                                  &
+        bexppert, xlaipert, vegfpert,pertvegf,                     &  ! sfc perts, mgehne
 !  ---  in/outs:
-             weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,        &
-             canopy, trans, tsurf, zorl,                                &
+        weasd, snwdph, tskin, tprcp, srflag, smc, stc, slc,        &
+        canopy, trans, tsurf, zorl,                                &
 !  ---  outputs:
-             sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,      &
-             cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,            &
-             smcwlt2, smcref2, wet1                                     &
-           )
+        sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,      &
+        cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,            &
+        smcwlt2, smcref2, wet1,                                    &
+        iter, ser_count_str                                        &
+      )
 !
-      use machine , only : kind_phys
-      use funcphys, only : fpvs
-      use physcons, only : grav   => con_g,    cp   => con_cp,          &
-                           hvap   => con_hvap, rd   => con_rd,          &
-                           eps    => con_eps, epsm1 => con_epsm1,       &
-                           rvrdm1 => con_fvirt
+ use machine , only : kind_phys
+ use funcphys, only : fpvs
+ use physcons, only : grav   => con_g,    cp   => con_cp,          &
+                      hvap   => con_hvap, rd   => con_rd,          &
+                      eps    => con_eps, epsm1 => con_epsm1,       &
+                      rvrdm1 => con_fvirt
 
-      use surface_perturbation, only : ppfbet
+ use surface_perturbation, only : ppfbet
 
-      implicit none
+ implicit none
 
 !  ---  constant parameters:
-      real(kind=kind_phys), parameter :: cpinv   = 1.0/cp
-      real(kind=kind_phys), parameter :: hvapi   = 1.0/hvap
-      real(kind=kind_phys), parameter :: elocp   = hvap/cp
-      real(kind=kind_phys), parameter :: rhoh2o  = 1000.0
-      real(kind=kind_phys), parameter :: a2      = 17.2693882
-      real(kind=kind_phys), parameter :: a3      = 273.16
-      real(kind=kind_phys), parameter :: a4      = 35.86
-      real(kind=kind_phys), parameter :: a23m4   = a2*(a3-a4)
+ real(kind=kind_phys), parameter :: cpinv   = 1.0/cp
+ real(kind=kind_phys), parameter :: hvapi   = 1.0/hvap
+ real(kind=kind_phys), parameter :: elocp   = hvap/cp
+ real(kind=kind_phys), parameter :: rhoh2o  = 1000.0
+ real(kind=kind_phys), parameter :: a2      = 17.2693882
+ real(kind=kind_phys), parameter :: a3      = 273.16
+ real(kind=kind_phys), parameter :: a4      = 35.86
+ real(kind=kind_phys), parameter :: a23m4   = a2*(a3-a4)
 
-      real(kind=kind_phys), save         :: zsoil_noah(4)
-      data zsoil_noah / -0.1, -0.4, -1.0, -2.0 /
+ real(kind=kind_phys), save         :: zsoil_noah(4)
+ data zsoil_noah / -0.1, -0.4, -1.0, -2.0 /
 
 !  ---  input:
-      integer, intent(in) :: im, km, isot, ivegsrc
-      real (kind=kind_phys), dimension(5), intent(in) :: pertvegf
+ integer, intent(in) :: im, km, isot, ivegsrc, iter
+ real (kind=kind_phys), dimension(5), intent(in) :: pertvegf
 
-      integer, dimension(im), intent(in) :: soiltyp, vegtype, slopetyp
+ integer, dimension(im), intent(in) :: soiltyp, vegtype, slopetyp
 
-      real (kind=kind_phys), dimension(im), intent(in) :: ps,           &
-             t1, q1, sigmaf, sfcemis, dlwflx, dswsfc, snet, tg3, cm,    &
-             ch, prsl1, prslki, wind, shdmin, shdmax,                   &
-             snoalb, sfalb, zf,                                         &
-             bexppert, xlaipert, vegfpert
+ real (kind=kind_phys), dimension(im), intent(in) :: ps,           &
+        t1, q1, sigmaf, sfcemis, dlwflx, dswsfc, snet, tg3, cm,    &
+        ch, prsl1, prslki, wind, shdmin, shdmax,                   &
+        snoalb, sfalb, zf,                                         &
+        bexppert, xlaipert, vegfpert
 
-      real (kind=kind_phys),  intent(in) :: delt
+ real (kind=kind_phys),  intent(in) :: delt
 
-      logical, dimension(im), intent(in) :: flag_iter, flag_guess, land
+ logical, dimension(im), intent(in) :: flag_iter, flag_guess, land
 
-      logical, intent(in) :: lheatstrg
+ logical, intent(in) :: lheatstrg
+
+ character(len=6) :: ser_count_str
 
 !  ---  in/out:
-      real (kind=kind_phys), dimension(im), intent(inout) :: weasd,     &
-             snwdph, tskin, tprcp, srflag, canopy, trans, tsurf, zorl
+ real (kind=kind_phys), dimension(im), intent(inout) :: weasd,     &
+        snwdph, tskin, tprcp, srflag, canopy, trans, tsurf, zorl
 
-      real (kind=kind_phys), dimension(im,km), intent(inout) ::         &
-             smc, stc, slc
+ real (kind=kind_phys), dimension(im,km), intent(inout) ::         &
+        smc, stc, slc
 
 !  ---  output:
-      real (kind=kind_phys), dimension(im), intent(out) :: sncovr1,     &
-             qsurf, gflux, drain, evap, hflx, ep, runoff, cmm, chh,     &
-             evbs, evcw, sbsno, snowc, stm, snohf, smcwlt2, smcref2,    &
-             wet1
+ real (kind=kind_phys), dimension(im), intent(out) :: sncovr1,     &
+        qsurf, gflux, drain, evap, hflx, ep, runoff, cmm, chh,     &
+        evbs, evcw, sbsno, snowc, stm, snohf, smcwlt2, smcref2,    &
+        wet1
 
 !  ---  locals:
-      real (kind=kind_phys), dimension(im) :: rch, rho,                 &
-             q0, qs1, theta1,       weasd_old, snwdph_old,              &
-             tprcp_old, srflag_old, tskin_old, canopy_old
+ real (kind=kind_phys), dimension(im) :: rch, rho,                 &
+        q0, qs1, theta1,       weasd_old, snwdph_old,              &
+        tprcp_old, srflag_old, tskin_old, canopy_old
 
-      real (kind=kind_phys), dimension(km) :: et, sldpth, stsoil,       &
-             smsoil, slsoil
+ real (kind=kind_phys), dimension(km) :: et, sldpth, stsoil,       &
+        smsoil, slsoil
 
-      real (kind=kind_phys), dimension(im,km) :: zsoil, smc_old,        &
-             stc_old, slc_old
+ real (kind=kind_phys), dimension(im,km) :: zsoil, smc_old,        &
+        stc_old, slc_old
 
-      real (kind=kind_phys) :: alb, albedo, beta, chx, cmx, cmc,        &
-             dew, drip, dqsdt2, ec, edir, ett, eta, esnow, etp,         &
-             flx1, flx2, flx3, ffrozp, lwdn, pc, prcp, ptu, q2,         &
-             q2sat, solnet, rc, rcs, rct, rcq, rcsoil, rsmin,           &
-             runoff1, runoff2, runoff3, sfcspd, sfcprs, sfctmp,         &
-             sfcems, sheat, shdfac, shdmin1d, shdmax1d, smcwlt,         &
-             smcdry, smcref, smcmax, sneqv, snoalb1d, snowh,            &
-             snomlt, sncovr, soilw, soilm, ssoil, tsea, th2, tbot,      &
-             xlai, zlvl, swdn, tem, z0, bexpp, xlaip, vegfp,            &
-             mv,sv,alphav,betav,vegftmp
+ real (kind=kind_phys) :: alb, albedo, beta, chx, cmx, cmc,        &
+        dew, drip, dqsdt2, ec, edir, ett, eta, esnow, etp,         &
+        flx1, flx2, flx3, ffrozp, lwdn, pc, prcp, ptu, q2,         &
+        q2sat, solnet, rc, rcs, rct, rcq, rcsoil, rsmin,           &
+        runoff1, runoff2, runoff3, sfcspd, sfcprs, sfctmp,         &
+        sfcems, sheat, shdfac, shdmin1d, shdmax1d, smcwlt,         &
+        smcdry, smcref, smcmax, sneqv, snoalb1d, snowh,            &
+        snomlt, sncovr, soilw, soilm, ssoil, tsea, th2, tbot,      &
+        xlai, zlvl, swdn, tem, z0, bexpp, xlaip, vegfp,            &
+        mv,sv,alphav,betav,vegftmp
 
-      integer :: couple, ice, nsoil, nroot, slope, stype, vtype
-      integer :: i, k, iflag
+ integer :: couple, ice, nsoil, nroot, slope, stype, vtype
+ integer :: i, k, iflag
+ logical :: first_iter
 
 !
 !===> ...  begin here
 !
 !  --- ...  save land-related prognostic fields for guess run
 
-      do i = 1, im
-        if (land(i) .and. flag_guess(i)) then
-          weasd_old(i)  = weasd(i)
-          snwdph_old(i) = snwdph(i)
-          tskin_old(i)  = tskin(i)
-          canopy_old(i) = canopy(i)
-          tprcp_old(i)  = tprcp(i)
-          srflag_old(i) = srflag(i)
+ do i = 1, im
+   if (land(i) .and. flag_guess(i)) then
+     weasd_old(i)  = weasd(i)
+     snwdph_old(i) = snwdph(i)
+     tskin_old(i)  = tskin(i)
+     canopy_old(i) = canopy(i)
+     tprcp_old(i)  = tprcp(i)
+     srflag_old(i) = srflag(i)
 
-          do k = 1, km
-            smc_old(i,k) = smc(i,k)
-            stc_old(i,k) = stc(i,k)
-            slc_old(i,k) = slc(i,k)
-          enddo
-        endif   ! land & flag_guess
-      enddo
+     do k = 1, km
+       smc_old(i,k) = smc(i,k)
+       stc_old(i,k) = stc(i,k)
+       slc_old(i,k) = slc(i,k)
+     enddo
+   endif   ! land & flag_guess
+ enddo
 
 !  --- ...  initialization block
 
-      do i = 1, im
-        if (flag_iter(i) .and. land(i)) then
-          ep(i)     = 0.0
-          evap (i)  = 0.0
-          hflx (i)  = 0.0
-          gflux(i)  = 0.0
-          drain(i)  = 0.0
-          canopy(i) = max(canopy(i), 0.0)
+ do i = 1, im
+   if (flag_iter(i) .and. land(i)) then
+     ep(i)     = 0.0
+     evap (i)  = 0.0
+     hflx (i)  = 0.0
+     gflux(i)  = 0.0
+     drain(i)  = 0.0
+     canopy(i) = max(canopy(i), 0.0)
 
-          evbs (i)  = 0.0
-          evcw (i)  = 0.0
-          trans(i)  = 0.0
-          sbsno(i)  = 0.0
-          snowc(i)  = 0.0
-          snohf(i)  = 0.0
-        endif   ! flag_iter & land
-      enddo
+     evbs (i)  = 0.0
+     evcw (i)  = 0.0
+     trans(i)  = 0.0
+     sbsno(i)  = 0.0
+     snowc(i)  = 0.0
+     snohf(i)  = 0.0
+   endif   ! flag_iter & land
+ enddo
 
 !  --- ...  initialize variables
+ 
+ do i = 1, im
+   if (flag_iter(i) .and. land(i)) then
+     q0(i)   = max(q1(i), 1.e-8)   !* q1=specific humidity at level 1 (kg/kg)
+     theta1(i) = t1(i) * prslki(i) !* adiabatic temp at level 1 (k)
 
-      do i = 1, im
-        if (flag_iter(i) .and. land(i)) then
-          q0(i)   = max(q1(i), 1.e-8)   !* q1=specific humidity at level 1 (kg/kg)
-          theta1(i) = t1(i) * prslki(i) !* adiabatic temp at level 1 (k)
+     rho(i) = prsl1(i) / (rd*t1(i)*(1.0+rvrdm1*q0(i)))
+     qs1(i) = fpvs( t1(i) )        !* qs1=sat. humidity at level 1 (kg/kg)
+     qs1(i) = max(eps*qs1(i) / (prsl1(i)+epsm1*qs1(i)), 1.e-8)
+     q0 (i) = min(qs1(i), q0(i))
+   endif   ! flag_iter & land
+ enddo
 
-          rho(i) = prsl1(i) / (rd*t1(i)*(1.0+rvrdm1*q0(i)))
-          qs1(i) = fpvs( t1(i) )        !* qs1=sat. humidity at level 1 (kg/kg)
-          qs1(i) = max(eps*qs1(i) / (prsl1(i)+epsm1*qs1(i)), 1.e-8)
-          q0 (i) = min(qs1(i), q0(i))
-        endif   ! flag_iter & land
-      enddo
+ do i = 1, im
+   if (flag_iter(i) .and. land(i)) then
+     do k = 1, km
+       zsoil(i,k) = zsoil_noah(k)
+     enddo
+   endif   ! flag_iter & land
+ enddo
 
-      do i = 1, im
-        if (flag_iter(i) .and. land(i)) then
-          do k = 1, km
-            zsoil(i,k) = zsoil_noah(k)
-          enddo
-        endif   ! flag_iter & land
-      enddo
+!$ser mode write
+!$ser verbatim if (iter == 1) then
+!$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+!$ser verbatim else
+!$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+!$ser verbatim end if
+! !$ser data zsoil_noah_ref=zsoil_noah canopy_ref=canopy q0_ref=q0 theta1_ref=theta1 rho_ref=rho qs1_ref=qs1 zsoil_ref=zsoil
 
-      do i = 1, im
-        if (flag_iter(i) .and. land(i)) then
+first_iter = .true.
+ do i = 1, im
+   if (flag_iter(i) .and. land(i)) then
 
 !  --- ...  noah: prepare variables to run noah lsm
 !   1. configuration information (c):
@@ -312,23 +325,23 @@
 !    nsoil   - number of soil layers (at least 2)
 !    sldpth  - the thickness of each soil layer (m)
 
-          couple = 1                      ! run noah lsm in 'couple' mode
+     couple = 1                      ! run noah lsm in 'couple' mode
 ! use srflag directly to allow fractional rain/snow
 !          if     (srflag(i) == 1.0) then  ! snow phase
 !            ffrozp = 1.0
 !          elseif (srflag(i) == 0.0) then  ! rain phase
 !            ffrozp = 0.0
 !          endif
-          ffrozp = srflag(i)
-          ice = 0
+     ffrozp = srflag(i)
+     ice = 0
 
-          zlvl = zf(i)
+     zlvl = zf(i)
 
-          nsoil = km
-          sldpth(1) = - zsoil(i,1)
-          do k = 2, km
-            sldpth(k) = zsoil(i,k-1) - zsoil(i,k)
-          enddo
+     nsoil = km
+     sldpth(1) = - zsoil(i,1)
+     do k = 2, km
+       sldpth(k) = zsoil(i,k-1) - zsoil(i,k)
+     enddo
 
 !   2. forcing data (f):
 !      -----------------
@@ -340,16 +353,16 @@
 !    th2     - air potential temperature (k) at height zlvl above ground
 !    q2      - mixing ratio at height zlvl above ground (kg kg-1)
 
-          lwdn   = dlwflx(i)         !..downward lw flux at sfc in w/m2
-          swdn   = dswsfc(i)         !..downward sw flux at sfc in w/m2
-          solnet = snet(i)           !..net sw rad flx (dn-up) at sfc in w/m2
-          sfcems = sfcemis(i)
+     lwdn   = dlwflx(i)         !..downward lw flux at sfc in w/m2
+     swdn   = dswsfc(i)         !..downward sw flux at sfc in w/m2
+     solnet = snet(i)           !..net sw rad flx (dn-up) at sfc in w/m2
+     sfcems = sfcemis(i)
 
-          sfcprs = prsl1(i) 
-          prcp   = rhoh2o * tprcp(i) / delt
-          sfctmp = t1(i)  
-          th2    = theta1(i)
-          q2     = q0(i)
+     sfcprs = prsl1(i) 
+     prcp   = rhoh2o * tprcp(i) / delt
+     sfctmp = t1(i)  
+     th2    = theta1(i)
+     q2     = q0(i)
 
 !   3. other forcing (input) data (i):
 !      ------------------------------
@@ -357,9 +370,9 @@
 !    q2sat   - sat mixing ratio at height zlvl above ground (kg kg-1)
 !    dqsdt2  - slope of sat specific humidity curve at t=sfctmp (kg kg-1 k-1)
 
-          sfcspd = wind(i)
-          q2sat  =  qs1(i)
-          dqsdt2 = q2sat * a23m4/(sfctmp-a4)**2
+     sfcspd = wind(i)
+     q2sat  =  qs1(i)
+     dqsdt2 = q2sat * a23m4/(sfctmp-a4)**2
 
 !   4. canopy/soil characteristics (s):
 !      --------------------------------
@@ -373,34 +386,34 @@
 !    snoalb  - upper bound on maximum albedo over deep snow          -> snoalb1d
 !    tbot    - bottom soil temperature (local yearly-mean sfc air temp)
 
-          vtype  = vegtype(i)
-          stype  = soiltyp(i)
-          slope  = slopetyp(i)
-          shdfac = sigmaf(i)
+     vtype  = vegtype(i)
+     stype  = soiltyp(i)
+     slope  = slopetyp(i)
+     shdfac = sigmaf(i)
 
 !  perturb vegetation fraction that goes into sflx, use the same
 !  perturbation strategy as for albedo (percentile matching)
-          vegfp  = vegfpert(i)                    ! sfc-perts, mgehne
-          if (pertvegf(1) > 0.0) then
-                ! compute beta distribution parameters for vegetation fraction
-                mv = shdfac
-                sv = pertvegf(1)*mv*(1.-mv)
-                alphav = mv*mv*(1.0-mv)/(sv*sv)-mv
-                betav  = alphav*(1.0-mv)/mv
+     vegfp  = vegfpert(i)                    ! sfc-perts, mgehne
+     if (pertvegf(1) > 0.0) then
+           ! compute beta distribution parameters for vegetation fraction
+           mv = shdfac
+           sv = pertvegf(1)*mv*(1.-mv)
+           alphav = mv*mv*(1.0-mv)/(sv*sv)-mv
+           betav  = alphav*(1.0-mv)/mv
 ! compute beta distribution value corresponding
 ! to the given percentile albPpert to use as new albedo
-                call ppfbet(vegfp,alphav,betav,iflag,vegftmp)
-                shdfac = vegftmp
-          endif
+           call ppfbet(vegfp,alphav,betav,iflag,vegftmp)
+           shdfac = vegftmp
+     endif
 ! *** sfc-perts, mgehne
 
-          shdmin1d = shdmin(i)
-          shdmax1d = shdmax(i)
-          snoalb1d = snoalb(i)
+     shdmin1d = shdmin(i)
+     shdmax1d = shdmax(i)
+     snoalb1d = snoalb(i)
 
-          ptu  = 0.0
-          alb  = sfalb(i)
-          tbot = tg3(i)
+     ptu  = 0.0
+     alb  = sfalb(i)
+     tbot = tg3(i)
 
 !   5. history (state) variables (h):
 !      ------------------------------
@@ -415,51 +428,48 @@
 !    ch      - surface exchange coefficient for heat and moisture (m s-1) -> chx
 !    cm      - surface exchange coefficient for momentum (m s-1)          -> cmx
 
-          cmc  = canopy(i) * 0.001           ! convert from mm to m
-          tsea = tsurf(i)                    ! clu_q2m_iter
+     cmc  = canopy(i) * 0.001           ! convert from mm to m
+     tsea = tsurf(i)                    ! clu_q2m_iter
 
-          do k = 1, km
-            stsoil(k) = stc(i,k)
-            smsoil(k) = smc(i,k)
-            slsoil(k) = slc(i,k)
-          enddo
+     do k = 1, km
+       stsoil(k) = stc(i,k)
+       smsoil(k) = smc(i,k)
+       slsoil(k) = slc(i,k)
+     enddo
 
-          snowh = snwdph(i) * 0.001         ! convert from mm to m
-          sneqv = weasd(i)  * 0.001         ! convert from mm to m
-          if (sneqv /= 0.0 .and. snowh == 0.0) then
-            snowh = 10.0 * sneqv
-          endif
+     snowh = snwdph(i) * 0.001         ! convert from mm to m
+     sneqv = weasd(i)  * 0.001         ! convert from mm to m
+     if (sneqv /= 0.0 .and. snowh == 0.0) then
+       snowh = 10.0 * sneqv
+     endif
 
-          chx    = ch(i)  * wind(i)              ! compute conductance
-          cmx    = cm(i)  * wind(i)
-          chh(i) = chx * rho(i)
-          cmm(i) = cmx
+     chx    = ch(i)  * wind(i)              ! compute conductance
+     cmx    = cm(i)  * wind(i)
+     chh(i) = chx * rho(i)
+     cmm(i) = cmx
 
 !  ---- ... outside sflx, roughness uses cm as unit
-          z0 = zorl(i)/100.
+     z0 = zorl(i)/100.
 !  ---- mgehne, sfc-perts
-          bexpp  = bexppert(i)                   ! sfc perts, mgehne
-          xlaip  = xlaipert(i)                   ! sfc perts, mgehne
+     bexpp  = bexppert(i)                   ! sfc perts, mgehne
+     xlaip  = xlaipert(i)                   ! sfc perts, mgehne
 
 !  --- ...  call noah lsm
 
-          call sflx                                                     &
-!  ---  inputs:
-     &     ( nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,            &
-     &       swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,                &
-     &       sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
-     &       vtype, stype, slope, shdmin1d, alb, snoalb1d,              &
-     &       bexpp, xlaip,                                              & ! sfc-perts, mgehne
-     &       lheatstrg,                                                 &
-!  ---  input/outputs:
-     &       tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx,  &
-     &       z0,                                                        &
-!  ---  outputs:
-     &       nroot, shdfac, snowh, albedo, eta, sheat, ec,              &
-     &       edir, et, ett, esnow, drip, dew, beta, etp, ssoil,         &
-     &       flx1, flx2, flx3, runoff1, runoff2, runoff3,               &
-     &       snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,        &
-     &       rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax)
+     call sflx                                                     &
+&     ( nsoil, couple, ice, ffrozp, delt, zlvl, sldpth,            &
+&       swdn, solnet, lwdn, sfcems, sfcprs, sfctmp,                &
+&       sfcspd, prcp, q2, q2sat, dqsdt2, th2, ivegsrc,             &
+&       vtype, stype, slope, shdmin1d, alb, snoalb1d,              &
+&       bexpp, xlaip,                                              & 
+&       lheatstrg, first_iter, iter, ser_count_str,                &
+&       tbot, cmc, tsea, stsoil, smsoil, slsoil, sneqv, chx, cmx,  &
+&       z0,                                                        &
+&       nroot, shdfac, snowh, albedo, eta, sheat, ec,              &
+&       edir, et, ett, esnow, drip, dew, beta, etp, ssoil,         &
+&       flx1, flx2, flx3, runoff1, runoff2, runoff3,               &
+&       snomlt, sncovr, rc, pc, rsmin, xlai, rcs, rct, rcq,        &
+&       rcsoil, soilw, soilm, smcwlt, smcdry, smcref, smcmax)
 
 !  --- ...  noah: prepare variables for return to parent mode
 !   6. output (o):
@@ -472,43 +482,43 @@
 !    runoff1 - surface runoff (m s-1), not infiltrating the surface
 !    runoff2 - subsurface runoff (m s-1), drainage out bottom
 
-          evap(i)  = eta
-          hflx(i)  = sheat
-          gflux(i) = ssoil
+     evap(i)  = eta
+     hflx(i)  = sheat
+     gflux(i) = ssoil
 
-          evbs(i)  = edir
-          evcw(i)  = ec
-          trans(i) = ett
-          sbsno(i) = esnow
-          snowc(i) = sncovr
-          stm(i)   = soilm * 1000.0 ! unit conversion (from m to kg m-2)
-          snohf(i) = flx1 + flx2 + flx3
+     evbs(i)  = edir
+     evcw(i)  = ec
+     trans(i) = ett
+     sbsno(i) = esnow
+     snowc(i) = sncovr
+     stm(i)   = soilm * 1000.0 ! unit conversion (from m to kg m-2)
+     snohf(i) = flx1 + flx2 + flx3
 
-          smcwlt2(i) = smcwlt
-          smcref2(i) = smcref
+     smcwlt2(i) = smcwlt
+     smcref2(i) = smcref
 
-          ep(i)      = etp
-          tsurf(i)   = tsea
+     ep(i)      = etp
+     tsurf(i)   = tsea
 
-          do k = 1, km
-            stc(i,k) = stsoil(k) 
-            smc(i,k) = smsoil(k)
-            slc(i,k) = slsoil(k)
-          enddo
-          wet1(i) = smsoil(1) / smcmax !Sarah Lu added 09/09/2010 (for GOCART)
+     do k = 1, km
+       stc(i,k) = stsoil(k) 
+       smc(i,k) = smsoil(k)
+       slc(i,k) = slsoil(k)
+     enddo
+     wet1(i) = smsoil(1) / smcmax !Sarah Lu added 09/09/2010 (for GOCART)
 
 !  --- ...  unit conversion (from m s-1 to mm s-1 and kg m-2 s-1)
-          runoff(i)  = runoff1 * 1000.0
-          drain (i)  = runoff2 * 1000.0
+     runoff(i)  = runoff1 * 1000.0
+     drain (i)  = runoff2 * 1000.0
 
 !  --- ...  unit conversion (from m to mm)
-          canopy(i)  = cmc   * 1000.0
-          snwdph(i)  = snowh * 1000.0
-          weasd(i)   = sneqv * 1000.0
-          sncovr1(i) = sncovr
+     canopy(i)  = cmc   * 1000.0
+     snwdph(i)  = snowh * 1000.0
+     weasd(i)   = sneqv * 1000.0
+     sncovr1(i) = sncovr
 !  ---- ... outside sflx, roughness uses cm as unit (update after snow's
 !  effect)
-          zorl(i) = z0*100.
+     zorl(i) = z0*100.
 
 !  --- ...  do not return the following output fields to parent model
 !    ec      - canopy water evaporation (m s-1)
@@ -548,55 +558,62 @@
 !              (volumetric)
 !    nroot   - number of root layers, a function of veg type, determined
 !              in subroutine redprm.
-
-        endif   ! flag_iter and flag
-      enddo   ! end do_i_loop
+    !if (first_iter) first_iter = .false.
+   endif   ! flag_iter and flag
+ enddo   ! end do_i_loop
 
 !   --- ...  compute qsurf (specific humidity at sfc)
 
-      do i = 1, im
-        if (flag_iter(i) .and. land(i)) then
-          rch(i)   = rho(i) * cp * ch(i) * wind(i)
-          qsurf(i) = q1(i)  + evap(i) / (elocp * rch(i))
-        endif   ! flag_iter & flag
-      enddo
+ do i = 1, im
+   if (flag_iter(i) .and. land(i)) then
+     rch(i)   = rho(i) * cp * ch(i) * wind(i)
+     qsurf(i) = q1(i)  + evap(i) / (elocp * rch(i))
+   endif   ! flag_iter & flag
+ enddo
 
-      do i = 1, im
-        if (flag_iter(i) .and. land(i)) then
-          tem     = 1.0 / rho(i)
-          hflx(i) = hflx(i) * tem * cpinv
-          evap(i) = evap(i) * tem * hvapi
-        endif   ! flag_iter & flag
-      enddo
+ do i = 1, im
+   if (flag_iter(i) .and. land(i)) then
+     tem     = 1.0 / rho(i)
+     hflx(i) = hflx(i) * tem * cpinv
+     evap(i) = evap(i) * tem * hvapi
+   endif   ! flag_iter & flag
+ enddo
 
 !  --- ...  restore land-related prognostic fields for guess run
 
-      do i = 1, im
-        if (land(i)) then
-          if (flag_guess(i)) then
-            weasd(i)  = weasd_old(i)
-            snwdph(i) = snwdph_old(i)
-            tskin(i)  = tskin_old(i)
-            canopy(i) = canopy_old(i)
-            tprcp(i)  = tprcp_old(i)
-            srflag(i) = srflag_old(i)
+ do i = 1, im
+   if (land(i)) then
+     if (flag_guess(i)) then
+       weasd(i)  = weasd_old(i)
+       snwdph(i) = snwdph_old(i)
+       tskin(i)  = tskin_old(i)
+       canopy(i) = canopy_old(i)
+       tprcp(i)  = tprcp_old(i)
+       srflag(i) = srflag_old(i)
 
-            do k = 1, km
-              smc(i,k) = smc_old(i,k)
-              stc(i,k) = stc_old(i,k)
-              slc(i,k) = slc_old(i,k)
-            enddo
-          else    ! flag_guess = F
-            tskin(i) = tsurf(i)
-          endif   ! flag_guess
-        endif     ! flag
+       do k = 1, km
+         smc(i,k) = smc_old(i,k)
+         stc(i,k) = stc_old(i,k)
+         slc(i,k) = slc_old(i,k)
+       enddo
+     else    ! flag_guess = F
+       tskin(i) = tsurf(i)
+     endif   ! flag_guess
+   endif     ! flag
 
-      enddo
-!
-      return
+ enddo
+
+! !$ser mode write
+! !$ser verbatim if (iter == 1) then
+! !$ser savepoint "test-out-iter1-"//trim(ser_count_str)
+! !$ser verbatim else
+! !$ser savepoint "test-out-iter2-"//trim(ser_count_str)
+! !$ser verbatim end if
+! ! !$ser data _ref=smc
+ return
 !...................................
-      end subroutine sfc_drv
+ end subroutine sfc_drv
 !-----------------------------------
 !> @}
 !> @}
-       end module module_sfc_drv
+  end module module_sfc_drv
