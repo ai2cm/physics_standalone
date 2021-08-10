@@ -62,8 +62,8 @@ program test
     call cdstart(num_tiles * ser_count_max * 2)
 
     do tile = 0, num_tiles - 1
-
-    !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=tile
+    
+    !$ser init directory='./dump' prefix='Serialized' directory_ref='./data' prefix_ref='Generator' mpi_rank=tile
 
     do ser_count = 0, ser_count_max
     do iter = 1, 2
@@ -136,7 +136,8 @@ program test
         !  ---  outputs:
               sncovr1, qsurf, gflux, drain, evap, hflx, ep, runoff,      &
               cmm, chh, evbs, evcw, sbsno, snowc, stm, snohf,            &
-              smcwlt2, smcref2, wet1                                     &
+              smcwlt2, smcref2, wet1,                                    &
+              iter, ser_count_str                                        &
             )
 
         call toc(time1, time2)

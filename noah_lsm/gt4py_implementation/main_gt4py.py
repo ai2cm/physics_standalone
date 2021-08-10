@@ -4,7 +4,8 @@ import os
 import sys
 import numpy as np
 from numpy.lib.npyio import save
-import noah_lsm
+np.seterr(divide="ignore", invalid="ignore")
+import noah_lsm_gt4py
 
 #SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
 SERIALBOX_DIR = "/usr/local/serialbox/"
@@ -21,6 +22,7 @@ IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
            "smcwlt2", "smcref2", "wet1"]
 
+
 IN_VARS_FPVS = ["c1xpvs", "c2xpvs", "tbpvs"]
 
 OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
@@ -30,6 +32,8 @@ OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", 
 
 SELECT_SP = None
 #SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
+
+BACKEND = "numpy"
 
 
 def data_dict_from_var_list(var_list, serializer, savepoint):
@@ -51,12 +55,20 @@ def compare_data(exp_data, ref_data):
         ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
         if ind.size > 0:
             i = tuple(ind[:, 0])
-            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i])
+            # for j in range(ind[0,:].size):
+            #     if tuple(ind[:, j])[0] == 139:
+            #         i = tuple(ind[:, j])
+
+            fails = ind.size
+
+            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
+
         assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
             "Data does not match for field " + key
+    # assert False, "done"
 
-total_time = 0.
-time = 0.
+total_time = 0.0
+time = 0.0
 
 for tile in range(6):
 
@@ -72,9 +84,6 @@ for tile in range(6):
 
     savepoint2 = serializer2.savepoint_list()
 
-
-
-    ser_count = 0
     isready = False
     for sp in savepoints:
         if SELECT_SP is not None:
@@ -95,11 +104,10 @@ for tile in range(6):
             in_data_fpvs = data_dict_from_var_list(IN_VARS_FPVS, serializer2, savepoint2[0])
 
             # run Python version
-            time, out_data = noah_lsm.run(in_data, in_data_fpvs, tile, ser_count)
-
-            isready = True
-            ser_count += 1
+            time, out_data = noah_lsm_gt4py.run(in_data, in_data_fpvs, BACKEND)
+            
             total_time += time
+            isready = True
 
         if sp.name.startswith("sfc_drv-out"):
 
@@ -112,9 +120,10 @@ for tile in range(6):
             ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
 
             # check result
+            # if tile == 1:
             compare_data(out_data, ref_data)
 
             isready = False
 
-print("total time: ", total_time, "s")
 
+print("total time: ", total_time, "s")
