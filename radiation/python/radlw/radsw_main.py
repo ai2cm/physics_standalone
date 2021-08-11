@@ -5,7 +5,7 @@ sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/p
 import numpy as np
 from radphysparam import iswmode, iswrgas, icldflg, iswrate
 from phys_const import con_g, con_cp, con_amd, con_amw, con_amo3, con_avgd
-from radsw_param import ntbmx, ngptsw, nbdsw, maxgas
+from radsw_param import ntbmx, ngptsw, nbdsw, maxgas, nblow, nbhgh
 
 
 class RadSWClass:
@@ -156,6 +156,10 @@ class RadSWClass:
         nlay,
         nlp1,
         lprnt,
+        lhswb,
+        lhsw0,
+        lflxprf,
+        lfdncmp,
     ):
         s0fac = solcon / self.s0
 
@@ -229,6 +233,30 @@ class RadSWClass:
 
         hswc = np.zeros((npts, nlay))
         cldtau = np.zeros((npts, nlay))
+
+        upfxc_t = np.zeros(npts)
+        upfx0_t = np.zeros(npts)
+        dnfxc_t = np.zeros(npts)
+
+        upfxc_s = np.zeros(npts)
+        upfx0_s = np.zeros(npts)
+        dnfxc_s = np.zeros(npts)
+        dnfx0_s = np.zeros(npts)
+
+        upfxc_f = np.zeros((npts, nlp1))
+        upfx0_f = np.zeros((npts, nlp1))
+        dnfxc_f = np.zeros((npts, nlp1))
+        dnfx0_f = np.zeros((npts, nlp1))
+
+        uvbf0 = np.zeros(npts)
+        uvbfc = np.zeros(npts)
+        nirbm = np.zeros(npts)
+        nirdf = np.zeros(npts)
+        visbm = np.zeros(npts)
+        visdf = np.zeros(npts)
+
+        hsw0 = np.zeros((npts, nlay))
+        hswb = np.zeros((npts, nlay, nbdsw))
 
         ipseed = np.zeros(npts)
 
@@ -423,7 +451,7 @@ class RadSWClass:
             nlay,
         )
 
-        if isubcsw <= 0:
+        if self.isubcsw <= 0:
             (
                 fxupc,
                 fxdnc,
@@ -482,7 +510,7 @@ class RadSWClass:
                 sfdf0,
                 suvbfc,
                 suvbf0,
-            ) = spcvrtm(
+            ) = self.spcvrtm(
                 ssolar,
                 cosz1,
                 sntz1,
@@ -544,14 +572,14 @@ class RadSWClass:
 
         #  --- ...  toa and sfc fluxes
 
-        upfxc[j1] = ftoauc
-        dnfxc[j1] = ftoadc
-        upfx0[j1] = ftoau0
+        upfxc_t[j1] = ftoauc
+        dnfxc_t[j1] = ftoadc
+        upfx0_t[j1] = ftoau0
 
-        upfxc[j1] = fsfcuc
-        dnfxc[j1] = fsfcdc
-        upfx0[j1] = fsfcu0
-        dnfx0[j1] = fsfcd0
+        upfxc_s[j1] = fsfcuc
+        dnfxc_s[j1] = fsfcdc
+        upfx0_s[j1] = fsfcu0
+        dnfx0_s[j1] = fsfcd0
 
         #  --- ...  compute heating rates
 
@@ -565,10 +593,10 @@ class RadSWClass:
 
         if lflxprf:
             for k in range(nlp1):
-                upfxc[j1, k] = flxuc[k]
-                dnfxc[j1, k] = flxdc[k]
-                upfx0[j1, k] = flxu0[k]
-                dnfx0[j1, k] = flxd0[k]
+                upfxc_f[j1, k] = flxuc[k]
+                dnfxc_f[j1, k] = flxdc[k]
+                upfx0_f[j1, k] = flxu0[k]
+                dnfx0_f[j1, k] = flxd0[k]
 
         # --- ...  optional clear sky heating rates
 
@@ -588,3 +616,1200 @@ class RadSWClass:
                 for k in range(nlay):
                     fnet[k + 1] = fxdnc[k + 1, mb] - fxupc[k + 1, mb]
                     hswb[j1, k, mb] = (fnet[k + 1] - fnet[k]) * rfdelp[k]
+
+    def cldprop(
+        self,
+        cfrac,
+        cliqp,
+        reliq,
+        cicep,
+        reice,
+        cdat1,
+        cdat2,
+        cdat3,
+        cdat4,
+        cf1,
+        nlay,
+        ipseed,
+        dz,
+        delgth,
+    ):
+        cldfmc = np.zeros((nlay, ngptsw))
+        taucw = np.zeros((nlay, nbdsw))
+        ssacw = np.ones((nlay, nbdsw))
+        asycw = np.zeros((nlay, nbdsw))
+        cldfrc = np.zeros(nlay)
+
+        ssaran = np.zeros(nbhgh - nblow)
+        ssasnw = np.zeros(nbhgh - nblow)
+        asyran = np.zeros(nbhgh - nblow)
+        asysnw = np.zeros(nbhgh - nblow)
+        tauliq = np.zeros(nbhgh - nblow)
+        ssaliq = np.zeros(nbhgh - nblow)
+        asyliq = np.zeros(nbhgh - nblow)
+
+        if self.iswcliq > 0:
+            for k in range(nlay):
+                if cfrac[k] > self.ftiny:
+                    cldran = cdat1[k]
+                    cldsnw = cdat3[k]
+                    refsnw = cdat4[k]
+                    dgesnw = 1.0315 * refsnw  # for fu's snow formula
+                    tauran = cldran * a0r
+
+                    if cldsnw > 0.0 and refsnw > 10.0:
+                        tausnw = cldsnw * 1.09087 * (a0s + a1s / dgesnw)  # fu's formula
+                    else:
+                        tausnw = 0.0
+
+                    for ib in range(nblow - 1, nbhgh):
+                        ssaran[ib] = tauran * (1.0 - b0r[ib])
+                        ssasnw[ib] = tausnw * (1.0 - (b0s[ib] + b1s[ib] * dgesnw))
+                        asyran[ib] = ssaran[ib] * c0r[ib]
+                        asysnw[ib] = ssasnw[ib] * c0s[ib]
+
+                    cldliq = cliqp[k]
+                    cldice = cicep[k]
+                    refliq = reliq[k]
+                    refice = reice[k]
+
+                    #  --- ...  calculation of absorption coefficients due to water clouds.
+
+                    if cldliq <= 0.0:
+                        for ib in range(nblow - 1, nbhgh):
+                            tauliq[ib] = 0.0
+                            ssaliq[ib] = 0.0
+                            asyliq[ib] = 0.0
+                    else:
+                        factor = refliq - 1.5
+                        index = max(1, min(57, int(factor))) - 1
+                        fint = factor - float(index + 1)
+
+                        if self.iswcliq == 1:
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoliq = max(
+                                    0.0,
+                                    extliq1[index, ib]
+                                    + fint
+                                    * (extliq1[index + 1, ib] - extliq1[index, ib]),
+                                )
+                                ssacoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaliq1[index, ib]
+                                        + fint
+                                        * (ssaliq1[index + 1, ib] - ssaliq1[index, ib]),
+                                    ),
+                                )
+
+                                asycoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyliq1[index, ib]
+                                        + fint
+                                        * (asyliq1[index + 1, ib] - asyliq1[index, ib]),
+                                    ),
+                                )
+
+                                tauliq[ib] = cldliq * extcoliq
+                                ssaliq[ib] = tauliq[ib] * ssacoliq
+                                asyliq[ib] = ssaliq[ib] * asycoliq
+                        elif self.iswcliq == 2:  # use updated coeffs
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoliq = max(
+                                    0.0,
+                                    extliq2[index, ib]
+                                    + fint
+                                    * (extliq2[index + 1, ib] - extliq2[index, ib]),
+                                )
+                                ssacoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaliq2[index, ib]
+                                        + fint
+                                        * (ssaliq2[index + 1, ib] - ssaliq2[index, ib]),
+                                    ),
+                                )
+
+                                asycoliq = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyliq2[index, ib]
+                                        + fint
+                                        * (asyliq2[index + 1, ib] - asyliq2[index, ib]),
+                                    ),
+                                )
+
+                                tauliq[ib] = cldliq * extcoliq
+                                ssaliq[ib] = tauliq[ib] * ssacoliq
+                                asyliq[ib] = ssaliq[ib] * asycoliq
+
+                    if cldice <= 0.0:
+                        for ib in range(nblow - 1, nbhgh):
+                            tauice[ib] = 0.0
+                            ssaice[ib] = 0.0
+                            asyice[ib] = 0.0
+                    else:
+                        #  --- ...  ebert and curry approach for all particle sizes though somewhat
+                        #           unjustified for large ice particles
+                        if self.iswcice == 1:
+                            refice = min(130.0, max(13.0, refice))
+
+                            for ib in range(nblow - 1, nbhgh):
+                                ia = (
+                                    self.idxebc[ib] - 1
+                                )  # eb_&_c band index for ice cloud coeff
+
+                                extcoice = max(0.0, abari[ia] + bbari[ia] / refice)
+                                ssacoice = max(
+                                    0.0, min(1.0, 1.0 - cbari[ia] - dbari[ia] * refice)
+                                )
+                                asycoice = max(
+                                    0.0, min(1.0, ebari[ia] + fbari[ia] * refice)
+                                )
+
+                                tauice[ib] = cldice * extcoice
+                                ssaice[ib] = tauice[ib] * ssacoice
+                                asyice[ib] = ssaice[ib] * asycoice
+
+                        #  --- ...  streamer approach for ice effective radius between 5.0 and 131.0 microns
+                        elif self.iswcice == 2:
+                            refice = min(131.0, max(5.0, refice))
+
+                            factor = (refice - 2.0) / 3.0
+                            index = max(1, min(42, int(factor))) - 1
+                            fint = factor - float(index + 1)
+
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoice = max(
+                                    0.0,
+                                    extice2(index, ib)
+                                    + fint
+                                    * (extice2[index + 1, ib] - extice2[index, ib]),
+                                )
+                                ssacoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaice2[index, ib]
+                                        + fint
+                                        * (ssaice2[index + 1, ib] - ssaice2[index, ib]),
+                                    ),
+                                )
+                                asycoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyice2[index, ib]
+                                        + fint
+                                        * (asyice2[index + 1, ib] - asyice2[index, ib]),
+                                    ),
+                                )
+
+                                tauice[ib] = cldice * extcoice
+                                ssaice[ib] = tauice[ib] * ssacoice
+                                asyice[ib] = ssaice[ib] * asycoice
+
+                        elif self.iswcice == 3:
+                            dgeice = max(5.0, min(140.0, 1.0315 * refice))
+
+                            factor = (dgeice - 2.0) / 3.0
+                            index = max(1, min(45, int(factor))) - 1
+                            fint = factor - float(index + 1)
+
+                            for ib in range(nblow - 1, nbhgh):
+                                extcoice = max(
+                                    0.0,
+                                    extice3[index, ib]
+                                    + fint
+                                    * (extice3[index + 1, ib] - extice3[index, ib]),
+                                )
+                                ssacoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        ssaice3[index, ib]
+                                        + fint
+                                        * (ssaice3[index + 1, ib] - ssaice3[index, ib]),
+                                    ),
+                                )
+                                asycoice = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        asyice3[index, ib]
+                                        + fint
+                                        * (asyice3[index + 1, ib] - asyice3[index, ib]),
+                                    ),
+                                )
+
+                                tauice[ib] = cldice * extcoice
+                                ssaice[ib] = tauice[ib] * ssacoice
+                                asyice[ib] = ssaice[ib] * asycoice
+
+                    for ib in range(nbdsw):
+                        jb = nblow + ib - 2
+                        taucw[k, ib] = tauliq[jb] + tauice[jb] + tauran + tausnw
+                        ssacw[k, ib] = ssaliq[jb] + ssaice[jb] + ssaran[jb] + ssasnw[jb]
+                        asycw[k, ib] = asyliq[jb] + asyice[jb] + asyran[jb] + asysnw[jb]
+        else:
+
+            for k in range(nlay):
+                if cfrac[k] > self.ftiny:
+                    for ib in range(nbdsw):
+                        taucw[k, ib] = cdat1[k]
+                        ssacw[k, ib] = cdat1[k] * cdat2[k]
+                        asycw[k, ib] = ssacw[k, ib] * cdat3[k]
+
+        # if physparam::isubcsw > 0, call mcica_subcol() to distribute
+        #    cloud properties to each g-point.
+
+        if self.isubcsw:
+            cldf = cfrac
+            cldf[cldf < self.ftiny] = 0.0
+
+            lcloudy = self.mcica_subcol(cldf, nlay, ipseed, dz, delgth)
+
+            for ig in range(ngptsw):
+                for k in range(nlay):
+                    if lcloudy[k, ig]:
+                        cldfmc[k, ig] = 1.0
+                    else:
+                        cldfmc = 0.0
+        else:
+            for k in range(nlay):
+                cldfrc[k] = cfrac[k] / cf1
+
+        return taucw, ssacw, asycw, cldfrc, cldfmc
+
+    def setcoef(self, pavel, tavel, h2ovmr, nlay, nlp1):
+
+        indself = np.zeros(nlay, dtype=np.int32)
+        indfor = np.zeros(nlay, dtype=np.int32)
+        jp = np.zeros(nlay, dtype=np.int32)
+        jt = np.zeros(nlay, dtype=np.int32)
+        jt1 = np.zeros(nlay, dtype=np.int32)
+
+        fac00 = np.zeros(nlay)
+        fac01 = np.zeros(nlay)
+        fac10 = np.zeros(nlay)
+        fac11 = np.zeros(nlay)
+        selffac = np.zeros(nlay)
+        selffrac = np.zeros(nlay)
+        forfac = np.zeros(nlay)
+        forfrac = np.zeros(nlay)
+
+        laytrop = nlay
+
+        for k in range(nlay):
+            forfac[k] = pavel[k] * self.stpfac / (tavel[k] * (1.0 + h2ovmr[k]))
+
+            #  --- ...  find the two reference pressures on either side of the
+            #           layer pressure.  store them in jp and jp1.  store in fp the
+            #           fraction of the difference (in ln(pressure)) between these
+            #           two values that the layer pressure lies.
+
+            plog = np.log(pavel[k])
+            jp[k] = max(1, min(58, int(36.0 - 5.0 * (plog + 0.04)))) - 1
+            jp1 = jp[k] + 1
+            fp = 5.0 * (preflog(jp[k]) - plog)
+
+            #  --- ...  determine, for each reference pressure (jp and jp1), which
+            #          reference temperature (these are different for each reference
+            #          pressure) is nearest the layer temperature but does not exceed it.
+            #          store these indices in jt and jt1, resp. store in ft (resp. ft1)
+            #          the fraction of the way between jt (jt1) and the next highest
+            #          reference temperature that the layer temperature falls.
+
+            tem1 = (tavel[k] - tref(jp[k])) / 15.0
+            tem2 = (tavel[k] - tref(jp1)) / 15.0
+            jt[k] = max(1, min(4, int(3.0 + tem1))) - 1
+            jt1[k] = max(1, min(4, int(3.0 + tem2))) - 1
+            ft = tem1 - float(jt[k] - 3)
+            ft1 = tem2 - float(jt1[k] - 3)
+
+            #  --- ...  we have now isolated the layer ln pressure and temperature,
+            #           between two reference pressures and two reference temperatures
+            #           (for each reference pressure).  we multiply the pressure
+            #           fraction fp with the appropriate temperature fractions to get
+            #           the factors that will be needed for the interpolation that yields
+            #           the optical depths (performed in routines taugbn for band n).
+
+            fp1 = 1.0 - fp
+            fac10[k] = fp1 * ft
+            fac00[k] = fp1 * (1.0 - ft)
+            fac11[k] = fp * ft1
+            fac01[k] = fp * (1.0 - ft1)
+
+            #  --- ...  if the pressure is less than ~100mb, perform a different
+            #           set of species interpolations.
+
+            if plog > 4.56:
+
+                laytrop = k
+
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           foreign-continuum in the calculation of absorption coefficient.
+
+                tem1 = (332.0 - tavel[k]) / 36.0
+                indfor[k] = min(2, max(1, int(tem1)))
+                forfrac[k] = tem1 - float(indfor[k])
+
+                tem2 = (tavel[k] - 188.0) / 7.2
+                indself[k] = min(9, max(1, int(tem2) - 7))
+                selffrac[k] = tem2 - float(indself[k] + 7)
+                selffac[k] = h2ovmr[k] * forfac[k]
+
+            else:
+
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           foreign-continuum in the calculation of absorption coefficient.
+
+                tem1 = (tavel[k] - 188.0) / 36.0
+                indfor[k] = 3
+                forfrac[k] = tem1 - 1.0
+
+                indself[k] = 0
+                selffrac[k] = 0.0
+                selffac[k] = 0.0
+
+        return (
+            laytrop,
+            jp,
+            jt,
+            jt1,
+            fac00,
+            fac01,
+            fac10,
+            fac11,
+            selffac,
+            selffrac,
+            indself,
+            forfac,
+            forfrac,
+            indfor,
+        )
+
+    def spcvrtc(
+        self,
+        ssolar,
+        cosz,
+        sntz,
+        albbm,
+        albdf,
+        sfluxzen,
+        cldfrc,
+        cf1,
+        cf0,
+        taug,
+        taur,
+        tauae,
+        ssaae,
+        asyae,
+        taucw,
+        ssacw,
+        asycw,
+        nlay,
+        nlp1,
+    ):
+
+        zcrit = 0.9999995  # thresold for conservative scattering
+        zsr3 = np.sqrt(3.0)
+        od_lo = 0.06
+        eps1 = 1.0e-8
+
+        fxupc = np.zeros((nlp1, nbdsw))
+        fxdnc = np.zeros((nlp1, nbdsw))
+        fxup0 = np.zeros((nlp1, nbdsw))
+        fxdn0 = np.zeros((nlp1, nbdsw))
+
+        sfbmc = np.zeros(2)
+        sfdfc = np.zeros(2)
+        sfbm0 = np.zeros(2)
+        sfdf0 = np.zeros(2)
+
+        ztaus = np.zeros(nlay)
+        zssas = np.zeros(nlay)
+        zasys = np.zeros(nlay)
+        zldbt0 = np.zeros(nlay)
+
+        zrefb = np.zeros(nlp1)
+        zrefd = np.zeros(nlp1)
+        ztrab = np.zeros(nlp1)
+        ztrad = np.zeros(nlp1)
+        ztdbt = np.zeros(nlp1)
+        zldbt = np.zeros(nlp1)
+        zfu = np.zeros(nlp1)
+        zfd = np.zeros(nlp1)
+
+        #  --- ...  loop over all g-points in each band
+
+        for jg in range(ngptsw):
+            jb = self.ngb[jg]
+            ib = jb + 1 - nblow
+            ibd = self.idxsfc[jb]
+
+            zsolar = ssolar * sfluxzen[jg]
+
+            #  --- ...  set up toa direct beam and surface values (beam and diff)
+
+            ztdbt[nlp1 - 1] = 1.0
+            ztdbt0 = 1.0
+
+            zldbt[0] = 0.0
+            if ibd != 0:
+                zrefb[0] = albbm[ibd]
+                zrefd[0] = albdf[ibd]
+            else:
+                zrefb[0] = 0.5 * (albbm[0] + albbm[1])
+                zrefd[0] = 0.5 * (albdf[0] + albdf[1])
+
+            ztrab[0] = 0.0
+            ztrad[0] = 0.0
+
+            # -# Compute clear-sky optical parameters, layer reflectance and
+            #    transmittance.
+            #    - Set up toa direct beam and surface values (beam and diff)
+            #    - Delta scaling for clear-sky condition
+            #    - General two-stream expressions for physparam::iswmode
+            #    - Compute homogeneous reflectance and transmittance for both
+            #      conservative and non-conservative scattering
+            #    - Pre-delta-scaling clear and cloudy direct beam transmittance
+            #    - Call swflux() to compute the upward and downward radiation
+            #      fluxes
+
+            for k in range(nlay - 1, -1, -1):
+                kp = k + 1
+
+                ztau0 = max(self.ftiny, taur[k, jg] + taug[k, jg] + tauae[k, ib])
+                zssa0 = taur[k, jg] + tauae[k, ib] * ssaae[k, ib]
+                zasy0 = asyae[k, ib] * ssaae[k, ib] * tauae[k, ib]
+                zssaw = min(self.oneminus, zssa0 / ztau0)
+                zasyw = zasy0 / max(self.ftiny, zssa0)
+
+                #  --- ...  saving clear-sky quantities for later total-sky usage
+                ztaus[k] = ztau0
+                zssas[k] = zssa0
+                zasys[k] = zasy0
+
+                #  --- ...  delta scaling for clear-sky condition
+                za1 = zasyw * zasyw
+                za2 = zssaw * za1
+
+                ztau1 = (1.0 - za2) * ztau0
+                zssa1 = (zssaw - za2) / (1.0 - za2)
+                zasy1 = zasyw / (1.0 + zasyw)  # to reduce truncation error
+                zasy3 = 0.75 * zasy1
+
+                #  --- ...  general two-stream expressions
+                if iswmode == 1:
+                    zgam1 = 1.75 - zssa1 * (1.0 + zasy3)
+                    zgam2 = -0.25 + zssa1 * (1.0 - zasy3)
+                    zgam3 = 0.5 - zasy3 * cosz
+                elif iswmode == 2:  # pifm
+                    zgam1 = 2.0 - zssa1 * (1.25 + zasy3)
+                    zgam2 = 0.75 * zssa1 * (1.0 - zasy1)
+                    zgam3 = 0.5 - zasy3 * cosz
+                elif iswmode == 3:  # discrete ordinates
+                    zgam1 = zsr3 * (2.0 - zssa1 * (1.0 + zasy1)) * 0.5
+                    zgam2 = zsr3 * zssa1 * (1.0 - zasy1) * 0.5
+                    zgam3 = (1.0 - zsr3 * zasy1 * cosz) * 0.5
+
+                zgam4 = 1.0 - zgam3
+
+                #  --- ...  compute homogeneous reflectance and transmittance
+
+                if zssaw >= zcrit:  # for conservative scattering
+                    za1 = zgam1 * cosz - zgam3
+                    za2 = zgam1 * ztau1
+
+                    #  --- ...  use exponential lookup table for transmittance, or expansion
+                    #           of exponential for low optical depth
+
+                    zb1 = min(ztau1 * sntz, 500.0)
+                    if zb1 <= od_lo:
+                        zb2 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                    else:
+                        ftind = zb1 / (self.bpade + zb1)
+                        itind = ftind * ntbmx + 0.5
+                        zb2 = self.exp_tbl[itind]
+
+                    #      ...  collimated beam
+                    zrefb[kp] = max(
+                        0.0, min(1.0, (za2 - za1 * (1.0 - zb2)) / (1.0 + za2))
+                    )
+                    ztrab[kp] = max(0.0, min(1.0, 1.0 - zrefb[kp]))
+
+                    #      ...  isotropic incidence
+                    zrefd[kp] = max(0.0, min(1.0, za2 / (1.0 + za2)))
+                    ztrad[kp] = max(0.0, min(1.0, 1.0 - zrefd[kp]))
+
+                else:
+                    za1 = zgam1 * zgam4 + zgam2 * zgam3
+                    za2 = zgam1 * zgam3 + zgam2 * zgam4
+                    zrk = np.sqrt((zgam1 - zgam2) * (zgam1 + zgam2))
+                    zrk2 = 2.0 * zrk
+
+                    zrp = zrk * cosz
+                    zrp1 = 1.0 + zrp
+                    zrm1 = 1.0 - zrp
+                    zrpp1 = 1.0 - zrp * zrp
+                    zrpp = np.sign(
+                        max(self.flimit, abs(zrpp1)), zrpp1
+                    )  # avoid numerical singularity
+                    zrkg1 = zrk + zgam1
+                    zrkg3 = zrk * zgam3
+                    zrkg4 = zrk * zgam4
+
+                    zr1 = zrm1 * (za2 + zrkg3)
+                    zr2 = zrp1 * (za2 - zrkg3)
+                    zr3 = zrk2 * (zgam3 - za2 * cosz)
+                    zr4 = zrpp * zrkg1
+                    zr5 = zrpp * (zrk - zgam1)
+
+                    zt1 = zrp1 * (za1 + zrkg4)
+                    zt2 = zrm1 * (za1 - zrkg4)
+                    zt3 = zrk2 * (zgam4 + za1 * cosz)
+
+                    #  --- ...  use exponential lookup table for transmittance, or expansion
+                    #           of exponential for low optical depth
+
+                    zb1 = min(zrk * ztau1, 500.0)
+                    if zb1 <= od_lo:
+                        zexm1 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                    else:
+                        ftind = zb1 / (self.bpade + zb1)
+                        itind = ftind * ntbmx + 0.5
+                        zexm1 = self.exp_tbl[itind]
+
+                    zexp1 = 1.0 / zexm1
+
+                    zb2 = min(sntz * ztau1, 500.0)
+                    if zb2 <= od_lo:
+                        zexm2 = 1.0 - zb2 + 0.5 * zb2 * zb2
+                    else:
+                        ftind = zb2 / (self.bpade + zb2)
+                        itind = ftind * ntbmx + 0.5
+                        zexm2 = self.exp_tbl[itind]
+
+                    zexp2 = 1.0 / zexm2
+                    ze1r45 = zr4 * zexp1 + zr5 * zexm1
+
+                    #      ...  collimated beam
+                    if ze1r45 >= -eps1 and ze1r45 <= eps1:
+                        zrefb[kp] = eps1
+                        ztrab[kp] = zexm2
+                    else:
+                        zden1 = zssa1 / ze1r45
+                        zrefb[kp] = max(
+                            0.0,
+                            min(1.0, (zr1 * zexp1 - zr2 * zexm1 - zr3 * zexm2) * zden1),
+                        )
+                        ztrab[kp] = max(
+                            0.0,
+                            min(
+                                1.0,
+                                zexm2
+                                * (
+                                    1.0
+                                    - (zt1 * zexp1 - zt2 * zexm1 - zt3 * zexp2) * zden1
+                                ),
+                            ),
+                        )
+
+                    #      ...  diffuse beam
+                    zden1 = zr4 / (ze1r45 * zrkg1)
+                    zrefd[kp] = max(0.0, min(1.0, zgam2 * (zexp1 - zexm1) * zden1))
+                    ztrad[kp] = max(0.0, min(1.0, zrk2 * zden1))
+
+                #  --- ...  direct beam transmittance. use exponential lookup table
+                #           for transmittance, or expansion of exponential for low
+                #           optical depth
+
+                zr1 = ztau1 * sntz
+                if zr1 <= od_lo:
+                    zexp3 = 1.0 - zr1 + 0.5 * zr1 * zr1
+                else:
+                    ftind = zr1 / (self.bpade + zr1)
+                    itind = max(0, min(ntbmx, int(0.5 + ntbmx * ftind)))
+                    zexp3 = self.exp_tbl[itind]
+
+                ztdbt[k] = zexp3 * ztdbt[kp]
+                zldbt[kp] = zexp3
+
+                #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
+                #           (must use 'orig', unscaled cloud optical depth)
+
+                zr1 = ztau0 * sntz
+                if zr1 <= od_lo:
+                    zexp4 = 1.0 - zr1 + 0.5 * zr1 * zr1
+                else:
+                    ftind = zr1 / (self.bpade + zr1)
+                    itind = max(0, min(ntbmx, int(0.5 + ntbmx * ftind)))
+                    zexp4 = self.exp_tbl[itind]
+
+                zldbt0[k] = zexp4
+                ztdbt0 = zexp4 * ztdbt0
+
+            zfu, zfd = self.vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1)
+
+            #  --- ...  compute upward and downward fluxes at levels
+            for k in range(nlp1):
+                fxup0[k, ib] = fxup0[k, ib] + zsolar * zfu[k]
+                fxdn0[k, ib] = fxdn0[k, ib] + zsolar * zfd[k]
+
+            # --- ...  surface downward beam/diffused flux components
+            zb1 = zsolar * ztdbt0
+            zb2 = zsolar * (zfd[0] - ztdbt0)
+
+            if ibd != 0:
+                sfbm0[ibd] = sfbm0[ibd] + zb1
+                sfdf0[ibd] = sfdf0[ibd] + zb2
+            else:
+                zf1 = 0.5 * zb1
+                zf2 = 0.5 * zb2
+                sfbm0[0] = sfbm0[0] + zf1
+                sfdf0[0] = sfdf0[0] + zf2
+                sfbm0[1] = sfbm0[1] + zf1
+                sfdf0[1] = sfdf0[1] + zf2
+
+            # -# Compute total sky optical parameters, layer reflectance and
+            #    transmittance.
+            #    - Set up toa direct beam and surface values (beam and diff)
+            #    - Delta scaling for total-sky condition
+            #    - General two-stream expressions for physparam::iswmode
+            #    - Compute homogeneous reflectance and transmittance for
+            #      conservative scattering and non-conservative scattering
+            #    - Pre-delta-scaling clear and cloudy direct beam transmittance
+            #    - Call swflux() to compute the upward and downward radiation fluxes
+
+            if cf1 > self.eps:
+
+                #  --- ...  set up toa direct beam and surface values (beam and diff)
+                ztdbt0 = 1.0
+                zldbt[0] = 0.0
+
+                for k in range(nlay - 1, -1, -1):
+                    kp = k + 1
+                    zc0 = 1.0 - cldfrc[k]
+                    zc1 = cldfrc[k]
+                    if zc1 > self.ftiny:  # it is a cloudy-layer
+                        ztau0 = ztaus[k] + taucw[k, ib]
+                        zssa0 = zssas[k] + ssacw[k, ib]
+                        zasy0 = zasys[k] + asycw[k, ib]
+                        zssaw = min(self.oneminus, zssa0 / ztau0)
+                        zasyw = zasy0 / max(self.ftiny, zssa0)
+
+                        #  --- ...  delta scaling for total-sky condition
+                        za1 = zasyw * zasyw
+                        za2 = zssaw * za1
+
+                        ztau1 = (1.0 - za2) * ztau0
+                        zssa1 = (zssaw - za2) / (1.0 - za2)
+                        zasy1 = zasyw / (1.0 + zasyw)
+                        zasy3 = 0.75 * zasy1
+
+                        #  --- ...  general two-stream expressions
+                        if iswmode == 1:
+                            zgam1 = 1.75 - zssa1 * (1.0 + zasy3)
+                            zgam2 = -0.25 + zssa1 * (1.0 - zasy3)
+                            zgam3 = 0.5 - zasy3 * cosz
+                        elif iswmode == 2:  # pifm
+                            zgam1 = 2.0 - zssa1 * (1.25 + zasy3)
+                            zgam2 = 0.75 * zssa1 * (1.0 - zasy1)
+                            zgam3 = 0.5 - zasy3 * cosz
+                        elif iswmode == 3:  # discrete ordinates
+                            zgam1 = zsr3 * (2.0 - zssa1 * (1.0 + zasy1)) * 0.5
+                            zgam2 = zsr3 * zssa1 * (1.0 - zasy1) * 0.5
+                            zgam3 = (1.0 - zsr3 * zasy1 * cosz) * 0.5
+
+                        zgam4 = 1.0 - zgam3
+
+                        zrefb1 = zrefb[kp]
+                        zrefd1 = zrefd[kp]
+                        ztrab1 = ztrab[kp]
+                        ztrad1 = ztrad[kp]
+
+                        #  --- ...  compute homogeneous reflectance and transmittance
+
+                        if zssaw >= zcrit:  # for conservative scattering
+                            za1 = zgam1 * cosz - zgam3
+                            za2 = zgam1 * ztau1
+
+                            #  --- ...  use exponential lookup table for transmittance, or expansion
+                            #           of exponential for low optical depth
+
+                            zb1 = min(ztau1 * sntz, 500.0)
+                            if zb1 <= od_lo:
+                                zb2 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                            else:
+                                ftind = zb1 / (self.bpade + zb1)
+                                itind = ftind * ntbmx + 0.5
+                                zb2 = self.exp_tbl[itind]
+
+                            #      ...  collimated beam
+                            zrefb[kp] = max(
+                                0.0, min(1.0, (za2 - za1 * (1.0 - zb2)) / (1.0 + za2))
+                            )
+                            ztrab[kp] = max(0.0, min(1.0, 1.0 - zrefb[kp]))
+
+                            #      ...  isotropic incidence
+                            zrefd[kp] = max(0.0, min(1.0, za2 / (1.0 + za2)))
+                            ztrad[kp] = max(0.0, min(1.0, 1.0 - zrefd[kp]))
+
+                        else:  # for non-conservative scattering
+                            za1 = zgam1 * zgam4 + zgam2 * zgam3
+                            za2 = zgam1 * zgam3 + zgam2 * zgam4
+                            zrk = np.sqrt((zgam1 - zgam2) * (zgam1 + zgam2))
+                            zrk2 = 2.0 * zrk
+
+                            zrp = zrk * cosz
+                            zrp1 = 1.0 + zrp
+                            zrm1 = 1.0 - zrp
+                            zrpp1 = 1.0 - zrp * zrp
+                            zrpp = np.sign(
+                                max(self.flimit, abs(zrpp1)), zrpp1
+                            )  # avoid numerical singularity
+                            zrkg1 = zrk + zgam1
+                            zrkg3 = zrk * zgam3
+                            zrkg4 = zrk * zgam4
+
+                            zr1 = zrm1 * (za2 + zrkg3)
+                            zr2 = zrp1 * (za2 - zrkg3)
+                            zr3 = zrk2 * (zgam3 - za2 * cosz)
+                            zr4 = zrpp * zrkg1
+                            zr5 = zrpp * (zrk - zgam1)
+
+                            zt1 = zrp1 * (za1 + zrkg4)
+                            zt2 = zrm1 * (za1 - zrkg4)
+                            zt3 = zrk2 * (zgam4 + za1 * cosz)
+
+                            #  --- ...  use exponential lookup table for transmittance, or expansion
+                            #           of exponential for low optical depth
+
+                            zb1 = min(zrk * ztau1, 500.0)
+                            if zb1 <= od_lo:
+                                zexm1 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                            else:
+                                ftind = zb1 / (self.bpade + zb1)
+                                itind = ftind * ntbmx + 0.5
+                                zexm1 = self.exp_tbl[itind]
+
+                            zexp1 = 1.0 / zexm1
+
+                            zb2 = min(ztau1 * sntz, 500.0)
+                            if zb2 <= od_lo:
+                                zexm2 = 1.0 - zb2 + 0.5 * zb2 * zb2
+                            else:
+                                ftind = zb2 / (self.bpade + zb2)
+                                itind = ftind * ntbmx + 0.5
+                                zexm2 = self.exp_tbl[itind]
+
+                            zexp2 = 1.0 / zexm2
+                            ze1r45 = zr4 * zexp1 + zr5 * zexm1
+
+                            #      ...  collimated beam
+                            if ze1r45 >= -eps1 and ze1r45 <= eps1:
+                                zrefb[kp] = eps1
+                                ztrab[kp] = zexm2
+                            else:
+                                zden1 = zssa1 / ze1r45
+                                zrefb[kp] = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        (zr1 * zexp1 - zr2 * zexm1 - zr3 * zexm2)
+                                        * zden1,
+                                    ),
+                                )
+                                ztrab[kp] = max(
+                                    0.0,
+                                    min(
+                                        1.0,
+                                        zexm2
+                                        * (
+                                            1.0
+                                            - (zt1 * zexp1 - zt2 * zexm1 - zt3 * zexp2)
+                                            * zden1
+                                        ),
+                                    ),
+                                )
+
+                            #      ...  diffuse beam
+                            zden1 = zr4 / (ze1r45 * zrkg1)
+                            zrefd[kp] = max(
+                                0.0, min(1.0, zgam2 * (zexp1 - zexm1) * zden1)
+                            )
+                            ztrad[kp] = max(0.0, min(1.0, zrk2 * zden1))
+
+                        #  --- ...  combine clear and cloudy contributions for total sky
+                        #           and calculate direct beam transmittances
+
+                        zrefb[kp] = zc0 * zrefb1 + zc1 * zrefb[kp]
+                        zrefd[kp] = zc0 * zrefd1 + zc1 * zrefd[kp]
+                        ztrab[kp] = zc0 * ztrab1 + zc1 * ztrab[kp]
+                        ztrad[kp] = zc0 * ztrad1 + zc1 * ztrad[kp]
+
+                        #  --- ...  direct beam transmittance. use exponential lookup table
+                        #           for transmittance, or expansion of exponential for low
+                        #           optical depth
+
+                        zr1 = ztau1 * sntz
+                        if zr1 <= od_lo:
+                            zexp3 = 1.0 - zr1 + 0.5 * zr1 * zr1
+                        else:
+                            ftind = zr1 / (self.bpade + zr1)
+                            itind = max(0, min(ntbmx, int(0.5 + ntbmx * ftind)))
+                            zexp3 = self.exp_tbl[itind]
+
+                        zldbt[kp] = zc0 * zldbt[kp] + zc1 * zexp3
+                        ztdbt[k] = zldbt[kp] * ztdbt[kp]
+
+                        #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
+                        #           (must use 'orig', unscaled cloud optical depth)
+
+                        zr1 = ztau0 * sntz
+                        if zr1 <= od_lo:
+                            zexp4 = 1.0 - zr1 + 0.5 * zr1 * zr1
+                        else:
+                            ftind = zr1 / (self.bpade + zr1)
+                            itind = max(0, min(ntbmx, int(0.5 + ntbmx * ftind)))
+                            zexp4 = self.exp_tbl[itind]
+
+                        ztdbt0 = (zc0 * zldbt0[k] + zc1 * zexp4) * ztdbt0
+
+                    else:
+
+                        #  --- ...  direct beam transmittance
+                        ztdbt[k] = zldbt[kp] * ztdbt[kp]
+
+                        #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
+                        ztdbt0 = zldbt0[k] * ztdbt0
+
+                zfu, zfd = self.vrtqdr(
+                    zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1
+                )
+
+                #  --- ...  compute upward and downward fluxes at levels
+                for k in range(nlp1):
+                    fxupc[k, ib] = fxupc[k, ib] + zsolar * zfu[k]
+                    fxdnc[k, ib] = fxdnc[k, ib] + zsolar * zfd[k]
+
+                # -# Process and save outputs.
+                # --- ...  surface downward beam/diffused flux components
+                zb1 = zsolar * ztdbt0
+                zb2 = zsolar * (zfd[0] - ztdbt0)
+
+                if ibd != 0:
+                    sfbmc[ibd] = sfbmc[ibd] + zb1
+                    sfdfc[ibd] = sfdfc[ibd] + zb2
+                else:
+                    zf1 = 0.5 * zb1
+                    zf2 = 0.5 * zb2
+                    sfbmc[0] = sfbmc[0] + zf1
+                    sfdfc[0] = sfdfc[0] + zf2
+                    sfbmc[1] = sfbmc[1] + zf1
+                    sfdfc[1] = sfdfc[1] + zf2
+
+        for ib in range(nbdsw):
+            ftoadc = ftoadc + fxdn0[nlp1, ib]
+            ftoau0 = ftoau0 + fxup0[nlp1, ib]
+            fsfcu0 = fsfcu0 + fxup0[0, ib]
+            fsfcd0 = fsfcd0 + fxdn0[0, ib]
+
+        # --- ...  uv-b surface downward flux
+        ibd = self.nuvb - nblow + 1
+        suvbf0 = fxdn0[0, ibd]
+
+        if cf1 <= self.eps:  # clear column, set total-sky=clear-sky fluxes
+            for ib in range(nbdsw):
+                for k in range(nlp1):
+                    fxupc[k, ib] = fxup0[k, ib]
+                    fxdnc[k, ib] = fxdn0[k, ib]
+
+            ftoauc = ftoau0
+            fsfcuc = fsfcu0
+            fsfcdc = fsfcd0
+
+            # --- ...  surface downward beam/diffused flux components
+            sfbmc[0] = sfbm0[0]
+            sfdfc[0] = sfdf0[0]
+            sfbmc[1] = sfbm0[1]
+            sfdfc[1] = sfdf0[1]
+
+            # --- ...  uv-b surface downward flux
+            suvbfc = suvbf0
+        else:  # cloudy column, compute total-sky fluxes
+            for ib in range(nbdsw):
+                for k in range(nlp1):
+                    fxupc[k, ib] = cf1 * fxupc[k, ib] + cf0 * fxup0[k, ib]
+                    fxdnc[k, ib] = cf1 * fxdnc[k, ib] + cf0 * fxdn0[k, ib]
+
+            for ib in range(nbdsw):
+                ftoauc = ftoauc + fxupc[nlp1, ib]
+                fsfcuc = fsfcuc + fxupc[0, ib]
+                fsfcdc = fsfcdc + fxdnc[0, ib]
+
+            # --- ...  uv-b surface downward flux
+            suvbfc = fxdnc[0, ibd]
+
+            # --- ...  surface downward beam/diffused flux components
+            sfbmc[0] = cf1 * sfbmc[0] + cf0 * sfbm0[0]
+            sfbmc[1] = cf1 * sfbmc[1] + cf0 * sfbm0[1]
+            sfdfc[0] = cf1 * sfdfc[0] + cf0 * sfdf0[0]
+            sfdfc[1] = cf1 * sfdfc[1] + cf0 * sfdf0[1]
+
+        return (
+            fxupc,
+            fxdnc,
+            fxup0,
+            fxdn0,
+            ftoauc,
+            ftoau0,
+            ftoadc,
+            fsfcuc,
+            fsfcu0,
+            fsfcdc,
+            fsfcd0,
+            sfbmc,
+            sfdfc,
+            sfbm0,
+            sfdf0,
+            suvbfc,
+            suvbf0,
+        )
+
+    def spcvrtm(
+        self,
+        ssolar,
+        cosz,
+        sntz,
+        albbm,
+        albdf,
+        sfluxzen,
+        cldfmc,
+        cf1,
+        cf0,
+        taug,
+        taur,
+        tauae,
+        ssaae,
+        asyae,
+        taucw,
+        ssacw,
+        asycw,
+        nlay,
+        nlp1,
+    ):
+        #  ---  constant parameters:
+        zcrit = 0.9999995  # thresold for conservative scattering
+        zsr3 = np.sqrt(3.0)
+        od_lo = 0.06
+        eps1 = 1.0e-8
+
+        fxupc = np.zeros((nlp1, nbdsw))
+        fxdnc = np.zeros((nlp1, nbdsw))
+        fxup0 = np.zeros((nlp1, nbdsw))
+        fxdn0 = np.zeros((nlp1, nbdsw))
+
+        sfbmc = np.zeros(2)
+        sfdfc = np.zeros(2)
+        sfbm0 = np.zeros(2)
+        sfdf0 = np.zeros(2)
+
+        ztaus = np.zeros(nlay)
+        zssas = np.zeros(nlay)
+        zasys = np.zeros(nlay)
+        zldbt0 = np.zeros(nlay)
+
+        zrefb = np.zeros(nlp1)
+        zrefd = np.zeros(nlp1)
+        ztrab = np.zeros(nlp1)
+        ztrad = np.zeros(nlp1)
+        ztdbt = np.zeros(nlp1)
+        zldbt = np.zeros(nlp1)
+        zfu = np.zeros(nlp1)
+        zfd = np.zeros(nlp1)
+
+        #  --- ...  loop over all g-points in each band
+        for jg in range(ngptsw):
+
+            jb = self.ngb[jg]
+            ib = jb + 1 - nblow
+            ibd = self.idxsfc[jb]  # spectral band index
+
+            zsolar = ssolar * sfluxzen[jg]
+
+            #  --- ...  set up toa direct beam and surface values (beam and diff)
+
+            ztdbt[nlp1] = 1.0
+            ztdbt0 = 1.0
+
+            zldbt[0] = 0.0
+            if ibd != 0:
+                zrefb[0] = albbm[ibd]
+                zrefd[0] = albdf[ibd]
+            else:
+                zrefb[0] = 0.5 * (albbm[0] + albbm[1])
+                zrefd[0] = 0.5 * (albdf[0] + albdf[1])
+
+            ztrab[0] = 0.0
+            ztrad[0] = 0.0
+
+            # -# Compute clear-sky optical parameters, layer reflectance and
+            #    transmittance.
+            #    - Set up toa direct beam and surface values (beam and diff)
+            #    - Delta scaling for clear-sky condition
+            #    - General two-stream expressions for physparam::iswmode
+            #    - Compute homogeneous reflectance and transmittance for both
+            #      conservative and non-conservative scattering
+            #    - Pre-delta-scaling clear and cloudy direct beam transmittance
+            #    - Call swflux() to compute the upward and downward radiation fluxes
+
+            for k in range(nlay - 1, -1, -1):
+                kp = k + 1
+
+                ztau0 = max(self.ftiny, taur[k, jg] + taug[k, jg] + tauae[k, ib])
+                zssa0 = taur[k, jg] + tauae[k, ib] * ssaae[k, ib]
+                zasy0 = asyae[k, ib] * ssaae[k, ib] * tauae[k, ib]
+                zssaw = min(self.oneminus, zssa0 / ztau0)
+                zasyw = zasy0 / max(self.ftiny, zssa0)
+
+                #  --- ...  saving clear-sky quantities for later total-sky usage
+                ztaus[k] = ztau0
+                zssas[k] = zssa0
+                zasys[k] = zasy0
+
+                #  --- ...  delta scaling for clear-sky condition
+                za1 = zasyw * zasyw
+                za2 = zssaw * za1
+
+                ztau1 = (1.0 - za2) * ztau0
+                zssa1 = (zssaw - za2) / (1.0 - za2)
+                zasy1 = zasyw / (1.0 + zasyw)  # to reduce truncation error
+                zasy3 = 0.75 * zasy1
+
+                #  --- ...  general two-stream expressions
+                if iswmode == 1:
+                    zgam1 = 1.75 - zssa1 * (1.0 + zasy3)
+                    zgam2 = -0.25 + zssa1 * (1.0 - zasy3)
+                    zgam3 = 0.5 - zasy3 * cosz
+                elif iswmode == 2:  # pifm
+                    zgam1 = 2.0 - zssa1 * (1.25 + zasy3)
+                    zgam2 = 0.75 * zssa1 * (1.0 - zasy1)
+                    zgam3 = 0.5 - zasy3 * cosz
+                elif iswmode == 3:  # discrete ordinates
+                    zgam1 = zsr3 * (2.0 - zssa1 * (1.0 + zasy1)) * 0.5
+                    zgam2 = zsr3 * zssa1 * (1.0 - zasy1) * 0.5
+                    zgam3 = (1.0 - zsr3 * zasy1 * cosz) * 0.5
+
+                zgam4 = 1.0 - zgam3
+
+                #  --- ...  compute homogeneous reflectance and transmittance
+
+                if zssaw >= zcrit:  # for conservative scattering
+                    za1 = zgam1 * cosz - zgam3
+                    za2 = zgam1 * ztau1
+
+                    #  --- ...  use exponential lookup table for transmittance, or expansion
+                    #           of exponential for low optical depth
+
+                    zb1 = min(ztau1 * sntz, 500.0)
+                    if zb1 <= od_lo:
+                        zb2 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                    else:
+                        ftind = zb1 / (self.bpade + zb1)
+                        itind = ftind * ntbmx + 0.5
+                        zb2 = self.exp_tbl[itind]
+
+                    #      ...  collimated beam
+                    zrefb[kp] = max(
+                        0.0, min(1.0, (za2 - za1 * (1.0 - zb2)) / (1.0 + za2))
+                    )
+                    ztrab[kp] = max(0.0, min(1.0, 1.0 - zrefb[kp]))
+
+                    #      ...  isotropic incidence
+                    zrefd[kp] = max(0.0, min(1.0, za2 / (1.0 + za2)))
+                    ztrad[kp] = max(0.0, min(1.0, 1.0 - zrefd[kp]))
+
+                else:  # for non-conservative scattering
+                    za1 = zgam1 * zgam4 + zgam2 * zgam3
+                    za2 = zgam1 * zgam3 + zgam2 * zgam4
+                    zrk = np.sqrt((zgam1 - zgam2) * (zgam1 + zgam2))
+                    zrk2 = 2.0 * zrk
+
+                    zrp = zrk * cosz
+                    zrp1 = 1.0 + zrp
+                    zrm1 = 1.0 - zrp
+                    zrpp1 = 1.0 - zrp * zrp
+                    zrpp = np.sign(
+                        max(self.flimit, abs(zrpp1)), zrpp1
+                    )  # avoid numerical singularity
+                    zrkg1 = zrk + zgam1
+                    zrkg3 = zrk * zgam3
+                    zrkg4 = zrk * zgam4
+
+                    zr1 = zrm1 * (za2 + zrkg3)
+                    zr2 = zrp1 * (za2 - zrkg3)
+                    zr3 = zrk2 * (zgam3 - za2 * cosz)
+                    zr4 = zrpp * zrkg1
+                    zr5 = zrpp * (zrk - zgam1)
+
+                    zt1 = zrp1 * (za1 + zrkg4)
+                    zt2 = zrm1 * (za1 - zrkg4)
+                    zt3 = zrk2 * (zgam4 + za1 * cosz)
+
+                    #  --- ...  use exponential lookup table for transmittance, or expansion
+                    #           of exponential for low optical depth
+
+                    zb1 = min(zrk * ztau1, 500.0)
+                    if zb1 <= od_lo:
+                        zexm1 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                    else:
+                        ftind = zb1 / (self.bpade + zb1)
+                        itind = ftind * ntbmx + 0.5
+                        zexm1 = self.exp_tbl[itind]
+
+                    zexp1 = 1.0 / zexm1
+
+                    zb2 = min(sntz * ztau1, 500.0)
+                    if zb2 <= od_lo:
+                        zexm2 = 1.0 - zb2 + 0.5 * zb2 * zb2
+                    else:
+                        ftind = zb2 / (self.bpade + zb2)
+                        itind = ftind * ntbmx + 0.5
+                        zexm2 = self.exp_tbl[itind]
+
+                    zexp2 = 1.0 / zexm2
+                    ze1r45 = zr4 * zexp1 + zr5 * zexm1
+
+                    #      ...  collimated beam
+                    if ze1r45 >= -eps1 and ze1r45 <= eps1:
+                        zrefb[kp] = eps1
+                        ztrab[kp] = zexm2
+                    else:
+                        zden1 = zssa1 / ze1r45
+                        zrefb[kp] = max(
+                            0.0,
+                            min(1.0, (zr1 * zexp1 - zr2 * zexm1 - zr3 * zexm2) * zden1),
+                        )
+                        ztrab[kp] = max(
+                            0.0,
+                            min(
+                                1.0,
+                                zexm2
+                                * (
+                                    1.0
+                                    - (zt1 * zexp1 - zt2 * zexm1 - zt3 * zexp2) * zden1
+                                ),
+                            ),
+                        )
+
+                    #      ...  diffuse beam
+                    zden1 = zr4 / (ze1r45 * zrkg1)
+                    zrefd[kp] = max(0.0, min(1.0, zgam2 * (zexp1 - zexm1) * zden1))
+                    ztrad[kp] = max(0.0, min(1.0, zrk2 * zden1))
