@@ -55,7 +55,7 @@ program test
 
       real (kind=kind_phys) :: heatfac
 
-      real (kind=kind_phys) :: exp_tbl(0:ntbl)  !transmittance lookup table
+      real (kind=kind_phys) :: exp_tbl(0:NTBMX)  !transmittance lookup table
 
 !> initial permutation seed used for sub-column cloud scheme
       integer, parameter :: ipsdsw0 = 1
@@ -88,6 +88,8 @@ program test
       type(cmpfsw_type), dimension(:), allocatable :: scmpsw
 
       real(kind=kind_phys), dimension(:), allocatable :: upfxc_t_ref, upfx0_t_ref, upfxc_s_ref, upfx0_s_ref
+      real(kind=kind_phys), dimension(:), allocatable :: dnfxc_t_ref, dnfxc_s_ref, dnfx0_s_ref
+      real(kind=kind_phys), dimension(:), allocatable :: uvbfc_ref, uvbf0_ref, nirbm_ref, nirdf_ref, visbm_ref, visdf_ref 
 
       integer, parameter :: me = 0
       integer :: ictm, isol, ico2, iaer, num_p2d,    &
@@ -104,7 +106,7 @@ program test
       real (kind=kind_phys) :: slag, sdec, cdec, solcon
 
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=0
+      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=1
       !$ser mode read
       !$ser savepoint "swrad-in-000000"
       !$ser data im=im levr=levr 
@@ -122,6 +124,8 @@ program test
       allocate(de_lgth(im))
       allocate(cldtausw(im, levr), cldtausw_ref(im, levr))
       allocate(icsdsw(im), topfsw(im), sfcfsw(im), scmpsw(im), upfxc_t_ref(im), upfx0_t_ref(im), upfxc_s_ref(im), upfx0_s_ref(im))
+      allocate(dnfxc_t_ref(im), dnfxc_s_ref(im), dnfx0_s_ref(im))
+      allocate(uvbfc_ref(im), uvbf0_ref(im), nirbm_ref(im), nirdf_ref(im), visbm_ref(im), visdf_ref(im))
       allocate(si(levr+1))
 
       !$ser mode read
@@ -149,7 +153,7 @@ program test
       call cdstart(num_tiles * ser_count_max * 2)
       write(*,*) "Running swrad . . ."
 
-      do tile = 0, 0
+      do tile = 1, 5
 
       !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=tile
 
@@ -175,13 +179,31 @@ program test
                      im, lmk, lmp, lprnt,                   &
                      htswc, topfsw, sfcfsw, cldtausw, HSW0=htsw0, FDNCMP=scmpsw)        !  ---  outputs
 
+!$ser mode read
+!$ser savepoint "swrad-out-"//trim(ser_count_str)
+! outputs
+!$ser data htswc=htswc_ref upfxc_t=upfxc_t_ref upfx0_t=upfx0_t_ref
+!$ser data dnfxc_t=dnfxc_t_ref upfxc_s=upfxc_s_ref upfx0_s=upfx0_s_ref
+!$ser data dnfxc_s=dnfxc_s_ref dnfx0_s=dnfx0_s_ref
+!$ser data uvbfc=uvbfc_ref uvbf0=uvbf0_ref nirbm=nirbm_ref nirdf=nirdf_ref
+!$ser data visbm=visbm_ref visdf=visdf_ref 
+!$ser data cldtausw=cldtausw_ref
 
-      ! call check_r_2d(htlwc, htlwc_ref, "htlwc")
-      ! call check_r_1d(topflw%upfxc, upfxc_t_ref, "upfxc_t")
-      ! call check_r_1d(topflw%upfx0, upfx0_t_ref, "upfx0_t")
-      ! call check_r_1d(sfcflw%upfxc, upfxc_s_ref, "upfxc_s")
-      ! call check_r_1d(sfcflw%upfx0, upfx0_s_ref, "upfx0_s")
-      ! call check_r_2d(cldtaulw, cldtaulw_ref, "cldtaulw")
+      call check_r_2d(htswc, htswc_ref, "htswc")
+      call check_r_1d(topfsw%upfxc, upfxc_t_ref, "upfxc_t")
+      call check_r_1d(topfsw%upfx0, upfx0_t_ref, "upfx0_t")
+      call check_r_1d(topfsw%dnfxc, dnfxc_t_ref, "dnfxc_t")
+      call check_r_1d(sfcfsw%upfxc, upfxc_s_ref, "upfxc_s")
+      call check_r_1d(sfcfsw%upfx0, upfx0_s_ref, "upfx0_s")
+      call check_r_1d(sfcfsw%dnfxc, dnfxc_s_ref, "dnfxc_s")
+      call check_r_1d(sfcfsw%dnfx0, dnfx0_s_ref, "dnfx0_s")
+      call check_r_1d(scmpsw%uvbfc, uvbfc_ref, "uvbfc")
+      call check_r_1d(scmpsw%uvbf0, uvbf0_ref, "uvbf0")
+      call check_r_1d(scmpsw%nirbm, nirbm_ref, "nirbm")
+      call check_r_1d(scmpsw%nirdf, nirdf_ref, "nirdf")
+      call check_r_1d(scmpsw%visbm, visbm_ref, "visbm")
+      call check_r_1d(scmpsw%visdf, visdf_ref, "visdf")
+      call check_r_2d(cldtausw, cldtausw_ref, "cldtausw")
       end do
       
 
