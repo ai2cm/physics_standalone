@@ -5107,3 +5107,5 @@ for var in outvars:
     )
 
 compare_data(outdict_val, outdict_gt4py)
+
+print(f"test = {locdict_gt4py['taug'][0, :, :-1, 0]}")

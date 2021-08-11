@@ -380,11 +380,8 @@ lookup_dict["ipat"] = create_storage_from_array(
 ds = xr.open_dataset("../lookupdata/rand2d.nc")
 rand2d = ds["rand2d"][0, :].data
 cdfunc = np.reshape(rand2d, (ngptlw, nlay), order="C")
-cdfunc = np.append(
-    cdfunc,
-    np.zeros((cdfunc.shape[0], 1)),
-    axis=1,
-)
+cdfunc = np.insert(cdfunc, 0, 0, axis=1)
+
 cdfunc = np.tile(cdfunc.T[None, None, :, :], (npts, 1, 1, 1))
 locdict_gt4py["cdfunc"] = create_storage_from_array(
     cdfunc, backend, shape_nlp1, type_ngptlw
@@ -1570,3 +1567,5 @@ combine_optical_depth(
 print(" ")
 end0 = time.time()
 print(f"Total time taken = {end0 - start0}")
+
+print(f"test = {locdict_gt4py['taug'][0, :, 1:, 0]}")

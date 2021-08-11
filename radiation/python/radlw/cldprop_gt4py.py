@@ -80,18 +80,14 @@ indict = dict()
 for var in invars:
     tmp = serializer.read(var, serializer.savepoint["lwrad-cldprop-input-000000"])
     if var in nlay_vars:
-        tmp2 = np.append(tmp, 0)
+        tmp2 = np.insert(tmp, 0, 0)
         indict[var] = np.tile(tmp2[None, None, :], (npts, 1, 1))
     elif var == "cldfrc":
         indict[var] = np.tile(tmp[None, None, :-1], (npts, 1, 1))
     elif var == "delgth":
         indict[var] = np.tile(tmp, (npts, 1))
     elif var == "cldfmc" or var == "taucld":
-        tmp2 = np.append(
-            tmp,
-            np.zeros((tmp.shape[0], 1)),
-            axis=1,
-        )
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2.T[None, None, :, :], (npts, 1, 1, 1))
     else:
         indict[var] = tmp
@@ -101,11 +97,7 @@ for var in invars:
 ds = xr.open_dataset("../lookupdata/rand2d.nc")
 rand2d = ds["rand2d"][0, :].data
 cdfunc = np.reshape(rand2d, (ngptlw, nlay), order="C")
-cdfunc = np.append(
-    cdfunc,
-    np.zeros((cdfunc.shape[0], 1)),
-    axis=1,
-)
+cdfunc = np.insert(cdfunc, 0, 0, axis=1)
 indict["cdfunc"] = np.tile(cdfunc.T[None, None, :, :], (npts, 1, 1, 1))
 
 
@@ -263,34 +255,7 @@ def cldprop(
     with computation(FORWARD), interval(-2, -1):
         lcf1 = cldsum > 0
 
-    with computation(FORWARD), interval(0, -1):
-        # Workaround for bug where variables first used inside if statements cause
-        # problems. Can be removed after next tag of gt4py is released
-        tauliq = tauliq
-        tauice = tauice
-        cldf = cldf
-        dgeice = dgeice
-        factor = factor
-        fint = fint
-        tauran = tauran
-        tausnw = tausnw
-        cldliq = cldliq
-        refliq = refliq
-        cldice = cldice
-        refice = refice
-        cfrac = cfrac
-        cliqp = cliqp
-        reliq = reliq
-        cicep = cicep
-        reice = reice
-        cdat1 = cdat1
-        cdat2 = cdat2
-        cdat3 = cdat3
-        cdat4 = cdat4
-        dz = dz
-        index = index
-        absliq1 = absliq1
-
+    with computation(FORWARD), interval(1, None):
         if lcf1:
             if ilwcliq > 0:
                 if cfrac > cldmin:
@@ -385,22 +350,21 @@ def cldprop(
                         )
 
             else:
-                if cfrac[0, 0, 1] > cldmin:
+                if cfrac > cldmin:
                     for ib7 in range(nbands):
                         taucld[0, 0, 0][ib7] = cdat1
 
             if isubclw > 0:
-                if cfrac[0, 0, 1] < cldmin:
+                if cfrac < cldmin:
                     cldf = 0.0
                 else:
-                    cldf = cfrac[0, 0, 1]
+                    cldf = cfrac
 
     # This section builds mcica_subcol from the fortran into cldprop.
     # Here I've read in the generated random numbers until we figure out
     # what to do with them. This will definitely need to change in future.
     # Only the iovrlw = 1 option is ported from Fortran
-    with computation(PARALLEL), interval(1, -1):
-        cldf = cldf
+    with computation(PARALLEL), interval(2, None):
         if lcf1:
             tem1 = 1.0 - cldf[0, 0, -1]
 
@@ -410,8 +374,7 @@ def cldprop(
                 else:
                     cdfunc[0, 0, 0][n] = cdfunc[0, 0, 0][n] * tem1
 
-    with computation(PARALLEL), interval(0, -1):
-        cldf = cldf
+    with computation(PARALLEL), interval(1, None):
         if lcf1:
             tem1 = 1.0 - cldf[0, 0, 0]
 
@@ -479,7 +442,7 @@ outdict_val = dict()
 outvars = ["cldfmc", "taucld"]
 
 for var in outvars:
-    outdict_gt4py[var] = indict_gt4py[var][0, :, :-1, :].squeeze().T
+    outdict_gt4py[var] = indict_gt4py[var][0, :, 1:, :].squeeze().T
     outdict_val[var] = serializer.read(
         var, serializer.savepoint["lwrad-cldprop-output-000000"]
     )
