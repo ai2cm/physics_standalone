@@ -69,13 +69,13 @@ for var in invars:
     if var in ["semis", "icsdlw", "tsfg", "de_lgth"]:
         indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
     elif var == "faerlw":
-        tmp2 = np.append(tmp, np.zeros((npts, 1, nbands, 3)), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :, :], (1, 1, 1, 1, 1))
     elif var == "gasvmr" or var == "clouds":
-        tmp2 = np.append(tmp, np.zeros((npts, 1, tmp.shape[2])), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
     elif var in ["plyr", "tlyr", "qlyr", "olyr", "dz", "delp"]:
-        tmp2 = np.append(tmp, np.zeros((npts, 1)), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
         print(f"{var} = {indict[var].shape}")
     elif var in ["plvl", "tlvl"]:
@@ -226,7 +226,7 @@ def firstloop(
     from __externals__ import nbands, ilwcliq, ilwrgas
 
     with computation(PARALLEL):
-        with interval(0, -1):
+        with interval(1, None):
             if sfemis > eps and sfemis <= 1.0:
                 for j in range(nbands):
                     semiss[0, 0, 0][j] = sfemis
@@ -238,12 +238,11 @@ def firstloop(
             tem2 = 1.0e-20 * 1.0e3 * con_avgd
 
     with computation(PARALLEL):
-        with interval(0, -1):
+        with interval(1, None):
             pavel = plyr
             delp = delpin
             tavel = tlyr
             dz = dzlyr
-            wx = wx
 
             h2ovmr = max(0.0, qlyr * amdw / (1.0 - qlyr))  # input specific humidity
             o3vmr = max(0.0, olyr * amdo3)  # input mass mixing ratio
@@ -285,10 +284,10 @@ def firstloop(
 
     with computation(PARALLEL):
         with interval(1, None):
-            cldfrc = clouds[0, 0, -1][0]
+            cldfrc = clouds[0, 0, 0][0]
 
     with computation(PARALLEL):
-        with interval(0, -1):
+        with interval(1, None):
             # Workaround for variables first referenced inside if statements
             # Can be removed at next gt4py release
             clwp = clwp
@@ -315,24 +314,25 @@ def firstloop(
     with computation(FORWARD):
         with interval(0, 1):
             cldfrc = 1.0
+        with interval(1, 2):
             tem11 = coldry[0, 0, 0] + colamt[0, 0, 0][0]
             tem22 = colamt[0, 0, 0][0]
 
     with computation(FORWARD):
-        with interval(1, -1):
+        with interval(2, None):
             #  --- ...  compute precipitable water vapor for diffusivity angle adjustments
             tem11 = tem11[0, 0, -1] + coldry + colamt[0, 0, 0][0]
             tem22 = tem22[0, 0, -1] + colamt[0, 0, 0][0]
 
     with computation(FORWARD):
-        with interval(-2, -1):
+        with interval(-1, None):
             tem00 = 10.0 * tem22 / (amdw * tem11 * con_g)
     with computation(FORWARD):
         with interval(0, 1):
             pwvcm[0, 0] = tem00[0, 0] * plvl[0, 0, 0]
 
     with computation(PARALLEL):
-        with interval(0, -1):
+        with interval(1, None):
             for m in range(1, maxgas):
                 summol += colamt[0, 0, 0][m]
             colbrd = coldry - summol
@@ -446,16 +446,16 @@ for var in valvars:
     elif var == "pwvcm":
         outdict[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
     elif var == "taucld" or var == "tauaer":
-        tmp = locdict_gt4py[var][:, :, :-1, :].view(np.ndarray).squeeze()
+        tmp = locdict_gt4py[var][:, :, 1:, :].view(np.ndarray).squeeze()
         outdict[var] = np.transpose(tmp, [0, 2, 1])
     elif var == "semiss" or var == "secdiff":
-        outdict[var] = locdict_gt4py[var][:, :, 0, :].view(np.ndarray).squeeze()
+        outdict[var] = locdict_gt4py[var][:, :, 1, :].view(np.ndarray).squeeze()
     else:
-        outdict[var] = locdict_gt4py[var][:, :, :-1].view(np.ndarray).squeeze()
+        outdict[var] = locdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
 
     valdict[var] = serializer.read(var, serializer.savepoint["lw_firstloop_out_000000"])
 
-# compare_data(outdict, valdict)
+compare_data(outdict, valdict)
 print(f"expval = {locdict_gt4py['expval'].max()}")
 print(" ")
 

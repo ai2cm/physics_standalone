@@ -205,6 +205,7 @@ locvars_int = [
     "jmcop",
     "jmn2",
     "jmn2p",
+    "NGB",
 ]
 locvars_flt = [
     "taug",
@@ -242,13 +243,13 @@ for var in invars:
     if var in ["semis", "icsdlw", "tsfg", "de_lgth"]:
         indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
     elif var == "faerlw":
-        tmp2 = np.append(tmp, np.zeros((npts, 1, nbands, 3)), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :, :], (1, 1, 1, 1, 1))
     elif var == "gasvmr" or var == "clouds":
-        tmp2 = np.append(tmp, np.zeros((npts, 1, tmp.shape[2])), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
     elif var in ["plyr", "tlyr", "qlyr", "olyr", "dz", "delp"]:
-        tmp2 = np.append(tmp, np.zeros((npts, 1)), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
     elif var in ["plvl", "tlvl"]:
         indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
@@ -324,6 +325,14 @@ for var in locvars:
 for var in locvars_int:
     if var == "ib":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_INT)
+    elif var == "NGB":
+        locdict_gt4py[var] = create_storage_from_array(
+            np.tile(np.array(ngb)[None, None, :], (npts, 1, 1)),
+            backend,
+            shape_2D,
+            (DTYPE_INT, (ngptlw,)),
+            default_origin=(0, 0),
+        )
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
 

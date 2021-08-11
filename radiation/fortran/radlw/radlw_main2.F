@@ -3934,13 +3934,6 @@
 !===> ...  begin here
 !
       call taugb01
-      !$ser verbatim if (iplon==1) then
-        !$ser mode write
-        !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-        !$ser verbatim write(*,*) 'iplon = ', iplon
-        !$ser savepoint "lw_taugb01_out"//trim(ser_count_str)
-        !$ser data taug=taug fracs=fracs
-      !$ser verbatim endif
       call taugb02
       call taugb03
       call taugb04
