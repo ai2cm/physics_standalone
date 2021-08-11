@@ -80,15 +80,15 @@ indict = dict()
 for var in invars:
     tmp = serializer.read(var, serializer.savepoint["lwrad-cldprop-input-000000"])
     if var in nlay_vars:
-        tmp2 = np.append(np.insert(tmp, 0, 0), 0)
+        tmp2 = np.append(tmp, 0)
         indict[var] = np.tile(tmp2[None, None, :], (npts, 1, 1))
     elif var == "cldfrc":
-        indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
+        indict[var] = np.tile(tmp[None, None, :-1], (npts, 1, 1))
     elif var == "delgth":
         indict[var] = np.tile(tmp, (npts, 1))
     elif var == "cldfmc" or var == "taucld":
         tmp2 = np.append(
-            np.insert(tmp, 0, np.zeros((1, 1)), axis=1),
+            tmp,
             np.zeros((tmp.shape[0], 1)),
             axis=1,
         )
@@ -102,7 +102,7 @@ ds = xr.open_dataset("../lookupdata/rand2d.nc")
 rand2d = ds["rand2d"][0, :].data
 cdfunc = np.reshape(rand2d, (ngptlw, nlay), order="C")
 cdfunc = np.append(
-    np.insert(cdfunc, 0, np.zeros((1, 1)), axis=1),
+    cdfunc,
     np.zeros((cdfunc.shape[0], 1)),
     axis=1,
 )
@@ -114,25 +114,25 @@ indict_gt4py = dict()
 for var in invars:
     if var in nlay_vars or var == "cldfrc":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlp2, type1
+            indict[var], backend, shape_nlp1, DTYPE_FLT
         )
     elif var == "delgth":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_2D, type1
+            indict[var], backend, shape_2D, DTYPE_FLT
         )
     elif var == "cldfmc":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlp2, type_ngptlw
+            indict[var], backend, shape_nlp1, type_ngptlw
         )
     elif var == "taucld":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlp2, type_nbands
+            indict[var], backend, shape_nlp1, type_nbands
         )
     else:
         indict_gt4py[var] = indict[var]
 
 indict_gt4py["cdfunc"] = create_storage_from_array(
-    indict["cdfunc"], backend, shape_nlp2, type_ngptlw
+    indict["cdfunc"], backend, shape_nlp1, type_ngptlw
 )
 
 locvars = [
@@ -152,6 +152,8 @@ locvars = [
     "ia",
     "lcloudy",
     "tem1",
+    "lcf1",
+    "cldsum",
 ]
 bandvars = ["tauliq", "tauice"]
 
@@ -159,15 +161,17 @@ locdict_gt4py = dict()
 
 for var in locvars:
     if var in bandvars:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp2, type_nbands)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
     elif var == "lcloudy":
         locdict_gt4py[var] = create_storage_zeros(
-            backend, shape_nlp2, (DTYPE_INT, (ngptlw))
+            backend, shape_nlp1, (DTYPE_INT, (ngptlw))
         )
     elif var == "index" or var == "ia":
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp2, DTYPE_INT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
+    elif var == "lcf1":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_BOOL)
     else:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp2, DTYPE_FLT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
 
 # Read in lookup table data for cldprop calculations
@@ -181,22 +185,22 @@ absice3 = ds["absice3"].data
 
 lookup_dict = dict()
 lookup_dict["absliq1"] = create_storage_from_array(
-    absliq1, backend, (npts, 1, nlp1 + 1), (np.float64, (58, nbands))
+    absliq1, backend, (npts, 1, nlp1), (np.float64, (58, nbands))
 )
 lookup_dict["absice0"] = create_storage_from_array(
-    absice0, backend, (npts, 1, nlp1 + 1), (np.float64, (2,))
+    absice0, backend, (npts, 1, nlp1), (np.float64, (2,))
 )
 lookup_dict["absice1"] = create_storage_from_array(
-    absice1, backend, (npts, 1, nlp1 + 1), (np.float64, (2, 5))
+    absice1, backend, (npts, 1, nlp1), (np.float64, (2, 5))
 )
 lookup_dict["absice2"] = create_storage_from_array(
-    absice2, backend, (npts, 1, nlp1 + 1), (np.float64, (43, nbands))
+    absice2, backend, (npts, 1, nlp1), (np.float64, (43, nbands))
 )
 lookup_dict["absice3"] = create_storage_from_array(
-    absice3, backend, (npts, 1, nlp1 + 1), (np.float64, (46, nbands))
+    absice3, backend, (npts, 1, nlp1), (np.float64, (46, nbands))
 )
 lookup_dict["ipat"] = create_storage_from_array(
-    ipat, backend, (npts, 1, nlp1 + 1), (DTYPE_INT, (nbands,))
+    ipat, backend, (npts, 1, nlp1), (DTYPE_INT, (nbands,))
 )
 
 
@@ -245,10 +249,21 @@ def cldprop(
     lcloudy: Field[(DTYPE_INT, (ngptlw,))],
     cdfunc: Field[type_ngptlw],
     tem1: FIELD_FLT,
+    lcf1: FIELD_2DBOOL,
+    cldsum: FIELD_FLT,
 ):
     from __externals__ import nbands, ilwcliq, ngptlw, isubclw
 
-    with computation(FORWARD), interval(1, -1):
+    # Compute flag for whether or not there is cloud in the vertical column
+    with computation(FORWARD):
+        with interval(0, 1):
+            cldsum = cfrac[0, 0, 1]
+        with interval(1, -1):
+            cldsum = cldsum[0, 0, -1] + cfrac[0, 0, 1]
+    with computation(FORWARD), interval(-2, -1):
+        lcf1 = cldsum > 0
+
+    with computation(FORWARD), interval(0, -1):
         # Workaround for bug where variables first used inside if statements cause
         # problems. Can be removed after next tag of gt4py is released
         tauliq = tauliq
@@ -276,133 +291,141 @@ def cldprop(
         index = index
         absliq1 = absliq1
 
-        if ilwcliq > 0:
-            if cfrac > cldmin:
-                tauran = absrain * cdat1
-                if cdat3 > 0.0 and cdat4 > 10.0:
-                    tausnw = abssnow0 * 1.05756 * cdat3 / cdat4
-                else:
-                    tausnw = 0.0
+        if lcf1:
+            if ilwcliq > 0:
+                if cfrac > cldmin:
+                    tauran = absrain * cdat1
+                    if cdat3 > 0.0 and cdat4 > 10.0:
+                        tausnw = abssnow0 * 1.05756 * cdat3 / cdat4
+                    else:
+                        tausnw = 0.0
 
-                cldliq = cliqp
-                cldice = cicep
-                refliq = reliq
-                refice = reice
+                    cldliq = cliqp
+                    cldice = cicep
+                    refliq = reliq
+                    refice = reice
 
-                if cldliq <= 0:
-                    for i in range(nbands):
-                        tauliq[0, 0, 0][i] = 0.0
-                else:
-                    if ilwcliq == 1:
-                        factor = refliq - 1.5
-                        index = max(1, min(57, factor)) - 1
-                        fint = factor - (index + 1)
+                    if cldliq <= 0:
+                        for i in range(nbands):
+                            tauliq[0, 0, 0][i] = 0.0
+                    else:
+                        if ilwcliq == 1:
+                            factor = refliq - 1.5
+                            index = max(1, min(57, factor)) - 1
+                            fint = factor - (index + 1)
 
-                        for ib in range(nbands):
-                            tmp = cldliq * (
-                                absliq1[0, 0, 0][index, ib]
-                                + fint
-                                * (
-                                    absliq1[0, 0, 0][index + 1, ib]
-                                    - absliq1[0, 0, 0][index, ib]
+                            for ib in range(nbands):
+                                tmp = cldliq * (
+                                    absliq1[0, 0, 0][index, ib]
+                                    + fint
+                                    * (
+                                        absliq1[0, 0, 0][index + 1, ib]
+                                        - absliq1[0, 0, 0][index, ib]
+                                    )
                                 )
-                            )
-                            # workaround since max doesn't work in for loop in if statement
-                            tauliq[0, 0, 0][ib] = tmp if tmp > 0.0 else 0.0
+                                # workaround since max doesn't work in for loop in if statement
+                                tauliq[0, 0, 0][ib] = tmp if tmp > 0.0 else 0.0
 
-                if cldice <= 0.0:
-                    for ib2 in range(nbands):
-                        tauice[0, 0, 0][ib2] = 0.0
-                else:
-                    if ilwcice == 1:
-                        refice = min(130.0, max(13.0, refice))
+                    if cldice <= 0.0:
+                        for ib2 in range(nbands):
+                            tauice[0, 0, 0][ib2] = 0.0
+                    else:
+                        if ilwcice == 1:
+                            refice = min(130.0, max(13.0, refice))
 
-                        for ib3 in range(nbands):
-                            ia = ipat[0, 0, 0][ib3] - 1
-                            tmp = cldice * (
-                                absice1[0, 0, 0][0, ia]
-                                + absice1[0, 0, 0][1, ia] / refice
-                            )
-                            # workaround since max doesn't work in for loop in if statement
-                            tauice[0, 0, 0][ib3] = tmp if tmp > 0.0 else 0.0
-                    elif ilwcice == 2:
-                        factor = (refice - 2.0) / 3.0
-                        index = max(1, min(42, factor)) - 1
-                        fint = factor - (index + 1)
-
-                        for ib4 in range(nbands):
-                            tmp = cldice * (
-                                absice2[0, 0, 0][index, ib4]
-                                + fint
-                                * (
-                                    absice2[0, 0, 0][index + 1, ib4]
-                                    - absice2[0, 0, 0][index, ib4]
+                            for ib3 in range(nbands):
+                                ia = ipat[0, 0, 0][ib3] - 1
+                                tmp = cldice * (
+                                    absice1[0, 0, 0][0, ia]
+                                    + absice1[0, 0, 0][1, ia] / refice
                                 )
-                            )
-                            # workaround since max doesn't work in for loop in if statement
-                            tauice[0, 0, 0][ib4] = tmp if tmp > 0.0 else 0.0
+                                # workaround since max doesn't work in for loop in if statement
+                                tauice[0, 0, 0][ib3] = tmp if tmp > 0.0 else 0.0
+                        elif ilwcice == 2:
+                            factor = (refice - 2.0) / 3.0
+                            index = max(1, min(42, factor)) - 1
+                            fint = factor - (index + 1)
 
-                    elif ilwcice == 3:
-                        dgeice = max(5.0, 1.0315 * refice)  # v4.71 value
-                        factor = (dgeice - 2.0) / 3.0
-                        index = max(1, min(45, factor)) - 1
-                        fint = factor - (index + 1)
-
-                        for ib5 in range(nbands):
-                            tmp = cldice * (
-                                absice3[0, 0, 0][index, ib5]
-                                + fint
-                                * (
-                                    absice3[0, 0, 0][index + 1, ib5]
-                                    - absice3[0, 0, 0][index, ib5]
+                            for ib4 in range(nbands):
+                                tmp = cldice * (
+                                    absice2[0, 0, 0][index, ib4]
+                                    + fint
+                                    * (
+                                        absice2[0, 0, 0][index + 1, ib4]
+                                        - absice2[0, 0, 0][index, ib4]
+                                    )
                                 )
-                            )
-                            # workaround since max doesn't work in for loop in if statement
-                            tauice[0, 0, 0][ib5] = tmp if tmp > 0.0 else 0.0
+                                # workaround since max doesn't work in for loop in if statement
+                                tauice[0, 0, 0][ib4] = tmp if tmp > 0.0 else 0.0
 
-                for ib6 in range(nbands):
-                    taucld[0, 0, 0][ib6] = (
-                        tauice[0, 0, 0][ib6] + tauliq[0, 0, 0][ib6] + tauran + tausnw
-                    )
+                        elif ilwcice == 3:
+                            dgeice = max(5.0, 1.0315 * refice)  # v4.71 value
+                            factor = (dgeice - 2.0) / 3.0
+                            index = max(1, min(45, factor)) - 1
+                            fint = factor - (index + 1)
 
-        else:
-            if cfrac > cldmin:
-                for ib7 in range(nbands):
-                    taucld[0, 0, 0][ib7] = cdat1
+                            for ib5 in range(nbands):
+                                tmp = cldice * (
+                                    absice3[0, 0, 0][index, ib5]
+                                    + fint
+                                    * (
+                                        absice3[0, 0, 0][index + 1, ib5]
+                                        - absice3[0, 0, 0][index, ib5]
+                                    )
+                                )
+                                # workaround since max doesn't work in for loop in if statement
+                                tauice[0, 0, 0][ib5] = tmp if tmp > 0.0 else 0.0
 
-        if isubclw > 0:
-            if cfrac < cldmin:
-                cldf = 0.0
+                    for ib6 in range(nbands):
+                        taucld[0, 0, 0][ib6] = (
+                            tauice[0, 0, 0][ib6]
+                            + tauliq[0, 0, 0][ib6]
+                            + tauran
+                            + tausnw
+                        )
+
             else:
-                cldf = cfrac
+                if cfrac[0, 0, 1] > cldmin:
+                    for ib7 in range(nbands):
+                        taucld[0, 0, 0][ib7] = cdat1
+
+            if isubclw > 0:
+                if cfrac[0, 0, 1] < cldmin:
+                    cldf = 0.0
+                else:
+                    cldf = cfrac[0, 0, 1]
 
     # This section builds mcica_subcol from the fortran into cldprop.
     # Here I've read in the generated random numbers until we figure out
     # what to do with them. This will definitely need to change in future.
     # Only the iovrlw = 1 option is ported from Fortran
-    with computation(PARALLEL), interval(2, -1):
-        tem1 = 1.0 - cldf[0, 0, -1]
-
-        for n in range(ngptlw):
-            if cdfunc[0, 0, -1][n] > tem1:
-                cdfunc[0, 0, 0][n] = cdfunc[0, 0, -1][n]
-            else:
-                cdfunc[0, 0, 0][n] = cdfunc[0, 0, 0][n] * tem1
-
     with computation(PARALLEL), interval(1, -1):
-        tem1 = 1.0 - cldf[0, 0, 0]
+        cldf = cldf
+        if lcf1:
+            tem1 = 1.0 - cldf[0, 0, -1]
 
-        for n2 in range(ngptlw):
-            if cdfunc[0, 0, 0][n2] >= tem1:
-                lcloudy[0, 0, 0][n2] = 1
-            else:
-                lcloudy[0, 0, 0][n2] = 0
+            for n in range(ngptlw):
+                if cdfunc[0, 0, -1][n] > tem1:
+                    cdfunc[0, 0, 0][n] = cdfunc[0, 0, -1][n]
+                else:
+                    cdfunc[0, 0, 0][n] = cdfunc[0, 0, 0][n] * tem1
 
-        for n3 in range(ngptlw):
-            if lcloudy[0, 0, 0][n3] == 1:
-                cldfmc[0, 0, 0][n3] = 1.0
-            else:
-                cldfmc[0, 0, 0][n3] = 0.0
+    with computation(PARALLEL), interval(0, -1):
+        cldf = cldf
+        if lcf1:
+            tem1 = 1.0 - cldf[0, 0, 0]
+
+            for n2 in range(ngptlw):
+                if cdfunc[0, 0, 0][n2] >= tem1:
+                    lcloudy[0, 0, 0][n2] = 1
+                else:
+                    lcloudy[0, 0, 0][n2] = 0
+
+            for n3 in range(ngptlw):
+                if lcloudy[0, 0, 0][n3] == 1:
+                    cldfmc[0, 0, 0][n3] = 1.0
+                else:
+                    cldfmc[0, 0, 0][n3] = 0.0
 
 
 start = time.time()
@@ -441,7 +464,9 @@ cldprop(
     locdict_gt4py["lcloudy"],
     indict_gt4py["cdfunc"],
     locdict_gt4py["tem1"],
-    domain=(npts, 1, nlp1 + 1),
+    locdict_gt4py["lcf1"],
+    locdict_gt4py["cldsum"],
+    domain=(npts, 1, nlp1),
     origin=default_origin,
     validate_args=validate,
 )
@@ -454,7 +479,7 @@ outdict_val = dict()
 outvars = ["cldfmc", "taucld"]
 
 for var in outvars:
-    outdict_gt4py[var] = indict_gt4py[var][0, :, 1:-1, :].squeeze().T
+    outdict_gt4py[var] = indict_gt4py[var][0, :, :-1, :].squeeze().T
     outdict_val[var] = serializer.read(
         var, serializer.savepoint["lwrad-cldprop-output-000000"]
     )

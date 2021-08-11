@@ -15,13 +15,17 @@ nlp1 = 64
 
 ilwrgas = 1
 ilwcliq = 1
+isubclw = 2
 
 DTYPE_INT = np.int32
 DTYPE_FLT = np.float64
+DTYPE_BOOL = bool
 FIELD_INT = Field[DTYPE_INT]
 FIELD_FLT = Field[DTYPE_FLT]
+FIELD_BOOL = Field[DTYPE_BOOL]
 FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
 FIELD_2DINT = Field[gtscript.IJ, DTYPE_INT]
+FIELD_2DBOOL = Field[gtscript.IJ, DTYPE_BOOL]
 
 domain = (npts, 1, 1)
 domain2 = (npts, 1, nlay)
