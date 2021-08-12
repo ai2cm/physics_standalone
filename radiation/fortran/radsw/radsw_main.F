@@ -1239,6 +1239,17 @@
 
         else                         ! use mcica cloud scheme
 
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-spcvrtm-input-"//trim(ser_count_str)
+  !$ser data ssolar=ssolar cosz1=cosz1 sntz1=sntz1 albbm=albbm
+  !$ser data albdf=albdf sfluxzen=sfluxzen cldfmc=cldfmc
+  !$ser data zcf1=zcf1 zcf0=zcf0 taug=taug taur=taur tauae=tauae
+  !$ser data ssaae=ssaae asyae=asyae taucw=taucw ssacw=ssacw
+  !$ser data asycw=asycw nlay=nlay nlp1=nlp1
+!$ser verbatim end if
+
           call spcvrtm                                                  &
 !  ---  inputs:
      &     ( ssolar,cosz1,sntz1,albbm,albdf,sfluxzen,cldfmc,            &

@@ -5,6 +5,7 @@ sys.path.insert(
     0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
 )
 from radlw_param import nbands, maxgas, maxxsec, ngptlw
+from radsw_param import ngptsw, nbdsw
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
@@ -37,6 +38,8 @@ shape_nlp2 = (npts, 1, nlp1 + 1)
 default_origin = (0, 0, 0)
 type_nbands = (np.float64, (nbands,))
 type_ngptlw = (np.float64, (ngptlw,))
+type_ngptsw = (np.float64, (ngptsw,))
+type_nbdsw = (np.float64, (nbdsw,))
 type_nbands3 = (np.float64, (nbands, 3))
 type_maxgas = (np.float64, (maxgas,))
 type_maxxsec = (np.float64, (maxxsec,))
