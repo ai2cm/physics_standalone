@@ -18,8 +18,10 @@ ilwcliq = 1
 
 DTYPE_INT = np.int32
 DTYPE_FLT = np.float64
+DTYPE_BOOL = bool
 FIELD_INT = Field[DTYPE_INT]
 FIELD_FLT = Field[DTYPE_FLT]
+FIELD_BOOL = Field[DTYPE_BOOL]
 FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
 FIELD_2DINT = Field[gtscript.IJ, DTYPE_INT]
 

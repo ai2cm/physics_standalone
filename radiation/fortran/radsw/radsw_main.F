@@ -813,6 +813,8 @@
      &       intent(out) :: fdncmp
 
 !  ---  locals:
+      character(len=6) :: ser_count_str
+
       real (kind=kind_phys), dimension(nlay,ngptsw) :: cldfmc,          &
      &       taug, taur
       real (kind=kind_phys), dimension(nlp1,nbdsw):: fxupc, fxdnc,      &
@@ -1179,6 +1181,15 @@
 
 !> -# Call setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-setcoef-input-"//trim(ser_count_str)
+  !$ser data pavel=pavel tavel=tavel h2ovmr=h2ovmr 
+  !$ser data nlay=nlay nlp1=nlp1
+!$ser verbatim end if
+
         call setcoef                                                    &
 !  ---  inputs:
      &     ( pavel,tavel,h2ovmr, nlay,nlp1,                             &
@@ -1186,6 +1197,16 @@
      &       laytrop,jp,jt,jt1,fac00,fac01,fac10,fac11,                 &
      &       selffac,selffrac,indself,forfac,forfrac,indfor             &
      &     )
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-setcoef-output-"//trim(ser_count_str)
+  !$ser data laytrop=laytrop jp=jp jt=jt jt1=jt1 fac00=fac00 
+  !$ser data fac01=fac01 fac10=fac10 fac11=fac11 selffac=selffac
+  !$ser data selffrac=selffrac indself=indself forfac=forfac
+  !$ser data forfrac=forfrac indfor=indfor
+!$ser verbatim end if
 
 !> -# Call taumol() to calculate optical depths for gaseous absorption
 !!    and rayleigh scattering
