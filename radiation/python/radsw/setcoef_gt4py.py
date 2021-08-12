@@ -169,7 +169,7 @@ def setcoef(
 
         if plog > 4.56:
 
-            laytrop = True
+            laytrop = True  # Flag for being in the troposphere
 
             #  --- ...  set up factors needed to separately include the water vapor
             #           foreign-continuum in the calculation of absorption coefficient.
