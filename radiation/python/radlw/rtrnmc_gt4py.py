@@ -277,7 +277,8 @@ def rtrnmc(
             ib = NGB[0, 0][ig0] - 1
 
             # clear sky, gases contribution
-            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0])
+            tmp = secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0]
+            odepth[0, 0, 0][ig0] = tmp if tmp > 0.0 else 0.0
             if odepth[0, 0, 0][ig0] <= 0.06:
                 atrgas[0, 0, 0][ig0] = (
                     odepth[0, 0, 0][ig0]
@@ -379,7 +380,8 @@ def rtrnmc(
             ib = NGB[0, 0][ig] - 1
 
             # clear sky, gases contribution
-            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig])
+            tmp = secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig]
+            odepth[0, 0, 0][ig] = tmp if tmp > 0.0 else 0.0
             if odepth[0, 0, 0][ig] <= 0.06:
                 atrgas[0, 0, 0][ig] = (
                     odepth[0, 0, 0][ig]
