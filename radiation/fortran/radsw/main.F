@@ -153,7 +153,7 @@ program test
       call cdstart(num_tiles * ser_count_max * 2)
       write(*,*) "Running swrad . . ."
 
-      do tile = 1, 5
+      do tile = 1, 1
 
       !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=tile
 
