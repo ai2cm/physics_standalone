@@ -23,8 +23,24 @@ NSWSTR = 1
 NSWEND = nbands
 nbdsw = nbands
 
+eps = 1.0e-6
+oneminus = 1.0 - eps
+# pade approx constant
+bpade = 1.0 / 0.278
+stpfac = 296.0 / 1013.0
+ftiny = 1.0e-12
+flimit = 1.0e-20
+# internal solar constant
+s0 = 1368.22
+
+# uv-b band index
+nuvb = 27
+
 nspa = [9, 9, 9, 9, 1, 9, 9, 1, 9, 1, 0, 1, 9, 1]
 nspb = [1, 5, 1, 1, 1, 5, 1, 0, 1, 0, 0, 1, 5, 1]
+
+idxsfc = [1, 1, 1, 1, 1, 1, 1, 1, 0, 2, 2, 2, 2, 1]  # band index for sfc flux
+idxebc = [5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1, 1, 5]  # band index for cld prop
 
 eps = 1.0e-6
 oneminus = 1.0 - eps

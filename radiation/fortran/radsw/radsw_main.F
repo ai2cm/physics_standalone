@@ -1256,6 +1256,16 @@
 
         else                         ! use mcica cloud scheme
 
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-spcvrtm-input-"//trim(ser_count_str)
+  !$ser data ssolar=ssolar cosz1=cosz1 sntz1=sntz1 albbm=albbm albdf=albdf
+  !$ser data sfluxzen=sfluxzen cldfmc=cldfmc zcf1=zcf1 zcf0=zcf0 taug=taug
+  !$ser data taur=taur tauae=tauae ssaae=ssaae asyae=asyae taucw=taucw
+  !$ser data ssacw=ssacw asycw=asycw nlay=nlay nlp1=nlp1 exp_tbl=exp_tbl 
+!$ser verbatim end if
+
           call spcvrtm                                                  &
 !  ---  inputs:
      &     ( ssolar,cosz1,sntz1,albbm,albdf,sfluxzen,cldfmc,            &
@@ -1266,6 +1276,17 @@
      &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
      &       sfbmc,sfdfc,sfbm0,sfdf0,suvbfc,suvbf0                      &
      &     )
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-spcvrtm-output-"//trim(ser_count_str)
+  !$ser data fxupc=fxupc fxdnc=fxdnc fxup0=fxup0 fxdn0=fxdn0 
+  !$ser data ftoauc=ftoauc ftoau0=ftoau0 ftoadc=ftoadc fsfcuc=fsfcuc
+  !$ser data fsfcu0=fsfcu0 fsfcdc=fsfcdc fsfcd0=fsfcd0 sfbmc=sfbmc
+  !$ser data sfdfc=sfdfc sfbm0=sfbm0 sfdf0=sfdf0 suvbfc=suvbfc
+  !$ser data suvbf0=suvbf0
+!$ser verbatim end if
 
         endif
 
