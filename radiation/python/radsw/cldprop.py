@@ -70,6 +70,7 @@ def cldprop(
     ipseed,
     dz,
     delgth,
+    ipt,
 ):
 
     #  ===================  program usage description  ===================  !
@@ -453,7 +454,7 @@ def cldprop(
 
         #  --- ...  call sub-column cloud generator
 
-        lcloudy = mcica_subcol(cldf, nlay, ipseed, dz, delgth)
+        lcloudy = mcica_subcol(cldf, nlay, ipseed, dz, delgth, ipt)
 
         for ig in range(ngptsw):
             for k in range(nlay):
@@ -476,7 +477,7 @@ def cldprop(
 # \param lcloudy     sub-colum cloud profile flag array
 
 
-def mcica_subcol(cldf, nlay, ipseed, dz, de_lgth):
+def mcica_subcol(cldf, nlay, ipseed, dz, de_lgth, ipt):
     #  ====================  defination of variables  ====================  !
     #                                                                       !
     #  input variables:                                                size !
@@ -500,6 +501,9 @@ def mcica_subcol(cldf, nlay, ipseed, dz, de_lgth):
     #                 =3: cloud decorrelation-length overlap method         !
     #                                                                       !
     #  =====================    end of definitions    ====================  !
+
+    ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
+    rand2d = ds["rand2d"][ipt, :].data
 
     #  ---  outputs:
     lcloudy = np.zeros((nlay, ngptsw))

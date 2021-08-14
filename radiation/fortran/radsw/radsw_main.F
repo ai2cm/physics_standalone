@@ -1148,7 +1148,7 @@
           call cldprop                                                  &
 !  ---  inputs:
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     &
-     &       zcf1, nlay, ipseed(j1), dz, delgth,                        &
+     &       zcf1, nlay, ipseed(j1), dz, delgth, ser_count, ipt,        &
 !  ---  outputs:
      &       taucw, ssacw, asycw, cldfrc, cldfmc                        &
      &     )
@@ -1661,7 +1661,7 @@
 !-----------------------------------
       subroutine cldprop                                                &
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     &   !  ---  inputs
-     &       cf1, nlay, ipseed, dz, delgth,                             &
+     &       cf1, nlay, ipseed, dz, delgth, ser_count, ipt,             &
      &       taucw, ssacw, asycw, cldfrc, cldfmc                        &   !  ---  output
      &     )
 
@@ -1747,7 +1747,7 @@
       use module_radsw_cldprtb
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, ipt
       real (kind=kind_phys), intent(in) :: cf1, delgth
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cliqp,      &
@@ -2004,7 +2004,7 @@
 
         call mcica_subcol                                               &
 !  ---  inputs:
-     &     ( cldf, nlay, ipseed, dz, delgth,                            &
+     &     ( ser_count, cldf, nlay, ipseed, dz, delgth, ipt,                           &
 !  ---  outputs:
      &       lcloudy                                                    &
      &     )
@@ -2040,7 +2040,7 @@
 !!\param lcloudy     sub-colum cloud profile flag array
 ! ----------------------------------
       subroutine mcica_subcol                                           &
-     &    ( cldf, nlay, ipseed, dz, de_lgth,                            &       !  ---  inputs
+     &    ( ser_count, cldf, nlay, ipseed, dz, de_lgth, ipt,                           &       !  ---  inputs
      &      lcloudy                                                     &       !  ---  outputs
      &    )
 
@@ -2071,7 +2071,7 @@
       implicit none
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, ipt
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cldf, dz
       real (kind=kind_phys), intent(in) :: de_lgth
@@ -2087,6 +2087,8 @@
       type (random_stat) :: stat          ! for thread safe random generator
 
       integer :: k, n, k1
+      character(len=6) :: ser_count_str
+      character(len=2) :: ipt_str
 !
 !===> ...  begin here
 !
@@ -2124,6 +2126,12 @@
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser verbatim write(ipt_str, '(i2.2)') ipt
+!$ser savepoint "random_number-output-"//trim(ser_count_str)//"-"//trim(ipt_str)
+!$ser data rand2d=rand2d
 
           k1 = 0
           do n = 1, ngptsw
@@ -4297,130 +4305,32 @@
 
 !>  - call taumol16()
       call taumol16
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb16-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol17()
       call taumol17
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb17-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol18()
       call taumol18
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb18-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol19()
       call taumol19
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb19-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol20()
       call taumol20
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb20-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol21()
       call taumol21
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb21-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol22()
       call taumol22
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb22-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol23()
       call taumol23
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb23-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol24()
       call taumol24
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb24-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol25()
       call taumol25
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb25-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol26()
       call taumol26
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb26-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol27()
       call taumol27
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb27-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol28()
       call taumol28
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb28-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 !>  - call taumol29()
       call taumol29
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb29-output-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
 
 
 ! =================
