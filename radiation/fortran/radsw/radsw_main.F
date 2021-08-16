@@ -1145,6 +1145,15 @@
 
         if (zcf1 > f_zero) then     ! cloudy sky column
 
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-input-"//trim(ser_count_str)
+  !$ser data cfrac=cfrac cliqp=cliqp reliq=reliq cicep=cicep reice=reice
+  !$ser data cdat1=cdat1 cdat2=cdat2 cdat3=cdat3 cdat4=cdat4 zcf1=zcf1 
+  !$ser data nlay=nlay ipseed=ipseed(j1) dz=dz delgth=delgth
+!$ser verbatim end if
+
           call cldprop                                                  &
 !  ---  inputs:
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     &
@@ -1152,6 +1161,14 @@
 !  ---  outputs:
      &       taucw, ssacw, asycw, cldfrc, cldfmc                        &
      &     )
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
+  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
+  !$ser data cldfmc=cldfmc
+!$ser verbatim end if
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band 10 is approx to the 0.55 mu spectrum

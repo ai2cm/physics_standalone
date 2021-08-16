@@ -19,6 +19,31 @@ ddir = "../../fortran/radsw/dump"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
 savepoints = serializer.savepoint_list()
 
+invars = [
+    "cfrac",
+    "cliqp",
+    "reliq",
+    "cicep",
+    "reice",
+    "cdat1",
+    "cdat2",
+    "cdat3",
+    "cdat4",
+    "zcf1",
+    "nlay",
+    "ipseed",
+    "dz",
+    "delgth",
+]
+
+indict = dict()
+for var in invars:
+    indict[var] = serializer.read(
+        var, serializer.savepoint["swrad-cldprop-input-000000"]
+    )
+
+indict["ipt"] = 0
+
 
 # This subroutine computes the cloud optical properties for each
 # cloudy layer and g-point interval.
@@ -431,7 +456,7 @@ def cldprop(
                             asyice[ib] = ssaice[ib] * asycoice
 
                 for ib in range(nbdsw):
-                    jb = nblow + ib - 2
+                    jb = nblow + ib - 16
                     taucw[k, ib] = tauliq[jb] + tauice[jb] + tauran + tausnw
                     ssacw[k, ib] = ssaliq[jb] + ssaice[jb] + ssaran[jb] + ssasnw[jb]
                     asycw[k, ib] = asyliq[jb] + asyice[jb] + asyran[jb] + asysnw[jb]
@@ -546,3 +571,40 @@ def mcica_subcol(cldf, nlay, ipseed, dz, de_lgth, ipt):
             lcloudy[k, n] = cdfunc[k, n] >= tem1
 
     return lcloudy
+
+
+taucw, ssacw, asycw, cldfrc, cldfmc = cldprop(
+    indict["cfrac"],
+    indict["cliqp"],
+    indict["reliq"],
+    indict["cicep"],
+    indict["reice"],
+    indict["cdat1"],
+    indict["cdat2"],
+    indict["cdat3"],
+    indict["cdat4"],
+    indict["zcf1"],
+    indict["nlay"][0],
+    indict["ipseed"],
+    indict["dz"],
+    indict["delgth"],
+    indict["ipt"],
+)
+
+outdict = dict()
+
+outdict["taucw"] = taucw
+outdict["ssacw"] = ssacw
+outdict["asycw"] = asycw
+outdict["cldfrc"] = cldfrc
+outdict["cldfmc"] = cldfmc
+
+outvars = ["taucw", "ssacw", "asycw", "cldfrc", "cldfmc"]
+valdict = dict()
+
+for var in outvars:
+    valdict[var] = serializer.read(
+        var, serializer.savepoint["swrad-cldprop-output-000000"]
+    )
+
+compare_data(outdict, valdict)
