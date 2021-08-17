@@ -1287,7 +1287,7 @@
 !  ---  inputs:
      &     ( ssolar,cosz1,sntz1,albbm,albdf,sfluxzen,cldfmc,            &
      &       zcf1,zcf0,taug,taur,tauae,ssaae,asyae,taucw,ssacw,asycw,   &
-     &       nlay, nlp1,                                                &
+     &       nlay, nlp1, ser_count, ipt,                                                &
 !  ---  outputs:
      &       fxupc,fxdnc,fxup0,fxdn0,                                   &
      &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
@@ -3252,7 +3252,7 @@
       subroutine spcvrtm                                                &
      &     ( ssolar,cosz,sntz,albbm,albdf,sfluxzen,cldfmc,              &   !  ---  inputs
      &       cf1,cf0,taug,taur,tauae,ssaae,asyae,taucw,ssacw,asycw,     &
-     &       nlay, nlp1,                                                &
+     &       nlay, nlp1, ser_count, ipt,                                                &
      &       fxupc,fxdnc,fxup0,fxdn0,                                   &   !  ---  outputs
      &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
      &       sfbmc,sfdfc,sfbm0,sfdf0,suvbfc,suvbf0                      &
@@ -3357,7 +3357,7 @@
       real (kind=kind_phys), parameter :: eps1  = 1.0e-8
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, nlp1
+      integer, intent(in) :: nlay, nlp1, ser_count, ipt
 
       real (kind=kind_phys), dimension(nlay,ngptsw), intent(in) ::      &
      &       taug, taur, cldfmc
@@ -3395,6 +3395,7 @@
      &       zr3, zr4, zr5, zt1, zt2, zt3, zf1, zf2, zrpp1
 
       integer :: ib, ibd, jb, jg, k, kp, itind
+      character(len=6) :: ser_count_str
 !
 !===> ...  begin here
 !
@@ -3634,6 +3635,14 @@
           ztdbt0 = zexp4 * ztdbt0
         enddo    ! end do_k_loop
 
+!$ser verbatim if (ipt == 1 .and. jg == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-vrtqdr-input-"//trim(ser_count_str)
+  !$ser data zrefb=zrefb zrefd=zrefd ztrab=ztrab ztrad=ztrad
+  !$ser data zldbt=zldbt ztdbt=ztdbt
+!$ser verbatim end if
+
         call vrtqdr                                                     &
 !  ---  inputs:
      &     ( zrefb,zrefd,ztrab,ztrad,zldbt,ztdbt,                       &
@@ -3641,6 +3650,13 @@
 !  ---  outputs:
      &       zfu, zfd                                                   &
      &     )
+
+!$ser verbatim if (ipt == 1 .and. jg == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-vrtqdr-output-"//trim(ser_count_str)
+  !$ser data zfu=zfu zfd=zfd
+!$ser verbatim end if
 
 !  --- ...  compute upward and downward fluxes at levels
         do k = 1, nlp1
