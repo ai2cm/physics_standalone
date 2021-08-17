@@ -2,10 +2,11 @@ import numpy as np
 import xarray as xr
 import os
 import sys
-from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD
+from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD, mod
 
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from radsw_param import (
+    nbands,
     ngptsw,
     nblow,
     nbhgh,
@@ -58,16 +59,33 @@ invars = [
     "selffac",
     "selffrac",
     "indself",
+    "id0",
+    "id1",
 ]
 
 outvars = ["sfluxzen", "taug", "taur"]
 
-locvars = ["fs", "speccomb", "specmult", "colm1", "colm2", "id0", "id1"]
+locvars = [
+    "id0",
+    "id1",
+    "ind01",
+    "ind02",
+    "ind03",
+    "ind04",
+    "ind11",
+    "ind12",
+    "ind13",
+    "ind14",
+    "inds",
+    "indsp",
+    "indf",
+    "indfp",
+]
 
 indict = dict()
 for var in invars:
-    tmp = serializer.read(var, serializer.savepoint["swrad-taumol-input-000000"])
-    if var == "colamt":
+    tmp = serializer.read(var, serializer.savepoint["swrad-taugb16-input-000000"])
+    if var == "colamt" or var == "id0" or var == "id1":
         indict[var] = np.tile(tmp[None, None, :, :], (npts, 1, 1, 1))
     elif var != "laytrop":
         indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
@@ -91,6 +109,10 @@ for var in invars:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlay, DTYPE_INT
         )
+    elif var == "id0" or var == "id1":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_nlay, type_nbandssw_int
+        )
     else:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlay, DTYPE_FLT
@@ -105,22 +127,74 @@ locdict_gt4py = dict()
 
 for var in locvars:
     if var in ["id0", "id1"]:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_nbandssw)
+        locdict_gt4py[var] = create_storage_zeros(
+            backend, shape_nlay, type_nbandssw_int
+        )
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
 
 
-@stencil(backend=backend, rebuild=rebuild, externals={"nbands": nbands})
-def setuptaumol(
+def loadlookupdata(name):
+    """
+    Load lookup table data for the given subroutine
+    This is a workaround for now, in the future this could change to a dictionary
+    or some kind of map object when gt4py gets support for lookup tables
+    """
+    ds = xr.open_dataset("../lookupdata/radsw_" + name + "_data.nc")
+
+    lookupdict = dict()
+    lookupdict_gt4py = dict()
+
+    for var in ds.data_vars.keys():
+        # print(f"{var} = {ds.data_vars[var].shape}")
+        if len(ds.data_vars[var].shape) == 1:
+            lookupdict[var] = np.tile(
+                ds[var].data[None, None, None, :], (npts, 1, nlay, 1)
+            )
+        elif len(ds.data_vars[var].shape) == 2:
+            lookupdict[var] = np.tile(
+                ds[var].data[None, None, None, :, :], (npts, 1, nlay, 1, 1)
+            )
+        elif len(ds.data_vars[var].shape) == 3:
+            lookupdict[var] = np.tile(
+                ds[var].data[None, None, None, :, :, :], (npts, 1, nlay, 1, 1, 1)
+            )
+        else:
+            lookupdict[var] = float(ds[var].data)
+
+        if len(ds.data_vars[var].shape) >= 1:
+            lookupdict_gt4py[var] = create_storage_from_array(
+                lookupdict[var], backend, shape_nlay, (DTYPE_FLT, ds[var].shape)
+            )
+        else:
+            lookupdict_gt4py[var] = lookupdict[var]
+
+    return lookupdict_gt4py
+
+
+lookupdict_ref = loadlookupdata("sflux")
+lookupdict16 = loadlookupdata("kgb16")
+lookupdict17 = loadlookupdata("kgb17")
+lookupdict18 = loadlookupdata("kgb18")
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "rayl": lookupdict16["rayl"],
+        "oneminus": oneminus,
+        "NG16": NG16,
+        "NS16": NS16,
+    },
+)
+def taumol16(
     colamt: Field[type_maxgas],
     colmol: FIELD_FLT,
     fac00: FIELD_FLT,
     fac01: FIELD_FLT,
     fac10: FIELD_FLT,
     fac11: FIELD_FLT,
-    jp: FIELD_INT,
-    jt: FIELD_INT,
-    jt1: FIELD_INT,
     laytrop: FIELD_BOOL,
     forfac: FIELD_FLT,
     forfrac: FIELD_FLT,
@@ -128,25 +202,523 @@ def setuptaumol(
     selffac: FIELD_FLT,
     selffrac: FIELD_FLT,
     indself: FIELD_INT,
-    id0: Field[type_nbandssw],
-    id1: Field[type_nbandssw],
+    strrat: Field[type_nbandssw_flt],
+    selfref: Field[(DTYPE_FLT, (10, NG16))],
+    forref: Field[(DTYPE_FLT, (3, NG16))],
+    absa: Field[(DTYPE_FLT, (585, NG16))],
+    absb: Field[(DTYPE_FLT, (235, NG16))],
     taug: Field[type_ngptsw],
     taur: Field[type_ngptsw],
+    id0: Field[type_nbandssw_int],
+    id1: Field[type_nbandssw_int],
+    ind01: FIELD_INT,
+    ind02: FIELD_INT,
+    ind03: FIELD_INT,
+    ind04: FIELD_INT,
+    ind11: FIELD_INT,
+    ind12: FIELD_INT,
+    ind13: FIELD_INT,
+    ind14: FIELD_INT,
+    inds: FIELD_INT,
+    indsp: FIELD_INT,
+    indf: FIELD_INT,
+    indfp: FIELD_INT,
 ):
-    from __externals__ import nbands
+
+    from __externals__ import rayl, oneminus, NG16, NS16
 
     with computation(PARALLEL), interval(...):
-        for jb in range(nbands):
-            #  --- ...  indices for layer optical depth
-            if laytrop:
-                id0[0, 0, 0][jb] = ((jp - 1) * 5 + (jt - 1)) * nspa[0, 0, 0][jb] - 1
-                id1[0, 0, 0][jb] = (jp * 5 + (jt1 - 1)) * nspa[0, 0, 0][jb] - 1
-            else:
-                id0[0, 0, 0][jb] = ((jp - 13) * 5 + (jt - 1)) * nspb[0, 0, 0][jb]
-                id1[0, 0, 0][jb] = ((jp - 12) * 5 + (jt1 - 1)) * nspb[0, 0, 0][jb]
 
-    with computation(PARALLEL), interval(0, 1):
-        for jb2 in range(nbands):
-            ibd = ibx[0, 0, 0][jb]
-            njb = ng[0, 0, 0][jb]
-            ns = ngs[0, 0, 0][jb]
+        tauray = colmol * rayl
+
+        for j in range(NG16):
+            taur[0, 0, 0][NS16 + j] = tauray
+
+        if laytrop:
+            speccomb = colamt[0, 0, 0][0] + strrat[0, 0, 0][0] * colamt[0, 0, 0][4]
+            specmult = 8.0 * min(oneminus, colamt[0, 0, 0][0] / speccomb)
+
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            fs1 = 1.0 - fs
+
+            fac000 = fs1 * fac00
+            fac010 = fs1 * fac10
+            fac100 = fs * fac00
+            fac110 = fs * fac10
+            fac001 = fs1 * fac01
+            fac011 = fs1 * fac11
+            fac101 = fs * fac01
+            fac111 = fs * fac11
+
+            ind01 = id0[0, 0, 0][0] + js - 1
+            ind02 = ind01 + 1
+            ind03 = ind01 + 9
+            ind04 = ind01 + 10
+            ind11 = id1[0, 0, 0][0] + js - 1
+            ind12 = ind11 + 1
+            ind13 = ind11 + 9
+            ind14 = ind11 + 10
+            inds = indself - 1
+            indf = indfor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+
+            for j2 in range(NG16):
+                taug[0, 0, 0][NS16 + j2] = speccomb * (
+                    fac000 * absa[0, 0, 0][ind01, j2]
+                    + fac100 * absa[0, 0, 0][ind02, j2]
+                    + fac010 * absa[0, 0, 0][ind03, j2]
+                    + fac110 * absa[0, 0, 0][ind04, j2]
+                    + fac001 * absa[0, 0, 0][ind11, j2]
+                    + fac101 * absa[0, 0, 0][ind12, j2]
+                    + fac011 * absa[0, 0, 0][ind13, j2]
+                    + fac111 * absa[0, 0, 0][ind14, j2]
+                ) + colamt[0, 0, 0][0] * (
+                    selffac
+                    * (
+                        selfref[0, 0, 0][inds, j2]
+                        + selffrac
+                        * (selfref[0, 0, 0][indsp, j2] - selfref[0, 0, 0][inds, j2])
+                    )
+                    + forfac
+                    * (
+                        forref[0, 0, 0][indf, j2]
+                        + forfrac
+                        * (forref[0, 0, 0][indfp, j2] - forref[0, 0, 0][indf, j2])
+                    )
+                )
+
+        else:
+            ind01 = id0[0, 0, 0][0]
+            ind02 = ind01 + 1
+            ind11 = id1[0, 0, 0][0]
+            ind12 = ind11 + 1
+
+            for j3 in range(NG16):
+                taug[0, 0, 0][NS16 + j3] = colamt[0, 0, 0][4] * (
+                    fac00 * absb[0, 0, 0][ind01, j3]
+                    + fac10 * absb[0, 0, 0][ind02, j3]
+                    + fac01 * absb[0, 0, 0][ind11, j3]
+                    + fac11 * absb[0, 0, 0][ind12, j3]
+                )
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "rayl": lookupdict17["rayl"],
+        "oneminus": oneminus,
+        "NG17": NG17,
+        "NS17": NS17,
+    },
+)
+def taumol17(
+    colamt: Field[type_maxgas],
+    colmol: FIELD_FLT,
+    fac00: FIELD_FLT,
+    fac01: FIELD_FLT,
+    fac10: FIELD_FLT,
+    fac11: FIELD_FLT,
+    laytrop: FIELD_BOOL,
+    forfac: FIELD_FLT,
+    forfrac: FIELD_FLT,
+    indfor: FIELD_INT,
+    selffac: FIELD_FLT,
+    selffrac: FIELD_FLT,
+    indself: FIELD_INT,
+    strrat: Field[type_nbandssw_flt],
+    selfref: Field[(DTYPE_FLT, (10, NG17))],
+    forref: Field[(DTYPE_FLT, (3, NG17))],
+    absa: Field[(DTYPE_FLT, (585, NG17))],
+    absb: Field[(DTYPE_FLT, (235, NG17))],
+    taug: Field[type_ngptsw],
+    taur: Field[type_ngptsw],
+    id0: Field[type_nbandssw_int],
+    id1: Field[type_nbandssw_int],
+    ind01: FIELD_INT,
+    ind02: FIELD_INT,
+    ind03: FIELD_INT,
+    ind04: FIELD_INT,
+    ind11: FIELD_INT,
+    ind12: FIELD_INT,
+    ind13: FIELD_INT,
+    ind14: FIELD_INT,
+    inds: FIELD_INT,
+    indsp: FIELD_INT,
+    indf: FIELD_INT,
+    indfp: FIELD_INT,
+):
+
+    from __externals__ import rayl, oneminus, NG17, NS17
+
+    with computation(PARALLEL), interval(...):
+
+        tauray = colmol * rayl
+
+        for j in range(NG17):
+            taur[0, 0, 0][NS17 + j] = tauray
+
+        if laytrop:
+            speccomb = colamt[0, 0, 0][0] + strrat[0, 0, 0][1] * colamt[0, 0, 0][1]
+            specmult = 8.0 * min(oneminus, colamt[0, 0, 0][0] / speccomb)
+
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            fs1 = 1.0 - fs
+            fac000 = fs1 * fac00
+            fac010 = fs1 * fac10
+            fac100 = fs * fac00
+            fac110 = fs * fac10
+            fac001 = fs1 * fac01
+            fac011 = fs1 * fac11
+            fac101 = fs * fac01
+            fac111 = fs * fac11
+
+            ind01 = id0[0, 0, 0][1] + js - 1
+            ind02 = ind01 + 1
+            ind03 = ind01 + 9
+            ind04 = ind01 + 10
+            ind11 = id1[0, 0, 0][1] + js - 1
+            ind12 = ind11 + 1
+            ind13 = ind11 + 9
+            ind14 = ind11 + 10
+
+            inds = indself - 1
+            indf = indfor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+
+            for j2 in range(NG17):
+                taug[0, 0, 0][NS17 + j2] = speccomb * (
+                    fac000 * absa[0, 0, 0][ind01, j2]
+                    + fac100 * absa[0, 0, 0][ind02, j2]
+                    + fac010 * absa[0, 0, 0][ind03, j2]
+                    + fac110 * absa[0, 0, 0][ind04, j2]
+                    + fac001 * absa[0, 0, 0][ind11, j2]
+                    + fac101 * absa[0, 0, 0][ind12, j2]
+                    + fac011 * absa[0, 0, 0][ind13, j2]
+                    + fac111 * absa[0, 0, 0][ind14, j2]
+                ) + colamt[0, 0, 0][0] * (
+                    selffac
+                    * (
+                        selfref[0, 0, 0][inds, j2]
+                        + selffrac
+                        * (selfref[0, 0, 0][indsp, j2] - selfref[0, 0, 0][inds, j2])
+                    )
+                    + forfac
+                    * (
+                        forref[0, 0, 0][indf, j2]
+                        + forfrac
+                        * (forref[0, 0, 0][indfp, j2] - forref[0, 0, 0][indf, j2])
+                    )
+                )
+        else:
+            speccomb = colamt[0, 0, 0][0] + strrat[0, 0, 0][1] * colamt[0, 0, 0][1]
+            specmult = 4.0 * min(oneminus, colamt[0, 0, 0][0] / speccomb)
+
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            fs1 = 1.0 - fs
+            fac000 = fs1 * fac00
+            fac010 = fs1 * fac10
+            fac100 = fs * fac00
+            fac110 = fs * fac10
+            fac001 = fs1 * fac01
+            fac011 = fs1 * fac11
+            fac101 = fs * fac01
+            fac111 = fs * fac11
+
+            ind01 = id0[0, 0, 0][1] + js - 1
+            ind02 = ind01 + 1
+            ind03 = ind01 + 5
+            ind04 = ind01 + 6
+            ind11 = id1[0, 0, 0][1] + js - 1
+            ind12 = ind11 + 1
+            ind13 = ind11 + 5
+            ind14 = ind11 + 6
+
+            indf = indfor - 1
+            indfp = indf + 1
+
+            for j3 in range(NG17):
+                taug[0, 0, 0][NS17 + j3] = speccomb * (
+                    fac000 * absb[0, 0, 0][ind01, j3]
+                    + fac100 * absb[0, 0, 0][ind02, j3]
+                    + fac010 * absb[0, 0, 0][ind03, j3]
+                    + fac110 * absb[0, 0, 0][ind04, j3]
+                    + fac001 * absb[0, 0, 0][ind11, j3]
+                    + fac101 * absb[0, 0, 0][ind12, j3]
+                    + fac011 * absb[0, 0, 0][ind13, j3]
+                    + fac111 * absb[0, 0, 0][ind14, j3]
+                ) + colamt[0, 0, 0][0] * forfac * (
+                    forref[0, 0, 0][indf, j3]
+                    + forfrac * (forref[0, 0, 0][indfp, j3] - forref[0, 0, 0][indf, j3])
+                )
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "rayl": lookupdict18["rayl"],
+        "oneminus": oneminus,
+        "NG18": NG18,
+        "NS18": NS18,
+    },
+)
+def taumol18(
+    colamt: Field[type_maxgas],
+    colmol: FIELD_FLT,
+    fac00: FIELD_FLT,
+    fac01: FIELD_FLT,
+    fac10: FIELD_FLT,
+    fac11: FIELD_FLT,
+    laytrop: FIELD_BOOL,
+    forfac: FIELD_FLT,
+    forfrac: FIELD_FLT,
+    indfor: FIELD_INT,
+    selffac: FIELD_FLT,
+    selffrac: FIELD_FLT,
+    indself: FIELD_INT,
+    strrat: Field[type_nbandssw_flt],
+    selfref: Field[(DTYPE_FLT, (10, NG18))],
+    forref: Field[(DTYPE_FLT, (3, NG18))],
+    absa: Field[(DTYPE_FLT, (585, NG18))],
+    absb: Field[(DTYPE_FLT, (235, NG18))],
+    taug: Field[type_ngptsw],
+    taur: Field[type_ngptsw],
+    id0: Field[type_nbandssw_int],
+    id1: Field[type_nbandssw_int],
+    ind01: FIELD_INT,
+    ind02: FIELD_INT,
+    ind03: FIELD_INT,
+    ind04: FIELD_INT,
+    ind11: FIELD_INT,
+    ind12: FIELD_INT,
+    ind13: FIELD_INT,
+    ind14: FIELD_INT,
+    inds: FIELD_INT,
+    indsp: FIELD_INT,
+    indf: FIELD_INT,
+    indfp: FIELD_INT,
+):
+
+    from __externals__ import rayl, oneminus, NG18, NS18
+
+    with computation(PARALLEL), interval(...):
+
+        tauray = colmol * rayl
+
+        for j in range(NG18):
+            taur[0, 0, 0][NS18 + j] = tauray
+
+        if laytrop:
+            speccomb = colamt[0, 0, 0][0] + strrat[0, 0, 0][2] * colamt[0, 0, 0][4]
+            specmult = 8.0 * min(oneminus, colamt[0, 0, 0][0] / speccomb)
+
+            js = 1 + specmult
+            fs = mod(specmult, 1.0)
+            fs1 = 1.0 - fs
+            fac000 = fs1 * fac00
+            fac010 = fs1 * fac10
+            fac100 = fs * fac00
+            fac110 = fs * fac10
+            fac001 = fs1 * fac01
+            fac011 = fs1 * fac11
+            fac101 = fs * fac01
+            fac111 = fs * fac11
+
+            ind01 = id0[0, 0, 0][2] + js - 1
+            ind02 = ind01 + 1
+            ind03 = ind01 + 9
+            ind04 = ind01 + 10
+            ind11 = id1[0, 0, 0][2] + js - 1
+            ind12 = ind11 + 1
+            ind13 = ind11 + 9
+            ind14 = ind11 + 10
+
+            inds = indself - 1
+            indf = indfor - 1
+            indsp = inds + 1
+            indfp = indf + 1
+
+            for j2 in range(NG18):
+                taug[0, 0, 0][NS18 + j2] = speccomb * (
+                    fac000 * absa[0, 0, 0][ind01, j2]
+                    + fac100 * absa[0, 0, 0][ind02, j2]
+                    + fac010 * absa[0, 0, 0][ind03, j2]
+                    + fac110 * absa[0, 0, 0][ind04, j2]
+                    + fac001 * absa[0, 0, 0][ind11, j2]
+                    + fac101 * absa[0, 0, 0][ind12, j2]
+                    + fac011 * absa[0, 0, 0][ind13, j2]
+                    + fac111 * absa[0, 0, 0][ind14, j2]
+                ) + colamt[0, 0, 0][0] * (
+                    selffac
+                    * (
+                        selfref[0, 0, 0][inds, j2]
+                        + selffrac
+                        * (selfref[0, 0, 0][indsp, j2] - selfref[0, 0, 0][inds, j2])
+                    )
+                    + forfac
+                    * (
+                        forref[0, 0, 0][indf, j2]
+                        + forfrac
+                        * (forref[0, 0, 0][indfp, j2] - forref[0, 0, 0][indf, j2])
+                    )
+                )
+        else:
+            ind01 = id0[0, 0, 0][2]
+            ind02 = ind01 + 1
+            ind11 = id1[0, 0, 0][2]
+            ind12 = ind11 + 1
+
+            for j3 in range(NG18):
+                taug[0, 0, 0][NS18 + j3] = colamt[0, 0, 0][4] * (
+                    fac00 * absb[0, 0, 0][ind01, j3]
+                    + fac10 * absb[0, 0, 0][ind02, j3]
+                    + fac01 * absb[0, 0, 0][ind11, j3]
+                    + fac11 * absb[0, 0, 0][ind12, j3]
+                )
+
+
+taumol16(
+    indict_gt4py["colamt"],
+    indict_gt4py["colmol"],
+    indict_gt4py["fac00"],
+    indict_gt4py["fac01"],
+    indict_gt4py["fac10"],
+    indict_gt4py["fac11"],
+    indict_gt4py["laytrop"],
+    indict_gt4py["forfac"],
+    indict_gt4py["forfrac"],
+    indict_gt4py["indfor"],
+    indict_gt4py["selffac"],
+    indict_gt4py["selffrac"],
+    indict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict16["selfref"],
+    lookupdict16["forref"],
+    lookupdict16["absa"],
+    lookupdict16["absb"],
+    outdict_gt4py["taug"],
+    outdict_gt4py["taur"],
+    indict_gt4py["id0"],
+    indict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlay,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol17(
+    indict_gt4py["colamt"],
+    indict_gt4py["colmol"],
+    indict_gt4py["fac00"],
+    indict_gt4py["fac01"],
+    indict_gt4py["fac10"],
+    indict_gt4py["fac11"],
+    indict_gt4py["laytrop"],
+    indict_gt4py["forfac"],
+    indict_gt4py["forfrac"],
+    indict_gt4py["indfor"],
+    indict_gt4py["selffac"],
+    indict_gt4py["selffrac"],
+    indict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict17["selfref"],
+    lookupdict17["forref"],
+    lookupdict17["absa"],
+    lookupdict17["absb"],
+    outdict_gt4py["taug"],
+    outdict_gt4py["taur"],
+    indict_gt4py["id0"],
+    indict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlay,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol18(
+    indict_gt4py["colamt"],
+    indict_gt4py["colmol"],
+    indict_gt4py["fac00"],
+    indict_gt4py["fac01"],
+    indict_gt4py["fac10"],
+    indict_gt4py["fac11"],
+    indict_gt4py["laytrop"],
+    indict_gt4py["forfac"],
+    indict_gt4py["forfrac"],
+    indict_gt4py["indfor"],
+    indict_gt4py["selffac"],
+    indict_gt4py["selffrac"],
+    indict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict18["selfref"],
+    lookupdict18["forref"],
+    lookupdict18["absa"],
+    lookupdict18["absb"],
+    outdict_gt4py["taug"],
+    outdict_gt4py["taur"],
+    indict_gt4py["id0"],
+    indict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlay,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+outvars = ["taug", "taur"]
+
+outdict_np = dict()
+valdict_np = dict()
+
+for var in outvars:
+    outdict_np[var] = outdict_gt4py[var][0, :, :, :].view(np.ndarray).squeeze()
+
+    valdict_np[var] = serializer.read(
+        var, serializer.savepoint["swrad-taugb18-output-000000"]
+    )
+
+compare_data(outdict_np, valdict_np)
+
+# print(f"Python = {outdict_np['taug'][:, NS16]}")
+# print(" ")
+# print(f"Fortran = {valdict_np['taug'][:, NS16]}")
+# print(" ")
+# print(f"Difference = {outdict_np['taug'][:, NS16] - valdict_np['taug'][:, NS16]}")
