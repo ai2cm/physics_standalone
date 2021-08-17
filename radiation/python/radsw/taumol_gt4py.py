@@ -6,6 +6,8 @@ from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD, mo
 
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from radsw_param import (
+    nbands,
+    ngptsw,
     oneminus,
     NG16,
     NG17,
@@ -198,6 +200,106 @@ lookupdict26 = loadlookupdata("kgb26")
 lookupdict27 = loadlookupdata("kgb27")
 lookupdict28 = loadlookupdata("kgb28")
 lookupdict29 = loadlookupdata("kgb29")
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "oneminus": oneminus,
+        "nbands": nbands,
+        "ngptsw": ngptsw,
+        "scalekur": lookupdict_ref["scalekur"],
+    },
+)
+def taumolsetup(
+    colamt: Field[type_maxgas],
+    colmol: FIELD_FLT,
+    fac00: FIELD_FLT,
+    fac01: FIELD_FLT,
+    fac10: FIELD_FLT,
+    fac11: FIELD_FLT,
+    jp: FIELD_INT,
+    jt: FIELD_INT,
+    jt1: FIELD_INT,
+    laytrop: FIELD_BOOL,
+    forfac: FIELD_FLT,
+    forfrac: FIELD_FLT,
+    indfor: FIELD_INT,
+    selffac: FIELD_FLT,
+    selffrac: FIELD_FLT,
+    indself: FIELD_INT,
+    strrat: Field[type_nbandssw_flt],
+    specwt: Field[type_nbandssw_flt],
+    sfluxref01: Field[(DTYPE_FLT, (16, 1, 7))],
+    sfluxref02: Field[(DTYPE_FLT, (16, 5, 2))],
+    layreffr: Field[type_nbandssw_int],
+    ix1: Field[type_nbandssw_int],
+    ix2: Field[type_nbandssw_int],
+    taug: Field[type_ngptsw],
+    taur: Field[type_ngptsw],
+    sfluxzen: Field[type_ngptsw],
+    id0: Field[type_nbandssw_int],
+    id1: Field[type_nbandssw_int],
+    nspa: Field[type_nbandssw_int],
+    nspb: Field[type_nbandssw_int],
+    ibx: Field[type_nbandssw_int],
+    ng: Field[type_nbandssw_int],
+    ngs: Field[type_nbandssw_int],
+    ibd: Field[type_nbandssw_int],
+    njb: Field[type_nbandssw_int],
+    ns: Field[type_nbandssw_int],
+):
+    from __externals__ import nbands, ngptsw, scalekur
+
+    with computation(PARALLEL), interval(...):
+
+        for jb in range(nbands):
+            #  --- ...  indices for layer optical depth
+            if laytrop:
+                id0[0, 0, 0][jb] = ((jp - 1) * 5 + (jt - 1)) * nspa[0, 0, 0][jb]
+                id1[0, 0, 0][jb] = (jp * 5 + (jt1 - 1)) * nspa[0, 0, 0][jb]
+            else:
+                id0[0, 0, 0][jb] = ((jp - 13) * 5 + (jt - 1)) * nspb[0, 0, 0][jb]
+                id1[0, 0, 0][jb] = ((jp - 12) * 5 + (jt1 - 1)) * nspb[0, 0, 0][jb]
+
+            #  --- ...  calculate spectral flux at toa
+            ibd = ibx[0, 0, 0][jb]
+            njb = ng[0, 0, 0][jb]
+            ns = ngs[0, 0, 0][jb]
+
+            if jb == 15 or jb == 19 or jb == 22 or jb == 24 or jb == 25 or jb == 28:
+                for j in range(ngptsw):
+                    if j < njb:
+                        sfluxzen[0, 0, 0][ns + j] = sfluxref01[0, 0, 0][j, 0, ibd]
+            # elif jb == 26:
+            #    for j2 in range(ngptsw):
+            #        sfluxzen[0, 0, 0][ns + j2] = (
+            #            scalekur * sfluxref01[0, 0, 0][j2, 0, ibd]
+            #        )
+            # else:
+            #    if jb == 16 or jb == 27:
+            #        if (
+            #            jp[0, 0, 0] >= layreffr[0, 0, 0][jb]
+            #            and jp[0, 0, 1] < layreffr[0, 0, 0][jb]
+            #        ):
+            #            colm1 = colamt[0, 0, 0][ix1[0, 0, 0][jb]]
+            #            colm2 = colamt[0, 0, 0][ix2[0, 0, 0][jb]]
+
+
+#
+#        speccomb = colm1 + strrat[0, 0, 0][jb] * colm2
+#        specmult = specwt[0, 0, 0][jb] * min(oneminus, colm1 / speccomb)
+#        js = 1 + specmult
+#        fs = mod(specmult, 1.0)
+#
+#        for j3 in range(njb):
+#            sfluxzen[0, 0, 0][ns + j3] = sfluxref02[0, 0, 0][
+#                j3, js, ibd
+#            ] + fs * (
+#                sfluxref02[0, 0, 0][j3, js + 1, ibd]
+#                - sfluxref02[0, 0, 0][j3, js, ibd]
+#            )
 
 
 @stencil(
