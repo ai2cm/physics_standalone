@@ -1212,8 +1212,10 @@
      &     )
 
         endif   ! end if_isubclw_block
+      enddo lab_do_iplon5
 
 !> -# Save outputs.
+      lab_do_iplon6 : do iplon = 1, npts
 
         topflx(iplon)%upfxc = totuflux(iplon,nlay)
         topflx(iplon)%upfx0 = totuclfl(iplon,nlay)
@@ -1222,9 +1224,7 @@
         sfcflx(iplon)%upfx0 = totuclfl(iplon,0)
         sfcflx(iplon)%dnfxc = totdflux(iplon,0)
         sfcflx(iplon)%dnfx0 = totdclfl(iplon,0)
-      enddo lab_do_iplon5
-
-      lab_do_iplon6 : do iplon = 1, npts
+      
         if (ivflip == 0) then       ! output from toa to sfc
 
 !! --- ...  optional fluxes
