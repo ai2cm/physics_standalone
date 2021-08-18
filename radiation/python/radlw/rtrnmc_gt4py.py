@@ -186,7 +186,6 @@ tblint = ntbl
 flxfac = wtdiff * fluxfac
 lhlw0 = True
 
-
 @stencil(
     backend,
     rebuild=rebuild,
@@ -277,8 +276,7 @@ def rtrnmc(
             ib = NGB[0, 0][ig0] - 1
 
             # clear sky, gases contribution
-            tmp = secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0]
-            odepth[0, 0, 0][ig0] = tmp if tmp > 0.0 else 0.0
+            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0])
             if odepth[0, 0, 0][ig0] <= 0.06:
                 atrgas[0, 0, 0][ig0] = (
                     odepth[0, 0, 0][ig0]
@@ -313,7 +311,7 @@ def rtrnmc(
             trngas[0, 0, 0][ig0] = trng[0, 0, 0][ig0]
 
             # total sky, gases+clouds contribution
-            clfm[0, 0, 0][ig0] = cldfmc[0, 0, 1][ig0]
+            clfm[0, 0, 0][ig0] = cldfmc[0, 0, 0][ig0]
             if clfm[0, 0, 0][ig0] >= eps:
                 # cloudy layer
                 odcld[0, 0, 0][ig0] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
@@ -380,8 +378,7 @@ def rtrnmc(
             ib = NGB[0, 0][ig] - 1
 
             # clear sky, gases contribution
-            tmp = secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig]
-            odepth[0, 0, 0][ig] = tmp if tmp > 0.0 else 0.0
+            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig])
             if odepth[0, 0, 0][ig] <= 0.06:
                 atrgas[0, 0, 0][ig] = (
                     odepth[0, 0, 0][ig]
@@ -543,7 +540,7 @@ def rtrnmc(
                     radclru[0, 0, 0][ig3] * trng[0, 0, 0][ig3] + gasu[0, 0, 0][ig3]
                 )
 
-    with computation(FORWARD), interval(1, None):
+    with computation(FORWARD), interval(1, -1):
         for ig4 in range(ngptlw):
             ib = NGB[0, 0][ig4] - 1
             clfm[0, 0, 0][ig4] = cldfmc[0, 0, 1][ig4]
@@ -552,7 +549,6 @@ def rtrnmc(
 
             if clfm[0, 0, 0][ig4] > eps:
                 #  --- ...  cloudy layer
-
                 #  --- ... total sky radiance
                 radtotu[0, 0, 0][ig4] = (
                     radtotu[0, 0, -1][ig4] * trng[0, 0, 0][ig4] * efclrfr[0, 0, 0][ig4]
@@ -560,27 +556,40 @@ def rtrnmc(
                     + clfm[0, 0, 0][ig4] * (totsrcu[0, 0, 0][ig4] - gasu[0, 0, 0][ig4])
                 )
                 toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig4]
-
                 #  --- ... clear sky radiance
                 radclru[0, 0, 0][ig4] = (
                     radclru[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
                 )
                 clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig4]
-
             else:
                 #  --- ...  clear layer
-
                 #  --- ... total sky radiance
                 radtotu[0, 0, 0][ig4] = (
                     radtotu[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
                 )
                 toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig4]
-
                 #  --- ... clear sky radiance
                 radclru[0, 0, 0][ig4] = (
                     radclru[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
                 )
                 clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig4]
+
+    with computation(FORWARD), interval(-1, None):
+        for ig5 in range(ngptlw):
+            ib = NGB[0, 0][ig5] - 1
+
+            if clfm[0, 0, 0][ig5] > eps:
+                #  --- ...  cloudy layer
+                #  --- ... total sky radiance
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig5]
+                #  --- ... clear sky radiance
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig5]
+            else:
+                #  --- ...  clear layer
+                #  --- ... total sky radiance
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig5]
+                #  --- ... clear sky radiance
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig5]
 
     # Process longwave output from band for total and clear streams.
     # Calculate upward, downward, and net flux.

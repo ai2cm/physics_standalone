@@ -56,6 +56,11 @@ from radlw_param import (
     ns15,
     ns16,
     oneminus,
+    bpade,
+    fluxfac,
+    heatfac,
+    ntbl,
+    wtdiff,
 )
 from radphysparam import ilwcice, ilwcliq
 from config import *
@@ -984,6 +989,7 @@ def taugb02(
 @stencil(
     backend=backend,
     rebuild=rebuild,
+    verbose=True,
     externals={
         "nspa": nspa[2],
         "nspb": nspb[2],
@@ -1116,21 +1122,6 @@ def taugb03(
                 adjcoln2o = adjfac * p
             else:
                 adjcoln2o = colamt[0, 0, 0][3]
-
-            # Workaround for bug in gt4py, can be removed at release of next tag (>32)
-            id000 = id000
-            id010 = id010
-            id100 = id100
-            id110 = id110
-            id200 = id200
-            id210 = id210
-
-            id001 = id001
-            id011 = id011
-            id101 = id101
-            id111 = id111
-            id201 = id201
-            id211 = id211
 
             if specparm < 0.125:
                 p = fs - 1.0
@@ -4468,3 +4459,447 @@ def combine_optical_depth(
             ib = NGB[0, 0][ig] - 1
 
             tautot[0, 0, 0][ig] = taug[0, 0, 0][ig] + tauaer[0, 0, 0][ib]
+
+
+rec_6 = 0.166667
+tblint = ntbl
+flxfac = wtdiff * fluxfac
+lhlw0 = True
+
+
+@stencil(
+    backend,
+    rebuild=rebuild,
+    externals={
+        "rec_6": rec_6,
+        "bpade": bpade,
+        "tblint": tblint,
+        "eps": eps,
+        "flxfac": fluxfac,
+        "heatfac": heatfac,
+        "lhlw0": lhlw0,
+    },
+)
+def rtrnmc(
+    semiss: Field[type_nbands],
+    secdif: Field[type_nbands],
+    delp: FIELD_FLT,
+    taucld: Field[type_nbands],
+    fracs: Field[type_ngptlw],
+    tautot: Field[type_ngptlw],
+    cldfmc: Field[type_ngptlw],
+    pklay: Field[type_nbands],
+    pklev: Field[type_nbands],
+    exp_tbl: Field[type_ntbl],
+    tau_tbl: Field[type_ntbl],
+    tfn_tbl: Field[type_ntbl],
+    NGB: Field[gtscript.IJ, (np.int32, (140,))],
+    htr: FIELD_FLT,
+    htrcl: FIELD_FLT,
+    htrb: Field[type_nbands],
+    totuflux: FIELD_FLT,
+    totdflux: FIELD_FLT,
+    totuclfl: FIELD_FLT,
+    totdclfl: FIELD_FLT,
+    clrurad: Field[type_nbands],
+    clrdrad: Field[type_nbands],
+    toturad: Field[type_nbands],
+    totdrad: Field[type_nbands],
+    gassrcu: Field[type_ngptlw],
+    totsrcu: Field[type_ngptlw],
+    trngas: Field[type_ngptlw],
+    efclrfr: Field[type_ngptlw],
+    rfdelp: FIELD_FLT,
+    fnet: FIELD_FLT,
+    fnetc: FIELD_FLT,
+    totsrcd: Field[type_ngptlw],
+    gassrcd: Field[type_ngptlw],
+    tblind: Field[type_ngptlw],
+    odepth: Field[type_ngptlw],
+    odtot: Field[type_ngptlw],
+    odcld: Field[type_ngptlw],
+    atrtot: Field[type_ngptlw],
+    atrgas: Field[type_ngptlw],
+    reflct: Field[type_ngptlw],
+    totfac: Field[type_ngptlw],
+    gasfac: Field[type_ngptlw],
+    flxfac: Field[type_ngptlw],
+    plfrac: Field[type_ngptlw],
+    blay: Field[type_ngptlw],
+    bbdgas: Field[type_ngptlw],
+    bbdtot: Field[type_ngptlw],
+    bbugas: Field[type_ngptlw],
+    bbutot: Field[type_ngptlw],
+    dplnku: Field[type_ngptlw],
+    dplnkd: Field[type_ngptlw],
+    radtotu: Field[type_ngptlw],
+    radclru: Field[type_ngptlw],
+    radtotd: Field[type_ngptlw],
+    radclrd: Field[type_ngptlw],
+    rad0: Field[type_ngptlw],
+    clfm: Field[type_ngptlw],
+    trng: Field[type_ngptlw],
+    gasu: Field[type_ngptlw],
+    itgas: Field[(np.int32, (ngptlw,))],
+    ittot: Field[(np.int32, (ngptlw,))],
+    ib: FIELD_2DINT,
+):
+    from __externals__ import rec_6, bpade, tblint, eps, flxfac, heatfac, lhlw0
+
+    # Downward radiative transfer loop.
+    # - Clear sky, gases contribution
+    # - Total sky, gases+clouds contribution
+    # - Cloudy layer
+    # - Total sky radiance
+    # - Clear sky radiance
+    with computation(FORWARD), interval(-2, -1):
+        for ig0 in range(ngptlw):
+            ib = NGB[0, 0][ig0] - 1
+
+            # clear sky, gases contribution
+            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0])
+            if odepth[0, 0, 0][ig0] <= 0.06:
+                atrgas[0, 0, 0][ig0] = (
+                    odepth[0, 0, 0][ig0]
+                    - 0.5 * odepth[0, 0, 0][ig0] * odepth[0, 0, 0][ig0]
+                )
+                trng[0, 0, 0][ig0] = 1.0 - atrgas[0, 0, 0][ig0]
+                gasfac[0, 0, 0][ig0] = rec_6 * odepth[0, 0, 0][ig0]
+            else:
+                tblind[0, 0, 0][ig0] = odepth[0, 0, 0][ig0] / (
+                    bpade + odepth[0, 0, 0][ig0]
+                )
+                # Currently itgas needs to be a storage, and can't be a local temporary.
+                itgas[0, 0, 0][ig0] = tblint * tblind[0, 0, 0][ig0] + 0.5
+                trng[0, 0, 0][ig0] = exp_tbl[0, 0, 0][itgas[0, 0, 0][ig0]]
+                atrgas[0, 0, 0][ig0] = 1.0 - trng[0, 0, 0][ig0]
+                gasfac[0, 0, 0][ig0] = tfn_tbl[0, 0, 0][itgas[0, 0, 0][ig0]]
+                odepth[0, 0, 0][ig0] = tau_tbl[0, 0, 0][itgas[0, 0, 0][ig0]]
+
+            plfrac[0, 0, 0][ig0] = fracs[0, 0, 1][ig0]
+            blay[0, 0, 0][ig0] = pklay[0, 0, 1][ib]
+
+            dplnku[0, 0, 0][ig0] = pklev[0, 0, 1][ib] - blay[0, 0, 0][ig0]
+            dplnkd[0, 0, 0][ig0] = pklev[0, 0, 0][ib] - blay[0, 0, 0][ig0]
+            bbdgas[0, 0, 0][ig0] = plfrac[0, 0, 0][ig0] * (
+                blay[0, 0, 0][ig0] + dplnkd[0, 0, 0][ig0] * gasfac[0, 0, 0][ig0]
+            )
+            bbugas[0, 0, 0][ig0] = plfrac[0, 0, 0][ig0] * (
+                blay[0, 0, 0][ig0] + dplnku[0, 0, 0][ig0] * gasfac[0, 0, 0][ig0]
+            )
+            gassrcd[0, 0, 0][ig0] = bbdgas[0, 0, 0][ig0] * atrgas[0, 0, 0][ig0]
+            gassrcu[0, 0, 0][ig0] = bbugas[0, 0, 0][ig0] * atrgas[0, 0, 0][ig0]
+            trngas[0, 0, 0][ig0] = trng[0, 0, 0][ig0]
+
+            # total sky, gases+clouds contribution
+            clfm[0, 0, 0][ig0] = cldfmc[0, 0, 0][ig0]
+            if clfm[0, 0, 0][ig0] >= eps:
+                # cloudy layer
+                odcld[0, 0, 0][ig0] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
+                efclrfr[0, 0, 0][ig0] = (
+                    1.0 - (1.0 - exp(-odcld[0, 0, 0][ig0])) * clfm[0, 0, 0][ig0]
+                )
+                odtot[0, 0, 0][ig0] = odepth[0, 0, 0][ig0] + odcld[0, 0, 0][ig0]
+                if odtot[0, 0, 0][ig0] < 0.06:
+                    totfac[0, 0, 0][ig0] = rec_6 * odtot[0, 0, 0][ig0]
+                    atrtot[0, 0, 0][ig0] = (
+                        odtot[0, 0, 0][ig0]
+                        - 0.5 * odtot[0, 0, 0][ig0] * odtot[0, 0, 0][ig0]
+                    )
+                else:
+                    tblind[0, 0, 0][ig0] = odtot[0, 0, 0][ig0] / (
+                        bpade + odtot[0, 0, 0][ig0]
+                    )
+                    ittot[0, 0, 0][ig0] = tblint * tblind[0, 0, 0][ig0] + 0.5
+                    totfac[0, 0, 0][ig0] = tfn_tbl[0, 0, 0][ittot[0, 0, 0][ig0]]
+                    atrtot[0, 0, 0][ig0] = 1.0 - exp_tbl[0, 0, 0][ittot[0, 0, 0][ig0]]
+
+                bbdtot[0, 0, 0][ig0] = plfrac[0, 0, 0][ig0] * (
+                    blay[0, 0, 0][ig0] + dplnkd[0, 0, 0][ig0] * totfac[0, 0, 0][ig0]
+                )
+                bbutot[0, 0, 0][ig0] = plfrac[0, 0, 0][ig0] * (
+                    blay[0, 0, 0][ig0] + dplnku[0, 0, 0][ig0] * totfac[0, 0, 0][ig0]
+                )
+                totsrcd[0, 0, 0][ig0] = bbdtot[0, 0, 0][ig0] * atrtot[0, 0, 0][ig0]
+                totsrcu[0, 0, 0][ig0] = bbutot[0, 0, 0][ig0] * atrtot[0, 0, 0][ig0]
+
+                # total sky radiance
+                radtotd[0, 0, 0][ig0] = (
+                    radtotd[0, 0, 0][ig0] * trng[0, 0, 0][ig0] * efclrfr[0, 0, 0][ig0]
+                    + gassrcd[0, 0, 0][ig0]
+                    + clfm[0, 0, 0][ig0]
+                    * (totsrcd[0, 0, 0][ig0] - gassrcd[0, 0, 0][ig0])
+                )
+                totdrad[0, 0, 0][ib] = totdrad[0, 0, 0][ib] + radtotd[0, 0, 0][ig0]
+
+                # clear sky radiance
+                radclrd[0, 0, 0][ig0] = (
+                    radclrd[0, 0, 0][ig0] * trng[0, 0, 0][ig0] + gassrcd[0, 0, 0][ig0]
+                )
+                clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig0]
+            else:
+                # clear layer
+
+                # total sky radiance
+                radtotd[0, 0, 0][ig0] = (
+                    radtotd[0, 0, 0][ig0] * trng[0, 0, 0][ig0] + gassrcd[0, 0, 0][ig0]
+                )
+                totdrad[0, 0, 0][ib] = totdrad[0, 0, 0][ib] + radtotd[0, 0, 0][ig0]
+
+                # clear sky radiance
+                radclrd[0, 0, 0][ig0] = (
+                    radclrd[0, 0, 0][ig0] * trng[0, 0, 0][ig0] + gassrcd[0, 0, 0][ig0]
+                )
+                clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig0]
+
+            reflct[0, 0, 0][ig0] = 1.0 - semiss[0, 0, 0][ib]
+
+    with computation(BACKWARD), interval(0, -2):
+        for ig in range(ngptlw):
+            ib = NGB[0, 0][ig] - 1
+
+            # clear sky, gases contribution
+            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig])
+            if odepth[0, 0, 0][ig] <= 0.06:
+                atrgas[0, 0, 0][ig] = (
+                    odepth[0, 0, 0][ig]
+                    - 0.5 * odepth[0, 0, 0][ig] * odepth[0, 0, 0][ig]
+                )
+                trng[0, 0, 0][ig] = 1.0 - atrgas[0, 0, 0][ig]
+                gasfac[0, 0, 0][ig] = rec_6 * odepth[0, 0, 0][ig]
+            else:
+                tblind[0, 0, 0][ig] = odepth[0, 0, 0][ig] / (
+                    bpade + odepth[0, 0, 0][ig]
+                )
+                itgas[0, 0, 0][ig] = tblint * tblind[0, 0, 0][ig] + 0.5
+                trng[0, 0, 0][ig] = exp_tbl[0, 0, 0][itgas[0, 0, 0][ig]]
+                atrgas[0, 0, 0][ig] = 1.0 - trng[0, 0, 0][ig]
+                gasfac[0, 0, 0][ig] = tfn_tbl[0, 0, 0][itgas[0, 0, 0][ig]]
+                odepth[0, 0, 0][ig] = tau_tbl[0, 0, 0][itgas[0, 0, 0][ig]]
+
+            plfrac[0, 0, 0][ig] = fracs[0, 0, 1][ig]
+            blay[0, 0, 0][ig] = pklay[0, 0, 1][ib]
+
+            dplnku[0, 0, 0][ig] = pklev[0, 0, 1][ib] - blay[0, 0, 0][ig]
+            dplnkd[0, 0, 0][ig] = pklev[0, 0, 0][ib] - blay[0, 0, 0][ig]
+            bbdgas[0, 0, 0][ig] = plfrac[0, 0, 0][ig] * (
+                blay[0, 0, 0][ig] + dplnkd[0, 0, 0][ig] * gasfac[0, 0, 0][ig]
+            )
+            bbugas[0, 0, 0][ig] = plfrac[0, 0, 0][ig] * (
+                blay[0, 0, 0][ig] + dplnku[0, 0, 0][ig] * gasfac[0, 0, 0][ig]
+            )
+            gassrcd[0, 0, 0][ig] = bbdgas[0, 0, 0][ig] * atrgas[0, 0, 0][ig]
+            gassrcu[0, 0, 0][ig] = bbugas[0, 0, 0][ig] * atrgas[0, 0, 0][ig]
+            trngas[0, 0, 0][ig] = trng[0, 0, 0][ig]
+
+            # total sky, gases+clouds contribution
+            clfm[0, 0, 0][ig] = cldfmc[0, 0, 1][ig]
+            if clfm[0, 0, 0][ig] >= eps:
+                # cloudy layer
+                odcld[0, 0, 0][ig] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
+                efclrfr[0, 0, 0][ig] = (
+                    1.0 - (1.0 - exp(-odcld[0, 0, 0][ig])) * clfm[0, 0, 0][ig]
+                )
+                odtot[0, 0, 0][ig] = odepth[0, 0, 0][ig] + odcld[0, 0, 0][ig]
+                if odtot[0, 0, 0][ig] < 0.06:
+                    totfac[0, 0, 0][ig] = rec_6 * odtot[0, 0, 0][ig]
+                    atrtot[0, 0, 0][ig] = (
+                        odtot[0, 0, 0][ig]
+                        - 0.5 * odtot[0, 0, 0][ig] * odtot[0, 0, 0][ig]
+                    )
+                else:
+                    tblind[0, 0, 0][ig] = odtot[0, 0, 0][ig] / (
+                        bpade + odtot[0, 0, 0][ig]
+                    )
+                    ittot[0, 0, 0][ig] = tblint * tblind[0, 0, 0][ig] + 0.5
+                    totfac[0, 0, 0][ig] = tfn_tbl[0, 0, 0][ittot[0, 0, 0][ig]]
+                    atrtot[0, 0, 0][ig] = 1.0 - exp_tbl[0, 0, 0][ittot[0, 0, 0][ig]]
+
+                bbdtot[0, 0, 0][ig] = plfrac[0, 0, 0][ig] * (
+                    blay[0, 0, 0][ig] + dplnkd[0, 0, 0][ig] * totfac[0, 0, 0][ig]
+                )
+                bbutot[0, 0, 0][ig] = plfrac[0, 0, 0][ig] * (
+                    blay[0, 0, 0][ig] + dplnku[0, 0, 0][ig] * totfac[0, 0, 0][ig]
+                )
+                totsrcd[0, 0, 0][ig] = bbdtot[0, 0, 0][ig] * atrtot[0, 0, 0][ig]
+                totsrcu[0, 0, 0][ig] = bbutot[0, 0, 0][ig] * atrtot[0, 0, 0][ig]
+
+                # total sky radiance
+                radtotd[0, 0, 0][ig] = (
+                    radtotd[0, 0, 1][ig] * trng[0, 0, 0][ig] * efclrfr[0, 0, 0][ig]
+                    + gassrcd[0, 0, 0][ig]
+                    + clfm[0, 0, 0][ig] * (totsrcd[0, 0, 0][ig] - gassrcd[0, 0, 0][ig])
+                )
+                totdrad[0, 0, 0][ib] = totdrad[0, 0, 0][ib] + radtotd[0, 0, 0][ig]
+
+                # clear sky radiance
+                radclrd[0, 0, 0][ig] = (
+                    radclrd[0, 0, 1][ig] * trng[0, 0, 0][ig] + gassrcd[0, 0, 0][ig]
+                )
+                clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig]
+            else:
+                # clear layer
+
+                # total sky radiance
+                radtotd[0, 0, 0][ig] = (
+                    radtotd[0, 0, 1][ig] * trng[0, 0, 0][ig] + gassrcd[0, 0, 0][ig]
+                )
+                totdrad[0, 0, 0][ib] = totdrad[0, 0, 0][ib] + radtotd[0, 0, 0][ig]
+
+                # clear sky radiance
+                radclrd[0, 0, 0][ig] = (
+                    radclrd[0, 0, 1][ig] * trng[0, 0, 0][ig] + gassrcd[0, 0, 0][ig]
+                )
+                clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig]
+
+            reflct[0, 0, 0][ig] = 1.0 - semiss[0, 0, 1][ib]
+
+    # Compute spectral emissivity & reflectance, include the
+    # contribution of spectrally varying longwave emissivity and
+    # reflection from the surface to the upward radiative transfer.
+    # note: spectral and Lambertian reflection are identical for the
+    #       diffusivity angle flux integration used here.
+
+    with computation(FORWARD), interval(0, 1):
+        for ig2 in range(ngptlw):
+            ib = NGB[0, 0][ig2] - 1
+            rad0[0, 0, 0][ig2] = (
+                semiss[0, 0, 1][ib] * fracs[0, 0, 1][ig2] * pklay[0, 0, 0][ib]
+            )
+
+            # Compute total sky radiance
+            radtotu[0, 0, 0][ig2] = (
+                rad0[0, 0, 0][ig2] + reflct[0, 0, 0][ig2] * radtotd[0, 0, 0][ig2]
+            )
+            toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, 0][ig2]
+
+            # Compute clear sky radiance
+            radclru[0, 0, 0][ig2] = (
+                rad0[0, 0, 0][ig2] + reflct[0, 0, 0][ig2] * radclrd[0, 0, 0][ig2]
+            )
+            clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, 0][ig2]
+
+    # Upward radiative transfer loop
+    # - Compute total sky radiance
+    # - Compute clear sky radiance
+
+    # toturad holds summed radiance for total sky stream
+    # clrurad holds summed radiance for clear sky stream
+
+    with computation(FORWARD), interval(0, 1):
+        for ig3 in range(ngptlw):
+            ib = NGB[0, 0][ig3] - 1
+            clfm[0, 0, 0][ig3] = cldfmc[0, 0, 1][ig3]
+            trng[0, 0, 0][ig3] = trngas[0, 0, 0][ig3]
+            gasu[0, 0, 0][ig3] = gassrcu[0, 0, 0][ig3]
+
+            if clfm[0, 0, 0][ig3] > eps:
+                #  --- ...  cloudy layer
+
+                #  --- ... total sky radiance
+                radtotu[0, 0, 0][ig3] = (
+                    radtotu[0, 0, 0][ig3] * trng[0, 0, 0][ig3] * efclrfr[0, 0, 0][ig3]
+                    + gasu[0, 0, 0][ig3]
+                    + clfm[0, 0, 0][ig3] * (totsrcu[0, 0, 0][ig3] - gasu[0, 0, 0][ig3])
+                )
+
+                #  --- ... clear sky radiance
+                radclru[0, 0, 0][ig3] = (
+                    radclru[0, 0, 0][ig3] * trng[0, 0, 0][ig3] + gasu[0, 0, 0][ig3]
+                )
+
+            else:
+                #  --- ...  clear layer
+
+                #  --- ... total sky radiance
+                radtotu[0, 0, 0][ig3] = (
+                    radtotu[0, 0, 0][ig3] * trng[0, 0, 0][ig3] + gasu[0, 0, 0][ig3]
+                )
+
+                #  --- ... clear sky radiance
+                radclru[0, 0, 0][ig3] = (
+                    radclru[0, 0, 0][ig3] * trng[0, 0, 0][ig3] + gasu[0, 0, 0][ig3]
+                )
+
+    with computation(FORWARD), interval(1, -1):
+        for ig4 in range(ngptlw):
+            ib = NGB[0, 0][ig4] - 1
+            clfm[0, 0, 0][ig4] = cldfmc[0, 0, 1][ig4]
+            trng[0, 0, 0][ig4] = trngas[0, 0, 0][ig4]
+            gasu[0, 0, 0][ig4] = gassrcu[0, 0, 0][ig4]
+
+            if clfm[0, 0, 0][ig4] > eps:
+                #  --- ...  cloudy layer
+                #  --- ... total sky radiance
+                radtotu[0, 0, 0][ig4] = (
+                    radtotu[0, 0, -1][ig4] * trng[0, 0, 0][ig4] * efclrfr[0, 0, 0][ig4]
+                    + gasu[0, 0, 0][ig4]
+                    + clfm[0, 0, 0][ig4] * (totsrcu[0, 0, 0][ig4] - gasu[0, 0, 0][ig4])
+                )
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig4]
+                #  --- ... clear sky radiance
+                radclru[0, 0, 0][ig4] = (
+                    radclru[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
+                )
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig4]
+            else:
+                #  --- ...  clear layer
+                #  --- ... total sky radiance
+                radtotu[0, 0, 0][ig4] = (
+                    radtotu[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
+                )
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig4]
+                #  --- ... clear sky radiance
+                radclru[0, 0, 0][ig4] = (
+                    radclru[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
+                )
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig4]
+
+    with computation(FORWARD), interval(-1, None):
+        for ig5 in range(ngptlw):
+            ib = NGB[0, 0][ig5] - 1
+
+            if clfm[0, 0, 0][ig5] > eps:
+                #  --- ...  cloudy layer
+                #  --- ... total sky radiance
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig5]
+                #  --- ... clear sky radiance
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig5]
+            else:
+                #  --- ...  clear layer
+                #  --- ... total sky radiance
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig5]
+                #  --- ... clear sky radiance
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig5]
+
+    # Process longwave output from band for total and clear streams.
+    # Calculate upward, downward, and net flux.
+    with computation(PARALLEL), interval(...):
+        for nb in range(nbands):
+            totuflux = totuflux + toturad[0, 0, 0][nb]
+            totdflux = totdflux + totdrad[0, 0, 0][nb]
+            totuclfl = totuclfl + clrurad[0, 0, 0][nb]
+            totdclfl = totdclfl + clrdrad[0, 0, 0][nb]
+
+        totuflux = totuflux * flxfac
+        totdflux = totdflux * flxfac
+        totuclfl = totuclfl * flxfac
+        totdclfl = totdclfl * flxfac
+
+    # calculate net fluxes and heating rates (fnet, htr)
+    # also compute optional clear sky heating rates (fnetc, htrcl)
+    with computation(FORWARD), interval(0, 1):
+        fnet = totuflux - totdflux
+        if lhlw0:
+            fnetc = totuclfl - totdclfl
+
+    with computation(PARALLEL), interval(1, None):
+        fnet = totuflux - totdflux
+        if lhlw0:
+            fnetc = totuclfl - totdclfl
+
+    with computation(PARALLEL), interval(1, None):
+        rfdelp = heatfac / delp
+        htr = (fnet[0, 0, -1] - fnet) * rfdelp
+        if lhlw0:
+            htrcl = (fnetc[0, 0, -1] - fnetc) * rfdelp
