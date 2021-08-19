@@ -23,9 +23,13 @@ SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data"
+ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
 savepoints = serializer.savepoint_list()
+
+ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
+savepoints2 = serializer2.savepoint_list()
 
 rebuild = False
 validate = True
@@ -51,6 +55,9 @@ invars = [
     "lmk",
     "lmp",
     "lprnt",
+    "exp_tbl",
+    "tau_tbl",
+    "tfn_tbl",
 ]
 
 outvars = [
@@ -72,6 +79,7 @@ locvars = [
     "totdclfl",
     "tz",
     "htr",
+    "htrb",
     "htrcl",
     "pavel",
     "tavel",
@@ -237,9 +245,58 @@ locvars_flt = [
     "ratco2",
 ]
 
+locvars_rtrnmc = [
+    "clrurad",
+    "clrdrad",
+    "toturad",
+    "totdrad",
+    "gassrcu",
+    "totsrcu",
+    "trngas",
+    "efclrfr",
+    "rfdelp",
+    "fnet",
+    "fnetc",
+    "totsrcd",
+    "gassrcd",
+    "tblind",
+    "odepth",
+    "odtot",
+    "odcld",
+    "atrtot",
+    "atrgas",
+    "reflct",
+    "totfac",
+    "gasfac",
+    "flxfac",
+    "plfrac",
+    "blay",
+    "bbdgas",
+    "bbdtot",
+    "bbugas",
+    "bbutot",
+    "dplnku",
+    "dplnkd",
+    "radtotu",
+    "radclru",
+    "radtotd",
+    "radclrd",
+    "rad0",
+    "clfm",
+    "trng",
+    "gasu",
+    "itgas",
+    "ittot",
+    "ib",
+]
+
 indict = dict()
 for var in invars:
-    tmp = serializer.read(var, serializer.savepoint["lwrad-in-000000"])
+    if var[-3:] == "tbl":
+        tmp = serializer2.read(var, serializer2.savepoint["lwrad-rtrnmc-input-000000"])
+    else:
+        tmp = serializer.read(var, serializer.savepoint["lwrad-in-000000"])
+
     if var in ["semis", "icsdlw", "tsfg", "de_lgth"]:
         indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
     elif var == "faerlw":
@@ -253,6 +310,8 @@ for var in invars:
         indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
     elif var in ["plvl", "tlvl"]:
         indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
+    elif var[-3:] == "tbl":
+        indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     else:
         indict[var] = tmp[0]
 
@@ -270,6 +329,10 @@ for var in invars:
     elif var == "icsdlw":
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlp1, DTYPE_INT
+        )
+    elif var[-3:] == "tbl":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_nlp1, type_ntbl
         )
     elif indict[var].size > 1:
         indict_gt4py[var] = create_storage_from_array(
@@ -298,7 +361,14 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_BOOL)
     elif var == "colamt":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_maxgas)
-    elif var in ["semiss", "secdiff", "expval", "pklay", "pklev"]:
+    elif var in [
+        "semiss",
+        "secdiff",
+        "expval",
+        "pklay",
+        "pklev",
+        "htrb",
+    ]:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
     elif var == "semiss0":
         locdict_gt4py[var] = create_storage_ones(backend, shape_nlp1, type_nbands)
@@ -341,6 +411,21 @@ for var in locvars_flt:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptlw)
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+
+# Initialize local vars for rtrnmc
+for var in locvars_rtrnmc:
+    if var[-3:] == "rad":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
+    elif var == "fnet" or var == "fnetc" or var == "rfdelp":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+    elif var == "itgas" or var == "ittot":
+        locdict_gt4py[var] = create_storage_zeros(
+            backend, shape_nlp1, (np.int32, (ngptlw,))
+        )
+    elif var == "ib":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, np.int32)
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptlw)
 
 locdict_gt4py["A0"] = create_storage_from_array(a0, backend, shape_nlp1, type_nbands)
 locdict_gt4py["A1"] = create_storage_from_array(a1, backend, shape_nlp1, type_nbands)
@@ -436,6 +521,7 @@ lookupdict_gt4py16 = loadlookupdata("kgb16")
 print("Done")
 print(" ")
 
+start0 = time.time()
 firstloop(
     indict_gt4py["plyr"],
     indict_gt4py["plvl"],
@@ -584,7 +670,6 @@ setcoef(
 
 print(locdict_gt4py["laytrop"])
 
-start0 = time.time()
 start = time.time()
 taugb01(
     locdict_gt4py["laytrop"],
@@ -1565,8 +1650,7 @@ combine_optical_depth(
     validate_args=validate,
 )
 print(" ")
-end0 = time.time()
-print(f"Total time taken = {end0 - start0}")
+
 
 rtrnmc(
     locdict_gt4py["semiss"],
@@ -1578,10 +1662,10 @@ rtrnmc(
     locdict_gt4py["cldfmc"],
     locdict_gt4py["pklay"],
     locdict_gt4py["pklev"],
-    locdict_gt4py["exp_tbl"],
-    locdict_gt4py["tau_tbl"],
-    locdict_gt4py["tfn_tbl"],
-    NGB,
+    indict_gt4py["exp_tbl"],
+    indict_gt4py["tau_tbl"],
+    indict_gt4py["tfn_tbl"],
+    locdict_gt4py["NGB"],
     locdict_gt4py["htr"],
     locdict_gt4py["htrcl"],
     locdict_gt4py["htrb"],
@@ -1636,4 +1720,5 @@ rtrnmc(
     validate_args=validate,
 )
 
-print(f"test = {locdict_gt4py['taug'][0, :, 1:, 0]}")
+end0 = time.time()
+print(f"Total time taken = {end0 - start0}")
