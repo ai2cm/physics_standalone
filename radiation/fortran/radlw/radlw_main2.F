@@ -1214,6 +1214,13 @@
         endif   ! end if_isubclw_block
       enddo lab_do_iplon5
 
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser savepoint "lwrad-finalloop-input-"//trim(ser_count_str)
+!$ser data totuflux=totuflux totuclfl=totuclfl totdflux=totdflux
+!$ser data totdclfl=totdclfl htr=htr htrcl=htrcl
+
 !> -# Save outputs.
       lab_do_iplon6 : do iplon = 1, npts
 
@@ -1296,6 +1303,16 @@
         endif                       ! if_ivflip
 
       enddo  lab_do_iplon6
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser verbatim write(*,*) 'iplon = ', iplon
+!$ser savepoint "lwrad-finalloop-output-"//trim(ser_count_str)
+!$ser data upfxc_t=topflx%upfxc upfx0_t=topflx%upfx0
+!$ser data upfxc_s=sfcflx%upfxc upfx0_s=sfcflx%upfx0
+!$ser data dnfxc_s=sfcflx%dnfxc dnfx0_s=sfcflx%dnfx0
+!$ser data hlwc=hlwc hlw0=hlw0
+
 
 !...................................
       end subroutine lwrad
