@@ -1217,6 +1217,15 @@
 !> -# Save outputs.
       lab_do_iplon6 : do iplon = 1, npts
 
+!$ser verbatim if (iplon == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser verbatim write(*,*) 'iplon = ', iplon
+  !$ser savepoint "lwrad-finalloop-input-"//trim(ser_count_str)
+  !$ser data totuflux=totuflux totuclfl=totuclfl totdflux=totdflux
+  !$ser data totdclfl=totdclfl htr=htr htrcl=htrcl
+!$ser verbatim end if
+
         topflx(iplon)%upfxc = totuflux(iplon,nlay)
         topflx(iplon)%upfx0 = totuclfl(iplon,nlay)
 
