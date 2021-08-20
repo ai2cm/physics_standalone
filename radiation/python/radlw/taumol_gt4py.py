@@ -2593,7 +2593,7 @@ def taugb09(
 
 @stencil(
     backend=backend,
-    rebuild=rebuild,
+    rebuild=True,
     verbose=True,
     externals={
         "nspa": nspa[9],
