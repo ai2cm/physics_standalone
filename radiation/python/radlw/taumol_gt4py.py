@@ -129,18 +129,21 @@ for var in invars:
         indict[var] = np.tile(np.array(ngb)[None, None, :], (npts, 1, 1))
     else:
         tmp = serializer.read(var, serializer.savepoint["lwrad-taumol-input-000000"])
+        print(f"{var} = {tmp.shape}")
         if var == "colamt" or var == "wx":
-            tmp2 = np.append(tmp, np.zeros((1, tmp.shape[1])), axis=0)
-            indict[var] = np.tile(tmp2[None, None, :, :], (npts, 1, 1, 1))
+            tmp2 = np.append(tmp, np.zeros((npts, 1, tmp.shape[2])), axis=1)
+            indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
         elif var == "tauaer" or var == "fracs" or var == "tautot":
-            tmp2 = np.append(tmp, np.zeros((tmp.shape[0], 1)), axis=1)
-            indict[var] = np.tile(tmp2.T[None, None, :, :], (npts, 1, 1, 1))
+            tmp2 = np.transpose(
+                np.append(tmp, np.zeros((npts, tmp.shape[1], 1)), axis=2), (0, 2, 1)
+            )
+            indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
         elif var == "rfrate":
-            tmp2 = np.append(tmp, np.zeros((1, tmp.shape[1], 2)), axis=0)
-            indict[var] = np.tile(tmp2[None, None, :, :, :], (npts, 1, 1, 1, 1))
+            tmp2 = np.append(tmp, np.zeros((npts, 1, tmp.shape[2], 2)), axis=1)
+            indict[var] = np.tile(tmp2[:, None, :, :, :], (1, 1, 1, 1, 1))
         elif var in integervars or var in fltvars:
-            tmp2 = np.append(tmp, 0)
-            indict[var] = np.tile(tmp2[None, None, :], (npts, 1, 1))
+            tmp2 = np.append(tmp, np.zeros((npts, 1)), axis=1)
+            indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
         else:
             indict[var] = tmp[0]
 
@@ -2586,7 +2589,8 @@ def taugb09(
 
 @stencil(
     backend=backend,
-    rebuild=rebuild,
+    rebuild=True,
+    verbose=True,
     externals={
         "nspa": nspa[9],
         "nspb": nspb[9],
@@ -2612,12 +2616,12 @@ def taugb10(
     indfor: FIELD_INT,
     fracs: Field[type_ngptlw],
     taug: Field[type_ngptlw],
-    absa: Field[(DTYPE_FLT, (ng08, 65))],
-    absb: Field[(DTYPE_FLT, (ng08, 235))],
-    selfref: Field[(DTYPE_FLT, (ng08, 10))],
-    forref: Field[(DTYPE_FLT, (ng08, 4))],
-    fracrefa: Field[(DTYPE_FLT, (ng08,))],
-    fracrefb: Field[(DTYPE_FLT, (ng08,))],
+    absa: Field[(DTYPE_FLT, (ng10, 65))],
+    absb: Field[(DTYPE_FLT, (ng10, 235))],
+    selfref: Field[(DTYPE_FLT, (ng10, 10))],
+    forref: Field[(DTYPE_FLT, (ng10, 4))],
+    fracrefa: Field[(DTYPE_FLT, (ng10,))],
+    fracrefb: Field[(DTYPE_FLT, (ng10,))],
     ind0: FIELD_INT,
     ind0p: FIELD_INT,
     ind1: FIELD_INT,
@@ -2869,10 +2873,10 @@ def taugb12(
     indfor: FIELD_INT,
     fracs: Field[type_ngptlw],
     taug: Field[type_ngptlw],
-    absa: Field[(DTYPE_FLT, (ng09, 585))],
-    selfref: Field[(DTYPE_FLT, (ng09, 10))],
-    forref: Field[(DTYPE_FLT, (ng09, 4))],
-    fracrefa: Field[(DTYPE_FLT, (ng09, 9))],
+    absa: Field[(DTYPE_FLT, (ng12, 585))],
+    selfref: Field[(DTYPE_FLT, (ng12, 10))],
+    forref: Field[(DTYPE_FLT, (ng12, 4))],
+    fracrefa: Field[(DTYPE_FLT, (ng12, 9))],
     chi_mls: Field[(DTYPE_FLT, (7, 59))],
     ind0: FIELD_INT,
     ind1: FIELD_INT,
@@ -3435,12 +3439,12 @@ def taugb14(
     indfor: FIELD_INT,
     fracs: Field[type_ngptlw],
     taug: Field[type_ngptlw],
-    absa: Field[(DTYPE_FLT, (ng11, 65))],
-    absb: Field[(DTYPE_FLT, (ng11, 235))],
-    selfref: Field[(DTYPE_FLT, (ng11, 10))],
-    forref: Field[(DTYPE_FLT, (ng11, 4))],
-    fracrefa: Field[(DTYPE_FLT, (ng11,))],
-    fracrefb: Field[(DTYPE_FLT, (ng11,))],
+    absa: Field[(DTYPE_FLT, (ng14, 65))],
+    absb: Field[(DTYPE_FLT, (ng14, 235))],
+    selfref: Field[(DTYPE_FLT, (ng14, 10))],
+    forref: Field[(DTYPE_FLT, (ng14, 4))],
+    fracrefa: Field[(DTYPE_FLT, (ng14,))],
+    fracrefb: Field[(DTYPE_FLT, (ng14,))],
     ind0: FIELD_INT,
     ind0p: FIELD_INT,
     ind1: FIELD_INT,
@@ -5094,18 +5098,41 @@ end0 = time.time()
 print(f"Total time taken = {end0 - start0}")
 
 outdict_gt4py = {
-    "fracs": indict_gt4py["fracs"][0, :, :-1, :].squeeze().T,
-    "tautot": indict_gt4py["tautot"][0, :, :-1, :].squeeze().T,
+    "fracs": np.transpose(indict_gt4py["fracs"][:, :, :-1, :].squeeze(), (0, 2, 1)),
+    "tautot": np.transpose(indict_gt4py["tautot"][:, :, :-1, :].squeeze(), (0, 2, 1)),
 }
 
-outvars = ["fracsout", "tautotout"]
+outvars = ["fracs", "tautot"]
 
 outdict_val = dict()
 for var in outvars:
-    outdict_val[var[:-3]] = serializer.read(
+    outdict_val[var] = serializer.read(
         var, serializer.savepoint["lwrad-taumol-output-000000"]
     )
 
-compare_data(outdict_val, outdict_gt4py)
+# compare_data(outdict_val, outdict_gt4py)
+print(f"laytrop = {indict_gt4py['laytrop'][3, :, :]}")
+print(f"ind0 = {locdict_gt4py['ind0'][3, :, :]}")
+print(f"ind0p = {locdict_gt4py['ind0p'][3, :, :]}")
+print(f"ind1 = {locdict_gt4py['ind1'][3, :, :]}")
+print(f"ind1p = {locdict_gt4py['ind1p'][3, :, :]}")
+print(f"inds = {locdict_gt4py['inds'][3, :, :]}")
+print(f"indsp = {locdict_gt4py['indsp'][3, :, :]}")
+print(f"indf = {locdict_gt4py['indf'][3, :, :]}")
+print(f"indfp = {locdict_gt4py['indfp'][3, :, :]}")
+print(f"tauself = {locdict_gt4py['tauself'][3, :, :]}")
+print(f"taufor = {locdict_gt4py['taufor'][3, :, :]}")
 
-print(f"test = {locdict_gt4py['taug'][0, :, :-1, 0]}")
+print(f"Python = {outdict_gt4py['fracs'][3, 108, :]}")
+print(" ")
+print(f"Fortran = {outdict_val['fracs'][3, 108, :]}")
+print(" ")
+
+for n in range(ngptlw):
+    tmp1 = outdict_gt4py["fracs"][:, n, :]
+    tmp2 = outdict_val["fracs"][:, n, :]
+    if not np.allclose(tmp1, tmp2):
+        print(f"Problem n = {n}")
+print(f"Difference = {(outdict_gt4py['fracs']-outdict_val['fracs']).min()}")
+
+# print(f"test = {locdict_gt4py['taug'][0, :, :-1, 0]}")

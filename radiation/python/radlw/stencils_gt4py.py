@@ -125,7 +125,6 @@ def firstloop(
     a0: Field[type_nbands],
     a1: Field[type_nbands],
     a2: Field[type_nbands],
-    expval: Field[type_nbands],
 ):
     from __externals__ import nbands, ilwcliq, ilwrgas
 
@@ -243,16 +242,18 @@ def firstloop(
 
             tem1 = 1.80
             tem2 = 1.50
-            expval = exp(a2 * pwvcm)
             for j4 in range(nbands):
                 if j4 == 0 or j4 == 3 or j4 == 9:
                     secdiff[0, 0, 0][j4] = 1.66
                 else:
-                    # Workaround for native functions not working inside for loops
-                    # Can be refactored at next gt4py release
-                    tmp = a0[0, 0, 0][j4] + a1[0, 0, 0][j4] * expval[0, 0, 0][j4]
-                    tmp2 = tmp if tmp > tem2 else tem2
-                    secdiff[0, 0, 0][j4] = tmp2 if tmp2 < tem1 else tem1
+                    secdiff[0, 0, 0][j4] = min(
+                        tem1,
+                        max(
+                            tem2,
+                            a0[0, 0, 0][j4]
+                            + a1[0, 0, 0][j4] * exp(a2[0, 0, 0][j4] * pwvcm),
+                        ),
+                    )
 
 
 @gtscript.stencil(
@@ -2985,12 +2986,12 @@ def taugb10(
     indfor: FIELD_INT,
     fracs: Field[type_ngptlw],
     taug: Field[type_ngptlw],
-    absa: Field[(DTYPE_FLT, (ng08, 65))],
-    absb: Field[(DTYPE_FLT, (ng08, 235))],
-    selfref: Field[(DTYPE_FLT, (ng08, 10))],
-    forref: Field[(DTYPE_FLT, (ng08, 4))],
-    fracrefa: Field[(DTYPE_FLT, (ng08,))],
-    fracrefb: Field[(DTYPE_FLT, (ng08,))],
+    absa: Field[(DTYPE_FLT, (ng10, 65))],
+    absb: Field[(DTYPE_FLT, (ng10, 235))],
+    selfref: Field[(DTYPE_FLT, (ng10, 10))],
+    forref: Field[(DTYPE_FLT, (ng10, 4))],
+    fracrefa: Field[(DTYPE_FLT, (ng10,))],
+    fracrefb: Field[(DTYPE_FLT, (ng10,))],
     ind0: FIELD_INT,
     ind0p: FIELD_INT,
     ind1: FIELD_INT,
@@ -3005,6 +3006,8 @@ def taugb10(
     from __externals__ import nspa, nspb, ng10, ns10
 
     with computation(PARALLEL), interval(1, None):
+        inds = inds
+        tauself = tauself
         if laytrop:
             ind0 = ((jp - 1) * 5 + (jt - 1)) * nspa
             ind1 = (jp * 5 + (jt1 - 1)) * nspa
@@ -4475,7 +4478,7 @@ lhlw0 = True
         "bpade": bpade,
         "tblint": tblint,
         "eps": eps,
-        "flxfac": fluxfac,
+        "flxfac": flxfac,
         "heatfac": heatfac,
         "lhlw0": lhlw0,
     },
@@ -4523,7 +4526,6 @@ def rtrnmc(
     reflct: Field[type_ngptlw],
     totfac: Field[type_ngptlw],
     gasfac: Field[type_ngptlw],
-    flxfac: Field[type_ngptlw],
     plfrac: Field[type_ngptlw],
     blay: Field[type_ngptlw],
     bbdgas: Field[type_ngptlw],
@@ -4903,3 +4905,42 @@ def rtrnmc(
         htr = (fnet[0, 0, -1] - fnet) * rfdelp
         if lhlw0:
             htrcl = (fnetc[0, 0, -1] - fnetc) * rfdelp
+
+
+@stencil(backend=backend, rebuild=rebuild, externals={"lhlw0": lhlw0})
+def finalloop(
+    totuflux: FIELD_FLT,
+    totuclfl: FIELD_FLT,
+    totdflux: FIELD_FLT,
+    totdclfl: FIELD_FLT,
+    htr: FIELD_FLT,
+    htrcl: FIELD_FLT,
+    upfxc_t: FIELD_2D,
+    upfx0_t: FIELD_2D,
+    upfxc_s: FIELD_2D,
+    upfx0_s: FIELD_2D,
+    dnfxc_s: FIELD_2D,
+    dnfx0_s: FIELD_2D,
+    hlwc: FIELD_FLT,
+    hlw0: FIELD_FLT,
+):
+    from __externals__ import lhlw0
+
+    with computation(FORWARD):
+        with interval(0, 1):
+            # Output surface fluxes
+            upfxc_s = totuflux
+            upfx0_s = totuclfl
+            dnfxc_s = totdflux
+            dnfx0_s = totdclfl
+        with interval(-1, None):
+            # Output TOA fluxes
+            upfxc_t = totuflux
+            upfx0_t = totuclfl
+
+    with computation(PARALLEL):
+        with interval(1, None):
+            hlwc = htr
+
+            if lhlw0:
+                hlw0 = htrcl

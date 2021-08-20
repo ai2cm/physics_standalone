@@ -186,6 +186,7 @@ tblint = ntbl
 flxfac = wtdiff * fluxfac
 lhlw0 = True
 
+
 @stencil(
     backend,
     rebuild=rebuild,
@@ -242,7 +243,6 @@ def rtrnmc(
     reflct: Field[type_ngptlw],
     totfac: Field[type_ngptlw],
     gasfac: Field[type_ngptlw],
-    flxfac: Field[type_ngptlw],
     plfrac: Field[type_ngptlw],
     blay: Field[type_ngptlw],
     bbdgas: Field[type_ngptlw],
@@ -668,7 +668,6 @@ rtrnmc(
     locdict_gt4py["reflct"],
     locdict_gt4py["totfac"],
     locdict_gt4py["gasfac"],
-    locdict_gt4py["flxfac"],
     locdict_gt4py["plfrac"],
     locdict_gt4py["blay"],
     locdict_gt4py["bbdgas"],
@@ -694,6 +693,8 @@ rtrnmc(
 )
 end = time.time()
 print(f"Elapsed time = {end-start}")
+
+print(f"delp = {indict_gt4py['delp']}")
 
 outvars = ["totuflux", "totdflux", "htr", "totuclfl", "totdclfl", "htrcl", "htrb"]
 

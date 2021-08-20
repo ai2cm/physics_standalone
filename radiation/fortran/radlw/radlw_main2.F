@@ -1039,7 +1039,7 @@
 !$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "lw_cldprop_in_"//trim(ser_count_str)
+  !$ser savepoint "lw-cldprop-input-"//trim(ser_count_str)
   !$ser data cldfrc=cldfrc clwp=clwp relw=relw ciwp=ciwp reiw=reiw cda1=cda1
   !$ser data cda2=cda2 cda3=cda3 cda4=cda4 nlay=nlay nlp1=nlp1 ipseed=ipseed
   !$ser data dz=dz delgth=delgth  
@@ -1048,13 +1048,21 @@
 
           call cldprop                                                  &
 !  ---  inputs:
-     &     ( cldfrc,clwp,relw,            &
-     &       ciwp,reiw,cda1,              &
-     &       cda2,cda3,cda4,              &
-     &       nlay, nlp1, iplon, npts, ipseed, dz, delgth,                     &
+     &     ( ser_count, cldfrc(iplon, :),clwp(iplon,:),relw(iplon,:),            &
+     &       ciwp(iplon, :),reiw(iplon, :),cda1(iplon, :),              &
+     &       cda2(iplon, :),cda3(iplon, :),cda4(iplon, :),              &
+     &       nlay, nlp1, ipseed(iplon), dz(iplon, :), &
+     &       delgth(iplon), iplon,                     &
 !  ---  outputs:
-     &       cldfmc, taucld                                             &
+     &       cldfmc(iplon,:,:), taucld(iplon,:,:)                                             &
      &     )
+
+!$ser verbatim if (iplon == npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lw-cldprop-output-"//trim(ser_count_str)
+  !$ser data cldfmc=cldfmc taucld=taucld
+!$ser verbatim endif
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band-7 is apprx 10mu channel (or use spectral mean of bands 6-8)
@@ -1077,7 +1085,7 @@
 
 !> -# Calling setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
-!$ser verbatim if (iplon == 1) then
+!$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser verbatim write(*,*) 'iplon = ', iplon
@@ -1102,7 +1110,7 @@
      &       indminor(iplon,:)                 &
      &     )
 
-!$ser verbatim if (iplon == 1) then
+!$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser verbatim write(*,*) 'iplon = ', iplon
@@ -1119,10 +1127,9 @@
 !! fractions for each longwave spectral band.
       lab_do_iplon4 : do iplon = 1, npts
 
-!$ser verbatim if (iplon == 1) then
+!$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-taumol-input-"//trim(ser_count_str)
   !$ser data laytrop=laytrop pavel=pavel coldry=coldry
   !$ser data colamt=colamt colbrd=colbrd wx=wx
@@ -1152,6 +1159,14 @@
 !  ---  outputs:
      &       fracs(iplon,:,:), tautot(iplon,:,:)                                              &
      &     )
+
+!$ser verbatim if (iplon == npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-taumol-output-"//trim(ser_count_str)
+  !$ser data fracs=fracs tautot=tautot
+!$ser verbatim end if
+
       enddo lab_do_iplon4
 
 !> -# Call the radiative transfer routine based on cloud scheme
@@ -1198,6 +1213,15 @@
           endif   ! end if_iovrlw_block
 
         else
+!$ser verbatim if (iplon == npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-rtrnmc-input-"//trim(ser_count_str)
+  !$ser data semiss=semiss delp=delp cldfmc=cldfmc taucld=taucld
+  !$ser data tautot=tautot pklay=pklay pklev=pklev fracs=fracs
+  !$ser data secdiff=secdiff exp_tbl=exp_tbl tau_tbl=tau_tbl
+  !$ser data tfn_tbl=tfn_tbl
+!$ser verbatim endif
 
           call rtrnmc                                                   &
 !  ---  inputs:
@@ -1210,6 +1234,15 @@
      &       totuclfl(iplon,:),totdclfl(iplon,:),htrcl(iplon,:),        &
      &       htrb(iplon,:,:)                                            &
      &     )
+
+!$ser verbatim if (iplon == npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-rtrnmc-output-"//trim(ser_count_str)
+  !$ser data totuflux=totuflux totdflux=totdflux htr=htr 
+  !$ser data totuclfl=totuclfl totdclfl=totdclfl htrcl=htrcl
+  !$ser data htrb=htrb
+!$ser verbatim endif
 
         endif   ! end if_isubclw_block
       enddo lab_do_iplon5
@@ -1306,7 +1339,6 @@
 
 !$ser mode write
 !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-!$ser verbatim write(*,*) 'iplon = ', iplon
 !$ser savepoint "lwrad-finalloop-output-"//trim(ser_count_str)
 !$ser data upfxc_t=topflx%upfxc upfx0_t=topflx%upfx0
 !$ser data upfxc_s=sfcflx%upfxc upfx0_s=sfcflx%upfx0
@@ -1554,310 +1586,317 @@
 !> @{
 ! ----------------------------
       subroutine cldprop                                                &
-     &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
-     &       nlay, nlp1, iplon, npts, ipseed, dz, de_lgth,                           &
-     &       cldfmc, taucld                                             & !  ---  outputs
-     &     )
-
-!  ===================  program usage description  ===================  !
-!                                                                       !
-! purpose:  compute the cloud optical depth(s) for each cloudy layer    !
-! and g-point interval.                                                 !
-!                                                                       !
-! subprograms called:  none                                             !
-!                                                                       !
-!  ====================  defination of variables  ====================  !
-!                                                                       !
-!  inputs:                                                       -size- !
-!    cfrac - real, layer cloud fraction                          0:nlp1 !
-!        .....  for ilwcliq > 0  (prognostic cloud sckeme)  - - -       !
-!    cliqp - real, layer in-cloud liq water path (g/m**2)          nlay !
-!    reliq - real, mean eff radius for liq cloud (micron)          nlay !
-!    cicep - real, layer in-cloud ice water path (g/m**2)          nlay !
-!    reice - real, mean eff radius for ice cloud (micron)          nlay !
-!    cdat1 - real, layer rain drop water path  (g/m**2)            nlay !
-!    cdat2 - real, effective radius for rain drop (microm)         nlay !
-!    cdat3 - real, layer snow flake water path (g/m**2)            nlay !
-!    cdat4 - real, effective radius for snow flakes (micron)       nlay !
-!        .....  for ilwcliq = 0  (diagnostic cloud sckeme)  - - -       !
-!    cdat1 - real, input cloud optical depth                       nlay !
-!    cdat2 - real, layer cloud single scattering albedo            nlay !
-!    cdat3 - real, layer cloud asymmetry factor                    nlay !
-!    cdat4 - real, optional use                                    nlay !
-!    cliqp - not used                                              nlay !
-!    reliq - not used                                              nlay !
-!    cicep - not used                                              nlay !
-!    reice - not used                                              nlay !
-!                                                                       !
-!    dz     - real, layer thickness (km)                           nlay !
-!    de_lgth- real, layer cloud decorrelation length (km)             1 !
-!    nlay  - integer, number of vertical layers                      1  !
-!    nlp1  - integer, number of vertical levels                      1  !
-!    ipseed- permutation seed for generating random numbers (isubclw>0) !
-!                                                                       !
-!  outputs:                                                             !
-!    cldfmc - real, cloud fraction for each sub-column       ngptlw*nlay!
-!    taucld - real, cld opt depth for bands (non-mcica)      nbands*nlay!
-!                                                                       !
-!  explanation of the method for each value of ilwcliq, and ilwcice.    !
-!    set up in module "module_radlw_cntr_para"                          !
-!                                                                       !
-!     ilwcliq=0  : input cloud optical property (tau, ssa, asy).        !
-!                  (used for diagnostic cloud method)                   !
-!     ilwcliq>0  : input cloud liq/ice path and effective radius, also  !
-!                  require the user of 'ilwcice' to specify the method  !
-!                  used to compute aborption due to water/ice parts.    !
-!  ...................................................................  !
-!                                                                       !
-!     ilwcliq=1:   the water droplet effective radius (microns) is input!
-!                  and the opt depths due to water clouds are computed  !
-!                  as in hu and stamnes, j., clim., 6, 728-742, (1993). !
-!                  the values for absorption coefficients appropriate for
-!                  the spectral bands in rrtm have been obtained for a  !
-!                  range of effective radii by an averaging procedure   !
-!                  based on the work of j. pinto (private communication).
-!                  linear interpolation is used to get the absorption   !
-!                  coefficients for the input effective radius.         !
-!                                                                       !
-!     ilwcice=1:   the cloud ice path (g/m2) and ice effective radius   !
-!                  (microns) are input and the optical depths due to ice!
-!                  clouds are computed as in ebert and curry, jgr, 97,  !
-!                  3831-3836 (1992).  the spectral regions in this work !
-!                  have been matched with the spectral bands in rrtm to !
-!                  as great an extent as possible:                      !
-!                     e&c 1      ib = 5      rrtm bands 9-16            !
-!                     e&c 2      ib = 4      rrtm bands 6-8             !
-!                     e&c 3      ib = 3      rrtm bands 3-5             !
-!                     e&c 4      ib = 2      rrtm band 2                !
-!                     e&c 5      ib = 1      rrtm band 1                !
-!     ilwcice=2:   the cloud ice path (g/m2) and ice effective radius   !
-!                  (microns) are input and the optical depths due to ice!
-!                  clouds are computed as in rt code, streamer v3.0     !
-!                  (ref: key j., streamer user's guide, cooperative     !
-!                  institute for meteorological satellite studies, 2001,!
-!                  96 pp.) valid range of values for re are between 5.0 !
-!                  and 131.0 micron.                                    !
-!     ilwcice=3:   the ice generalized effective size (dge) is input and!
-!                  the optical properties, are calculated as in q. fu,  !
-!                  j. climate, (1998). q. fu provided high resolution   !
-!                  tales which were appropriately averaged for the bands!
-!                  in rrtm_lw. linear interpolation is used to get the  !
-!                  coeff from the stored tables. valid range of values  !
-!                  for deg are between 5.0 and 140.0 micron.            !
-!                                                                       !
-!  other cloud control module variables:                                !
-!     isubclw =0: standard cloud scheme, no sub-col cloud approximation !
-!             >0: mcica sub-col cloud scheme using ipseed as permutation!
-!                 seed for generating rundom numbers                    !
-!                                                                       !
-!  ======================  end of description block  =================  !
-!
-      use module_radlw_cldprlw
-
-!  ---  inputs:
-      integer, intent(in) :: nlay, nlp1, iplon, npts
-      integer, dimension(npts), intent(in) :: ipseed
-
-      real (kind=kind_phys), dimension(npts,0:nlp1), intent(in) :: cfrac
-      real (kind=kind_phys), dimension(npts, nlay),   intent(in) :: cliqp,    &
-     &       reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4, dz
-      real (kind=kind_phys), dimension(npts), intent(in) :: de_lgth
-
-!  ---  outputs:
-      real (kind=kind_phys), dimension(npts,ngptlw,nlay),intent(out):: cldfmc
-      real (kind=kind_phys), dimension(npts,nbands,nlay),intent(out):: taucld
-
-!  ---  locals:
-      real (kind=kind_phys), dimension(npts,nbands) :: tauliq, tauice
-      real (kind=kind_phys), dimension(npts,nlay)   :: cldf
-
-      real (kind=kind_phys), dimension(npts) :: dgeice, factor, fint, tauran, tausnw,    &
-     &       cldliq, refliq, cldice, refice
-
-      logical :: lcloudy(npts,ngptlw,nlay)
-      integer :: ia, ib, ig, k, index
-
-!
-!===> ...  begin here
-!
-      do k = 1, nlay
-        do ib = 1, nbands
-          taucld(iplon,ib,k) = f_zero
-        enddo
-      enddo
-
-      do k = 1, nlay
-        do ig = 1, ngptlw
-          cldfmc(iplon,ig,k) = f_zero
-        enddo
-      enddo
-
-!> -# Compute cloud radiative properties for a cloudy column:
-!!\n  - Compute cloud radiative properties for rain and snow (tauran,tausnw)
-!!\n  - Calculation of absorption coefficients due to water clouds(tauliq)
-!!\n  - Calculation of absorption coefficients due to ice clouds (tauice).
-!!\n  - For prognostic cloud scheme: sum up the cloud optical property:
-!!\n    \f$ taucld=tauice+tauliq+tauran+tausnw \f$
-
-!  --- ...  compute cloud radiative properties for a cloudy column
-
-      lab_if_ilwcliq : if (ilwcliq > 0) then
-
-        lab_do_k : do k = 1, nlay
-          lab_if_cld : if (cfrac(iplon,k) > cldmin) then
-
-            tauran(iplon) = absrain * cdat1(iplon,k)                      ! ncar formula
-!!          tausnw = abssnow1 * cdat3(k)                     ! ncar formula
-!  ---  if use fu's formula it needs to be normalized by snow density
-!       !not use snow density = 0.1 g/cm**3 = 0.1 g/(mu * m**2)
-!       use ice density = 0.9167 g/cm**3 = 0.9167 g/(mu * m**2)
-!       factor 1.5396=8/(3*sqrt(3)) converts reff to generalized ice particle size
-!       use newer factor value 1.0315
-!       1/(0.9167*1.0315) = 1.05756
-            if (cdat3(iplon,k)>f_zero .and. cdat4(iplon,k)>10.0_kind_phys) then
-              tausnw(iplon) = abssnow0*1.05756*cdat3(iplon,k)/cdat4(iplon,k)      ! fu's formula
-            else
-              tausnw(iplon) = f_zero
-            endif
-
-            cldliq(iplon) = cliqp(iplon,k)
-            cldice(iplon) = cicep(iplon,k)
-!           refliq = max(2.5e0, min(60.0e0, reliq(k) ))
-!           refice = max(5.0e0, reice(k) )
-            refliq(iplon) = reliq(iplon,k)
-            refice(iplon) = reice(iplon,k)
-
-!  --- ...  calculation of absorption coefficients due to water clouds.
-
-            if ( cldliq(iplon) <= f_zero ) then
-              do ib = 1, nbands
-                tauliq(iplon,ib) = f_zero
-              enddo
-            else
-              if ( ilwcliq == 1 ) then
-
-                factor(iplon) = refliq(iplon) - 1.5
-                index  = max( 1, min( 57, int( factor(iplon) ) ))
-                fint(iplon)   = factor(iplon) - float(index)
-
-                do ib = 1, nbands
-                  tauliq(iplon,ib) = max(f_zero, cldliq(iplon)*(absliq1(index,ib)    &
-     &              + fint(iplon)*(absliq1(index+1,ib)-absliq1(index,ib)) ))
-                enddo
-              endif   ! end if_ilwcliq_block
-            endif   ! end if_cldliq_block
-
-!  --- ...  calculation of absorption coefficients due to ice clouds.
-
-            if ( cldice(iplon) <= f_zero ) then
-              do ib = 1, nbands
-                tauice(iplon,ib) = f_zero
-              enddo
-            else
-
-!  --- ...  ebert and curry approach for all particle sizes though somewhat
-!           unjustified for large ice particles
-
-              if ( ilwcice == 1 ) then
-                refice(iplon) = min(130.0, max(13.0, real(refice(iplon)) ))
-
-                do ib = 1, nbands
-                  ia = ipat(ib)             ! eb_&_c band index for ice cloud coeff
-                  tauice(iplon,ib) = max(f_zero, cldice(iplon)*(absice1(1,ia)        &
-     &                         + absice1(2,ia)/refice(iplon)) )
-                enddo
-
-!  --- ...  streamer approach for ice effective radius between 5.0 and 131.0 microns
-!           and ebert and curry approach for ice eff radius greater than 131.0 microns.
-!           no smoothing between the transition of the two methods.
-
-              elseif ( ilwcice == 2 ) then
-
-                factor(iplon) = (refice(iplon) - 2.0) / 3.0
-                index  = max( 1, min( 42, int( factor(iplon) ) ))
-                fint(iplon)   = factor(iplon) - float(index)
-
-                do ib = 1, nbands
-                  tauice(iplon,ib) = max(f_zero, cldice(iplon)*(absice2(index,ib)    &
-     &              + fint(iplon)*(absice2(index+1,ib) - absice2(index,ib)) ))
-                enddo
-
-!  --- ...  fu's approach for ice effective radius between 4.8 and 135 microns
-!           (generalized effective size from 5 to 140 microns)
-
-              elseif ( ilwcice == 3 ) then
-
-!               dgeice = max(5.0, 1.5396*refice)              ! v4.4 value
-                dgeice(iplon) = max(5.0, 1.0315*refice(iplon))              ! v4.71 value
-                factor(iplon) = (dgeice(iplon) - 2.0) / 3.0
-                index  = max( 1, min( 45, int( factor(iplon) ) ))
-                fint(iplon)   = factor(iplon) - float(index)
-
-                do ib = 1, nbands
-                  tauice(iplon,ib) = max(f_zero, cldice(iplon)*(absice3(index,ib)    &
-     &              + fint(iplon)*(absice3(index+1,ib) - absice3(index,ib)) ))
-                enddo
-
-              endif   ! end if_ilwcice_block
-            endif   ! end if_cldice_block
-
-            do ib = 1, nbands
-              taucld(iplon,ib,k) = tauice(iplon,ib) + tauliq(iplon,ib) + tauran(iplon) + tausnw(iplon)
-            enddo
-
-          endif  lab_if_cld
-        enddo  lab_do_k
-
-      else  lab_if_ilwcliq
-
-        do k = 1, nlay
-          if (cfrac(iplon,k) > cldmin) then
-            do ib = 1, nbands
-              taucld(iplon,ib,k) = cdat1(iplon,k)
-            enddo
-          endif
-        enddo
-
-      endif  lab_if_ilwcliq
-
-!> -# if physparam::isubclw > 0, call mcica_subcol() to distribute
-!!    cloud properties to each g-point.
-
-      if ( isubclw > 0 ) then      ! mcica sub-col clouds approx
-        do k = 1, nlay
-          if ( cfrac(iplon,k) < cldmin ) then
-            cldf(iplon,k) = f_zero
-          else
-            cldf(iplon,k) = cfrac(iplon,k)
-          endif
-        enddo
-
-!  --- ...  call sub-column cloud generator
-
-        call mcica_subcol                                               &
-!  ---  inputs:
-     &     ( cldf(iplon,:), nlay, ipseed(iplon), dz(iplon,:), de_lgth(iplon),                           &
-!  ---  output:
-     &       lcloudy(iplon,:,:)                                                    &
-     &     )
-
-        do k = 1, nlay
-          do ig = 1, ngptlw
-            if ( lcloudy(iplon,ig,k) ) then
-              cldfmc(iplon,ig,k) = f_one
-            else
-              cldfmc(iplon,ig,k) = f_zero
-            endif
-          enddo
-        enddo
-
-      endif   ! end if_isubclw_block
-
-      return
-! ..................................
-      end subroutine cldprop
-! ----------------------------------
-!> @}
+        &     ( ser_count, cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     & !  ---  inputs
+        &       nlay, nlp1, ipseed, dz, de_lgth, iplon,                          &
+        &       cldfmc, taucld                                             & !  ---  outputs
+        &     )
+   
+   !  ===================  program usage description  ===================  !
+   !                                                                       !
+   ! purpose:  compute the cloud optical depth(s) for each cloudy layer    !
+   ! and g-point interval.                                                 !
+   !                                                                       !
+   ! subprograms called:  none                                             !
+   !                                                                       !
+   !  ====================  defination of variables  ====================  !
+   !                                                                       !
+   !  inputs:                                                       -size- !
+   !    cfrac - real, layer cloud fraction                          0:nlp1 !
+   !        .....  for ilwcliq > 0  (prognostic cloud sckeme)  - - -       !
+   !    cliqp - real, layer in-cloud liq water path (g/m**2)          nlay !
+   !    reliq - real, mean eff radius for liq cloud (micron)          nlay !
+   !    cicep - real, layer in-cloud ice water path (g/m**2)          nlay !
+   !    reice - real, mean eff radius for ice cloud (micron)          nlay !
+   !    cdat1 - real, layer rain drop water path  (g/m**2)            nlay !
+   !    cdat2 - real, effective radius for rain drop (microm)         nlay !
+   !    cdat3 - real, layer snow flake water path (g/m**2)            nlay !
+   !    cdat4 - real, effective radius for snow flakes (micron)       nlay !
+   !        .....  for ilwcliq = 0  (diagnostic cloud sckeme)  - - -       !
+   !    cdat1 - real, input cloud optical depth                       nlay !
+   !    cdat2 - real, layer cloud single scattering albedo            nlay !
+   !    cdat3 - real, layer cloud asymmetry factor                    nlay !
+   !    cdat4 - real, optional use                                    nlay !
+   !    cliqp - not used                                              nlay !
+   !    reliq - not used                                              nlay !
+   !    cicep - not used                                              nlay !
+   !    reice - not used                                              nlay !
+   !                                                                       !
+   !    dz     - real, layer thickness (km)                           nlay !
+   !    de_lgth- real, layer cloud decorrelation length (km)             1 !
+   !    nlay  - integer, number of vertical layers                      1  !
+   !    nlp1  - integer, number of vertical levels                      1  !
+   !    ipseed- permutation seed for generating random numbers (isubclw>0) !
+   !                                                                       !
+   !  outputs:                                                             !
+   !    cldfmc - real, cloud fraction for each sub-column       ngptlw*nlay!
+   !    taucld - real, cld opt depth for bands (non-mcica)      nbands*nlay!
+   !                                                                       !
+   !  explanation of the method for each value of ilwcliq, and ilwcice.    !
+   !    set up in module "module_radlw_cntr_para"                          !
+   !                                                                       !
+   !     ilwcliq=0  : input cloud optical property (tau, ssa, asy).        !
+   !                  (used for diagnostic cloud method)                   !
+   !     ilwcliq>0  : input cloud liq/ice path and effective radius, also  !
+   !                  require the user of 'ilwcice' to specify the method  !
+   !                  used to compute aborption due to water/ice parts.    !
+   !  ...................................................................  !
+   !                                                                       !
+   !     ilwcliq=1:   the water droplet effective radius (microns) is input!
+   !                  and the opt depths due to water clouds are computed  !
+   !                  as in hu and stamnes, j., clim., 6, 728-742, (1993). !
+   !                  the values for absorption coefficients appropriate for
+   !                  the spectral bands in rrtm have been obtained for a  !
+   !                  range of effective radii by an averaging procedure   !
+   !                  based on the work of j. pinto (private communication).
+   !                  linear interpolation is used to get the absorption   !
+   !                  coefficients for the input effective radius.         !
+   !                                                                       !
+   !     ilwcice=1:   the cloud ice path (g/m2) and ice effective radius   !
+   !                  (microns) are input and the optical depths due to ice!
+   !                  clouds are computed as in ebert and curry, jgr, 97,  !
+   !                  3831-3836 (1992).  the spectral regions in this work !
+   !                  have been matched with the spectral bands in rrtm to !
+   !                  as great an extent as possible:                      !
+   !                     e&c 1      ib = 5      rrtm bands 9-16            !
+   !                     e&c 2      ib = 4      rrtm bands 6-8             !
+   !                     e&c 3      ib = 3      rrtm bands 3-5             !
+   !                     e&c 4      ib = 2      rrtm band 2                !
+   !                     e&c 5      ib = 1      rrtm band 1                !
+   !     ilwcice=2:   the cloud ice path (g/m2) and ice effective radius   !
+   !                  (microns) are input and the optical depths due to ice!
+   !                  clouds are computed as in rt code, streamer v3.0     !
+   !                  (ref: key j., streamer user's guide, cooperative     !
+   !                  institute for meteorological satellite studies, 2001,!
+   !                  96 pp.) valid range of values for re are between 5.0 !
+   !                  and 131.0 micron.                                    !
+   !     ilwcice=3:   the ice generalized effective size (dge) is input and!
+   !                  the optical properties, are calculated as in q. fu,  !
+   !                  j. climate, (1998). q. fu provided high resolution   !
+   !                  tales which were appropriately averaged for the bands!
+   !                  in rrtm_lw. linear interpolation is used to get the  !
+   !                  coeff from the stored tables. valid range of values  !
+   !                  for deg are between 5.0 and 140.0 micron.            !
+   !                                                                       !
+   !  other cloud control module variables:                                !
+   !     isubclw =0: standard cloud scheme, no sub-col cloud approximation !
+   !             >0: mcica sub-col cloud scheme using ipseed as permutation!
+   !                 seed for generating rundom numbers                    !
+   !                                                                       !
+   !  ======================  end of description block  =================  !
+   !
+         use module_radlw_cldprlw
+   
+   !  ---  inputs:
+         integer, intent(in) :: nlay, nlp1, ipseed, ser_count, iplon
+   
+         real (kind=kind_phys), dimension(0:nlp1), intent(in) :: cfrac
+         real (kind=kind_phys), dimension(nlay),   intent(in) :: cliqp,    &
+        &       reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4, dz
+         real (kind=kind_phys),                    intent(in) :: de_lgth
+   
+   !  ---  outputs:
+         real (kind=kind_phys), dimension(ngptlw,nlay),intent(out):: cldfmc
+         real (kind=kind_phys), dimension(nbands,nlay),intent(out):: taucld
+   
+   !  ---  locals:
+         real (kind=kind_phys), dimension(nbands) :: tauliq, tauice
+         real (kind=kind_phys), dimension(nlay)   :: cldf
+   
+         real (kind=kind_phys) :: dgeice, factor, fint, tauran, tausnw,    &
+        &       cldliq, refliq, cldice, refice
+   
+         logical :: lcloudy(ngptlw,nlay)
+         integer :: ia, ib, ig, k, index
+         character(len=6) :: ser_count_str
+   
+   !
+   !===> ...  begin here
+   !
+         do k = 1, nlay
+           do ib = 1, nbands
+             taucld(ib,k) = f_zero
+           enddo
+         enddo
+   
+         do k = 1, nlay
+           do ig = 1, ngptlw
+             cldfmc(ig,k) = f_zero
+           enddo
+         enddo
+   
+   !> -# Compute cloud radiative properties for a cloudy column:
+   !!\n  - Compute cloud radiative properties for rain and snow (tauran,tausnw)
+   !!\n  - Calculation of absorption coefficients due to water clouds(tauliq)
+   !!\n  - Calculation of absorption coefficients due to ice clouds (tauice).
+   !!\n  - For prognostic cloud scheme: sum up the cloud optical property:
+   !!\n    \f$ taucld=tauice+tauliq+tauran+tausnw \f$
+   
+   !  --- ...  compute cloud radiative properties for a cloudy column
+   
+         lab_if_ilwcliq : if (ilwcliq > 0) then
+   
+           lab_do_k : do k = 1, nlay
+             lab_if_cld : if (cfrac(k) > cldmin) then
+   
+               tauran = absrain * cdat1(k)                      ! ncar formula
+   !!          tausnw = abssnow1 * cdat3(k)                     ! ncar formula
+   !  ---  if use fu's formula it needs to be normalized by snow density
+   !       !not use snow density = 0.1 g/cm**3 = 0.1 g/(mu * m**2)
+   !       use ice density = 0.9167 g/cm**3 = 0.9167 g/(mu * m**2)
+   !       factor 1.5396=8/(3*sqrt(3)) converts reff to generalized ice particle size
+   !       use newer factor value 1.0315
+   !       1/(0.9167*1.0315) = 1.05756
+               if (cdat3(k)>f_zero .and. cdat4(k)>10.0_kind_phys) then
+                 tausnw = abssnow0*1.05756*cdat3(k)/cdat4(k)      ! fu's formula
+               else
+                 tausnw = f_zero
+               endif
+   
+               cldliq = cliqp(k)
+               cldice = cicep(k)
+   !           refliq = max(2.5e0, min(60.0e0, reliq(k) ))
+   !           refice = max(5.0e0, reice(k) )
+               refliq = reliq(k)
+               refice = reice(k)
+   
+   !  --- ...  calculation of absorption coefficients due to water clouds.
+   
+               if ( cldliq <= f_zero ) then
+                 do ib = 1, nbands
+                   tauliq(ib) = f_zero
+                 enddo
+               else
+                 if ( ilwcliq == 1 ) then
+   
+                   factor = refliq - 1.5
+                   index  = max( 1, min( 57, int( factor ) ))
+                   fint   = factor - float(index)
+   
+                   do ib = 1, nbands
+                     tauliq(ib) = max(f_zero, cldliq*(absliq1(index,ib)    &
+        &              + fint*(absliq1(index+1,ib)-absliq1(index,ib)) ))
+                   enddo
+                 endif   ! end if_ilwcliq_block
+               endif   ! end if_cldliq_block
+   
+   !  --- ...  calculation of absorption coefficients due to ice clouds.
+   
+               if ( cldice <= f_zero ) then
+                 do ib = 1, nbands
+                   tauice(ib) = f_zero
+                 enddo
+               else
+   
+   !  --- ...  ebert and curry approach for all particle sizes though somewhat
+   !           unjustified for large ice particles
+   
+                 if ( ilwcice == 1 ) then
+                   refice = min(130.0, max(13.0, real(refice) ))
+   
+                   do ib = 1, nbands
+                     ia = ipat(ib)             ! eb_&_c band index for ice cloud coeff
+                     tauice(ib) = max(f_zero, cldice*(absice1(1,ia)        &
+        &                         + absice1(2,ia)/refice) )
+                   enddo
+   
+   !  --- ...  streamer approach for ice effective radius between 5.0 and 131.0 microns
+   !           and ebert and curry approach for ice eff radius greater than 131.0 microns.
+   !           no smoothing between the transition of the two methods.
+   
+                 elseif ( ilwcice == 2 ) then
+   
+                   factor = (refice - 2.0) / 3.0
+                   index  = max( 1, min( 42, int( factor ) ))
+                   fint   = factor - float(index)
+   
+                   do ib = 1, nbands
+                     tauice(ib) = max(f_zero, cldice*(absice2(index,ib)    &
+        &              + fint*(absice2(index+1,ib) - absice2(index,ib)) ))
+                   enddo
+   
+   !  --- ...  fu's approach for ice effective radius between 4.8 and 135 microns
+   !           (generalized effective size from 5 to 140 microns)
+   
+                 elseif ( ilwcice == 3 ) then
+   
+   !               dgeice = max(5.0, 1.5396*refice)              ! v4.4 value
+                   dgeice = max(5.0, 1.0315*refice)              ! v4.71 value
+                   factor = (dgeice - 2.0) / 3.0
+                   index  = max( 1, min( 45, int( factor ) ))
+                   fint   = factor - float(index)
+   
+                   do ib = 1, nbands
+                     tauice(ib) = max(f_zero, cldice*(absice3(index,ib)    &
+        &              + fint*(absice3(index+1,ib) - absice3(index,ib)) ))
+                   enddo
+   
+                 endif   ! end if_ilwcice_block
+               endif   ! end if_cldice_block
+   
+               do ib = 1, nbands
+                 taucld(ib,k) = tauice(ib) + tauliq(ib) + tauran + tausnw
+               enddo
+   
+             endif  lab_if_cld
+           enddo  lab_do_k
+   
+         else  lab_if_ilwcliq
+   
+           do k = 1, nlay
+             if (cfrac(k) > cldmin) then
+               do ib = 1, nbands
+                 taucld(ib,k) = cdat1(k)
+               enddo
+             endif
+           enddo
+   
+         endif  lab_if_ilwcliq
+   
+   !> -# if physparam::isubclw > 0, call mcica_subcol() to distribute
+   !!    cloud properties to each g-point.
+   
+         if ( isubclw > 0 ) then      ! mcica sub-col clouds approx
+           do k = 1, nlay
+             if ( cfrac(k) < cldmin ) then
+               cldf(k) = f_zero
+             else
+               cldf(k) = cfrac(k)
+             endif
+           enddo
+   
+   !     --- ...  call sub-column cloud generator
+   
+           call mcica_subcol                                               &
+   !  ---  inputs:
+        &     ( ser_count, cldf, nlay, ipseed, dz, de_lgth, iplon,         &
+   !  ---  output:
+        &       lcloudy                                                    &
+        &     )
+   
+   !$ser verbatim if (iplon==1) then
+     !$ser mode write
+     !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+     !$ser savepoint "lwrad-mcica_subcol-output-"//trim(ser_count_str)
+     !$ser data lcloudy=lcloudy
+   !$ser verbatim endif
+   
+           do k = 1, nlay
+             do ig = 1, ngptlw
+               if ( lcloudy(ig,k) ) then
+                 cldfmc(ig,k) = f_one
+               else
+                 cldfmc(ig,k) = f_zero
+               endif
+             enddo
+           enddo
+   
+         endif   ! end if_isubclw_block
+   
+         return
+   ! ..................................
+         end subroutine cldprop
+   ! ----------------------------------
+   !> @}
 
 !> This suroutine computes sub-colum cloud profile flag array.
 !!\param cldf        layer cloud fraction
@@ -1866,7 +1905,7 @@
 !!\param lcloudy     sub-colum cloud profile flag array
 ! ----------------------------------
       subroutine mcica_subcol                                           &
-     &    ( cldf, nlay, ipseed, dz, de_lgth,                            &!  ---  inputs
+     &    ( ser_count, cldf, nlay, ipseed, dz, de_lgth, iplon,                            &!  ---  inputs
      &      lcloudy                                                     & !  ---  outputs
      &    )
 
@@ -1894,7 +1933,7 @@
       implicit none
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, iplon
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cldf, dz
       real (kind=kind_phys),                  intent(in) :: de_lgth

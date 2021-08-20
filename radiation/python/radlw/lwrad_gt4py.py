@@ -61,8 +61,9 @@ invars = [
 ]
 
 outvars = [
-    "hlwc",
-    "cldtau",
+    "htlwc",
+    "htlw0",
+    "cldtaulw",
     "upfxc_t",
     "upfx0_t",
     "upfxc_s",
@@ -111,7 +112,8 @@ locvars = [
     "dz",
     "pklev",
     "pklay",
-    "htrb" "taucld",
+    "htrb",
+    "taucld",
     "tauaer",
     "fracs",
     "tautot",
@@ -157,7 +159,6 @@ locvars = [
     "lcloudy",
     "tem1",
     "summol",
-    "expval",
     "lcf1",
     "cldsum",
     "tlvlfr",
@@ -344,7 +345,10 @@ for var in invars:
 outdict_gt4py = dict()
 
 for var in outvars:
-    outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+    if var in ["htlwc", "htlw0", "cldtaulw"]:
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+    else:
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
 
 locdict_gt4py = dict()
 
@@ -364,7 +368,6 @@ for var in locvars:
     elif var in [
         "semiss",
         "secdiff",
-        "expval",
         "pklay",
         "pklev",
         "htrb",
@@ -463,11 +466,14 @@ lookup_dict["ipat"] = create_storage_from_array(
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
 ds = xr.open_dataset("../lookupdata/rand2d.nc")
-rand2d = ds["rand2d"][0, :].data
-cdfunc = np.reshape(rand2d, (ngptlw, nlay), order="C")
-cdfunc = np.insert(cdfunc, 0, 0, axis=1)
+rand2d = ds["rand2d"][:, :].data
+cdfunc = np.zeros((npts, ngptlw, nlay))
+for n in range(npts):
+    cdfunc[n, :, :] = np.reshape(rand2d[n, :], (ngptlw, nlay), order="C")
+cdfunc = np.insert(cdfunc, 0, 0, axis=2)
+cdfunc = np.transpose(cdfunc, (0, 2, 1))
 
-cdfunc = np.tile(cdfunc.T[None, None, :, :], (npts, 1, 1, 1))
+cdfunc = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
 locdict_gt4py["cdfunc"] = create_storage_from_array(
     cdfunc, backend, shape_nlp1, type_ngptlw
 )
@@ -569,7 +575,6 @@ firstloop(
     locdict_gt4py["A0"],
     locdict_gt4py["A1"],
     locdict_gt4py["A2"],
-    locdict_gt4py["expval"],
     domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
@@ -618,11 +623,26 @@ cldprop(
     validate_args=validate,
 )
 
+outdict_cldprop = dict()
+valdict_cldprop = dict()
+
+outvars_cldprop = ["cldfmc", "taucld"]
+
+for var in outvars_cldprop:
+    outdict_cldprop[var] = (
+        locdict_gt4py[var][:, :, 1:, :].squeeze().transpose((0, 2, 1))
+    )
+    valdict_cldprop[var] = serializer2.read(
+        var, serializer2.savepoint["lw-cldprop-output-000000"]
+    )
+
+compare_data(outdict_cldprop, valdict_cldprop)
+
 setcoef(
     locdict_gt4py["pavel"],
     locdict_gt4py["tavel"],
-    locdict_gt4py["tz"],
-    locdict_gt4py["stemp"],
+    indict_gt4py["tlvl"],
+    indict_gt4py["tsfg"],
     locdict_gt4py["h2ovmr"],
     locdict_gt4py["colamt"],
     locdict_gt4py["coldry"],
@@ -668,7 +688,53 @@ setcoef(
     validate_args=validate,
 )
 
-print(locdict_gt4py["laytrop"])
+outvars_setcoef = [
+    "laytrop",
+    "pklay",
+    "pklev",
+    "jp",
+    "jt",
+    "jt1",
+    "rfrate",
+    "fac00",
+    "fac01",
+    "fac10",
+    "fac11",
+    "selffac",
+    "selffrac",
+    "indself",
+    "forfac",
+    "forfrac",
+    "indfor",
+    "minorfrac",
+    "scaleminor",
+    "scaleminorn2",
+    "indminor",
+]
+
+outdict_setcoef = dict()
+valdict_setcoef = dict()
+
+for var in outvars_setcoef:
+    valdict_setcoef[var] = serializer2.read(
+        var, serializer2.savepoint["lwrad-setcoef-output-000000"]
+    )
+    if var != "laytrop":
+        outdict_setcoef[var] = locdict_gt4py[var][:, 0, ...].squeeze().view(np.ndarray)
+        if var == "pklay" or var == "pklev":
+            outdict_setcoef[var] = np.transpose(outdict_setcoef[var], (0, 2, 1))
+        else:
+            outdict_setcoef[var] = outdict_setcoef[var][:, 1:, ...]
+    else:
+        outdict_setcoef[var] = (
+            locdict_gt4py[var][0, :, 1:]
+            .squeeze()
+            .view(np.ndarray)
+            .astype(np.int32)
+            .sum()
+        )
+
+compare_data(outdict_setcoef, valdict_setcoef)
 
 start = time.time()
 taugb01(
@@ -1651,6 +1717,32 @@ combine_optical_depth(
 )
 print(" ")
 
+outdict_taumol = {
+    "fracs": np.transpose(locdict_gt4py["fracs"][:, :, 1:, :].squeeze(), (0, 2, 1)),
+    "tautot": np.transpose(locdict_gt4py["tautot"][:, :, 1:, :].squeeze(), (0, 2, 1)),
+}
+
+outvars_t = ["fracs", "tautot"]
+
+valdict_taumol = dict()
+for var in outvars_t:
+    valdict_taumol[var] = serializer2.read(
+        var, serializer2.savepoint["lwrad-taumol-output-000000"]
+    )
+
+# compare_data(valdict_taumol, outdict_taumol)
+print(f"Laytrop = {locdict_gt4py['laytrop'][3, :, :]}")
+print(' ')
+print(f"Python = {outdict_taumol['fracs'][:, 108, 0]}")
+print(" ")
+print(f"Fortran = {valdict_taumol['fracs'][:, 108, 0]}")
+print(" ")
+for n in range(ngptlw):
+    tmp1 = outdict_taumol["fracs"][:, n, :]
+    tmp2 = valdict_taumol["fracs"][:, n, :]
+    if not np.allclose(tmp1, tmp2):
+        print(f"Problem n = {n}")
+print(f"Difference = {(outdict_taumol['fracs']-valdict_taumol['fracs']).min()}")
 
 rtrnmc(
     locdict_gt4py["semiss"],
@@ -1695,7 +1787,6 @@ rtrnmc(
     locdict_gt4py["reflct"],
     locdict_gt4py["totfac"],
     locdict_gt4py["gasfac"],
-    locdict_gt4py["flxfac"],
     locdict_gt4py["plfrac"],
     locdict_gt4py["blay"],
     locdict_gt4py["bbdgas"],
@@ -1720,5 +1811,67 @@ rtrnmc(
     validate_args=validate,
 )
 
+outvars_r = ["totuflux", "totdflux", "htr", "totuclfl", "totdclfl", "htrcl", "htrb"]
+outdict_tmp = dict()
+
+for var in outvars_r:
+    outdict_tmp[var] = locdict_gt4py[var]
+outdict_np = view_gt4py_storage(outdict_tmp)
+
+for var in outdict_np.keys():
+    if var == "htr" or var == "htrcl":
+        outdict_np[var] = outdict_np[var][:, 1:].squeeze()
+    elif var == "htrb":
+        outdict_np[var] = outdict_np[var][:, 1:, :].squeeze()
+    else:
+        outdict_np[var] = outdict_np[var][:, :]
+
+outdict_val = dict()
+for var in outvars_r:
+    outdict_val[var] = serializer2.read(
+        var, serializer2.savepoint["lwrad-rtrnmc-output-000000"]
+    )
+
+compare_data(outdict_np, outdict_val)
+
+finalloop(
+    locdict_gt4py["totuflux"],
+    locdict_gt4py["totuclfl"],
+    locdict_gt4py["totdflux"],
+    locdict_gt4py["totdclfl"],
+    locdict_gt4py["htr"],
+    locdict_gt4py["htrcl"],
+    outdict_gt4py["upfxc_t"],
+    outdict_gt4py["upfx0_t"],
+    outdict_gt4py["upfxc_s"],
+    outdict_gt4py["upfx0_s"],
+    outdict_gt4py["dnfxc_s"],
+    outdict_gt4py["dnfx0_s"],
+    outdict_gt4py["htlwc"],
+    outdict_gt4py["htlw0"],
+    domain=(shape_nlp1),
+    origin=default_origin,
+    validate_args=validate,
+)
+
 end0 = time.time()
 print(f"Total time taken = {end0 - start0}")
+
+valdict = dict()
+outdict_np = dict()
+
+for var in outvars:
+    print(var)
+    valdict[var] = serializer.read(var, serializer.savepoint["lwrad-out-000000"])
+    if var == "htlwc" or var == "htlw0" or var == "cldtaulw":
+        outdict_np[var] = outdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
+    else:
+        outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
+
+# compare_data(valdict, outdict_np)
+
+print(f"Python = {outdict_np['upfxc_t']}")
+print(" ")
+print(f"Fortran = {valdict['upfxc_t']}")
+print(" ")
+print(f"Difference = {outdict_np['upfxc_t'] - valdict['upfxc_t']}")

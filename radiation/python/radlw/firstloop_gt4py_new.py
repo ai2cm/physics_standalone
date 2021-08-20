@@ -30,7 +30,7 @@ rebuild = False
 validate = False
 backend = "gtc:gt:cpu_ifirst"
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data"
+ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
 
 savepoints = serializer.savepoint_list()
@@ -137,7 +137,6 @@ locvars = [
     "tem11",
     "tem22",
     "summol",
-    "expval",
 ]
 
 locdict_gt4py = dict()
@@ -153,7 +152,7 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
     elif var == "semiss0":
         locdict_gt4py[var] = create_storage_ones(backend, shape_nlp1, type_nbands)
-    elif var == "semiss" or var == "secdiff" or var == "expval":
+    elif var == "semiss" or var == "secdiff":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbands)
     elif var == "tz":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
@@ -221,7 +220,6 @@ def firstloop(
     a0: Field[type_nbands],
     a1: Field[type_nbands],
     a2: Field[type_nbands],
-    expval: Field[type_nbands],
 ):
     from __externals__ import nbands, ilwcliq, ilwrgas
 
@@ -339,16 +337,20 @@ def firstloop(
 
             tem1 = 1.80
             tem2 = 1.50
-            expval = exp(a2 * pwvcm)
             for j4 in range(nbands):
                 if j4 == 0 or j4 == 3 or j4 == 9:
                     secdiff[0, 0, 0][j4] = 1.66
                 else:
                     # Workaround for native functions not working inside for loops
                     # Can be refactored at next gt4py release
-                    tmp = a0[0, 0, 0][j4] + a1[0, 0, 0][j4] * expval[0, 0, 0][j4]
-                    tmp2 = tmp if tmp > tem2 else tem2
-                    secdiff[0, 0, 0][j4] = tmp2 if tmp2 < tem1 else tem1
+                    secdiff[0, 0, 0][j4] = min(
+                        tem1,
+                        max(
+                            tem2,
+                            a0[0, 0, 0][j4]
+                            + a1[0, 0, 0][j4] * exp(a2[0, 0, 0][j4] * pwvcm),
+                        ),
+                    )
 
 
 firstloop(
@@ -398,7 +400,6 @@ firstloop(
     locdict_gt4py["A0"],
     locdict_gt4py["A1"],
     locdict_gt4py["A2"],
-    locdict_gt4py["expval"],
     domain=(npts, 1, nlp1),
     origin=default_origin,
     validate_args=validate,
@@ -456,9 +457,3 @@ for var in valvars:
     valdict[var] = serializer.read(var, serializer.savepoint["lw_firstloop_out_000000"])
 
 compare_data(outdict, valdict)
-print(f"expval = {locdict_gt4py['expval'].max()}")
-print(" ")
-
-print(f"Python = {outdict['secdiff']}")
-print(" ")
-print(f"Fortran = {valdict['secdiff']}")
