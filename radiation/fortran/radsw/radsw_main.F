@@ -1145,13 +1145,30 @@
 
         if (zcf1 > f_zero) then     ! cloudy sky column
 
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-input-"//trim(ser_count_str)
+  !$ser data cfrac=cfrac cliqp=cliqp reliq=reliq cicep=cicep reice=reice
+  !$ser data cdat1=cdat1 cdat2=cdat2 cdat3=cdat3 cdat4=cdat4 zcf1=zcf1 
+  !$ser data nlay=nlay ipseed=ipseed(j1) dz=dz delgth=delgth
+!$ser verbatim end if
+
           call cldprop                                                  &
 !  ---  inputs:
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     &
-     &       zcf1, nlay, ipseed(j1), dz, delgth,                        &
+     &       zcf1, nlay, ipseed(j1), dz, delgth, ser_count, ipt,        &
 !  ---  outputs:
      &       taucw, ssacw, asycw, cldfrc, cldfmc                        &
      &     )
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
+  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
+  !$ser data cldfmc=cldfmc
+!$ser verbatim end if
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band 10 is approx to the 0.55 mu spectrum
@@ -1208,15 +1225,32 @@
   !$ser data forfrac=forfrac indfor=indfor
 !$ser verbatim end if
 
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taumol-input-"//trim(ser_count_str)
+  !$ser data colamt=colamt colmol=colmol fac00=fac00 fac01=fac01 fac10=fac10
+  !$ser data fac11=fac11 jp=jp jt=jt jt1=jt1 laytrop=laytrop forfac=forfac
+  !$ser data forfrac=forfrac indfor=indfor selffac=selffac selffrac=selffrac
+  !$ser data indself=indself NLAY=NLAY
+!$ser verbatim end if
+
 !> -# Call taumol() to calculate optical depths for gaseous absorption
 !!    and rayleigh scattering
         call taumol                                                     &
 !  ---  inputs:
-     &     ( colamt,colmol,fac00,fac01,fac10,fac11,jp,jt,jt1,laytrop,   &
-     &       forfac,forfrac,indfor,selffac,selffrac,indself, NLAY,      &
+     &     ( ser_count,colamt,colmol,fac00,fac01,fac10,fac11,jp,jt,jt1,laytrop,   &
+     &       forfac,forfrac,indfor,selffac,selffrac,indself, NLAY, ipt,      &
 !  ---  outputs:
      &       sfluxzen, taug, taur                                       &
      &     )
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taumol-output-"//trim(ser_count_str)
+  !$ser data sfluxzen=sfluxzen taug=taug taur=taur
+!$ser verbatim end if
 
 !> -# Call the 2-stream radiation transfer model:
 !!    - if physparam::isubcsw .le.0, using standard cloud scheme,
@@ -1243,11 +1277,10 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-spcvrtm-input-"//trim(ser_count_str)
-  !$ser data ssolar=ssolar cosz1=cosz1 sntz1=sntz1 albbm=albbm
-  !$ser data albdf=albdf sfluxzen=sfluxzen cldfmc=cldfmc
-  !$ser data zcf1=zcf1 zcf0=zcf0 taug=taug taur=taur tauae=tauae
-  !$ser data ssaae=ssaae asyae=asyae taucw=taucw ssacw=ssacw
-  !$ser data asycw=asycw nlay=nlay nlp1=nlp1
+  !$ser data ssolar=ssolar cosz1=cosz1 sntz1=sntz1 albbm=albbm albdf=albdf
+  !$ser data sfluxzen=sfluxzen cldfmc=cldfmc zcf1=zcf1 zcf0=zcf0 taug=taug
+  !$ser data taur=taur tauae=tauae ssaae=ssaae asyae=asyae taucw=taucw
+  !$ser data ssacw=ssacw asycw=asycw nlay=nlay nlp1=nlp1 exp_tbl=exp_tbl 
 !$ser verbatim end if
 
           call spcvrtm                                                  &
@@ -1260,6 +1293,17 @@
      &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
      &       sfbmc,sfdfc,sfbm0,sfdf0,suvbfc,suvbf0                      &
      &     )
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-spcvrtm-output-"//trim(ser_count_str)
+  !$ser data fxupc=fxupc fxdnc=fxdnc fxup0=fxup0 fxdn0=fxdn0 
+  !$ser data ftoauc=ftoauc ftoau0=ftoau0 ftoadc=ftoadc fsfcuc=fsfcuc
+  !$ser data fsfcu0=fsfcu0 fsfcdc=fsfcdc fsfcd0=fsfcd0 sfbmc=sfbmc
+  !$ser data sfdfc=sfdfc sfbm0=sfbm0 sfdf0=sfdf0 suvbfc=suvbfc
+  !$ser data suvbf0=suvbf0
+!$ser verbatim end if
 
         endif
 
@@ -1634,7 +1678,7 @@
 !-----------------------------------
       subroutine cldprop                                                &
      &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     &   !  ---  inputs
-     &       cf1, nlay, ipseed, dz, delgth,                             &
+     &       cf1, nlay, ipseed, dz, delgth, ser_count, ipt,             &
      &       taucw, ssacw, asycw, cldfrc, cldfmc                        &   !  ---  output
      &     )
 
@@ -1720,7 +1764,7 @@
       use module_radsw_cldprtb
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, ipt
       real (kind=kind_phys), intent(in) :: cf1, delgth
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cliqp,      &
@@ -1977,7 +2021,7 @@
 
         call mcica_subcol                                               &
 !  ---  inputs:
-     &     ( cldf, nlay, ipseed, dz, delgth,                            &
+     &     ( ser_count, cldf, nlay, ipseed, dz, delgth, ipt,                           &
 !  ---  outputs:
      &       lcloudy                                                    &
      &     )
@@ -2013,7 +2057,7 @@
 !!\param lcloudy     sub-colum cloud profile flag array
 ! ----------------------------------
       subroutine mcica_subcol                                           &
-     &    ( cldf, nlay, ipseed, dz, de_lgth,                            &       !  ---  inputs
+     &    ( ser_count, cldf, nlay, ipseed, dz, de_lgth, ipt,                           &       !  ---  inputs
      &      lcloudy                                                     &       !  ---  outputs
      &    )
 
@@ -2044,7 +2088,7 @@
       implicit none
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, ipseed
+      integer, intent(in) :: nlay, ipseed, ser_count, ipt
 
       real (kind=kind_phys), dimension(nlay), intent(in) :: cldf, dz
       real (kind=kind_phys), intent(in) :: de_lgth
@@ -2060,6 +2104,8 @@
       type (random_stat) :: stat          ! for thread safe random generator
 
       integer :: k, n, k1
+      character(len=6) :: ser_count_str
+      character(len=2) :: ipt_str
 !
 !===> ...  begin here
 !
@@ -2097,6 +2143,12 @@
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser verbatim write(ipt_str, '(i2.2)') ipt
+!$ser savepoint "random_number-output-"//trim(ser_count_str)//"-"//trim(ipt_str)
+!$ser data rand2d=rand2d
 
           k1 = 0
           do n = 1, ngptsw
@@ -4041,8 +4093,8 @@
 !! @{
 !-----------------------------------
       subroutine taumol                                                 &
-     &     ( colamt,colmol,fac00,fac01,fac10,fac11,jp,jt,jt1,laytrop,   & !  ---  inputs
-     &       forfac,forfrac,indfor,selffac,selffrac,indself, nlay,      &
+     &     ( ser_count,colamt,colmol,fac00,fac01,fac10,fac11,jp,jt,jt1,laytrop,   & !  ---  inputs
+     &       forfac,forfrac,indfor,selffac,selffrac,indself, nlay, ipt,     &
      &       sfluxzen, taug, taur                                       &  !  ---  outputs
      &     )
 
@@ -4143,7 +4195,7 @@
 !  ======================  end of description block  =================  !
 
 !  ---  inputs:
-      integer,               intent(in) :: nlay, laytrop
+      integer,               intent(in) :: nlay, laytrop, ipt, ser_count
 
       integer, dimension(nlay), intent(in) :: indfor, indself,          &
      &       jp, jt, jt1
@@ -4166,6 +4218,8 @@
       integer, dimension(nlay,nblow:nbhgh) :: id0, id1
 
       integer :: ibd, j, jb, js, k, klow, khgh, klim, ks, njb, ns
+
+      character(len=6) :: ser_count_str
 !
 !===> ... begin here
 !
@@ -4256,6 +4310,13 @@
         end select
 
       enddo
+
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taumol-check-"//trim(ser_count_str)
+  !$ser data sfluxzen=sfluxzen
+!$ser verbatim end if
 
 !> - Call taumol## (##: 16-29) to calculate layer optical depth.
 
