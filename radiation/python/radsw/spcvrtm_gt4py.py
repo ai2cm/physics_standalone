@@ -226,10 +226,6 @@ zsr3 = np.sqrt(3.0)
 od_lo = 0.06
 eps1 = 1.0e-8
 
-@gtscript.function
-def vrtqdr(zrefb,zrefd,ztrab,ztrad,zldbt,ztdbt):
-    
-
 
 @stencil(
     backend=backend,
@@ -434,35 +430,34 @@ def spcvrtm(
                 ze1r45 = zr4 * zexp1 + zr5 * zexm1
 
                 zden1 = zssa1 / ze1r45
-            
+
             #  --- ...  direct beam transmittance. use exponential lookup table
             #           for transmittance, or expansion of exponential for low
             #           optical depth
 
             zr1 = ztau1 * sntz
             if zr1 <= od_lo:
-                zexp3 = 1.0 - zr1 + 0.5*zr1*zr1
+                zexp3 = 1.0 - zr1 + 0.5 * zr1 * zr1
             else:
                 ftind = zr1 / (bpade + zr1)
-                itind = max(0, min(ntbmx, int(0.5+ntbmx*ftind))) - 1
+                itind = max(0, min(ntbmx, int(0.5 + ntbmx * ftind))) - 1
                 zexp3 = exp_tbl[0, 0, 0][itind]
 
-            ztdbt  = zexp3 * ztdbt[0, 0, 1]
+            ztdbt = zexp3 * ztdbt[0, 0, 1]
 
             #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
             #           (must use 'orig', unscaled cloud optical depth)
 
             zr1 = ztau0 * sntz
             if zr1 <= od_lo:
-                zexp4 = 1.0 - zr1 + 0.5*zr1*zr1
+                zexp4 = 1.0 - zr1 + 0.5 * zr1 * zr1
             else:
                 ftind = zr1 / (bpade + zr1)
-                itind = max(0, min(ntbmx, int(0.5+ntbmx*ftind))) - 1
+                itind = max(0, min(ntbmx, int(0.5 + ntbmx * ftind))) - 1
                 zexp4 = exp_tbl[0, 0, 0][itind]
 
             zldbt0 = zexp4
             ztdbt0 = zexp4 * ztdbt0
-          
 
     with computation(BACKWARD), interval(2, None):
         for jg4 in range(ngptsw):
