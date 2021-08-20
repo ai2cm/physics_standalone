@@ -144,12 +144,16 @@ for var in invars:
         elif var in integervars or var in fltvars:
             tmp2 = np.append(tmp, np.zeros((npts, 1)), axis=1)
             indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
+        elif var == "laytrop":
+            indict[var] = tmp
         else:
             indict[var] = tmp[0]
 
 laytrop_arr = np.zeros(shape_nlp1, dtype=bool)
-lim = indict["laytrop"]
-laytrop_arr[:, :, :lim] = True
+for n in range(npts):
+    lim = indict["laytrop"][n]
+    laytrop_arr[n, :, :lim] = True
+
 indict["laytrop"] = laytrop_arr
 
 indict_gt4py = dict()
@@ -2589,7 +2593,7 @@ def taugb09(
 
 @stencil(
     backend=backend,
-    rebuild=True,
+    rebuild=rebuild,
     verbose=True,
     externals={
         "nspa": nspa[9],
@@ -5134,5 +5138,8 @@ for n in range(ngptlw):
     if not np.allclose(tmp1, tmp2):
         print(f"Problem n = {n}")
 print(f"Difference = {(outdict_gt4py['fracs']-outdict_val['fracs']).min()}")
+
+print(f"fracrefa = {lookupdict_gt4py10['fracrefa'][3, :, 0, :]}")
+print(f"fracrefb = {lookupdict_gt4py10['fracrefb'][3, :, 0, :]}")
 
 # print(f"test = {locdict_gt4py['taug'][0, :, :-1, 0]}")
