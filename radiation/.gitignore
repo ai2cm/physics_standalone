@@ -3,7 +3,7 @@
 *.F90
 *.o
 *.mod
-*.dat
+fortran/*.dat
 *.sdfg
 *.json
 *.x
