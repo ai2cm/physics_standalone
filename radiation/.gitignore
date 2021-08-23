@@ -5,5 +5,5 @@
 *.mod
 fortran/*.dat
 *.sdfg
-*.json
+fortran/*/dump/*.json
 *.x
