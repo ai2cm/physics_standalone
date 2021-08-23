@@ -3,18 +3,27 @@ import numpy as np
 import xarray as xr
 from gt4py.gtscript import (
     stencil,
+    function,
     computation,
     PARALLEL,
-    BACKWARD,
     interval,
-    log,
-    index,
+    abs,
     sqrt,
 )
 
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from config import *
-from radsw_param import ngptsw, nblow, nbhgh, NGB, idxsfc, ntbmx
+from radsw.radsw_param import (
+    ngptsw,
+    nblow,
+    NGB,
+    idxsfc,
+    ntbmx,
+    bpade,
+    oneminus,
+    ftiny,
+    flimit,
+)
 from radphysparam import iswmode
 from util import create_storage_from_array, create_storage_zeros, compare_data
 
@@ -50,6 +59,7 @@ invars = [
     "asycw",
     "nlay",
     "nlp1",
+    "exp_tbl",
 ]
 
 outvars = [
@@ -136,6 +146,7 @@ locvars = [
     "jb",
     "ib",
     "ibd",
+    "itind",
 ]
 
 indict = dict()
@@ -154,7 +165,7 @@ for var in invars:
     ]:
         tmp2 = np.insert(tmp, 0, 0, axis=0)
         indict[var] = np.tile(tmp2[None, None, :, :], (npts, 1, 1, 1))
-    elif var in ["sfluxzen", "albbm", "albdf"]:
+    elif var in ["sfluxzen", "albbm", "albdf", "exp_tbl"]:
         indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     else:
         indict[var] = np.tile(tmp[None, None], (npts, 1))
@@ -172,6 +183,10 @@ for var in invars:
     elif var in ["albbm", "albdf"]:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlp1, (DTYPE_FLT, (2,))
+        )
+    elif var == "exp_tbl":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_nlp1, type_ntbmx
         )
     else:
         indict_gt4py[var] = create_storage_from_array(
@@ -201,7 +216,7 @@ for var in outvars:
 
 locdict_gt4py = dict()
 for var in locvars:
-    if var in ["jb", "ib", "ibd"]:
+    if var in ["jb", "ib", "ibd", "itind"]:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
@@ -214,20 +229,36 @@ locdict_gt4py["idxsfc"] = create_storage_from_array(
     idxsfc, backend, shape_nlp1, (DTYPE_FLT, (14,))
 )
 
-eps = 1.0e-6
-oneminus = 1.0 - eps
-
-bpade = 1.0 / 0.278
-ftiny = 1.0e-12
-flimit = 1.0e-20
-
 zcrit = 0.9999995  # thresold for conservative scattering
 zsr3 = np.sqrt(3.0)
 od_lo = 0.06
 eps1 = 1.0e-8
 
 
-@stencil(backend=backend, rebuild=rebuild, externals={"ngptsw": ngptsw})
+@function
+def sign(a, b):
+    if b < 0:
+        out = -a
+    else:
+        out = a
+    return out
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "ngptsw": ngptsw,
+        "bpade": bpade,
+        "oneminus": oneminus,
+        "ftiny": ftiny,
+        "flimit": flimit,
+        "zcrit": zcrit,
+        "zsr3": zsr3,
+        "od_lo": od_lo,
+        "eps1": eps1,
+    },
+)
 def spcvrtm(
     ssolar: FIELD_2D,
     cosz: FIELD_2D,
@@ -246,20 +277,22 @@ def spcvrtm(
     taucw: Field[type_nbdsw],
     ssacw: Field[type_nbdsw],
     asycw: Field[type_nbdsw],
+    exp_tbl: Field[type_ntbmx],
     jb: FIELD_INT,
     ib: FIELD_INT,
     ibd: FIELD_INT,
     NGB: Field[type_ngptsw],
     idxsfc: Field[(DTYPE_FLT, (14,))],
+    itind: FIELD_INT,
 ):
-    from __externals__ import ngptsw
+    from __externals__ import ngptsw, bpade, oneminus, ftiny, zcrit, zsr3, od_lo, eps1
 
     with computation(PARALLEL), interval(1, None):
         #  --- ...  loop over all g-points in each band
         for jg in range(ngptsw):
             jb = NGB[0, 0, 0][jg] - 1
             ib = jb + 1 - nblow
-            ibd = idxsfc[0, 0, 0][jb]
+            ibd = idxsfc[0, 0, 0][jb - 15] - 1
 
             zsolar = ssolar * sfluxzen[0, 0, 0][jg]
 
@@ -316,6 +349,188 @@ def spcvrtm(
             zasy1 = zasyw / (1.0 + zasyw)  # to reduce truncation error
             zasy3 = 0.75 * zasy1
 
+            #  --- ...  general two-stream expressions
+            if iswmode == 1:
+                zgam1 = 1.75 - zssa1 * (1.0 + zasy3)
+                zgam2 = -0.25 + zssa1 * (1.0 - zasy3)
+                zgam3 = 0.5 - zasy3 * cosz
+            elif iswmode == 2:  # pifm
+                zgam1 = 2.0 - zssa1 * (1.25 + zasy3)
+                zgam2 = 0.75 * zssa1 * (1.0 - zasy1)
+                zgam3 = 0.5 - zasy3 * cosz
+            elif iswmode == 3:  # discrete ordinates
+                zgam1 = zsr3 * (2.0 - zssa1 * (1.0 + zasy1)) * 0.5
+                zgam2 = zsr3 * zssa1 * (1.0 - zasy1) * 0.5
+                zgam3 = (1.0 - zsr3 * zasy1 * cosz) * 0.5
+
+            zgam4 = 1.0 - zgam3
+
+            #  --- ...  compute homogeneous reflectance and transmittance
+
+            if zssaw >= zcrit:  # for conservative scattering
+                za1 = zgam1 * cosz - zgam3
+                za2 = zgam1 * ztau1
+
+                #  --- ...  use exponential lookup table for transmittance, or expansion
+                #           of exponential for low optical depth
+
+                zb1 = min(ztau1 * sntz, 500.0)
+                if zb1 <= od_lo:
+                    zb2 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                else:
+                    ftind = zb1 / (bpade + zb1)
+                    itind = ftind * ntbmx + 0.5
+                    zb2 = exp_tbl[0, 0, 0][itind]
+
+            else:  # for non-conservative scattering
+                za1 = zgam1 * zgam4 + zgam2 * zgam3
+                za2 = zgam1 * zgam3 + zgam2 * zgam4
+                zrk = sqrt((zgam1 - zgam2) * (zgam1 + zgam2))
+                zrk2 = 2.0 * zrk
+
+                zrp = zrk * cosz
+                zrp1 = 1.0 + zrp
+                zrm1 = 1.0 - zrp
+                zrpp1 = 1.0 - zrp * zrp
+                zrpp = sign(
+                    max(flimit, abs(zrpp1)), zrpp1
+                )  # avoid numerical singularity
+                zrkg1 = zrk + zgam1
+                zrkg3 = zrk * zgam3
+                zrkg4 = zrk * zgam4
+
+                zr1 = zrm1 * (za2 + zrkg3)
+                zr2 = zrp1 * (za2 - zrkg3)
+                zr3 = zrk2 * (zgam3 - za2 * cosz)
+                zr4 = zrpp * zrkg1
+                zr5 = zrpp * (zrk - zgam1)
+
+                zt1 = zrp1 * (za1 + zrkg4)
+                zt2 = zrm1 * (za1 - zrkg4)
+                zt3 = zrk2 * (zgam4 + za1 * cosz)
+
+                #  --- ...  use exponential lookup table for transmittance, or expansion
+                #           of exponential for low optical depth
+
+                zb1 = min(zrk * ztau1, 500.0)
+                if zb1 <= od_lo:
+                    zexm1 = 1.0 - zb1 + 0.5 * zb1 * zb1
+                else:
+                    ftind = zb1 / (bpade + zb1)
+                    itind = ftind * ntbmx + 0.5
+                    zexm1 = exp_tbl[0, 0, 0][itind]
+
+                zexp1 = 1.0 / zexm1
+
+                zb2 = min(sntz * ztau1, 500.0)
+                if zb2 <= od_lo:
+                    zexm2 = 1.0 - zb2 + 0.5 * zb2 * zb2
+                else:
+                    ftind = zb2 / (bpade + zb2)
+                    itind = ftind * ntbmx + 0.5
+                    zexm2 = exp_tbl[0, 0, 0][itind]
+
+                zexp2 = 1.0 / zexm2
+                ze1r45 = zr4 * zexp1 + zr5 * zexm1
+
+                #  --- ...  direct beam transmittance. use exponential lookup table
+                #           for transmittance, or expansion of exponential for low
+                #           optical depth
+
+                zr1 = ztau1 * sntz
+                if zr1 <= od_lo:
+                    zexp3 = 1.0 - zr1 + 0.5 * zr1 * zr1
+                else:
+                    ftind = zr1 / (bpade + zr1)
+                    itind = max(0, min(ntbmx, 0.5 + ntbmx * ftind))
+                    zexp3 = exp_tbl[0, 0, 0][itind]
+
+                ztdbt = zexp3 * ztdbt[0, 0, 1]
+
+                #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
+                #           (must use 'orig', unscaled cloud optical depth)
+
+                zr1 = ztau0 * sntz
+                if zr1 <= od_lo:
+                    zexp4 = 1.0 - zr1 + 0.5 * zr1 * zr1
+                else:
+                    ftind = zr1 / (bpade + zr1)
+                    itind = max(0, min(ntbmx, 0.5 + ntbmx * ftind))
+                    zexp4 = exp_tbl[0, 0, 0][itind]
+
+                zldbt0 = zexp4
+                ztdbt0 = zexp4 * ztdbt0
+
+    with computation(PARALLEL), interval(2, None):
+        for jg4 in range(ngptsw):
+            jb = NGB[0, 0, 0][jg4] - 1
+            ib = jb + 1 - nblow
+            ibd = idxsfc[0, 0, 0][jb]
+
+            if zssaw >= zcrit:  # for conservative scattering
+                #      ...  collimated beam
+                zrefb = max(
+                    0.0,
+                    min(
+                        1.0,
+                        (za2[0, 0, -1] - za1[0, 0, -1] * (1.0 - zb2[0, 0, -1]))
+                        / (1.0 + za2[0, 0, -1]),
+                    ),
+                )
+                ztrab = max(0.0, min(1.0, 1.0 - zrefb))
+
+                #      ...  isotropic incidence
+                zrefd = max(0.0, min(1.0, za2[0, 0, -1] / (1.0 + za2[0, 0, -1])))
+                ztrad = max(0.0, min(1.0, 1.0 - zrefd))
+            else:
+                #      ...  collimated beam
+                if ze1r45 >= -eps1 and ze1r45 <= eps1:
+                    zrefb = eps1
+                    ztrab = zexm2[0, 0, -1]
+                else:
+                    zden1 = zssa1[0, 0, -1] / ze1r45[0, 0, -1]
+                    zrefb = max(
+                        0.0,
+                        min(
+                            1.0,
+                            (
+                                zr1[0, 0, -1] * zexp1[0, 0, -1]
+                                - zr2[0, 0, -1] * zexm1[0, 0, -1]
+                                - zr3[0, 0, -1] * zexm2[0, 0, -1]
+                            )
+                            * zden1,
+                        ),
+                    )
+                    ztrab = max(
+                        0.0,
+                        min(
+                            1.0,
+                            zexm2[0, 0, -1]
+                            * (
+                                1.0
+                                - (
+                                    zt1[0, 0, -1] * zexp1[0, 0, -1]
+                                    - zt2[0, 0, -1] * zexm1[0, 0, -1]
+                                    - zt3[0, 0, -1] * zexp2[0, 0, -1]
+                                )
+                                * zden1
+                            ),
+                        ),
+                    )
+
+                #      ...  diffuse beam
+                zden1 = zr4[0, 0, -1] / (ze1r45[0, 0, -1] * zrkg1[0, 0, -1])
+                zrefd = max(
+                    0.0,
+                    min(
+                        1.0,
+                        zgam2[0, 0, -1] * (zexp1[0, 0, -1] - zexm1[0, 0, -1]) * zden1,
+                    ),
+                )
+                ztrad = max(0.0, min(1.0, zrk2[0, 0, -1] * zden1))
+
+            zldbt = zexp3[0, 0, -1]
+
 
 spcvrtm(
     indict_gt4py["ssolar"],
@@ -335,11 +550,13 @@ spcvrtm(
     indict_gt4py["taucw"],
     indict_gt4py["ssacw"],
     indict_gt4py["asycw"],
+    indict_gt4py["exp_tbl"],
     locdict_gt4py["jb"],
     locdict_gt4py["ib"],
     locdict_gt4py["ibd"],
     locdict_gt4py["NGB"],
     locdict_gt4py["idxsfc"],
+    locdict_gt4py["itind"],
     domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
