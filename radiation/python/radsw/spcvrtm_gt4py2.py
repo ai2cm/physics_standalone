@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import xarray as xr
 from gt4py.gtscript import (
+    BACKWARD,
     stencil,
     function,
     computation,
@@ -530,6 +531,60 @@ def spcvrtm(
                 ztrad = max(0.0, min(1.0, zrk2[0, 0, -1] * zden1))
 
             zldbt = zexp3[0, 0, -1]
+
+    # Need to incorporate the vrtqdr subroutine here, since I don't know
+    # of a way to specify the interval within a gtscript function. Could be pulled
+    # out later
+
+    with computation(PARALLEL):
+        with interval(0, 1):
+            # Link lowest layer with surface.
+            zrupb = zrefb  # direct beam
+            zrupd = zrefd  # diffused
+
+        with interval(1, None):
+            zden1 = 1.0 / (1.0 - zrupd[0, 0, -1] * zrefd)
+
+            zrupb = (
+                zrefb
+                + (
+                    ztrad
+                    * ((ztrab - zldbt) * zrupd[0, 0, -1] + zldbt * zrupb[0, 0, -1])
+                )
+                * zden1
+            )
+            zrupd = zrefd + ztrad * ztrad * zrupd[0, 0, -1] * zden1
+
+    with computation(PARALLEL):
+        with interval(-2, -1):
+            ztdn = ztrab[0, 0, 1]
+            zrdnd = zrefd[0, 0, 1]
+        with interval(-1, None):
+            ztdn = 1.0
+            zrdnd = 0.0
+
+    # with computation(BACKWARD), interval(0, -1):
+    #     zden1 = 1.0 / (1.0 - zrefd[0, 0, 1] * zrdnd[0, 0, 1])
+    #     ztdn = (
+    #         ztdbt[0, 0, 1] * ztrab[0, 0, 1]
+    #         + (
+    #             ztrad[0, 0, 1]
+    #             * (
+    #                 (ztdn[0, 0, 1] - ztdbt[0, 0, 1])
+    #                 + ztdbt[0, 0, 1] * zrefb[0, 0, 1] * zrdnd[0, 0, 1]
+    #             )
+    #         )
+    #         * zden1
+    #     )
+    #     zrdnd = (
+    #         zrefd[0, 0, 1] + ztrad[0, 0, 1] * ztrad[0, 0, 1] * zrdnd[0, 0, 1] * zden1
+    #     )
+
+    # Up and down-welling fluxes at levels.
+    with computation(PARALLEL), interval(...):
+        zden1 = 1.0 / (1.0 - zrdnd * zrupd)
+        zfu = (ztdbt * zrupb + (ztdn - ztdbt) * zrupd) * zden1
+        zfd = ztdbt + (ztdn - ztdbt + ztdbt * zrupb * zrdnd) * zden1
 
 
 spcvrtm(
