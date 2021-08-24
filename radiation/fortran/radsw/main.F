@@ -106,7 +106,7 @@ program test
       real (kind=kind_phys) :: slag, sdec, cdec, solcon
 
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=1
+      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/SW' prefix_ref='Generator' mpi_rank=1
       !$ser mode read
       !$ser savepoint "swrad-in-000000"
       !$ser data im=im levr=levr 
