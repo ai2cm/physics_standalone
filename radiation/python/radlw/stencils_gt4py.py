@@ -279,6 +279,7 @@ def cldprop(
     dz: FIELD_FLT,
     cldfmc: Field[type_ngptlw],
     taucld: Field[type_nbands],
+    cldtau: FIELD_FLT,
     absliq1: Field[(DTYPE_FLT, (58, nbands))],
     absice1: Field[(DTYPE_FLT, (2, 5))],
     absice2: Field[(DTYPE_FLT, (43, nbands))],
@@ -449,6 +450,8 @@ def cldprop(
                     cldfmc[0, 0, 0][n3] = 1.0
                 else:
                     cldfmc[0, 0, 0][n3] = 0.0
+
+            cldtau = taucld[0, 0, 0][6]
 
 
 stpfac = 296.0 / 1013.0
@@ -2960,7 +2963,7 @@ def taugb09(
 
 @stencil(
     backend=backend,
-    rebuild=True,
+    rebuild=rebuild,
     externals={
         "nspa": nspa[9],
         "nspb": nspb[9],

@@ -594,6 +594,7 @@ cldprop(
     locdict_gt4py["dz"],
     locdict_gt4py["cldfmc"],
     locdict_gt4py["taucld"],
+    outdict_gt4py["cldtaulw"],
     lookup_dict["absliq1"],
     lookup_dict["absice1"],
     lookup_dict["absice2"],
