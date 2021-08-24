@@ -6,8 +6,13 @@ sys.path.insert(
 )
 from radlw_param import nbands, maxgas, maxxsec, ngptlw
 from radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
+import gt4py
 from gt4py import gtscript
 from gt4py.gtscript import Field
+
+gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
+    ["-fno-strict-aliasing"]
+)
 
 npts = 24
 
