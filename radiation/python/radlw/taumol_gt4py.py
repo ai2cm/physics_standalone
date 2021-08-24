@@ -2593,8 +2593,7 @@ def taugb09(
 
 @stencil(
     backend=backend,
-    rebuild=True,
-    verbose=True,
+    rebuild=rebuild,
     externals={
         "nspa": nspa[9],
         "nspb": nspb[9],
@@ -5114,32 +5113,7 @@ for var in outvars:
         var, serializer.savepoint["lwrad-taumol-output-000000"]
     )
 
-# compare_data(outdict_val, outdict_gt4py)
-print(f"laytrop = {indict_gt4py['laytrop'][3, :, :]}")
-print(f"ind0 = {locdict_gt4py['ind0'][3, :, :]}")
-print(f"ind0p = {locdict_gt4py['ind0p'][3, :, :]}")
-print(f"ind1 = {locdict_gt4py['ind1'][3, :, :]}")
-print(f"ind1p = {locdict_gt4py['ind1p'][3, :, :]}")
-print(f"inds = {locdict_gt4py['inds'][3, :, :]}")
-print(f"indsp = {locdict_gt4py['indsp'][3, :, :]}")
-print(f"indf = {locdict_gt4py['indf'][3, :, :]}")
-print(f"indfp = {locdict_gt4py['indfp'][3, :, :]}")
-print(f"tauself = {locdict_gt4py['tauself'][3, :, :]}")
-print(f"taufor = {locdict_gt4py['taufor'][3, :, :]}")
+compare_data(outdict_val, outdict_gt4py)
 
-print(f"Python = {outdict_gt4py['fracs'][3, 108, :]}")
-print(" ")
-print(f"Fortran = {outdict_val['fracs'][3, 108, :]}")
-print(" ")
-
-for n in range(ngptlw):
-    tmp1 = outdict_gt4py["fracs"][:, n, :]
-    tmp2 = outdict_val["fracs"][:, n, :]
-    if not np.allclose(tmp1, tmp2):
-        print(f"Problem n = {n}")
-print(f"Difference = {(outdict_gt4py['fracs']-outdict_val['fracs']).min()}")
-
-print(f"fracrefa = {lookupdict_gt4py10['fracrefa'][3, :, 0, :]}")
-print(f"fracrefb = {lookupdict_gt4py10['fracrefb'][3, :, 0, :]}")
 
 # print(f"test = {locdict_gt4py['taug'][0, :, :-1, 0]}")

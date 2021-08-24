@@ -1732,7 +1732,7 @@ for var in outvars_t:
 
 # compare_data(valdict_taumol, outdict_taumol)
 print(f"Laytrop = {locdict_gt4py['laytrop'][3, :, :]}")
-print(' ')
+print(" ")
 print(f"Python = {outdict_taumol['fracs'][:, 108, 0]}")
 print(" ")
 print(f"Fortran = {valdict_taumol['fracs'][:, 108, 0]}")
@@ -1868,10 +1868,4 @@ for var in outvars:
     else:
         outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
 
-# compare_data(valdict, outdict_np)
-
-print(f"Python = {outdict_np['upfxc_t']}")
-print(" ")
-print(f"Fortran = {valdict['upfxc_t']}")
-print(" ")
-print(f"Difference = {outdict_np['upfxc_t'] - valdict['upfxc_t']}")
+compare_data(valdict, outdict_np)

@@ -1,12 +1,15 @@
 import numpy as np
 import sys
 
-sys.path.insert(
-    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
-)
+sys.path.insert(0, "/work/radiation/python/radlw")
 from radlw_param import nbands, maxgas, maxxsec, ngptlw, ntbl
+import gt4py
 from gt4py import gtscript
 from gt4py.gtscript import Field
+
+gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
+    ["-fno-strict-aliasing"]
+)
 
 npts = 24
 

@@ -56,12 +56,12 @@ RUN cd /serialbox && \
     make install && \
     /bin/rm -rf /serialbox
 
-# install gt4py
-RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@v32 && \
-    python -m gt4py.gt_src_manager install -m 2
-
 # install some python packages
 RUN pip install numpy xarray[complete]
+
+# install gt4py
+RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@tmp_forloop_fixes && \
+    python -m gt4py.gt_src_manager install -m 2
 
 # add default user
 ARG USER=user
