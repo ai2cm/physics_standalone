@@ -14,10 +14,8 @@ from gt4py.gtscript import (
     mod,
 )
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
-sys.path.insert(
-    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
-)
+sys.path.insert(0, "/work/radiation/python")
+sys.path.insert(0, "/work/radiation/python/radlw")
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 from radlw.radlw_param import (
@@ -27,7 +25,7 @@ from radlw.radlw_param import (
     ns10,
 )
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
+SERIALBOX_DIR = "/usr/local/serialbox"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 

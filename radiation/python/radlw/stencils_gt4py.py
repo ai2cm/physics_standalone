@@ -66,7 +66,7 @@ from radphysparam import ilwcice, ilwcliq
 from config import *
 
 rebuild = False
-validate = False
+validate = True
 backend = "gtc:gt:cpu_ifirst"
 
 amdw = con_amd / con_amw
@@ -76,7 +76,20 @@ amdo3 = con_amd / con_amo3
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    externals={"nbands": nbands, "ilwcliq": ilwcliq, "ilwrgas": ilwrgas},
+    verbose=True,
+    externals={
+        "nbands": nbands,
+        "maxgas": maxgas,
+        "ilwcliq": ilwcliq,
+        "ilwrgas": ilwrgas,
+        "amdw": amdw,
+        "amdo3": amdo3,
+        "con_avgd": con_avgd,
+        "con_g": con_g,
+        "con_amd": con_amd,
+        "con_amw": con_amw,
+        "eps": eps,
+    },
 )
 def firstloop(
     plyr: FIELD_FLT,
@@ -126,7 +139,19 @@ def firstloop(
     a1: Field[type_nbands],
     a2: Field[type_nbands],
 ):
-    from __externals__ import nbands, ilwcliq, ilwrgas
+    from __externals__ import (
+        nbands,
+        ilwcliq,
+        ilwrgas,
+        maxgas,
+        amdw,
+        amdo3,
+        con_avgd,
+        con_amd,
+        con_amw,
+        con_g,
+        eps,
+    )
 
     with computation(PARALLEL):
         with interval(1, None):
