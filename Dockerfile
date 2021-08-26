@@ -5,11 +5,11 @@
 #   - gcc-3.9.0
 #   - python-3.9
 #   - NCEP
-#   - serialbox-2.6.0
+#   - serialbox-2.6.1
 #   - GT4Py (and GT v1)
 #   - numpy, xarray
 # ===================================
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -45,10 +45,10 @@ RUN apt-get update \
     libnetcdff-dev
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-RUN python3.8 get-pip.py
+RUN python3.9 get-pip.py
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 10 && \
-    update-alternatives  --set python /usr/bin/python3.8
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 10 && \
+    update-alternatives  --set python /usr/bin/python3.9
 
 # set TZ
 ENV TZ=US/Pacific
