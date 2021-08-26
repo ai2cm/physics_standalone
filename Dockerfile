@@ -1,13 +1,31 @@
-FROM ubuntu:latest
+# ===================================
+# Purpose: testing `physics_standalone`
+# Stack:
+#   - based on ubuntu20.04
+#   - gcc-3.9.0
+#   - python-3.9
+#   - NCEP
+#   - serialbox-2.6.0
+#   - GT4Py (and GT v1)
+#   - numpy, xarray
+# ===================================
+FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update &&\
+    apt install -y --no-install-recommends \
+    software-properties-common
+
+RUN add-apt-repository ppa:deadsnakes/ppa 
+
 RUN apt-get update \
-  && apt-get install -y \
+    && apt install -y --no-install-recommends \
     apt-utils \
     sudo \
     build-essential \
-    gcc \
-    g++ \
+    gcc-9 \
+    g++-9 \
     gfortran \
     gdb \
     wget \
@@ -15,20 +33,22 @@ RUN apt-get update \
     tar \
     git \
     vim \
+    nano \
     make \
     cmake \
     cmake-curses-gui \
-    python3-pip \
-    python3-dev \
+    python3.9-dev \
+    python3.9-distutils \
     libssl-dev \
     libboost-all-dev \
     libnetcdf-dev \
     libnetcdff-dev
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10 && \
-    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 10 && \
-    update-alternatives  --set python /usr/bin/python3 && \
-    update-alternatives  --set pip /usr/bin/pip3
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+RUN python3.8 get-pip.py
+
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 10 && \
+    update-alternatives  --set python /usr/bin/python3.8
 
 # set TZ
 ENV TZ=US/Pacific
@@ -44,22 +64,28 @@ RUN cd /serialbox && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local/serialbox -DCMAKE_BUILD_TYPE=Debug \
-          -DSERIALBOX_USE_NETCDF=ON -DSERIALBOX_ENABLE_FORTRAN=ON \
-          -DSERIALBOX_TESTING=ON  ../ && \
-    make -j8 && \
+    -DSERIALBOX_USE_NETCDF=ON -DSERIALBOX_ENABLE_FORTRAN=ON \
+    -DSERIALBOX_TESTING=ON  ../ && \
+    make -j4 && \
     make test && \
     make install && \
     /bin/rm -rf /serialbox
+ENV PYTHONPATH=/usr/local/serialbox/python
 
 # install gt4py
-RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@develop && \
-    python -m gt4py.gt_src_manager install
+RUN cd /
+RUN git clone https://github.com/VulcanClimateModeling/gt4py.git
+RUN pip install -e ./gt4py && \
+    python -m gt4py.gt_src_manager install -m 1
+
+# install some python packages
+RUN pip install numpy xarray[complete]
 
 # add default user
 ARG USER=user
 ENV USER ${USER}
 RUN useradd -ms /bin/bash ${USER} \
-      && echo "${USER}   ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    && echo "${USER}   ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 ENV USER_HOME /home/${USER}
 RUN chown -R ${USER}:${USER} ${USER_HOME}
 
