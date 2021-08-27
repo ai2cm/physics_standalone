@@ -33,7 +33,7 @@ SRC = \
   radiation_gases.F \
   radiation_clouds.F \
   radiation_aerosols.F \
-  radsw_main.F \
+  radsw_main2.F \
   radlw_main.F  \
   GFS_typedefs.F \
   GFS_radiation_driver.F \
