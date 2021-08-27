@@ -1215,7 +1215,7 @@
 !> -# Call setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-setcoef-input-"//trim(ser_count_str)
@@ -1235,7 +1235,7 @@
 
 enddo lab_do_ipt3
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-setcoef-output-"//trim(ser_count_str)
@@ -1245,7 +1245,7 @@ enddo lab_do_ipt3
   !$ser data forfrac=forfrac indfor=indfor
 !$ser verbatim end if
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taumol-input-"//trim(ser_count_str)
@@ -1273,7 +1273,7 @@ enddo lab_do_ipt3
      &     )
       enddo lab_do_ipt4
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taumol-output-"//trim(ser_count_str)
