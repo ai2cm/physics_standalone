@@ -179,14 +179,16 @@ for var in invars:
         "ssaae",
         "asyae",
     ]:
-        tmp2 = np.insert(tmp, 0, 0, axis=0)
-        indict[var] = np.tile(tmp2[None, None, :, :], (npts, 1, 1, 1))
-    elif var in ["sfluxzen", "albbm", "albdf", "exp_tbl"]:
-        indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
+        indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
+    elif var in ["sfluxzen", "albbm", "albdf"]:
+        indict[var] = np.tile(tmp[:, None, None, :], (1, 1, nlp1, 1))
     elif var in ["zcf1", "zcf0"]:
-        indict[var] = np.tile(tmp[None, None, None], (npts, 1, nlp1))
+        indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
+    elif var == "exp_tbl":
+        indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     else:
-        indict[var] = np.tile(tmp[None, None], (npts, 1))
+        indict[var] = np.tile(tmp[:, None], (1, 1))
 
 indict_gt4py = dict()
 for var in invars:
@@ -1354,10 +1356,11 @@ def spcvrtm_allsky(
 
     with computation(FORWARD):
         with interval(0, 1):
-            for m5 in range(ngptsw):
-                # Link lowest layer with surface.
-                zrupb[0, 0, 0][m5] = zrefb[0, 0, 0][m5]  # direct beam
-                zrupd[0, 0, 0][m5] = zrefd[0, 0, 0][m5]  # diffused
+            if cf1 > eps:
+                for m5 in range(ngptsw):
+                    # Link lowest layer with surface.
+                    zrupb[0, 0, 0][m5] = zrefb[0, 0, 0][m5]  # direct beam
+                    zrupd[0, 0, 0][m5] = zrefd[0, 0, 0][m5]  # diffused
 
         with interval(1, None):
             if cf1 > eps:
@@ -1394,91 +1397,102 @@ def spcvrtm_allsky(
 
     with computation(PARALLEL):
         with interval(-2, -1):
-            for m7 in range(ngptsw):
-                ztdn[0, 0, 0][m7] = ztrab[0, 0, 1][m7]
-                zrdnd[0, 0, 0][m7] = zrefd[0, 0, 1][m7]
+            if cf1 > eps:
+                for m7 in range(ngptsw):
+                    ztdn[0, 0, 0][m7] = ztrab[0, 0, 1][m7]
+                    zrdnd[0, 0, 0][m7] = zrefd[0, 0, 1][m7]
         with interval(-1, None):
-            for m8 in range(ngptsw):
-                ztdn[0, 0, 0][m8] = 1.0
-                zrdnd[0, 0, 0][m8] = 0.0
+            if cf1 > eps:
+                for m8 in range(ngptsw):
+                    ztdn[0, 0, 0][m8] = 1.0
+                    zrdnd[0, 0, 0][m8] = 0.0
 
     with computation(BACKWARD), interval(0, -1):
-        for m9 in range(ngptsw):
-            zden1[0, 0, 0][m9] = 1.0 / (1.0 - zrefd[0, 0, 1][m9] * zrdnd[0, 0, 1][m9])
-            ztdn[0, 0, 0][m9] = (
-                ztdbt[0, 0, 1][m9] * ztrab[0, 0, 1][m9]
-                + (
-                    ztrad[0, 0, 1][m9]
-                    * (
-                        (ztdn[0, 0, 1][m9] - ztdbt[0, 0, 1][m9])
-                        + ztdbt[0, 0, 1][m9] * zrefb[0, 0, 1][m9] * zrdnd[0, 0, 1][m9]
-                    )
+        if cf1 > eps:
+            for m9 in range(ngptsw):
+                zden1[0, 0, 0][m9] = 1.0 / (
+                    1.0 - zrefd[0, 0, 1][m9] * zrdnd[0, 0, 1][m9]
                 )
-                * zden1[0, 0, 0][m9]
-            )
-            zrdnd[0, 0, 0][m9] = (
-                zrefd[0, 0, 1][m9]
-                + ztrad[0, 0, 1][m9]
-                * ztrad[0, 0, 1][m9]
-                * zrdnd[0, 0, 1][m9]
-                * zden1[0, 0, 0][m9]
-            )
+                ztdn[0, 0, 0][m9] = (
+                    ztdbt[0, 0, 1][m9] * ztrab[0, 0, 1][m9]
+                    + (
+                        ztrad[0, 0, 1][m9]
+                        * (
+                            (ztdn[0, 0, 1][m9] - ztdbt[0, 0, 1][m9])
+                            + ztdbt[0, 0, 1][m9]
+                            * zrefb[0, 0, 1][m9]
+                            * zrdnd[0, 0, 1][m9]
+                        )
+                    )
+                    * zden1[0, 0, 0][m9]
+                )
+                zrdnd[0, 0, 0][m9] = (
+                    zrefd[0, 0, 1][m9]
+                    + ztrad[0, 0, 1][m9]
+                    * ztrad[0, 0, 1][m9]
+                    * zrdnd[0, 0, 1][m9]
+                    * zden1[0, 0, 0][m9]
+                )
 
     # Up and down-welling fluxes at levels.
     with computation(FORWARD), interval(...):
         #  -# Process and save outputs.
         # --- ...  surface downward beam/diffused flux components
-        for m10 in range(ngptsw):
-            jb = NGB[0, 0, 0][m10] - 1
-            ib = jb + 1 - nblow
+        if cf1 > eps:
+            for m10 in range(ngptsw):
+                jb = NGB[0, 0, 0][m10] - 1
+                ib = jb + 1 - nblow
 
-            zden1[0, 0, 0][m10] = 1.0 / (
-                1.0 - zrdnd[0, 0, 0][m10] * zrupd[0, 0, 0][m10]
-            )
-            zfu[0, 0, 0][m10] = (
-                ztdbt[0, 0, 0][m10] * zrupb[0, 0, 0][m10]
-                + (ztdn[0, 0, 0][m10] - ztdbt[0, 0, 0][m10]) * zrupd[0, 0, 0][m10]
-            ) * zden1[0, 0, 0][m10]
-            zfd[0, 0, 0][m10] = (
-                ztdbt[0, 0, 0][m10]
-                + (
-                    ztdn[0, 0, 0][m10]
-                    - ztdbt[0, 0, 0][m10]
-                    + ztdbt[0, 0, 0][m10] * zrupb[0, 0, 0][m10] * zrdnd[0, 0, 0][m10]
+                zden1[0, 0, 0][m10] = 1.0 / (
+                    1.0 - zrdnd[0, 0, 0][m10] * zrupd[0, 0, 0][m10]
                 )
-                * zden1[0, 0, 0][m10]
-            )
+                zfu[0, 0, 0][m10] = (
+                    ztdbt[0, 0, 0][m10] * zrupb[0, 0, 0][m10]
+                    + (ztdn[0, 0, 0][m10] - ztdbt[0, 0, 0][m10]) * zrupd[0, 0, 0][m10]
+                ) * zden1[0, 0, 0][m10]
+                zfd[0, 0, 0][m10] = (
+                    ztdbt[0, 0, 0][m10]
+                    + (
+                        ztdn[0, 0, 0][m10]
+                        - ztdbt[0, 0, 0][m10]
+                        + ztdbt[0, 0, 0][m10]
+                        * zrupb[0, 0, 0][m10]
+                        * zrdnd[0, 0, 0][m10]
+                    )
+                    * zden1[0, 0, 0][m10]
+                )
 
-            fxupc[0, 0, 0][ib] = (
-                fxupc[0, 0, 0][ib] + zsolar[0, 0, 0][m10] * zfu[0, 0, 0][m10]
-            )
-            fxdnc[0, 0, 0][ib] = (
-                fxdnc[0, 0, 0][ib] + zsolar[0, 0, 0][m10] * zfd[0, 0, 0][m10]
-            )
+                fxupc[0, 0, 0][ib] = (
+                    fxupc[0, 0, 0][ib] + zsolar[0, 0, 0][m10] * zfu[0, 0, 0][m10]
+                )
+                fxdnc[0, 0, 0][ib] = (
+                    fxdnc[0, 0, 0][ib] + zsolar[0, 0, 0][m10] * zfd[0, 0, 0][m10]
+                )
 
     # -# Process and save outputs.
     with computation(FORWARD), interval(0, 1):
-        for m11 in range(ngptsw):
-            jb = NGB[0, 0, 0][m11] - 1
-            ib = jb + 1 - nblow
-            ibd = idxsfc[0, 0, 0][jb - 15] - 1  # spectral band index
+        if cf1 > eps:
+            for m11 in range(ngptsw):
+                jb = NGB[0, 0, 0][m11] - 1
+                ib = jb + 1 - nblow
+                ibd = idxsfc[0, 0, 0][jb - 15] - 1  # spectral band index
 
-            # --- ...  surface downward beam/diffused flux components
-            zb11[0, 0][m11] = zsolar[0, 0, 0][m11] * ztdbt0[0, 0, 0][m11]
-            zb22[0, 0][m11] = zsolar[0, 0, 0][m11] * (
-                zfd[0, 0, 0][m11] - ztdbt0[0, 0, 0][m11]
-            )
+                # --- ...  surface downward beam/diffused flux components
+                zb11[0, 0][m11] = zsolar[0, 0, 0][m11] * ztdbt0[0, 0, 0][m11]
+                zb22[0, 0][m11] = zsolar[0, 0, 0][m11] * (
+                    zfd[0, 0, 0][m11] - ztdbt0[0, 0, 0][m11]
+                )
 
-            if ibd != -1:
-                sfbmc[0, 0][ibd] = sfbmc[0, 0][ibd] + zb11[0, 0][m11]
-                sfdfc[0, 0][ibd] = sfdfc[0, 0][ibd] + zb22[0, 0][m11]
-            else:
-                zf1[0, 0, 0][m11] = 0.5 * zb11[0, 0][m11]
-                zf2[0, 0, 0][m11] = 0.5 * zb22[0, 0][m11]
-                sfbmc[0, 0][0] = sfbmc[0, 0][0] + zf1[0, 0, 0][m11]
-                sfdfc[0, 0][0] = sfdfc[0, 0][0] + zf2[0, 0, 0][m11]
-                sfbmc[0, 0][1] = sfbmc[0, 0][1] + zf1[0, 0, 0][m11]
-                sfdfc[0, 0][1] = sfdfc[0, 0][1] + zf2[0, 0, 0][m11]
+                if ibd != -1:
+                    sfbmc[0, 0][ibd] = sfbmc[0, 0][ibd] + zb11[0, 0][m11]
+                    sfdfc[0, 0][ibd] = sfdfc[0, 0][ibd] + zb22[0, 0][m11]
+                else:
+                    zf1[0, 0, 0][m11] = 0.5 * zb11[0, 0][m11]
+                    zf2[0, 0, 0][m11] = 0.5 * zb22[0, 0][m11]
+                    sfbmc[0, 0][0] = sfbmc[0, 0][0] + zf1[0, 0, 0][m11]
+                    sfdfc[0, 0][0] = sfdfc[0, 0][0] + zf2[0, 0, 0][m11]
+                    sfbmc[0, 0][1] = sfbmc[0, 0][1] + zf1[0, 0, 0][m11]
+                    sfdfc[0, 0][1] = sfdfc[0, 0][1] + zf2[0, 0, 0][m11]
 
     with computation(FORWARD):
         with interval(0, 1):
@@ -1762,7 +1776,7 @@ print(f"Elapsed time = {end-start}")
 outdict_np = dict()
 valdict = dict()
 for var in outvars:
-    outdict_np[var] = outdict_gt4py[var][0, ...].view(np.ndarray).squeeze()
+    outdict_np[var] = outdict_gt4py[var][:, ...].view(np.ndarray).squeeze()
     valdict[var] = serializer.read(
         var, serializer.savepoint["swrad-spcvrtm-output-000000"]
     )
