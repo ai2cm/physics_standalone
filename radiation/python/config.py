@@ -2,6 +2,9 @@ import numpy as np
 import sys
 
 sys.path.insert(0, "/work/radiation/python/radlw")
+# sys.path.insert(
+#    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
+# )
 from radlw_param import nbands, maxgas, maxxsec, ngptlw
 from radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
 import gt4py

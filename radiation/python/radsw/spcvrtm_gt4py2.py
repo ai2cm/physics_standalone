@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import xarray as xr
+import time
 from gt4py.gtscript import (
     BACKWARD,
     FORWARD,
@@ -15,6 +16,7 @@ from gt4py.gtscript import (
     sqrt,
 )
 
+# sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 sys.path.insert(0, "/work/radiation/python")
 from config import *
 from radsw.radsw_param import (
@@ -28,19 +30,22 @@ from radsw.radsw_param import (
     ftiny,
     flimit,
     eps,
+    nuvb,
 )
 from radphysparam import iswmode
 from util import create_storage_from_array, create_storage_zeros, compare_data
 
+# SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 SERIALBOX_DIR = "/usr/local/serialbox"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 ddir = "/work/radiation/fortran/radsw/dump"
+# ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radsw/dump"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
 savepoints = serializer.savepoint_list()
 
-rebuild = True
+rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
@@ -251,10 +256,13 @@ zsr3 = np.sqrt(3.0)
 od_lo = 0.06
 eps1 = 1.0e-8
 
+start = time.time()
+
 
 @stencil(
     backend=backend,
     rebuild=rebuild,
+    verbose=True,
     externals={
         "ngptsw": ngptsw,
         "bpade": bpade,
@@ -268,7 +276,7 @@ eps1 = 1.0e-8
         "eps": eps,
     },
 )
-def spcvrtm(
+def spcvrtm_clearsky(
     ssolar: FIELD_2D,
     cosz: FIELD_2D,
     sntz: FIELD_2D,
@@ -394,7 +402,7 @@ def spcvrtm(
         for jg in range(ngptsw):
             jb = NGB[0, 0, 0][jg] - 1
             ib = jb + 1 - nblow
-            ibd = idxsfc[0, 0, 0][jb - 15] - 1
+            ibd = idxsfc[0, 0, 0][jb - 15] - 1  # spectral band index
 
             zsolar[0, 0, 0][jg] = ssolar * sfluxzen[0, 0, 0][jg]
             ztdbt0[0, 0, 0][jg] = 1.0
@@ -431,7 +439,7 @@ def spcvrtm(
         for n3 in range(ngptsw):
             jb = NGB[0, 0, 0][n3] - 1
             ib = jb + 1 - nblow
-            ibd = idxsfc[0, 0, 0][jb - 15] - 1
+            ibd = idxsfc[0, 0, 0][jb - 15] - 1  # spectral band index
 
             ztau0[0, 0, 0][n3] = max(
                 ftiny, taur[0, 0, 1][n3] + taug[0, 0, 1][n3] + tauae[0, 0, 1][ib]
@@ -519,6 +527,7 @@ def spcvrtm(
             ibd = idxsfc[0, 0, 0][jb - 15] - 1
 
             if zssaw[0, 0, -1][nn3] >= zcrit:
+                # collimated beam
                 zrefb[0, 0, 0][nn3] = max(
                     0.0,
                     min(
@@ -731,7 +740,7 @@ def spcvrtm(
 
     # Need to incorporate the vrtqdr subroutine here, since I don't know
     # of a way to specify the interval within a gtscript function. Could be pulled
-    # out later
+    # out later if we can call a stencil from a stencil
 
     with computation(FORWARD):
         with interval(0, 1):
@@ -835,6 +844,7 @@ def spcvrtm(
             ib = jb + 1 - nblow
             ibd = idxsfc[0, 0, 0][jb - 15] - 1
 
+            # --- ...  surface downward beam/diffuse flux components
             zb11[0, 0][n11] = zsolar[0, 0, 0][n11] * ztdbt0[0, 0, 0][n11]
             zb22[0, 0][n11] = zsolar[0, 0, 0][n11] * (
                 zfd[0, 0, 0][n11] - ztdbt0[0, 0, 0][n11]
@@ -853,6 +863,149 @@ def spcvrtm(
 
             zldbt[0, 0, 0][n11] = 0.0
 
+
+ibd0 = nuvb - nblow
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    verbose=True,
+    externals={
+        "ngptsw": ngptsw,
+        "bpade": bpade,
+        "oneminus": oneminus,
+        "ftiny": ftiny,
+        "flimit": flimit,
+        "zcrit": zcrit,
+        "zsr3": zsr3,
+        "od_lo": od_lo,
+        "eps1": eps1,
+        "eps": eps,
+        "ibd0": ibd0,
+    },
+)
+def spcvrtm_allsky(
+    ssolar: FIELD_2D,
+    cosz: FIELD_2D,
+    sntz: FIELD_2D,
+    albbm: Field[(DTYPE_FLT, (2,))],
+    albdf: Field[(DTYPE_FLT, (2,))],
+    sfluxzen: Field[type_ngptsw],
+    cldfmc: Field[type_ngptsw],
+    cf1: FIELD_FLT,
+    cf0: FIELD_FLT,
+    taug: Field[type_ngptsw],
+    taur: Field[type_ngptsw],
+    tauae: Field[type_nbdsw],
+    ssaae: Field[type_nbdsw],
+    asyae: Field[type_nbdsw],
+    taucw: Field[type_nbdsw],
+    ssacw: Field[type_nbdsw],
+    asycw: Field[type_nbdsw],
+    exp_tbl: Field[type_ntbmx],
+    ztaus: Field[type_ngptsw],
+    zssas: Field[type_ngptsw],
+    zasys: Field[type_ngptsw],
+    zldbt0: Field[type_ngptsw],
+    zrefb: Field[type_ngptsw],
+    zrefd: Field[type_ngptsw],
+    ztrab: Field[type_ngptsw],
+    ztrad: Field[type_ngptsw],
+    ztdbt: Field[type_ngptsw],
+    zldbt: Field[type_ngptsw],
+    zfu: Field[type_ngptsw],
+    zfd: Field[type_ngptsw],
+    ztau1: Field[type_ngptsw],
+    zssa1: Field[type_ngptsw],
+    zasy1: Field[type_ngptsw],
+    ztau0: Field[type_ngptsw],
+    zssa0: Field[type_ngptsw],
+    zasy0: Field[type_ngptsw],
+    zasy3: Field[type_ngptsw],
+    zssaw: Field[type_ngptsw],
+    zasyw: Field[type_ngptsw],
+    zgam1: Field[type_ngptsw],
+    zgam2: Field[type_ngptsw],
+    zgam3: Field[type_ngptsw],
+    zgam4: Field[type_ngptsw],
+    za1: Field[type_ngptsw],
+    za2: Field[type_ngptsw],
+    zb1: Field[type_ngptsw],
+    zb2: Field[type_ngptsw],
+    zrk: Field[type_ngptsw],
+    zrk2: Field[type_ngptsw],
+    zrp: Field[type_ngptsw],
+    zrp1: Field[type_ngptsw],
+    zrm1: Field[type_ngptsw],
+    zrpp: Field[type_ngptsw],
+    zrkg1: Field[type_ngptsw],
+    zrkg3: Field[type_ngptsw],
+    zrkg4: Field[type_ngptsw],
+    zexp1: Field[type_ngptsw],
+    zexm1: Field[type_ngptsw],
+    zexp2: Field[type_ngptsw],
+    zexm2: Field[type_ngptsw],
+    zden1: Field[type_ngptsw],
+    zexp3: Field[type_ngptsw],
+    zexp4: Field[type_ngptsw],
+    ze1r45: Field[type_ngptsw],
+    ftind: Field[type_ngptsw],
+    zsolar: Field[type_ngptsw],
+    ztdbt0: Field[type_ngptsw],
+    zr1: Field[type_ngptsw],
+    zr2: Field[type_ngptsw],
+    zr3: Field[type_ngptsw],
+    zr4: Field[type_ngptsw],
+    zr5: Field[type_ngptsw],
+    zt1: Field[type_ngptsw],
+    zt2: Field[type_ngptsw],
+    zt3: Field[type_ngptsw],
+    zf1: Field[type_ngptsw],
+    zf2: Field[type_ngptsw],
+    zrpp1: Field[type_ngptsw],
+    zrupd: Field[type_ngptsw],
+    zrupb: Field[type_ngptsw],
+    ztdn: Field[type_ngptsw],
+    zrdnd: Field[type_ngptsw],
+    zb11: Field[gtscript.IJ, (DTYPE_FLT, (ngptsw,))],
+    zb22: Field[gtscript.IJ, (DTYPE_FLT, (ngptsw,))],
+    jb: FIELD_INT,
+    ib: FIELD_INT,
+    ibd: FIELD_INT,
+    NGB: Field[type_ngptsw],
+    idxsfc: Field[(DTYPE_FLT, (14,))],
+    itind: FIELD_INT,
+    fxupc: Field[type_nbdsw],
+    fxdnc: Field[type_nbdsw],
+    fxup0: Field[type_nbdsw],
+    fxdn0: Field[type_nbdsw],
+    ftoauc: FIELD_2D,
+    ftoau0: FIELD_2D,
+    ftoadc: FIELD_2D,
+    fsfcuc: FIELD_2D,
+    fsfcu0: FIELD_2D,
+    fsfcdc: FIELD_2D,
+    fsfcd0: FIELD_2D,
+    sfbmc: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
+    sfdfc: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
+    sfbm0: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
+    sfdf0: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
+    suvbfc: FIELD_2D,
+    suvbf0: FIELD_2D,
+):
+    from __externals__ import (
+        ngptsw,
+        bpade,
+        oneminus,
+        ftiny,
+        zcrit,
+        zsr3,
+        od_lo,
+        eps1,
+        eps,
+    )
+
     # -# Compute total sky optical parameters, layer reflectance and
     #    transmittance.
     #    - Set up toa direct beam and surface values (beam and diff)
@@ -865,8 +1018,9 @@ def spcvrtm(
 
     with computation(BACKWARD):
         with interval(-1, None):
-            for m0 in range(ngptsw):
-                ztdbt0[0, 0, 0][m0] = 1.0
+            if cf1 > eps:
+                for m0 in range(ngptsw):
+                    ztdbt0[0, 0, 0][m0] = 1.0
         with interval(0, -1):
             if cf1 > eps:
                 for m in range(ngptsw):
@@ -874,7 +1028,7 @@ def spcvrtm(
                     ib = jb + 1 - nblow
                     ibd = idxsfc[0, 0, 0][jb - 15] - 1
 
-                    if cldfmc[0, 0, 1] > ftiny:
+                    if cldfmc[0, 0, 1][m] > ftiny:
                         ztau0[0, 0, 0][m] = ztaus[0, 0, 0][m] + taucw[0, 0, 1][ib]
                         zssa0[0, 0, 0][m] = zssas[0, 0, 0][m] + ssacw[0, 0, 1][ib]
                         zasy0[0, 0, 0][m] = zasys[0, 0, 0][m] + asycw[0, 0, 1][ib]
@@ -1085,7 +1239,7 @@ def spcvrtm(
     with computation(BACKWARD), interval(1, None):
         if cf1 > eps:
             for mm3 in range(ngptsw):
-                if cldfmc[0, 0, 0] > ftiny:
+                if cldfmc[0, 0, 0][mm3] > ftiny:
                     if zssaw[0, 0, -1][mm3] < zcrit:
                         #      ...  collimated beam
                         if (
@@ -1154,7 +1308,7 @@ def spcvrtm(
 
                     zr1[0, 0, 0][m4] = ztau1[0, 0, 0][m4] * sntz
                     if zr1[0, 0, 0][m4] <= od_lo:
-                        zexp3 = (
+                        zexp3[0, 0, 0][m4] = (
                             1.0
                             - zr1[0, 0, 0][m4]
                             + 0.5 * zr1[0, 0, 0][m4] * zr1[0, 0, 0][m4]
@@ -1189,7 +1343,7 @@ def spcvrtm(
 
                 else:
                     #  --- ...  direct beam transmittance
-                    ztdbt[0, 0, 0][m4] = zldbt[0, 0, 1] * ztdbt[0, 0, 1][m4]
+                    ztdbt[0, 0, 0][m4] = zldbt[0, 0, 1][m4] * ztdbt[0, 0, 1][m4]
 
                     #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
                     ztdbt0[0, 0, 0][m4] = zldbt0[0, 0, 0][m4] * ztdbt0[0, 0, 1][m4]
@@ -1272,6 +1426,8 @@ def spcvrtm(
 
     # Up and down-welling fluxes at levels.
     with computation(FORWARD), interval(...):
+        #  -# Process and save outputs.
+        # --- ...  surface downward beam/diffused flux components
         for m10 in range(ngptsw):
             jb = NGB[0, 0, 0][m10] - 1
             ib = jb + 1 - nblow
@@ -1300,8 +1456,82 @@ def spcvrtm(
                 fxdnc[0, 0, 0][ib] + zsolar[0, 0, 0][m10] * zfd[0, 0, 0][m10]
             )
 
+    # -# Process and save outputs.
+    with computation(FORWARD), interval(0, 1):
+        for m11 in range(ngptsw):
+            jb = NGB[0, 0, 0][m11] - 1
+            ib = jb + 1 - nblow
+            ibd = idxsfc[0, 0, 0][jb - 15] - 1  # spectral band index
 
-spcvrtm(
+            # --- ...  surface downward beam/diffused flux components
+            zb11[0, 0][m11] = zsolar[0, 0, 0][m11] * ztdbt0[0, 0, 0][m11]
+            zb22[0, 0][m11] = zsolar[0, 0, 0][m11] * (
+                zfd[0, 0, 0][m11] - ztdbt0[0, 0, 0][m11]
+            )
+
+            if ibd != -1:
+                sfbmc[0, 0][ibd] = sfbmc[0, 0][ibd] + zb11[0, 0][m11]
+                sfdfc[0, 0][ibd] = sfdfc[0, 0][ibd] + zb22[0, 0][m11]
+            else:
+                zf1[0, 0, 0][m11] = 0.5 * zb11[0, 0][m11]
+                zf2[0, 0, 0][m11] = 0.5 * zb22[0, 0][m11]
+                sfbmc[0, 0][0] = sfbmc[0, 0][0] + zf1[0, 0, 0][m11]
+                sfdfc[0, 0][0] = sfdfc[0, 0][0] + zf2[0, 0, 0][m11]
+                sfbmc[0, 0][1] = sfbmc[0, 0][1] + zf1[0, 0, 0][m11]
+                sfdfc[0, 0][1] = sfdfc[0, 0][1] + zf2[0, 0, 0][m11]
+
+    with computation(FORWARD):
+        with interval(0, 1):
+            for b in range(nbdsw):
+                fsfcu0 = fsfcu0 + fxup0[0, 0, 0][b]
+                fsfcd0 = fsfcd0 + fxdn0[0, 0, 0][b]
+
+            # --- ...  uv-b surface downward flux
+            suvbf0 = fxdn0[0, 0, 0][ibd0]
+        with interval(-1, None):
+            for bb in range(nbdsw):
+                ftoadc = ftoadc + fxdn0[0, 0, 0][bb]
+                ftoau0 = ftoau0 + fxup0[0, 0, 0][bb]
+
+    with computation(PARALLEL), interval(...):
+        if cf1 <= eps:  # clear column
+            for b2 in range(nbdsw):
+                fxupc[0, 0, 0][b2] = fxup0[0, 0, 0][b2]
+                fxdnc[0, 0, 0][b2] = fxdn0[0, 0, 0][b2]
+
+    with computation(FORWARD):
+        with interval(0, 1):
+            if cf1 <= eps:
+                ftoauc = ftoau0
+                fsfcuc = fsfcu0
+                fsfcdc = fsfcd0
+
+                # --- ...  surface downward beam/diffused flux components
+                sfbmc[0, 0][0] = sfbm0[0, 0][0]
+                sfdfc[0, 0][0] = sfdf0[0, 0][0]
+                sfbmc[0, 0][1] = sfbm0[0, 0][1]
+                sfdfc[0, 0][1] = sfdf0[0, 0][1]
+
+                # --- ...  uv-b surface downward flux
+                suvbfc = suvbf0
+            else:  # cloudy column, compute total-sky fluxes
+                for b3 in range(nbdsw):
+                    fsfcuc = fsfcuc + fxupc[0, 0, 0][b3]
+                    fsfcdc = fsfcdc + fxdnc[0, 0, 0][b3]
+
+                # --- ...  uv-b surface downward flux
+                suvbfc = fxdnc[0, 0, 0][ibd0]
+
+        with interval(-1, None):
+            if cf1 > eps:  # cloudy column, compute total-sky fluxes
+                for b4 in range(nbdsw):
+                    ftoauc = ftoauc + fxupc[0, 0, 0][b4]
+
+
+end = time.time()
+
+
+spcvrtm_clearsky(
     indict_gt4py["ssolar"],
     indict_gt4py["cosz1"],
     indict_gt4py["sntz1"],
@@ -1414,7 +1644,127 @@ spcvrtm(
     validate_args=validate,
 )
 
-print(f"zfu = {locdict_gt4py['zfu'][0, 0, :, 0]}")
-print(f"zfd = {locdict_gt4py['zfd'][0, 0, :, 0]}")
-print(f"zsolar = {locdict_gt4py['zsolar'][0, 0, 0, :]}")
-print(f"fxupc = {outdict_gt4py['fxupc'][0, 0, :, 0]}")
+spcvrtm_allsky(
+    indict_gt4py["ssolar"],
+    indict_gt4py["cosz1"],
+    indict_gt4py["sntz1"],
+    indict_gt4py["albbm"],
+    indict_gt4py["albdf"],
+    indict_gt4py["sfluxzen"],
+    indict_gt4py["cldfmc"],
+    indict_gt4py["zcf1"],
+    indict_gt4py["zcf0"],
+    indict_gt4py["taug"],
+    indict_gt4py["taur"],
+    indict_gt4py["tauae"],
+    indict_gt4py["ssaae"],
+    indict_gt4py["asyae"],
+    indict_gt4py["taucw"],
+    indict_gt4py["ssacw"],
+    indict_gt4py["asycw"],
+    indict_gt4py["exp_tbl"],
+    locdict_gt4py["ztaus"],
+    locdict_gt4py["zssas"],
+    locdict_gt4py["zasys"],
+    locdict_gt4py["zldbt0"],
+    locdict_gt4py["zrefb"],
+    locdict_gt4py["zrefd"],
+    locdict_gt4py["ztrab"],
+    locdict_gt4py["ztrad"],
+    locdict_gt4py["ztdbt"],
+    locdict_gt4py["zldbt"],
+    locdict_gt4py["zfu"],
+    locdict_gt4py["zfd"],
+    locdict_gt4py["ztau1"],
+    locdict_gt4py["zssa1"],
+    locdict_gt4py["zasy1"],
+    locdict_gt4py["ztau0"],
+    locdict_gt4py["zssa0"],
+    locdict_gt4py["zasy0"],
+    locdict_gt4py["zasy3"],
+    locdict_gt4py["zssaw"],
+    locdict_gt4py["zasyw"],
+    locdict_gt4py["zgam1"],
+    locdict_gt4py["zgam2"],
+    locdict_gt4py["zgam3"],
+    locdict_gt4py["zgam4"],
+    locdict_gt4py["za1"],
+    locdict_gt4py["za2"],
+    locdict_gt4py["zb1"],
+    locdict_gt4py["zb2"],
+    locdict_gt4py["zrk"],
+    locdict_gt4py["zrk2"],
+    locdict_gt4py["zrp"],
+    locdict_gt4py["zrp1"],
+    locdict_gt4py["zrm1"],
+    locdict_gt4py["zrpp"],
+    locdict_gt4py["zrkg1"],
+    locdict_gt4py["zrkg3"],
+    locdict_gt4py["zrkg4"],
+    locdict_gt4py["zexp1"],
+    locdict_gt4py["zexm1"],
+    locdict_gt4py["zexp2"],
+    locdict_gt4py["zexm2"],
+    locdict_gt4py["zden1"],
+    locdict_gt4py["zexp3"],
+    locdict_gt4py["zexp4"],
+    locdict_gt4py["ze1r45"],
+    locdict_gt4py["ftind"],
+    locdict_gt4py["zsolar"],
+    locdict_gt4py["ztdbt0"],
+    locdict_gt4py["zr1"],
+    locdict_gt4py["zr2"],
+    locdict_gt4py["zr3"],
+    locdict_gt4py["zr4"],
+    locdict_gt4py["zr5"],
+    locdict_gt4py["zt1"],
+    locdict_gt4py["zt2"],
+    locdict_gt4py["zt3"],
+    locdict_gt4py["zf1"],
+    locdict_gt4py["zf2"],
+    locdict_gt4py["zrpp1"],
+    locdict_gt4py["zrupd"],
+    locdict_gt4py["zrupb"],
+    locdict_gt4py["ztdn"],
+    locdict_gt4py["zrdnd"],
+    locdict_gt4py["zb11"],
+    locdict_gt4py["zb22"],
+    locdict_gt4py["jb"],
+    locdict_gt4py["ib"],
+    locdict_gt4py["ibd"],
+    locdict_gt4py["NGB"],
+    locdict_gt4py["idxsfc"],
+    locdict_gt4py["itind"],
+    outdict_gt4py["fxupc"],
+    outdict_gt4py["fxdnc"],
+    outdict_gt4py["fxup0"],
+    outdict_gt4py["fxdn0"],
+    outdict_gt4py["ftoauc"],
+    outdict_gt4py["ftoau0"],
+    outdict_gt4py["ftoadc"],
+    outdict_gt4py["fsfcuc"],
+    outdict_gt4py["fsfcu0"],
+    outdict_gt4py["fsfcdc"],
+    outdict_gt4py["fsfcd0"],
+    outdict_gt4py["sfbmc"],
+    outdict_gt4py["sfdfc"],
+    outdict_gt4py["sfbm0"],
+    outdict_gt4py["sfdf0"],
+    outdict_gt4py["suvbfc"],
+    outdict_gt4py["suvbf0"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+print(f"Elapsed time = {end-start}")
+
+outdict_np = dict()
+valdict = dict()
+for var in outvars:
+    outdict_np[var] = outdict_gt4py[var][0, ...].view(np.ndarray).squeeze()
+    valdict[var] = serializer.read(
+        var, serializer.savepoint["swrad-spcvrtm-output-000000"]
+    )
+
+compare_data(outdict_np, valdict)

@@ -407,6 +407,8 @@ def spcvrtm(
             zldbt0[k] = zexp4
             ztdbt0 = zexp4 * ztdbt0
 
+        # if jg == 0:
+        # print(f"zldbt0 = {zldbt0}")
         zfu, zfd = vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1, jg)
 
         #  --- ...  compute upward and downward fluxes at levels
@@ -504,8 +506,6 @@ def spcvrtm(
                         ztrab[kp] = max(0.0, min(1.0, 1.0 - zrefb[kp]))
 
                         #      ...  isotropic incidence
-                        if jg == 0:
-                            print("hello")
                         zrefd[kp] = max(0.0, min(1.0, za2 / (1.0 + za2)))
                         ztrad[kp] = max(0.0, min(1.0, 1.0 - zrefd[kp]))
 
@@ -623,22 +623,17 @@ def spcvrtm(
 
                     #  --- ...  direct beam transmittance
                     ztdbt[k] = zldbt[kp] * ztdbt[kp]
-
+                    # print(f"zldbt0 = {zldbt0[k]}")
                     #  --- ...  pre-delta-scaling clear and cloudy direct beam transmittance
                     ztdbt0 = zldbt0[k] * ztdbt0
 
             #  --- ...  perform vertical quadrature
             zfu, zfd = vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1, jg)
-            if jg == 0:
-                print(f"zfu = {zfu}")
-                print(f"zfu = {zfd}")
 
             #  --- ...  compute upward and downward fluxes at levels
             for k in range(nlp1):
                 fxupc[k, ib] = fxupc[k, ib] + zsolar * zfu[k]
                 fxdnc[k, ib] = fxdnc[k, ib] + zsolar * zfd[k]
-                if k == 0:
-                    print(f"zsolar = {zsolar}")
 
             #  -# Process and save outputs.
             # --- ...  surface downward beam/diffused flux components
@@ -812,13 +807,6 @@ def vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1, jg):
             ztdbt[k] + (ztdn[k] - ztdbt[k] + ztdbt[k] * zrupb[k] * zrdnd[k]) * zden1
         )
 
-    if jg == 0:
-        print(f"zrupb = {zrupb}")
-        print(f"zrupd = {zrupd}")
-        print(f"zden1 = {zden1}")
-        print(f"zrdnd = {zrdnd}")
-        print(f"ztdn = {ztdn}")
-
     return zfu, zfd
 
 
@@ -909,5 +897,3 @@ for var in outvars:
     )
 
 compare_data(outdict, valdict)
-
-print(f"fxupc = {outdict['fxupc'][:, 0]}")
