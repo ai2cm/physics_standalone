@@ -2,10 +2,17 @@ import numpy as np
 import xarray as xr
 import os
 import sys
-from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD, mod
+from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD
 
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from radsw_param import (
+    ngptsw,
+    nblow,
+    nbhgh,
+    nspa,
+    nspb,
+    ng,
+    ngs,
     oneminus,
     NG16,
     NG17,
