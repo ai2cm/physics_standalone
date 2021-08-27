@@ -610,8 +610,7 @@ def cldprop(
         # cloud properties to each g-point.
 
         if isubcsw > 0:
-            cldf = cfrac
-            cldf = 0.0 if cldf < ftiny else cldf
+            cldf = 0.0 if cfrac < ftiny else cfrac
 
     # This section builds mcica_subcol from the fortran into cldprop.
     # Here I've read in the generated random numbers until we figure out
