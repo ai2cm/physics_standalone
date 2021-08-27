@@ -1287,7 +1287,7 @@
 !  ---  inputs:
      &     ( ssolar,cosz1,sntz1,albbm,albdf,sfluxzen,cldfmc,            &
      &       zcf1,zcf0,taug,taur,tauae,ssaae,asyae,taucw,ssacw,asycw,   &
-     &       nlay, nlp1,                                                &
+     &       nlay, nlp1, ser_count, ipt,                                                &
 !  ---  outputs:
      &       fxupc,fxdnc,fxup0,fxdn0,                                   &
      &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
@@ -3252,7 +3252,7 @@
       subroutine spcvrtm                                                &
      &     ( ssolar,cosz,sntz,albbm,albdf,sfluxzen,cldfmc,              &   !  ---  inputs
      &       cf1,cf0,taug,taur,tauae,ssaae,asyae,taucw,ssacw,asycw,     &
-     &       nlay, nlp1,                                                &
+     &       nlay, nlp1, ser_count, ipt,                                                &
      &       fxupc,fxdnc,fxup0,fxdn0,                                   &   !  ---  outputs
      &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
      &       sfbmc,sfdfc,sfbm0,sfdf0,suvbfc,suvbf0                      &
@@ -3357,7 +3357,7 @@
       real (kind=kind_phys), parameter :: eps1  = 1.0e-8
 
 !  ---  inputs:
-      integer, intent(in) :: nlay, nlp1
+      integer, intent(in) :: nlay, nlp1, ser_count, ipt
 
       real (kind=kind_phys), dimension(nlay,ngptsw), intent(in) ::      &
      &       taug, taur, cldfmc
@@ -3395,6 +3395,7 @@
      &       zr3, zr4, zr5, zt1, zt2, zt3, zf1, zf2, zrpp1
 
       integer :: ib, ibd, jb, jg, k, kp, itind
+      character(len=6) :: ser_count_str
 !
 !===> ...  begin here
 !
@@ -3634,6 +3635,14 @@
           ztdbt0 = zexp4 * ztdbt0
         enddo    ! end do_k_loop
 
+!$ser verbatim if (ipt == 1 .and. jg == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-vrtqdr-input-"//trim(ser_count_str)
+  !$ser data zrefb=zrefb zrefd=zrefd ztrab=ztrab ztrad=ztrad
+  !$ser data zldbt=zldbt ztdbt=ztdbt
+!$ser verbatim end if
+
         call vrtqdr                                                     &
 !  ---  inputs:
      &     ( zrefb,zrefd,ztrab,ztrad,zldbt,ztdbt,                       &
@@ -3641,6 +3650,13 @@
 !  ---  outputs:
      &       zfu, zfd                                                   &
      &     )
+
+!$ser verbatim if (ipt == 1 .and. jg == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-vrtqdr-output-"//trim(ser_count_str)
+  !$ser data zfu=zfu zfd=zfd
+!$ser verbatim end if
 
 !  --- ...  compute upward and downward fluxes at levels
         do k = 1, nlp1
@@ -4321,33 +4337,127 @@
 !> - Call taumol## (##: 16-29) to calculate layer optical depth.
 
 !>  - call taumol16()
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
+  !$ser data colamt=colamt colmol=colmol fac00=fac00 fac01=fac01 fac10=fac10
+  !$ser data fac11=fac11 jp=jp jt=jt jt1=jt1 laytrop=laytrop forfac=forfac
+  !$ser data forfrac=forfrac indfor=indfor selffac=selffac selffrac=selffrac
+  !$ser data indself=indself nlay=nlay
+  !$ser data id0=id0 id1=id1
+!$ser verbatim end if
       call taumol16
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb16-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol17()
       call taumol17
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb17-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol18()
       call taumol18
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb18-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol19()
       call taumol19
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb19-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol20()
       call taumol20
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb20-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol21()
       call taumol21
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb21-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol22()
       call taumol22
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb22-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol23()
       call taumol23
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb23-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol24()
       call taumol24
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb24-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol25()
       call taumol25
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb25-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol26()
       call taumol26
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb26-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol27()
       call taumol27
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb27-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol28()
       call taumol28
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb28-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 !>  - call taumol29()
       call taumol29
+!$ser verbatim if (ipt == 1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-taugb29-output-"//trim(ser_count_str)
+  !$ser data taug=taug taur=taur
+!$ser verbatim end if
 
 
 ! =================
