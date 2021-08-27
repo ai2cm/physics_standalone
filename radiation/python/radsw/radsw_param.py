@@ -7,7 +7,7 @@ nblow = 16
 # band range upper index
 nbhgh = 29
 # total number of SW bands (14)
-nbands = nbhgh - nblow + 1
+nbandssw = nbhgh - nblow + 1
 # total number of g-point in all bands
 ngptsw = 112
 # maximum number of g-point in one band
@@ -20,8 +20,8 @@ ntbmx = 10000
 # SW radiation schemes)
 NSWSTR = 1
 
-NSWEND = nbands
-nbdsw = nbands
+NSWEND = nbandssw
+nbdsw = nbandssw
 
 eps = 1.0e-6
 oneminus = 1.0 - eps
