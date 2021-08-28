@@ -1,11 +1,9 @@
 import numpy as np
 import sys
 
-sys.path.insert(
-    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
-)
-from radlw_param import nbands, maxgas, maxxsec, ngptlw
-from radsw_param import ngptsw, nbhgh, nblow, nbdsw
+sys.path.insert(0, "/work/radiation/python")
+from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw
+from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
@@ -25,6 +23,7 @@ FIELD_FLT = Field[DTYPE_FLT]
 FIELD_BOOL = Field[DTYPE_BOOL]
 FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
 FIELD_2DINT = Field[gtscript.IJ, DTYPE_INT]
+FIELD_2DBOOL = Field[gtscript.IJ, DTYPE_BOOL]
 
 domain = (npts, 1, 1)
 domain2 = (npts, 1, nlay)
