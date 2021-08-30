@@ -30,8 +30,10 @@ sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 ddir = "/work/radiation/fortran/data/SW"
+ddir2 = "/work/radiation/fortran/radsw/dump"
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank1")
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank1")
 savepoints = serializer.savepoint_list()
 
 invars = [
@@ -64,13 +66,10 @@ locvars = [
     "ssolar",
     "albbm",
     "albdf",
-    "tem1",
-    "tem2",
     "pavel",
     "tavel",
     "h2ovmr",
     "o3vmr",
-    "tem0",
     "coldry",
     "temcol",
     "colamt",
@@ -91,6 +90,8 @@ locvars = [
     "zcf1",
 ]
 
+temvars = ["tem0", "tem1", "tem2"]
+
 indict = dict()
 
 for var in invars:
@@ -108,8 +109,15 @@ for var in invars:
     elif var == "faersw":
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :, :], (1, 1, 1, 1, 1))
-    elif var in ["coszen", "de_lgth", "idxday"]:
+    elif var in ["coszen", "de_lgth"]:
         indict[var] = np.tile(tmp[:, None], (1, 1))
+    elif var == "idxday":
+        tmp2 = np.zeros(npts, dtype=bool)
+        for n in range(npts):
+            if tmp[n] > 1 and tmp[n] < 25:
+                tmp2[tmp[n] - 1] = True
+
+        indict[var] = np.tile(tmp2[:, None], (1, 1))
     else:
         indict[var] = tmp[0]
 
@@ -150,7 +158,7 @@ for var in locvars:
     if var in ["tauae", "ssaae", "asyae", "taucw", "ssacw", "asycw"]:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbdsw)
     elif var in ["zcf0", "zcf1"]:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_INT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
     elif var in ["albbm", "albdf"]:
         locdict_gt4py[var] = create_storage_zeros(
             backend, shape_nlp1, (DTYPE_FLT, (2,))
@@ -159,6 +167,9 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_maxgas)
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+
+for var in temvars:
+    locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
 s0 = 1368.22
 s0fac = indict["solcon"] / s0
@@ -232,8 +243,8 @@ def firstloop(
     cdat2: FIELD_FLT,
     cdat3: FIELD_FLT,
     cdat4: FIELD_FLT,
-    zcf0: FIELD_2DINT,
-    zcf1: FIELD_2DINT,
+    zcf0: FIELD_2D,
+    zcf1: FIELD_2D,
 ):
     from __externals__ import (
         solcon,
@@ -335,9 +346,13 @@ def firstloop(
                     zcf0 = zcf0 * zcf1
                     zcf1 = 1.0
 
-                zcf0 = zcf0 * zcf1
             elif iovrsw >= 2:
                 zcf0 = min(zcf0, 1.0 - cfrac)  # used only as clear/cloudy indicator
+
+    with computation(FORWARD), interval(0, 1):
+        if idxday:
+            if iovrsw == 1:
+                zcf0 = zcf0 * zcf1
 
             if zcf0 <= ftiny:
                 zcf0 = 0.0
@@ -345,3 +360,69 @@ def firstloop(
                 zcf0 = 1.0
 
             zcf1 = 1.0 - zcf0
+
+
+firstloop(
+    indict_gt4py["plyr"],
+    indict_gt4py["plvl"],
+    indict_gt4py["tlyr"],
+    indict_gt4py["tlvl"],
+    indict_gt4py["qlyr"],
+    indict_gt4py["olyr"],
+    indict_gt4py["gasvmr"],
+    indict_gt4py["clouds"],
+    indict_gt4py["faersw"],
+    indict_gt4py["sfcalb"],
+    indict_gt4py["dz"],
+    indict_gt4py["delp"],
+    indict_gt4py["de_lgth"],
+    indict_gt4py["coszen"],
+    indict_gt4py["idxday"],
+    locdict_gt4py["cosz1"],
+    locdict_gt4py["sntz1"],
+    locdict_gt4py["ssolar"],
+    locdict_gt4py["albbm"],
+    locdict_gt4py["albdf"],
+    locdict_gt4py["tem1"],
+    locdict_gt4py["tem2"],
+    locdict_gt4py["pavel"],
+    locdict_gt4py["tavel"],
+    locdict_gt4py["h2ovmr"],
+    locdict_gt4py["o3vmr"],
+    locdict_gt4py["tem0"],
+    locdict_gt4py["coldry"],
+    locdict_gt4py["temcol"],
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["tauae"],
+    locdict_gt4py["ssaae"],
+    locdict_gt4py["asyae"],
+    locdict_gt4py["cfrac"],
+    locdict_gt4py["cliqp"],
+    locdict_gt4py["reliq"],
+    locdict_gt4py["cicep"],
+    locdict_gt4py["reice"],
+    locdict_gt4py["cdat1"],
+    locdict_gt4py["cdat2"],
+    locdict_gt4py["cdat3"],
+    locdict_gt4py["cdat4"],
+    locdict_gt4py["zcf0"],
+    locdict_gt4py["zcf1"],
+)
+
+
+valdict = dict()
+outdict_np = dict()
+
+for var in locvars:
+    valdict[var] = serializer2.read(
+        var, serializer2.savepoint["swrad-firstloop-output-000000"]
+    )
+    if var in ["cosz1", "sntz1", "ssolar", "albbm", "albdf", "tem0", "tem1", "tem2"]:
+        outdict_np[var] = locdict_gt4py[var][:, :, 0, ...].view(np.ndarray).squeeze()
+    elif var in ["zcf1", "zcf0"]:
+        outdict_np[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
+    else:
+        outdict_np[var] = locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+
+compare_data(valdict, outdict_np)
