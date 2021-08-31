@@ -73,20 +73,24 @@ def vrtqdr(
     zden1: FIELD_FLT,
 ):
 
-    with computation(PARALLEL), interval(0, 1):
-        # Link lowest layer with surface.
-        zrupb = zrefb  # direct beam
-        zrupd = zrefd  # diffused
+    with computation(FORWARD):
+        with interval(0, 1):
+            # Link lowest layer with surface.
+            zrupb = zrefb  # direct beam
+            zrupd = zrefd  # diffused
 
-    with computation(PARALLEL), interval(1, None):
-        # Pass from bottom to top.
-        zden1 = 1.0 / (1.0 - zrupd[0, 0, -1] * zrefd)
-        zrupb = (
-            zrefb
-            + (ztrad * ((ztrab - zldbt) * zrupd[0, 0, -1] + zldbt * zrupb[0, 0, -1]))
-            * zden1
-        )
-        zrupd = zrefd + ztrad * ztrad * zrupd[0, 0, -1] * zden1
+        with interval(1, None):
+            # Pass from bottom to top.
+            zden1 = 1.0 / (1.0 - zrupd[0, 0, -1] * zrefd)
+            zrupb = (
+                zrefb
+                + (
+                    ztrad
+                    * ((ztrab - zldbt) * zrupd[0, 0, -1] + zldbt * zrupb[0, 0, -1])
+                )
+                * zden1
+            )
+            zrupd = zrefd + ztrad * ztrad * zrupd[0, 0, -1] * zden1
 
     # Upper boundary conditions
     with computation(PARALLEL):
