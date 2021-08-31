@@ -6,7 +6,8 @@ import numpy as np
 import xarray as xr
 import gt4py.gtscript as gtscript
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+# sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "/work/radiation/python")
 from radlw_param import a0, a1, a2, nbands, nrates, ipat, delwave
 from stencils_gt4py import *
 from util import (
@@ -19,19 +20,22 @@ from util import (
 )
 from config import *
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
+# SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
+SERIALBOX_DIR = "/usr/local/serialbox"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
+# ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
+ddir = "/work/radiation/fortran/data/LW"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
 savepoints = serializer.savepoint_list()
 
-ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
+# ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
+ddir2 = "/work/radiation/fortran/radlw/dump"
 serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
 savepoints2 = serializer2.savepoint_list()
 
-rebuild = False
+rebuild = True
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 

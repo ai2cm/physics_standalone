@@ -10,9 +10,10 @@ from gt4py.gtscript import (
 )
 import sys
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+# sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "/work/radiation/python")
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
-from radlw_param import (
+from radlw.radlw_param import (
     nbands,
     nplnk,
     nrates,
@@ -65,7 +66,7 @@ from radlw_param import (
 from radphysparam import ilwcice, ilwcliq
 from config import *
 
-rebuild = False
+rebuild = True
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 

@@ -6,4 +6,5 @@
 fortran/*.dat
 *.sdfg
 fortran/*/dump/*.json
+fortran/*/dump/*.dat
 *.x
