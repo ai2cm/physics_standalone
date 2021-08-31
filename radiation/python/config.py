@@ -1,9 +1,11 @@
 import numpy as np
 import sys
 
-sys.path.insert(0, "/work/radiation/python/radlw")
-from radlw_param import nbands, maxgas, maxxsec, ngptlw, ntbl
-import gt4py
+sys.path.insert(
+    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
+)
+from radlw_param import nbands, maxgas, maxxsec, ngptlw
+from radsw_param import ngptsw, nbhgh, nblow, nbdsw
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
@@ -40,11 +42,15 @@ shape_nlay = (npts, 1, nlay)
 shape_nlp1 = (npts, 1, nlp1)
 shape_nlp2 = (npts, 1, nlp1 + 1)
 default_origin = (0, 0, 0)
-type_nbands = (np.float64, (nbands,))
-type_ngptlw = (np.float64, (ngptlw,))
-type_nbands3 = (np.float64, (nbands, 3))
-type_maxgas = (np.float64, (maxgas,))
-type_maxxsec = (np.float64, (maxxsec,))
-type_ntbl = (DTYPE_FLT, (ntbl + 1,))
-type_9 = (np.float64, (9,))
-type_10 = (np.float64, (10,))
+type_nbands = (DTYPE_FLT, (nbands,))
+type_nbandssw_int = (DTYPE_INT, (nbhgh - nblow + 1,))
+type_nbandssw_flt = (DTYPE_FLT, (nbhgh - nblow + 1,))
+type_ngptlw = (DTYPE_FLT, (ngptlw,))
+type_ngptsw = (DTYPE_FLT, (ngptsw,))
+type_ngptsw_bool = (DTYPE_BOOL, (ngptsw,))
+type_nbands3 = (DTYPE_FLT, (nbands, 3))
+type_maxgas = (DTYPE_FLT, (maxgas,))
+type_maxxsec = (DTYPE_FLT, (maxxsec,))
+type_nbdsw = (DTYPE_FLT, (nbdsw,))
+type_9 = (DTYPE_FLT, (9,))
+type_10 = (DTYPE_FLT, (10,))
