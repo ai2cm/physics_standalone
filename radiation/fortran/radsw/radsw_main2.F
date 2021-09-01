@@ -1246,6 +1246,10 @@
 enddo lab_do_ipt3
 
 
+!> -# Call taumol() to calculate optical depths for gaseous absorption
+!!    and rayleigh scattering
+
+      lab_do_ipt4 : do ipt = 1, NDAY
 
 !$ser verbatim if (ipt == NDAY) then
   !$ser mode write
@@ -1256,11 +1260,6 @@ enddo lab_do_ipt3
   !$ser data forfrac=forfrac indfor=indfor selffac=selffac selffrac=selffrac
   !$ser data indself=indself NLAY=NLAY
 !$ser verbatim end if
-
-!> -# Call taumol() to calculate optical depths for gaseous absorption
-!!    and rayleigh scattering
-
-      lab_do_ipt4 : do ipt = 1, NDAY
 
         j1 = idxday(ipt)
         call taumol                                                     &
@@ -1273,7 +1272,6 @@ enddo lab_do_ipt3
 !  ---  outputs:
      &       sfluxzen(j1,:), taug(j1,:,:), taur(j1,:,:)                                       &
      &     )
-      enddo lab_do_ipt4
 
 !$ser verbatim if (ipt == NDAY) then
   !$ser mode write
@@ -1281,6 +1279,10 @@ enddo lab_do_ipt3
   !$ser savepoint "swrad-taumol-output-"//trim(ser_count_str)
   !$ser data sfluxzen=sfluxzen taug=taug taur=taur
 !$ser verbatim end if
+
+      enddo lab_do_ipt4
+
+
 
 !> -# Call the 2-stream radiation transfer model:
 !!    - if physparam::isubcsw .le.0, using standard cloud scheme,

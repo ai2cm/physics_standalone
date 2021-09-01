@@ -2,13 +2,11 @@ import numpy as np
 import xarray as xr
 import os
 import sys
-from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD
+from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD, mod
 
 sys.path.insert(0, "..")
 from radsw.radsw_param import (
-    ngptsw,
-    nblow,
-    nbhgh,
+    nbandssw,
     nspa,
     nspb,
     ng,
@@ -54,8 +52,10 @@ sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 ddir = "../../fortran/radsw/dump"
+ddir2 = "../../fortran/data/SW"
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Generator_rank1")
 savepoints = serializer.savepoint_list()
 
 invars = [
@@ -75,8 +75,7 @@ invars = [
     "selffac",
     "selffrac",
     "indself",
-    "id0",
-    "id1",
+    "idxday",
 ]
 
 outvars = ["sfluxzen", "taug", "taur"]
@@ -97,21 +96,34 @@ locvars = [
     "indf",
     "indfp",
     "js",
+    "jsa",
+    "colm1a",
+    "colm2a",
 ]
 
 indict = dict()
 for var in invars:
-    tmp = serializer.read(
-        var + "in", serializer.savepoint["swrad-taugb16-input-000000"]
-    )
+    if var == "idxday":
+        tmp = serializer2.read(var, serializer2.savepoint["swrad-in-000000"])
+    else:
+        tmp = serializer.read(var, serializer.savepoint["swrad-taumol-input-000000"])
+
     if var == "colamt" or var == "id0" or var == "id1":
-        indict[var] = np.tile(tmp[None, None, :, :], (npts, 1, 1, 1))
-    elif var != "laytrop":
-        indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
+        indict[var] = np.tile(tmp[:, None, :, :], (1, 1, 1, 1))
+    elif var != "laytrop" and var != "idxday":
+        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
     elif var == "laytrop":
         laytrop = np.zeros((npts, 1, nlay), dtype=bool)
-        laytrop[:, :, : tmp[0]] = True
+        for n in range(npts):
+            laytrop[n, :, : tmp[n]] = True
         indict[var] = laytrop
+    elif var == "idxday":
+        tmp2 = np.zeros(npts, dtype=bool)
+        for n in range(npts):
+            if tmp[n] > 1 and tmp[n] < 25:
+                tmp2[tmp[n] - 1] = True
+
+        indict[var] = np.tile(tmp2[:, None], (1, 1))
 
 indict_gt4py = dict()
 
@@ -132,6 +144,10 @@ for var in invars:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlay, type_nbandssw_int
         )
+    elif var == "idxday":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, DTYPE_BOOL
+        )
     else:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlay, DTYPE_FLT
@@ -140,7 +156,10 @@ for var in invars:
 outdict_gt4py = dict()
 
 for var in outvars:
-    outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_ngptsw)
+    if var == "sfluxzen":
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_2D, type_ngptsw)
+    else:
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_ngptsw)
 
 locdict_gt4py = dict()
 
@@ -149,8 +168,32 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_zeros(
             backend, shape_nlay, type_nbandssw_int
         )
+    elif var in ["colm1a", "colm2a"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
+
+layind = np.arange(nlay, dtype=np.int32)
+layind = np.tile(layind[None, None, :], (npts, 1, 1))
+nspa = np.tile(np.array(nspa)[None, None, :], (npts, 1, 1))
+nspb = np.tile(np.array(nspb)[None, None, :], (npts, 1, 1))
+ngtmp = np.tile(np.array(ng)[None, None, :], (npts, 1, 1))
+ngs = np.tile(np.array(ngs)[None, None, :], (npts, 1, 1))
+locdict_gt4py["layind"] = create_storage_from_array(
+    layind, backend, shape_nlay, DTYPE_INT
+)
+locdict_gt4py["nspa"] = create_storage_from_array(
+    nspa, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["nspb"] = create_storage_from_array(
+    nspb, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ng"] = create_storage_from_array(
+    ngtmp, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ngs"] = create_storage_from_array(
+    ngs, backend, shape_2D, type_nbandssw_int
+)
 
 
 def loadlookupdata(name):
@@ -183,7 +226,7 @@ def loadlookupdata(name):
 
         if len(ds.data_vars[var].shape) >= 1:
             lookupdict_gt4py[var] = create_storage_from_array(
-                lookupdict[var], backend, shape_nlay, (DTYPE_FLT, ds[var].shape)
+                lookupdict[var], backend, shape_nlay, (ds[var].dtype, ds[var].shape)
             )
         else:
             lookupdict_gt4py[var] = lookupdict[var]
@@ -206,6 +249,241 @@ lookupdict26 = loadlookupdata("kgb26")
 lookupdict27 = loadlookupdata("kgb27")
 lookupdict28 = loadlookupdata("kgb28")
 lookupdict29 = loadlookupdata("kgb29")
+
+# Subtract one from indexing variables for Fortran -> Python conversion
+lookupdict_ref["ix1"] = lookupdict_ref["ix1"] - 1
+lookupdict_ref["ix2"] = lookupdict_ref["ix2"] - 1
+lookupdict_ref["ibx"] = lookupdict_ref["ibx"] - 1
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "nbands": nbandssw,
+        "njb16": ng[0],
+        "njb17": ng[1],
+        "njb18": ng[2],
+        "njb19": ng[3],
+        "njb20": ng[4],
+        "njb21": ng[5],
+        "njb22": ng[6],
+        "njb23": ng[7],
+        "njb24": ng[8],
+        "njb25": ng[9],
+        "njb26": ng[10],
+        "njb27": ng[11],
+        "njb28": ng[12],
+        "njb29": ng[13],
+        "scalekur": lookupdict_ref["scalekur"],
+    },
+)
+def taumolsetup(
+    colamt: Field[type_maxgas],
+    jp: FIELD_INT,
+    jt: FIELD_INT,
+    jt1: FIELD_INT,
+    laytrop: FIELD_BOOL,
+    idxday: FIELD_2DBOOL,
+    sfluxzen: Field[gtscript.IJ, type_ngptsw],
+    layind: FIELD_INT,
+    nspa: Field[gtscript.IJ, type_nbandssw_int],
+    nspb: Field[gtscript.IJ, type_nbandssw_int],
+    ngs: Field[gtscript.IJ, type_nbandssw_int],
+    id0: Field[type_nbandssw_int],
+    id1: Field[type_nbandssw_int],
+    js: FIELD_INT,
+    jsa: FIELD_INT,
+    colm1a: FIELD_2D,
+    colm2a: FIELD_2D,
+    sfluxref01: Field[(DTYPE_FLT, (16, 1, 7))],
+    sfluxref02: Field[(DTYPE_FLT, (16, 5, 2))],
+    sfluxref03: Field[(DTYPE_FLT, (16, 9, 5))],
+    layreffr: Field[type_nbandssw_int],
+    ix1: Field[type_nbandssw_int],
+    ix2: Field[type_nbandssw_int],
+    ibx: Field[type_nbandssw_int],
+    strrat: Field[type_nbandssw_flt],
+    specwt: Field[type_nbandssw_flt],
+):
+    from __externals__ import (
+        nbands,
+        njb16,
+        njb17,
+        njb18,
+        njb19,
+        njb20,
+        njb21,
+        njb22,
+        njb23,
+        njb24,
+        njb25,
+        njb26,
+        njb27,
+        njb28,
+        njb29,
+        scalekur,
+    )
+
+    with computation(FORWARD), interval(...):
+        if idxday:
+            for jb in range(nbands):
+                if laytrop:
+                    id0[0, 0, 0][jb] = ((jp - 1) * 5 + (jt - 1)) * nspa[0, 0][jb]
+                    id1[0, 0, 0][jb] = (jp * 5 + (jt1 - 1)) * nspa[0, 0][jb]
+                else:
+                    id0[0, 0, 0][jb] = ((jp - 13) * 5 + (jt - 1)) * nspb[0, 0][jb]
+                    id1[0, 0, 0][jb] = ((jp - 12) * 5 + (jt1 - 1)) * nspb[0, 0][jb]
+
+            for j in range(njb16):
+                sfluxzen[0, 0][ngs[0, 0][0] + j] = sfluxref01[0, 0, 0][
+                    j, 0, ibx[0, 0, 0][0]
+                ]
+            for j2 in range(njb20):
+                sfluxzen[0, 0][ngs[0, 0][4] + j2] = sfluxref01[0, 0, 0][
+                    j2, 0, ibx[0, 0, 0][4]
+                ]
+            for j3 in range(njb23):
+                sfluxzen[0, 0][ngs[0, 0][7] + j3] = sfluxref01[0, 0, 0][
+                    j3, 0, ibx[0, 0, 0][7]
+                ]
+            for j4 in range(njb25):
+                sfluxzen[0, 0][ngs[0, 0][9] + j4] = sfluxref01[0, 0, 0][
+                    j4, 0, ibx[0, 0, 0][9]
+                ]
+            for j5 in range(njb26):
+                sfluxzen[0, 0][ngs[0, 0][10] + j5] = sfluxref01[0, 0, 0][
+                    j5, 0, ibx[0, 0, 0][10]
+                ]
+            for j6 in range(njb29):
+                sfluxzen[0, 0][ngs[0, 0][13] + j6] = sfluxref01[0, 0, 0][
+                    j6, 0, ibx[0, 0, 0][13]
+                ]
+
+            for j7 in range(njb27):
+                sfluxzen[0, 0][ngs[0, 0][11] + j7] = (
+                    scalekur * sfluxref01[0, 0, 0][j7, 0, ibx[0, 0, 0][11]]
+                )
+
+            if not laytrop:
+                # case default
+                if jp < layreffr[0, 0, 0][1] and jp[0, 0, 1] >= layreffr[0, 0, 0][1]:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][1]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][1]]
+
+                    speccomb = colm1 + strrat[0, 0, 0][1] * colm2
+                    specmult = specwt[0, 0, 0][1] * min(oneminus, colm1 / speccomb)
+                    js = specmult
+                    fs = mod(specmult, 1.0)
+
+                    for jj in range(njb17):
+                        sfluxzen[0, 0][ngs[0, 0][1] + jj] = sfluxref02[0, 0, 0][
+                            jj, js, ibx[0, 0, 0][1]
+                        ] + fs * (
+                            sfluxref02[0, 0, 0][jj, js + 1, ibx[0, 0, 0][1]]
+                            - sfluxref02[0, 0, 0][jj, js, ibx[0, 0, 0][1]]
+                        )
+
+                if jp < layreffr[0, 0, 0][12] and jp[0, 0, 1] >= layreffr[0, 0, 0][12]:
+                    colm1a = colamt[0, 0, 1][ix1[0, 0, 0][12]]
+                    colm2a = colamt[0, 0, 1][ix2[0, 0, 0][12]]
+                elif layind == 62 and colm1a == 0.0:
+                    colm1a = colamt[0, 0, 0][ix1[0, 0, 0][12]]
+                    colm2a = colamt[0, 0, 0][ix2[0, 0, 0][12]]
+
+                speccomba = colm1a + strrat[0, 0, 0][12] * colm2a
+                specmulta = specwt[0, 0, 0][12] * min(oneminus, colm1a / speccomba)
+                jsa = specmulta
+                fsa = mod(specmulta, 1.0)
+
+                for jj2 in range(njb28):
+                    sfluxzen[0, 0][ngs[0, 0][12] + jj2] = sfluxref02[0, 0, 0][
+                        jj2, jsa, ibx[0, 0, 0][12]
+                    ] + fsa * (
+                        sfluxref02[0, 0, 0][jj2, jsa + 1, ibx[0, 0, 0][12]]
+                        - sfluxref02[0, 0, 0][jj2, jsa, ibx[0, 0, 0][12]]
+                    )
+
+            if laytrop:
+                if jp < layreffr[0, 0, 0][2] and jp[0, 0, 1] >= layreffr[0, 0, 0][2]:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][2]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][2]]
+                    speccomb = colm1 + strrat[0, 0, 0][2] * colm2
+                    specmult = specwt[0, 0, 0][2] * min(oneminus, colm1 / speccomb)
+                    js = specmult
+                    fs = mod(specmult, 1.0)
+
+                    for jj3 in range(njb18):
+                        sfluxzen[0, 0][ngs[0, 0][2] + jj3] = sfluxref03[0, 0, 0][
+                            jj3, js, ibx[0, 0, 0][2]
+                        ] + fs * (
+                            sfluxref03[0, 0, 0][jj3, js + 1, ibx[0, 0, 0][2]]
+                            - sfluxref03[0, 0, 0][jj3, js, ibx[0, 0, 0][2]]
+                        )
+
+                if jp < layreffr[0, 0, 0][3] and jp[0, 0, 1] >= layreffr[0, 0, 0][3]:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][3]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][3]]
+                    speccomb = colm1 + strrat[0, 0, 0][3] * colm2
+                    specmult = specwt[0, 0, 0][3] * min(oneminus, colm1 / speccomb)
+                    js = specmult
+                    fs = mod(specmult, 1.0)
+
+                    for jj4 in range(njb19):
+                        sfluxzen[0, 0][ngs[0, 0][3] + jj4] = sfluxref03[0, 0, 0][
+                            jj4, js, ibx[0, 0, 0][3]
+                        ] + fs * (
+                            sfluxref03[0, 0, 0][jj4, js + 1, ibx[0, 0, 0][3]]
+                            - sfluxref03[0, 0, 0][jj4, js, ibx[0, 0, 0][3]]
+                        )
+
+                if jp < layreffr[0, 0, 0][5] and jp[0, 0, 1] >= layreffr[0, 0, 0][5]:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][5]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][5]]
+                    speccomb = colm1 + strrat[0, 0, 0][5] * colm2
+                    specmult = specwt[0, 0, 0][5] * min(oneminus, colm1 / speccomb)
+                    js = specmult
+                    fs = mod(specmult, 1.0)
+
+                    for jj5 in range(njb21):
+                        sfluxzen[0, 0][ngs[0, 0][5] + jj5] = sfluxref03[0, 0, 0][
+                            jj5, js, ibx[0, 0, 0][5]
+                        ] + fs * (
+                            sfluxref03[0, 0, 0][jj5, js + 1, ibx[0, 0, 0][5]]
+                            - sfluxref03[0, 0, 0][jj5, js, ibx[0, 0, 0][5]]
+                        )
+
+                if jp < layreffr[0, 0, 0][6] and jp[0, 0, 1] >= layreffr[0, 0, 0][6]:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][6]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][6]]
+                    speccomb = colm1 + strrat[0, 0, 0][6] * colm2
+                    specmult = specwt[0, 0, 0][6] * min(oneminus, colm1 / speccomb)
+                    js = specmult
+                    fs = mod(specmult, 1.0)
+
+                    for jj6 in range(njb22):
+                        sfluxzen[0, 0][ngs[0, 0][6] + jj6] = sfluxref03[0, 0, 0][
+                            jj6, js, ibx[0, 0, 0][6]
+                        ] + fs * (
+                            sfluxref03[0, 0, 0][jj6, js + 1, ibx[0, 0, 0][6]]
+                            - sfluxref03[0, 0, 0][jj6, js, ibx[0, 0, 0][6]]
+                        )
+
+                if jp < layreffr[0, 0, 0][8] and jp[0, 0, 1] >= layreffr[0, 0, 0][8]:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][8]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][8]]
+                    speccomb = colm1 + strrat[0, 0, 0][8] * colm2
+                    specmult = specwt[0, 0, 0][8] * min(oneminus, colm1 / speccomb)
+                    js = specmult
+                    fs = mod(specmult, 1.0)
+
+                    for jj7 in range(njb24):
+                        sfluxzen[0, 0][ngs[0, 0][8] + jj7] = sfluxref03[0, 0, 0][
+                            jj7, js, ibx[0, 0, 0][8]
+                        ] + fs * (
+                            sfluxref03[0, 0, 0][jj7, js + 1, ibx[0, 0, 0][8]]
+                            - sfluxref03[0, 0, 0][jj7, js, ibx[0, 0, 0][8]]
+                        )
 
 
 @stencil(
@@ -1795,6 +2073,38 @@ def taumol29(
                 )
 
 
+taumolsetup(
+    indict_gt4py["colamt"],
+    indict_gt4py["jp"],
+    indict_gt4py["jt"],
+    indict_gt4py["jt1"],
+    indict_gt4py["laytrop"],
+    indict_gt4py["idxday"],
+    outdict_gt4py["sfluxzen"],
+    locdict_gt4py["layind"],
+    locdict_gt4py["nspa"],
+    locdict_gt4py["nspb"],
+    locdict_gt4py["ngs"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["js"],
+    locdict_gt4py["jsa"],
+    locdict_gt4py["colm1a"],
+    locdict_gt4py["colm2a"],
+    lookupdict_ref["sfluxref01"],
+    lookupdict_ref["sfluxref02"],
+    lookupdict_ref["sfluxref03"],
+    lookupdict_ref["layreffr"],
+    lookupdict_ref["ix1"],
+    lookupdict_ref["ix2"],
+    lookupdict_ref["ibx"],
+    lookupdict_ref["strrat"],
+    lookupdict_ref["specwt"],
+    domain=shape_nlay,
+    origin=default_origin,
+    validate_args=validate,
+)
+
 taumol16(
     indict_gt4py["colamt"],
     indict_gt4py["colmol"],
@@ -1816,8 +2126,8 @@ taumol16(
     lookupdict16["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -1856,8 +2166,8 @@ taumol17(
     lookupdict17["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -1896,8 +2206,8 @@ taumol18(
     lookupdict18["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -1936,8 +2246,8 @@ taumol19(
     lookupdict19["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -1976,8 +2286,8 @@ taumol20(
     lookupdict20["absch4"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
@@ -2012,8 +2322,8 @@ taumol21(
     lookupdict21["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -2052,8 +2362,8 @@ taumol22(
     lookupdict22["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -2091,8 +2401,8 @@ taumol23(
     lookupdict23["rayl"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
@@ -2131,8 +2441,8 @@ taumol24(
     lookupdict24["abso3b"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -2165,8 +2475,8 @@ taumol25(
     lookupdict25["abso3b"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
@@ -2199,8 +2509,8 @@ taumol27(
     lookupdict27["rayl"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
@@ -2223,8 +2533,8 @@ taumol28(
     lookupdict28["absb"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind03"],
@@ -2261,8 +2571,8 @@ taumol29(
     lookupdict29["absco2"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    indict_gt4py["id0"],
-    indict_gt4py["id1"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
     locdict_gt4py["ind01"],
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
@@ -2276,16 +2586,31 @@ taumol29(
     validate_args=validate,
 )
 
-outvars = ["taug", "taur"]
+outvars = ["taug", "taur", "sfluxzen"]
 
 outdict_np = dict()
 valdict_np = dict()
 
 for var in outvars:
-    outdict_np[var] = outdict_gt4py[var][0, :, :, :].view(np.ndarray).squeeze()
+    outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
 
     valdict_np[var] = serializer.read(
-        var + "out", serializer.savepoint["swrad-taugb29-output-000000"]
+        var, serializer.savepoint["swrad-taumol-output-000000"]
     )
 
-compare_data(outdict_np, valdict_np)
+# compare_data(outdict_np, valdict_np)
+
+print(f"index = {ngs}")
+
+print(f"Python = {outdict_np['sfluxzen'][:,94]}")
+print(" ")
+print(f"Fortran = {valdict_np['sfluxzen'][:, 94]}")
+print(" ")
+print(f"Difference = {outdict_np['sfluxzen'][:, 94] - valdict_np['sfluxzen'][:, 94]}")
+print(" ")
+print(f"colm1 = {locdict_gt4py['colm1a'][10, :]}")
+print(f"colm2 = {locdict_gt4py['colm2a'][10, :]}")
+
+for n in range(ngptsw):
+    if not np.allclose(outdict_np["sfluxzen"][:, n], valdict_np["sfluxzen"][:, n]):
+        print(f"Bad n = {n}")
