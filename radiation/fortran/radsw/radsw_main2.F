@@ -4388,7 +4388,7 @@ enddo lab_do_ipt3
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
-  !$ser data colamt=colamt colmol=colmol fac00=fac00 fac01=fac01 fac10=fac10
+  !$ser data colamtin=colamt colmol=colmol fac00=fac00 fac01=fac01 fac10=fac10
   !$ser data fac11=fac11 jp=jp jt=jt jt1=jt1 laytrop=laytrop forfac=forfac
   !$ser data forfrac=forfrac indfor=indfor selffac=selffac selffrac=selffrac
   !$ser data indself=indself nlay=nlay

@@ -1,11 +1,9 @@
 import numpy as np
 import sys
 
-sys.path.insert(
-    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
-)
-from radlw_param import nbands, maxgas, maxxsec, ngptlw
-from radsw_param import ngptsw, nbhgh, nblow, nbdsw
+sys.path.insert(0, "/work/radiation/python/radlw")
+from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw
+from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
