@@ -1233,8 +1233,6 @@
      &       forfrac(j1,:),indfor(j1,:)             &
      &     )
 
-enddo lab_do_ipt3
-
 !$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
@@ -1244,6 +1242,10 @@ enddo lab_do_ipt3
   !$ser data selffrac=selffrac indself=indself forfac=forfac
   !$ser data forfrac=forfrac indfor=indfor
 !$ser verbatim end if
+
+enddo lab_do_ipt3
+
+
 
 !$ser verbatim if (ipt == NDAY) then
   !$ser mode write
@@ -4384,16 +4386,6 @@ enddo lab_do_ipt3
 !> - Call taumol## (##: 16-29) to calculate layer optical depth.
 
 !>  - call taumol16()
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
-  !$ser data colamt=colamt colmol=colmol fac00=fac00 fac01=fac01 fac10=fac10
-  !$ser data fac11=fac11 jp=jp jt=jt jt1=jt1 laytrop=laytrop forfac=forfac
-  !$ser data forfrac=forfrac indfor=indfor selffac=selffac selffrac=selffrac
-  !$ser data indself=indself nlay=nlay
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
       call taumol16
 !$ser verbatim if (ipt == 1) then
   !$ser mode write
