@@ -36,6 +36,7 @@ FIELD_FLT = Field[DTYPE_FLT]
 FIELD_BOOL = Field[DTYPE_BOOL]
 FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
 FIELD_2DINT = Field[gtscript.IJ, DTYPE_INT]
+FIELD_2DBOOL = Field[gtscript.IJ, DTYPE_BOOL]
 
 shape = (npts, 1, 1)
 shape_2D = (npts, 1)

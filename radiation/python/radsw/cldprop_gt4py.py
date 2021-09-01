@@ -21,7 +21,9 @@ sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 ddir = "../../fortran/radsw/dump"
+ddir2 = "../../fortran/data/SW"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Generator_rank1")
 savepoints = serializer.savepoint_list()
 
 invars = [
@@ -37,6 +39,7 @@ invars = [
     "zcf1",
     "dz",
     "delgth",
+    "idxday",
 ]
 
 outvars = ["cldfmc", "taucw", "ssacw", "asycw", "cldfrc"]
@@ -84,25 +87,43 @@ backend = "gtc:gt:cpu_ifirst"
 
 indict = dict()
 for var in invars:
-    tmp = serializer.read(var, serializer.savepoint["swrad-cldprop-input-000000"])
+    if var == "idxday":
+        tmp = serializer2.read(var, serializer2.savepoint["swrad-in-000000"])
+    else:
+        tmp = serializer.read(var, serializer.savepoint["swrad-cldprop-input-000000"])
     if var == "zcf1" or var == "delgth":
         indict[var] = np.tile(tmp[:, None, None], (1, 1, nlay))
+    elif var == "idxday":
+        tmp2 = np.zeros(npts, dtype=bool)
+        for n in range(npts):
+            if tmp[n] > 1 and tmp[n] < 25:
+                tmp2[tmp[n] - 1] = True
+
+        indict[var] = np.tile(tmp2[:, None], (1, 1))
     else:
         indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
 
 indict_gt4py = dict()
 for var in invars:
-    indict_gt4py[var] = create_storage_from_array(
-        indict[var], backend, shape_nlay, DTYPE_FLT
-    )
+    if var == "idxday":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, DTYPE_BOOL
+        )
+    else:
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_nlay, DTYPE_FLT
+        )
 
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
 ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
 rand2d = ds["rand2d"].data
 cdfunc = np.zeros((npts, nlay, ngptsw))
+idxday = serializer2.read("idxday", serializer2.savepoint["swrad-in-000000"])
 for n in range(npts):
-    cdfunc[n, :, :] = np.reshape(rand2d[n, :], (nlay, ngptsw), order="F")
+    myind = idxday[n]
+    if myind > 1 and myind < 25:
+        cdfunc[myind - 1, :, :] = np.reshape(rand2d[n, :], (nlay, ngptsw), order="F")
 indict["cdfunc"] = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
 
 indict_gt4py["cdfunc"] = create_storage_from_array(
@@ -221,6 +242,7 @@ def cldprop(
     zcf1: FIELD_FLT,
     dz: FIELD_FLT,
     delgth: FIELD_FLT,
+    idxday: FIELD_2DBOOL,
     cldfmc: Field[type_ngptsw],
     taucw: Field[type_nbdsw],
     ssacw: Field[type_nbdsw],
@@ -303,7 +325,8 @@ def cldprop(
 
     with computation(PARALLEL), interval(...):
         for nb in range(nbdsw):
-            ssacw[0, 0, 0][nb] = 1.0
+            if idxday and zcf1 > 0:
+                ssacw[0, 0, 0][nb] = 1.0
 
         # Compute cloud radiative properties for a cloudy column.
         if iswcliq > 0:
@@ -656,6 +679,7 @@ cldprop(
     indict_gt4py["zcf1"],
     indict_gt4py["dz"],
     indict_gt4py["delgth"],
+    indict_gt4py["idxday"],
     outdict_gt4py["cldfmc"],
     outdict_gt4py["taucw"],
     outdict_gt4py["ssacw"],
@@ -735,10 +759,4 @@ for var in outvars:
     )
     outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
 
-# compare_data(outdict_np, valdict)
-
-print(f"Python = {outdict_np['ssacw'][0, ...]}")
-print(" ")
-print(f"Fortran = {valdict['ssacw'][0, ...]}")
-print(" ")
-print(f"Difference = {outdict_np['ssacw'][0, ...]-valdict['ssacw'][0, ...]}")
+compare_data(outdict_np, valdict)
