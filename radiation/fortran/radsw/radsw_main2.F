@@ -815,40 +815,43 @@
 !  ---  locals:
       character(len=6) :: ser_count_str
 
-      real (kind=kind_phys), dimension(nlay,ngptsw) :: cldfmc,          &
+      real (kind=kind_phys), dimension(npts,nlay,ngptsw) :: cldfmc,          &
      &       taug, taur
-      real (kind=kind_phys), dimension(nlp1,nbdsw):: fxupc, fxdnc,      &
+      real (kind=kind_phys), dimension(npts,nlp1,nbdsw):: fxupc, fxdnc,      &
      &       fxup0, fxdn0
 
-      real (kind=kind_phys), dimension(nlay,nbdsw)  ::                  &
+      real (kind=kind_phys), dimension(npts,nlay,nbdsw)  ::                  &
      &       tauae, ssaae, asyae, taucw, ssacw, asycw
 
-      real (kind=kind_phys), dimension(ngptsw) :: sfluxzen
+      real (kind=kind_phys), dimension(npts,ngptsw) :: sfluxzen
 
-      real (kind=kind_phys), dimension(nlay)   :: cldfrc,     delp,     &
+      real (kind=kind_phys), dimension(npts,nlay)   :: cldfrc,     delp,     &
      &       pavel, tavel, coldry, colmol, h2ovmr, o3vmr, temcol,       &
      &       cliqp, reliq, cicep, reice, cdat1, cdat2, cdat3, cdat4,    &
      &       cfrac, fac00, fac01, fac10, fac11, forfac, forfrac,        &
      &       selffac, selffrac, rfdelp, dz
 
-      real (kind=kind_phys), dimension(nlp1) :: fnet, flxdc, flxuc,     &
+      real (kind=kind_phys), dimension(npts,nlp1) :: fnet, flxdc, flxuc,     &
      &       flxd0, flxu0
 
-      real (kind=kind_phys), dimension(2) :: albbm, albdf, sfbmc,       &
+      real (kind=kind_phys), dimension(npts,2) :: albbm, albdf, sfbmc,       &
      &       sfbm0, sfdfc, sfdf0
 
-      real (kind=kind_phys) :: cosz1, sntz1, tem0, tem1, tem2, s0fac,   &
+      real (kind=kind_phys), dimension(npts) :: cosz1, sntz1, tem0,     &
+     &       tem1, tem2,   &
      &       ssolar, zcf0, zcf1, ftoau0, ftoauc, ftoadc,                &
      &       fsfcu0, fsfcuc, fsfcd0, fsfcdc, suvbfc, suvbf0, delgth
 
 !  ---  column amount of absorbing gases:
 !       (:,m) m = 1-h2o, 2-co2, 3-o3, 4-n2o, 5-ch4, 6-o2, 7-co
-      real (kind=kind_phys) ::  colamt(nlay,maxgas)
+      real (kind=kind_phys) ::  colamt(npts,nlay,maxgas)
 
-      integer, dimension(npts) :: ipseed
-      integer, dimension(nlay) :: indfor, indself, jp, jt, jt1
+      real (kind=kind_phys) :: s0fac
 
-      integer :: i, ib, ipt, j1, k, kk, laytrop, mb
+      integer, dimension(npts) :: ipseed, laytrop
+      integer, dimension(npts,nlay) :: indfor, indself, jp, jt, jt1
+
+      integer :: i, ib, ipt, j1, k, kk, mb
 !
 !===> ... begin here
 !
@@ -912,31 +915,31 @@
 
         j1 = idxday(ipt)
 
-        cosz1  = cosz(j1)
-        sntz1  = f_one / cosz(j1)
-        ssolar = s0fac * cosz(j1)
-        if (iovrsw == 3) delgth = de_lgth(j1) ! clouds decorr-length
+        cosz1(j1)  = cosz(j1)
+        sntz1(j1)  = f_one / cosz(j1)
+        ssolar(j1) = s0fac * cosz(j1)
+        if (iovrsw == 3) delgth(j1) = de_lgth(j1) ! clouds decorr-length
 
 !> -# Prepare surface albedo: bm,df - dir,dif; 1,2 - nir,uvv.
-        albbm(1) = sfcalb(j1,1)
-        albdf(1) = sfcalb(j1,2)
-        albbm(2) = sfcalb(j1,3)
-        albdf(2) = sfcalb(j1,4)
+        albbm(j1,1) = sfcalb(j1,1)
+        albdf(j1,1) = sfcalb(j1,2)
+        albbm(j1,2) = sfcalb(j1,3)
+        albdf(j1,2) = sfcalb(j1,4)
 
 !> -# Prepare atmospheric profile for use in rrtm.
 !           the vertical index of internal array is from surface to top
 
         if (ivflip == 0) then       ! input from toa to sfc
 
-          tem1 = 100.0 * con_g
-          tem2 = 1.0e-20 * 1.0e3 * con_avgd
+          tem1(j1) = 100.0 * con_g
+          tem2(j1) = 1.0e-20 * 1.0e3 * con_avgd
 
           do k = 1, nlay
             kk = nlp1 - k
-            pavel(k) = plyr(j1,kk)
-            tavel(k) = tlyr(j1,kk)
-            delp (k) = delpin(j1,kk)
-            dz   (k) = dzlyr (j1,kk)
+            pavel(j1,k) = plyr(j1,kk)
+            tavel(j1,k) = tlyr(j1,kk)
+            delp (j1,k) = delpin(j1,kk)
+            dz   (j1,k) = dzlyr (j1,kk)
 !> -# Set absorber and gas column amount, convert from volume mixing
 !!    ratio to molec/cm2 based on coldry (scaled to 1.0e-20)
 !!    - colamt(nlay,maxgas):column amounts of absorbing gases 1 to
@@ -948,17 +951,18 @@
 !           h2ovmr(k)= max(f_zero,qlyr(j1,kk))                          ! input vol mixing ratio
 !           o3vmr (k)= max(f_zero,olyr(j1,kk))                          ! input vol mixing ratio
 !ncep model use
-            h2ovmr(k)= max(f_zero,qlyr(j1,kk)*amdw/(f_one-qlyr(j1,kk))) ! input specific humidity
-            o3vmr (k)= max(f_zero,olyr(j1,kk)*amdo3)                    ! input mass mixing ratio
+            h2ovmr(j1,k)= max(f_zero,qlyr(j1,kk)*amdw/(f_one-qlyr(j1,kk))) ! input specific humidity
+            o3vmr (j1,k)= max(f_zero,olyr(j1,kk)*amdo3)                    ! input mass mixing ratio
 
-            tem0 = (f_one - h2ovmr(k))*con_amd + h2ovmr(k)*con_amw
-            coldry(k) = tem2 * delp(k) / (tem1*tem0*(f_one + h2ovmr(k)))
-            temcol(k) = 1.0e-12 * coldry(k)
+            tem0(j1) = (f_one - h2ovmr(j1,k))*con_amd + h2ovmr(j1,k)*con_amw
+            coldry(j1,k) = tem2(j1) * delp(j1,k) / (tem1(j1)*tem0(j1)*(f_one + h2ovmr(j1,k)))
+            temcol(j1,k) = 1.0e-12 * coldry(j1,k)
 
-            colamt(k,1) = max(f_zero,    coldry(k)*h2ovmr(k))         ! h2o
-            colamt(k,2) = max(temcol(k), coldry(k)*gasvmr(j1,kk,1))   ! co2
-            colamt(k,3) = max(f_zero,    coldry(k)*o3vmr(k))          ! o3
-            colmol(k)   = coldry(k) + colamt(k,1)
+            colamt(j1,k,1) = max(f_zero,    coldry(j1,k)*h2ovmr(j1,k))         ! h2o
+            colamt(j1,k,2) = max(temcol(j1,k), &
+            &                    coldry(j1,k)*gasvmr(j1,kk,1))   ! co2
+            colamt(j1,k,3) = max(f_zero,    coldry(j1,k)*o3vmr(j1,k))          ! o3
+            colmol(j1,k)   = coldry(j1,k) + colamt(j1,k,1)
           enddo
 
 !  --- ...  set up gas column amount, convert from volume mixing ratio
@@ -967,16 +971,16 @@
           if (iswrgas > 0) then
             do k = 1, nlay
               kk = nlp1 - k
-              colamt(k,4) = max(temcol(k), coldry(k)*gasvmr(j1,kk,2))  ! n2o
-              colamt(k,5) = max(temcol(k), coldry(k)*gasvmr(j1,kk,3))  ! ch4
-              colamt(k,6) = max(temcol(k), coldry(k)*gasvmr(j1,kk,4))  ! o2
+              colamt(j1,k,4) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,kk,2))  ! n2o
+              colamt(j1,k,5) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,kk,3))  ! ch4
+              colamt(j1,k,6) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,kk,4))  ! o2
 !             colamt(k,7) = max(temcol(k), coldry(k)*gasvmr(j1,kk,5))  ! co - notused
             enddo
           else
             do k = 1, nlay
-              colamt(k,4) = temcol(k)                                  ! n2o
-              colamt(k,5) = temcol(k)                                  ! ch4
-              colamt(k,6) = temcol(k)                                  ! o2
+              colamt(j1,k,4) = temcol(j1,k)                                  ! n2o
+              colamt(j1,k,5) = temcol(j1,k)                                  ! ch4
+              colamt(j1,k,6) = temcol(j1,k)                                  ! o2
 !             colamt(k,7) = temcol(k)                                  ! co - notused
             enddo
           endif
@@ -986,9 +990,9 @@
           do k = 1, nlay
             kk = nlp1 - k
             do ib = 1, nbdsw
-              tauae(k,ib) = aerosols(j1,kk,ib,1)
-              ssaae(k,ib) = aerosols(j1,kk,ib,2)
-              asyae(k,ib) = aerosols(j1,kk,ib,3)
+              tauae(j1,k,ib) = aerosols(j1,kk,ib,1)
+              ssaae(j1,k,ib) = aerosols(j1,kk,ib,2)
+              asyae(j1,k,ib) = aerosols(j1,kk,ib,3)
             enddo
           enddo
 
@@ -996,36 +1000,36 @@
           if (iswcliq > 0) then    ! use prognostic cloud method
             do k = 1, nlay
               kk = nlp1 - k
-              cfrac(k) = clouds(j1,kk,1)      ! cloud fraction
-              cliqp(k) = clouds(j1,kk,2)      ! cloud liq path
-              reliq(k) = clouds(j1,kk,3)      ! liq partical effctive radius
-              cicep(k) = clouds(j1,kk,4)      ! cloud ice path
-              reice(k) = clouds(j1,kk,5)      ! ice partical effctive radius
-              cdat1(k) = clouds(j1,kk,6)      ! cloud rain drop path
-              cdat2(k) = clouds(j1,kk,7)      ! rain partical effctive radius
-              cdat3(k) = clouds(j1,kk,8)      ! cloud snow path
-              cdat4(k) = clouds(j1,kk,9)      ! snow partical effctive radius
+              cfrac(j1,k) = clouds(j1,kk,1)      ! cloud fraction
+              cliqp(j1,k) = clouds(j1,kk,2)      ! cloud liq path
+              reliq(j1,k) = clouds(j1,kk,3)      ! liq partical effctive radius
+              cicep(j1,k) = clouds(j1,kk,4)      ! cloud ice path
+              reice(j1,k) = clouds(j1,kk,5)      ! ice partical effctive radius
+              cdat1(j1,k) = clouds(j1,kk,6)      ! cloud rain drop path
+              cdat2(j1,k) = clouds(j1,kk,7)      ! rain partical effctive radius
+              cdat3(j1,k) = clouds(j1,kk,8)      ! cloud snow path
+              cdat4(j1,k) = clouds(j1,kk,9)      ! snow partical effctive radius
             enddo
           else                     ! use diagnostic cloud method
             do k = 1, nlay
               kk = nlp1 - k
-              cfrac(k) = clouds(j1,kk,1)      ! cloud fraction
-              cdat1(k) = clouds(j1,kk,2)      ! cloud optical depth
-              cdat2(k) = clouds(j1,kk,3)      ! cloud single scattering albedo
-              cdat3(k) = clouds(j1,kk,4)      ! cloud asymmetry factor
+              cfrac(j1,k) = clouds(j1,kk,1)      ! cloud fraction
+              cdat1(j1,k) = clouds(j1,kk,2)      ! cloud optical depth
+              cdat2(j1,k) = clouds(j1,kk,3)      ! cloud single scattering albedo
+              cdat3(j1,k) = clouds(j1,kk,4)      ! cloud asymmetry factor
             enddo
           endif                    ! end if_iswcliq
 
         else                        ! input from sfc to toa
 
-          tem1 = 100.0 * con_g
-          tem2 = 1.0e-20 * 1.0e3 * con_avgd
+          tem1(j1) = 100.0 * con_g
+          tem2(j1) = 1.0e-20 * 1.0e3 * con_avgd
 
           do k = 1, nlay
-            pavel(k) = plyr(j1,k)
-            tavel(k) = tlyr(j1,k)
-            delp (k) = delpin(j1,k)
-            dz   (k) = dzlyr (j1,k)
+            pavel(j1,k) = plyr(j1,k)
+            tavel(j1,k) = tlyr(j1,k)
+            delp (j1,k) = delpin(j1,k)
+            dz   (j1,k) = dzlyr (j1,k)
 
 !  --- ...  set absorber amount
 !test use
@@ -1033,17 +1037,17 @@
 !           h2ovmr(k)= max(f_zero,qlyr(j1,k))                         ! input vol mixing ratio
 !           o3vmr (k)= max(f_zero,olyr(j1,k))                         ! input vol mixing ratio
 !ncep model use
-            h2ovmr(k)= max(f_zero,qlyr(j1,k)*amdw/(f_one-qlyr(j1,k))) ! input specific humidity
-            o3vmr (k)= max(f_zero,olyr(j1,k)*amdo3)                   ! input mass mixing ratio
+            h2ovmr(j1,k)= max(f_zero,qlyr(j1,k)*amdw/(f_one-qlyr(j1,k))) ! input specific humidity
+            o3vmr (j1,k)= max(f_zero,olyr(j1,k)*amdo3)                   ! input mass mixing ratio
 
-            tem0 = (f_one - h2ovmr(k))*con_amd + h2ovmr(k)*con_amw
-            coldry(k) = tem2 * delp(k) / (tem1*tem0*(f_one + h2ovmr(k)))
-            temcol(k) = 1.0e-12 * coldry(k)
+            tem0(j1) = (f_one - h2ovmr(j1,k))*con_amd + h2ovmr(j1,k)*con_amw
+            coldry(j1,k) = tem2(j1) * delp(j1,k) / (tem1(j1)*tem0(j1)*(f_one + h2ovmr(j1,k)))
+            temcol(j1,k) = 1.0e-12 * coldry(j1,k)
 
-            colamt(k,1) = max(f_zero,    coldry(k)*h2ovmr(k))         ! h2o
-            colamt(k,2) = max(temcol(k), coldry(k)*gasvmr(j1,k,1))    ! co2
-            colamt(k,3) = max(f_zero,    coldry(k)*o3vmr(k))          ! o3
-            colmol(k)   = coldry(k) + colamt(k,1)
+            colamt(j1,k,1) = max(f_zero,    coldry(j1,k)*h2ovmr(j1,k))         ! h2o
+            colamt(j1,k,2) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,k,1))    ! co2
+            colamt(j1,k,3) = max(f_zero,    coldry(j1,k)*o3vmr(j1,k))          ! o3
+            colmol(j1,k)   = coldry(j1,k) + colamt(j1,k,1)
           enddo
 
 
@@ -1062,16 +1066,16 @@
 
           if (iswrgas > 0) then
             do k = 1, nlay
-              colamt(k,4) = max(temcol(k), coldry(k)*gasvmr(j1,k,2))  ! n2o
-              colamt(k,5) = max(temcol(k), coldry(k)*gasvmr(j1,k,3))  ! ch4
-              colamt(k,6) = max(temcol(k), coldry(k)*gasvmr(j1,k,4))  ! o2
+              colamt(j1,k,4) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,k,2))  ! n2o
+              colamt(j1,k,5) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,k,3))  ! ch4
+              colamt(j1,k,6) = max(temcol(j1,k), coldry(j1,k)*gasvmr(j1,k,4))  ! o2
 !             colamt(k,7) = max(temcol(k), coldry(k)*gasvmr(j1,k,5))  ! co - notused
             enddo
           else
             do k = 1, nlay
-              colamt(k,4) = temcol(k)                                 ! n2o
-              colamt(k,5) = temcol(k)                                 ! ch4
-              colamt(k,6) = temcol(k)                                 ! o2
+              colamt(j1,k,4) = temcol(j1,k)                                 ! n2o
+              colamt(j1,k,5) = temcol(j1,k)                                 ! ch4
+              colamt(j1,k,6) = temcol(j1,k)                                 ! o2
 !             colamt(k,7) = temcol(k)                                 ! co - notused
             enddo
           endif
@@ -1080,30 +1084,30 @@
 
           do ib = 1, nbdsw
             do k = 1, nlay
-              tauae(k,ib) = aerosols(j1,k,ib,1)
-              ssaae(k,ib) = aerosols(j1,k,ib,2)
-              asyae(k,ib) = aerosols(j1,k,ib,3)
+              tauae(j1,k,ib) = aerosols(j1,k,ib,1)
+              ssaae(j1,k,ib) = aerosols(j1,k,ib,2)
+              asyae(j1,k,ib) = aerosols(j1,k,ib,3)
             enddo
           enddo
 
           if (iswcliq > 0) then    ! use prognostic cloud method
             do k = 1, nlay
-              cfrac(k) = clouds(j1,k,1)       ! cloud fraction
-              cliqp(k) = clouds(j1,k,2)       ! cloud liq path
-              reliq(k) = clouds(j1,k,3)       ! liq partical effctive radius
-              cicep(k) = clouds(j1,k,4)       ! cloud ice path
-              reice(k) = clouds(j1,k,5)       ! ice partical effctive radius
-              cdat1(k) = clouds(j1,k,6)       ! cloud rain drop path
-              cdat2(k) = clouds(j1,k,7)       ! rain partical effctive radius
-              cdat3(k) = clouds(j1,k,8)       ! cloud snow path
-              cdat4(k) = clouds(j1,k,9)       ! snow partical effctive radius
+              cfrac(j1,k) = clouds(j1,k,1)       ! cloud fraction
+              cliqp(j1,k) = clouds(j1,k,2)       ! cloud liq path
+              reliq(j1,k) = clouds(j1,k,3)       ! liq partical effctive radius
+              cicep(j1,k) = clouds(j1,k,4)       ! cloud ice path
+              reice(j1,k) = clouds(j1,k,5)       ! ice partical effctive radius
+              cdat1(j1,k) = clouds(j1,k,6)       ! cloud rain drop path
+              cdat2(j1,k) = clouds(j1,k,7)       ! rain partical effctive radius
+              cdat3(j1,k) = clouds(j1,k,8)       ! cloud snow path
+              cdat4(j1,k) = clouds(j1,k,9)       ! snow partical effctive radius
             enddo
           else                     ! use diagnostic cloud method
             do k = 1, nlay
-              cfrac(k) = clouds(j1,k,1)       ! cloud fraction
-              cdat1(k) = clouds(j1,k,2)       ! cloud optical depth
-              cdat2(k) = clouds(j1,k,3)       ! cloud single scattering albedo
-              cdat3(k) = clouds(j1,k,4)       ! cloud asymmetry factor
+              cfrac(j1,k) = clouds(j1,k,1)       ! cloud fraction
+              cdat1(j1,k) = clouds(j1,k,2)       ! cloud optical depth
+              cdat2(j1,k) = clouds(j1,k,3)       ! cloud single scattering albedo
+              cdat3(j1,k) = clouds(j1,k,4)       ! cloud asymmetry factor
             enddo
           endif                    ! end if_iswcliq
 
@@ -1114,38 +1118,41 @@
 !!    - max/ran overlapping
 !!    - maximum overlapping
 
-        zcf0   = f_one
-        zcf1   = f_one
+        zcf0(j1)   = f_one
+        zcf1(j1)   = f_one
         if (iovrsw == 0) then                    ! random overlapping
           do k = 1, nlay
-            zcf0 = zcf0 * (f_one - cfrac(k))
+            zcf0(j1) = zcf0(j1) * (f_one - cfrac(j1,k))
           enddo
         else if (iovrsw == 1) then               ! max/ran overlapping
           do k = 1, nlay
-            if (cfrac(k) > ftiny) then                ! cloudy layer
-              zcf1 = min ( zcf1, f_one-cfrac(k) )
-            elseif (zcf1 < f_one) then                ! clear layer
-              zcf0 = zcf0 * zcf1
-              zcf1 = f_one
+            if (cfrac(j1,k) > ftiny) then                ! cloudy layer
+              zcf1(j1) = min ( zcf1(j1), f_one-cfrac(j1,k) )
+            elseif (zcf1(j1) < f_one) then                ! clear layer
+              zcf0(j1) = zcf0(j1) * zcf1(j1)
+              zcf1(j1) = f_one
             endif
           enddo
-          zcf0 = zcf0 * zcf1
+          zcf0(j1) = zcf0(j1) * zcf1(j1)
         else if (iovrsw >= 2) then
           do k = 1, nlay
-            zcf0 = min ( zcf0, f_one-cfrac(k) )  ! used only as clear/cloudy indicator
+            zcf0(j1) = min ( zcf0(j1), f_one-cfrac(j1,k) )  ! used only as clear/cloudy indicator
           enddo
         endif
 
-        if (zcf0 <= ftiny) zcf0 = f_zero
-        if (zcf0 > oneminus) zcf0 = f_one
-        zcf1 = f_one - zcf0
+        if (zcf0(j1) <= ftiny) zcf0(j1) = f_zero
+        if (zcf0(j1) > oneminus) zcf0(j1) = f_one
+        zcf1(j1) = f_one - zcf0(j1)
+      enddo lab_do_ipt
+
+      lab_do_ipt2 : do ipt = 1, NDAY
+
+        j1 = idxday(ipt)
 
 !> -# For cloudy sky column, call cldprop() to compute the cloud
 !!    optical properties for each cloudy layer.
 
-        if (zcf1 > f_zero) then     ! cloudy sky column
-
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-cldprop-input-"//trim(ser_count_str)
@@ -1154,21 +1161,17 @@
   !$ser data nlay=nlay ipseed=ipseed(j1) dz=dz delgth=delgth
 !$ser verbatim end if
 
+        if (zcf1(j1) > f_zero) then     ! cloudy sky column
+
           call cldprop                                                  &
 !  ---  inputs:
-     &     ( cfrac,cliqp,reliq,cicep,reice,cdat1,cdat2,cdat3,cdat4,     &
-     &       zcf1, nlay, ipseed(j1), dz, delgth, ser_count, ipt,        &
+     &     ( cfrac(j1,:),cliqp(j1,:),reliq(j1,:),cicep(j1,:),reice(j1,:),  &
+     &       cdat1(j1,:),cdat2(j1,:),cdat3(j1,:),cdat4(j1,:),            &
+     &       zcf1(j1), nlay, ipseed(j1), dz(j1,:), delgth(j1),           &
+     &       ser_count, ipt,        &
 !  ---  outputs:
-     &       taucw, ssacw, asycw, cldfrc, cldfmc                        &
+     &       taucw(j1,:,:), ssacw(j1,:,:), asycw(j1,:,:), cldfrc(j1,:), cldfmc(j1,:,:)                        &
      &     )
-
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
-  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
-  !$ser data cldfmc=cldfmc
-!$ser verbatim end if
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band 10 is approx to the 0.55 mu spectrum
@@ -1176,30 +1179,43 @@
           if (ivflip == 0) then       ! input from toa to sfc
             do k = 1, nlay
               kk = nlp1 - k
-              cldtau(j1,kk) = taucw(k,10)
+              cldtau(j1,kk) = taucw(j1,k,10)
             enddo
           else                        ! input from sfc to toa
             do k = 1, nlay
-              cldtau(j1,k) = taucw(k,10)
+              cldtau(j1,k) = taucw(j1,k,10)
             enddo
           endif                       ! end if_ivflip_block
 
         else                        ! clear sky column
-          cldfrc(:)  = f_zero
-          cldfmc(:,:)= f_zero
+          cldfrc(j1,:)  = f_zero
+          cldfmc(j1,:,:)= f_zero
           do i = 1, nbdsw
             do k = 1, nlay
-              taucw(k,i) = f_zero
-              ssacw(k,i) = f_zero
-              asycw(k,i) = f_zero
+              taucw(j1,k,i) = f_zero
+              ssacw(j1,k,i) = f_zero
+              asycw(j1,k,i) = f_zero
             enddo
           enddo
         endif   ! end if_zcf1_block
 
+!$ser verbatim if (ipt == NDAY) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
+  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
+  !$ser data cldfmc=cldfmc
+!$ser verbatim end if
+      enddo lab_do_ipt2
+
+      lab_do_ipt3 : do ipt = 1, NDAY
+
+        j1 = idxday(ipt)
+
 !> -# Call setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-setcoef-input-"//trim(ser_count_str)
@@ -1209,13 +1225,15 @@
 
         call setcoef                                                    &
 !  ---  inputs:
-     &     ( pavel,tavel,h2ovmr, nlay,nlp1,                             &
+     &     ( pavel(j1,:),tavel(j1,:),h2ovmr(j1,:), nlay,nlp1,                             &
 !  ---  outputs:
-     &       laytrop,jp,jt,jt1,fac00,fac01,fac10,fac11,                 &
-     &       selffac,selffrac,indself,forfac,forfrac,indfor             &
+     &       laytrop(j1),jp(j1,:),jt(j1,:),jt1(j1,:),fac00(j1,:),  &
+     &       fac01(j1,:),fac10(j1,:),fac11(j1,:),                 &
+     &       selffac(j1,:),selffrac(j1,:),indself(j1,:),forfac(j1,:), &
+     &       forfrac(j1,:),indfor(j1,:)             &
      &     )
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-setcoef-output-"//trim(ser_count_str)
@@ -1225,7 +1243,11 @@
   !$ser data forfrac=forfrac indfor=indfor
 !$ser verbatim end if
 
-!$ser verbatim if (ipt == 1) then
+enddo lab_do_ipt3
+
+
+
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taumol-input-"//trim(ser_count_str)
@@ -1237,15 +1259,23 @@
 
 !> -# Call taumol() to calculate optical depths for gaseous absorption
 !!    and rayleigh scattering
+
+      lab_do_ipt4 : do ipt = 1, NDAY
+
+        j1 = idxday(ipt)
         call taumol                                                     &
 !  ---  inputs:
-     &     ( ser_count,colamt,colmol,fac00,fac01,fac10,fac11,jp,jt,jt1,laytrop,   &
-     &       forfac,forfrac,indfor,selffac,selffrac,indself, NLAY, ipt,      &
+     &     ( ser_count,colamt(j1,:,:),colmol(j1,:),fac00(j1,:),   &
+     &       fac01(j1,:),fac10(j1,:),fac11(j1,:),jp(j1,:),jt(j1,:),  &
+     &       jt1(j1,:),laytrop(j1),   &
+     &       forfac(j1,:),forfrac(j1,:),indfor(j1,:),selffac(j1,:),  &
+     &       selffrac(j1,:),indself(j1,:), NLAY, ipt,      &
 !  ---  outputs:
-     &       sfluxzen, taug, taur                                       &
+     &       sfluxzen(j1,:), taug(j1,:,:), taur(j1,:,:)                                       &
      &     )
+      enddo lab_do_ipt4
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taumol-output-"//trim(ser_count_str)
@@ -1258,17 +1288,26 @@
 !!    - if physparam::isubcsw .gt.0, using mcica cloud scheme,
 !!      call spcvrtm().
 
+      lab_do_ipt5 : do ipt = 1, NDAY
+
+        j1 = idxday(ipt)
+
         if ( isubcsw <= 0 ) then     ! use standard cloud scheme
 
           call spcvrtc                                                  &
 !  ---  inputs:
-     &     ( ssolar,cosz1,sntz1,albbm,albdf,sfluxzen,cldfrc,            &
-     &       zcf1,zcf0,taug,taur,tauae,ssaae,asyae,taucw,ssacw,asycw,   &
+     &     ( ssolar(j1),cosz1(j1),sntz1(j1),albbm(j1,:),albdf(j1,:),  &
+     &       sfluxzen(j1,:),cldfrc(j1,:),            &
+     &       zcf1(j1),zcf0(j1),taug(j1,:,:),taur(j1,:,:),tauae(j1,:,:), &
+     &       ssaae(j1,:,:),asyae(j1,:,:),taucw(j1,:,:),ssacw(j1,:,:),   &
+     &       asycw(j1,:,:),   &
      &       nlay, nlp1,                                                &
 !  ---  outputs:
-     &       fxupc,fxdnc,fxup0,fxdn0,                                   &
-     &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
-     &       sfbmc,sfdfc,sfbm0,sfdf0,suvbfc,suvbf0                      &
+     &       fxupc(j1,:,:),fxdnc(j1,:,:),fxup0(j1,:,:),fxdn0(j1,:,:),                                   &
+     &       ftoauc(j1),ftoau0(j1),ftoadc(j1),fsfcuc(j1),fsfcu0(j1),  &
+     &       fsfcdc(j1),fsfcd0(j1),          &
+     &       sfbmc(j1,:),sfdfc(j1,:),sfbm0(j1,:),sfdf0(j1,:),          &
+     &       suvbfc(j1),suvbf0(j1)                      &
      &     )
 
         else                         ! use mcica cloud scheme
@@ -1285,13 +1324,18 @@
 
           call spcvrtm                                                  &
 !  ---  inputs:
-     &     ( ssolar,cosz1,sntz1,albbm,albdf,sfluxzen,cldfmc,            &
-     &       zcf1,zcf0,taug,taur,tauae,ssaae,asyae,taucw,ssacw,asycw,   &
-     &       nlay, nlp1, ser_count, ipt,                                                &
-!  ---  outputs:
-     &       fxupc,fxdnc,fxup0,fxdn0,                                   &
-     &       ftoauc,ftoau0,ftoadc,fsfcuc,fsfcu0,fsfcdc,fsfcd0,          &
-     &       sfbmc,sfdfc,sfbm0,sfdf0,suvbfc,suvbf0                      &
+     &     ( ssolar(j1),cosz1(j1),sntz1(j1),albbm(j1,:),albdf(j1,:),  &
+     &       sfluxzen(j1,:),cldfmc(j1,:,:),            &
+     &       zcf1(j1),zcf0(j1),taug(j1,:,:),taur(j1,:,:),tauae(j1,:,:), &
+     &       ssaae(j1,:,:),asyae(j1,:,:),taucw(j1,:,:),ssacw(j1,:,:),   &
+     &       asycw(j1,:,:),   &
+     &       nlay, nlp1, ser_count, ipt,                                              &
+     !  ---  outputs:
+     &       fxupc(j1,:,:),fxdnc(j1,:,:),fxup0(j1,:,:),fxdn0(j1,:,:),                                   &
+     &       ftoauc(j1),ftoau0(j1),ftoadc(j1),fsfcuc(j1),fsfcu0(j1),  &
+     &       fsfcdc(j1),fsfcd0(j1),          &
+     &       sfbmc(j1,:),sfdfc(j1,:),sfbm0(j1,:),sfdf0(j1,:),          &
+     &       suvbfc(j1),suvbf0(j1)                          &
      &     )
 
 !$ser verbatim if (ipt == 1) then
@@ -1306,17 +1350,22 @@
 !$ser verbatim end if
 
         endif
+      enddo lab_do_ipt5
+
+      lab_do_ipt6 : do ipt = 1, NDAY
+
+        j1 = idxday(ipt)
 
 !> -# Save outputs.
 !  --- ...  sum up total spectral fluxes for total-sky
 
         do k = 1, nlp1
-          flxuc(k) = f_zero
-          flxdc(k) = f_zero
+          flxuc(j1,k) = f_zero
+          flxdc(j1,k) = f_zero
 
           do ib = 1, nbdsw
-            flxuc(k) = flxuc(k) + fxupc(k,ib)
-            flxdc(k) = flxdc(k) + fxdnc(k,ib)
+            flxuc(j1,k) = flxuc(j1,k) + fxupc(j1,k,ib)
+            flxdc(j1,k) = flxdc(j1,k) + fxdnc(j1,k,ib)
           enddo
         enddo
 
@@ -1324,12 +1373,12 @@
 
         if ( lhsw0 .or. lflxprf ) then
           do k = 1, nlp1
-            flxu0(k) = f_zero
-            flxd0(k) = f_zero
+            flxu0(j1,k) = f_zero
+            flxd0(j1,k) = f_zero
 
             do ib = 1, nbdsw
-              flxu0(k) = flxu0(k) + fxup0(k,ib)
-              flxd0(k) = flxd0(k) + fxdn0(k,ib)
+              flxu0(j1,k) = flxu0(j1,k) + fxup0(j1,k,ib)
+              flxd0(j1,k) = flxd0(j1,k) + fxdn0(j1,k,ib)
             enddo
           enddo
         endif
@@ -1337,42 +1386,42 @@
 !  --- ...  prepare for final outputs
 
         do k = 1, nlay
-          rfdelp(k) = heatfac / delp(k)
+          rfdelp(j1,k) = heatfac / delp(j1,k)
         enddo
 
         if ( lfdncmp ) then
 !! --- ...  optional uv-b surface downward flux
-          fdncmp(j1)%uvbf0 = suvbf0
-          fdncmp(j1)%uvbfc = suvbfc
+          fdncmp(j1)%uvbf0 = suvbf0(j1)
+          fdncmp(j1)%uvbfc = suvbfc(j1)
 
 !! --- ...  optional beam and diffuse sfc fluxes
-          fdncmp(j1)%nirbm = sfbmc(1)
-          fdncmp(j1)%nirdf = sfdfc(1)
-          fdncmp(j1)%visbm = sfbmc(2)
-          fdncmp(j1)%visdf = sfdfc(2)
+          fdncmp(j1)%nirbm = sfbmc(j1,1)
+          fdncmp(j1)%nirdf = sfdfc(j1,1)
+          fdncmp(j1)%visbm = sfbmc(j1,2)
+          fdncmp(j1)%visdf = sfdfc(j1,2)
         endif    ! end if_lfdncmp
 
 !  --- ...  toa and sfc fluxes
 
-        topflx(j1)%upfxc = ftoauc
-        topflx(j1)%dnfxc = ftoadc
-        topflx(j1)%upfx0 = ftoau0
+        topflx(j1)%upfxc = ftoauc(j1)
+        topflx(j1)%dnfxc = ftoadc(j1)
+        topflx(j1)%upfx0 = ftoau0(j1)
 
-        sfcflx(j1)%upfxc = fsfcuc
-        sfcflx(j1)%dnfxc = fsfcdc
-        sfcflx(j1)%upfx0 = fsfcu0
-        sfcflx(j1)%dnfx0 = fsfcd0
+        sfcflx(j1)%upfxc = fsfcuc(j1)
+        sfcflx(j1)%dnfxc = fsfcdc(j1)
+        sfcflx(j1)%upfx0 = fsfcu0(j1)
+        sfcflx(j1)%dnfx0 = fsfcd0(j1)
 
         if (ivflip == 0) then       ! output from toa to sfc
 
 !  --- ...  compute heating rates
 
-          fnet(1) = flxdc(1) - flxuc(1)
+          fnet(j1,1) = flxdc(j1,1) - flxuc(j1,1)
 
           do k = 2, nlp1
             kk = nlp1 - k + 1
-            fnet(k) = flxdc(k) - flxuc(k)
-            hswc(j1,kk) = (fnet(k)-fnet(k-1)) * rfdelp(k-1)
+            fnet(j1,k) = flxdc(j1,k) - flxuc(j1,k)
+            hswc(j1,kk) = (fnet(j1,k)-fnet(j1,k-1)) * rfdelp(j1,k-1)
           enddo
 
 !! --- ...  optional flux profiles
@@ -1380,22 +1429,22 @@
           if ( lflxprf ) then
             do k = 1, nlp1
               kk = nlp1 - k + 1
-              flxprf(j1,kk)%upfxc = flxuc(k)
-              flxprf(j1,kk)%dnfxc = flxdc(k)
-              flxprf(j1,kk)%upfx0 = flxu0(k)
-              flxprf(j1,kk)%dnfx0 = flxd0(k)
+              flxprf(j1,kk)%upfxc = flxuc(j1,k)
+              flxprf(j1,kk)%dnfxc = flxdc(j1,k)
+              flxprf(j1,kk)%upfx0 = flxu0(j1,k)
+              flxprf(j1,kk)%dnfx0 = flxd0(j1,k)
             enddo
           endif
 
 !! --- ...  optional clear sky heating rates
 
           if ( lhsw0 ) then
-            fnet(1) = flxd0(1) - flxu0(1)
+            fnet(j1,1) = flxd0(j1,1) - flxu0(j1,1)
 
             do k = 2, nlp1
               kk = nlp1 - k + 1
-              fnet(k) = flxd0(k) - flxu0(k)
-              hsw0(j1,kk) = (fnet(k)-fnet(k-1)) * rfdelp(k-1)
+              fnet(j1,k) = flxd0(j1,k) - flxu0(j1,k)
+              hsw0(j1,kk) = (fnet(j1,k)-fnet(j1,k-1)) * rfdelp(j1,k-1)
             enddo
           endif
 
@@ -1403,12 +1452,12 @@
 
           if ( lhswb ) then
             do mb = 1, nbdsw
-              fnet(1) = fxdnc(1,mb) - fxupc(1,mb)
+              fnet(j1,1) = fxdnc(j1,1,mb) - fxupc(j1,1,mb)
 
               do k = 2, nlp1
                 kk = nlp1 - k + 1
-                fnet(k) = fxdnc(k,mb) - fxupc(k,mb)
-                hswb(j1,kk,mb) = (fnet(k) - fnet(k-1)) * rfdelp(k-1)
+                fnet(j1,k) = fxdnc(j1,k,mb) - fxupc(j1,k,mb)
+                hswb(j1,kk,mb) = (fnet(j1,k) - fnet(j1,k-1)) * rfdelp(j1,k-1)
               enddo
             enddo
           endif
@@ -1417,32 +1466,32 @@
 
 !  --- ...  compute heating rates
 
-          fnet(1) = flxdc(1) - flxuc(1)
+          fnet(j1,1) = flxdc(j1,1) - flxuc(j1,1)
 
           do k = 2, nlp1
-            fnet(k) = flxdc(k) - flxuc(k)
-            hswc(j1,k-1) = (fnet(k)-fnet(k-1)) * rfdelp(k-1)
+            fnet(j1,k) = flxdc(j1,k) - flxuc(j1,k)
+            hswc(j1,k-1) = (fnet(j1,k)-fnet(j1,k-1)) * rfdelp(j1,k-1)
           enddo
 
 !! --- ...  optional flux profiles
 
           if ( lflxprf ) then
             do k = 1, nlp1
-              flxprf(j1,k)%upfxc = flxuc(k)
-              flxprf(j1,k)%dnfxc = flxdc(k)
-              flxprf(j1,k)%upfx0 = flxu0(k)
-              flxprf(j1,k)%dnfx0 = flxd0(k)
+              flxprf(j1,k)%upfxc = flxuc(j1,k)
+              flxprf(j1,k)%dnfxc = flxdc(j1,k)
+              flxprf(j1,k)%upfx0 = flxu0(j1,k)
+              flxprf(j1,k)%dnfx0 = flxd0(j1,k)
             enddo
           endif
 
 !! --- ...  optional clear sky heating rates
 
           if ( lhsw0 ) then
-            fnet(1) = flxd0(1) - flxu0(1)
+            fnet(j1,1) = flxd0(j1,1) - flxu0(j1,1)
 
             do k = 2, nlp1
-              fnet(k) = flxd0(k) - flxu0(k)
-              hsw0(j1,k-1) = (fnet(k)-fnet(k-1)) * rfdelp(k-1)
+              fnet(j1,k) = flxd0(j1,k) - flxu0(j1,k)
+              hsw0(j1,k-1) = (fnet(j1,k)-fnet(j1,k-1)) * rfdelp(j1,k-1)
             enddo
           endif
 
@@ -1450,18 +1499,18 @@
 
           if ( lhswb ) then
             do mb = 1, nbdsw
-              fnet(1) = fxdnc(1,mb) - fxupc(1,mb)
+              fnet(j1,1) = fxdnc(j1,1,mb) - fxupc(j1,1,mb)
 
               do k = 1, nlay
-                fnet(k+1) = fxdnc(k+1,mb) - fxupc(k+1,mb)
-                hswb(j1,k,mb) = (fnet(k+1) - fnet(k)) * rfdelp(k)
+                fnet(j1,k+1) = fxdnc(j1,k+1,mb) - fxupc(j1,k+1,mb)
+                hswb(j1,k,mb) = (fnet(j1,k+1) - fnet(j1,k)) * rfdelp(j1,k)
               enddo
             enddo
           endif
 
         endif                       ! if_ivflip
 
-      enddo   lab_do_ipt
+      enddo   lab_do_ipt6
 
       return
 !...................................
@@ -4331,28 +4380,18 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taumol-check-"//trim(ser_count_str)
-  !$ser data sfluxzen=sfluxzen
+  !$ser data sfluxzenout=sfluxzen
 !$ser verbatim end if
 
 !> - Call taumol## (##: 16-29) to calculate layer optical depth.
 
 !>  - call taumol16()
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
-  !$ser data colamt=colamt colmol=colmol fac00=fac00 fac01=fac01 fac10=fac10
-  !$ser data fac11=fac11 jp=jp jt=jt jt1=jt1 laytrop=laytrop forfac=forfac
-  !$ser data forfrac=forfrac indfor=indfor selffac=selffac selffrac=selffrac
-  !$ser data indself=indself nlay=nlay
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
       call taumol16
 !$ser verbatim if (ipt == 1) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb16-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol17()
       call taumol17
@@ -4360,7 +4399,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb17-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol18()
       call taumol18
@@ -4368,7 +4407,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb18-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol19()
       call taumol19
@@ -4376,7 +4415,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb19-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol20()
       call taumol20
@@ -4384,7 +4423,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb20-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol21()
       call taumol21
@@ -4392,7 +4431,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb21-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol22()
       call taumol22
@@ -4400,7 +4439,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb22-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol23()
       call taumol23
@@ -4408,7 +4447,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb23-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol24()
       call taumol24
@@ -4416,7 +4455,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb24-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol25()
       call taumol25
@@ -4424,7 +4463,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb25-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol26()
       call taumol26
@@ -4432,7 +4471,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb26-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol27()
       call taumol27
@@ -4440,7 +4479,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb27-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol28()
       call taumol28
@@ -4448,7 +4487,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb28-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 !>  - call taumol29()
       call taumol29
@@ -4456,7 +4495,7 @@
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb29-output-"//trim(ser_count_str)
-  !$ser data taug=taug taur=taur
+  !$ser data taugout=taug taurout=taur
 !$ser verbatim end if
 
 

@@ -1,37 +1,42 @@
 import sys
 import numpy as np
 import xarray as xr
-from gt4py.gtscript import (
-    stencil,
-    computation,
-    interval,
-    log,
-    index,
-)
+from gt4py.gtscript import stencil, computation, interval, log, index, PARALLEL
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radsw/dump"
+ddir = "../../fortran/radsw/dump"
+ddir2 = "../../fortran/data/SW"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Generator_rank1")
 savepoints = serializer.savepoint_list()
 
 rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
-invars = ["pavel", "tavel", "h2ovmr", "nlay", "nlp1"]
+invars = ["pavel", "tavel", "h2ovmr", "nlay", "nlp1", "idxday"]
 
 indict = dict()
 for var in invars:
-    tmp = serializer.read(var, serializer.savepoint["swrad-setcoef-input-000000"])
+    if var == "idxday":
+        tmp = serializer2.read(var, serializer2.savepoint["swrad-in-000000"])
+    else:
+        tmp = serializer.read(var, serializer.savepoint["swrad-setcoef-input-000000"])
     if var in ["pavel", "tavel", "h2ovmr"]:
-        indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
+        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
+    elif var == "idxday":
+        tmp2 = np.zeros(npts, dtype=bool)
+        for n in range(npts):
+            if tmp[n] > 1 and tmp[n] < 25:
+                tmp2[tmp[n] - 1] = True
+
+        indict[var] = np.tile(tmp2[:, None], (1, 1))
     else:
         indict[var] = tmp[0]
 
@@ -40,6 +45,10 @@ for var in invars:
     if var in ["pavel", "tavel", "h2ovmr"]:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlay, DTYPE_FLT
+        )
+    elif var == "idxday":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, DTYPE_BOOL
         )
     else:
         indict_gt4py[var] = indict[var]
@@ -97,6 +106,7 @@ def setcoef(
     pavel: FIELD_FLT,
     tavel: FIELD_FLT,
     h2ovmr: FIELD_FLT,
+    idxday: FIELD_2DBOOL,
     laytrop: FIELD_BOOL,
     jp: FIELD_INT,
     jt: FIELD_INT,
@@ -125,90 +135,92 @@ def setcoef(
     from __externals__ import stpfac
 
     with computation(PARALLEL), interval(...):
-        forfac = pavel * stpfac / (tavel * (1.0 + h2ovmr))
+        if idxday:
+            forfac = pavel * stpfac / (tavel * (1.0 + h2ovmr))
 
-        #  --- ...  find the two reference pressures on either side of the
-        #           layer pressure.  store them in jp and jp1.  store in fp the
-        #           fraction of the difference (in ln(pressure)) between these
-        #           two values that the layer pressure lies.
+            #  --- ...  find the two reference pressures on either side of the
+            #           layer pressure.  store them in jp and jp1.  store in fp the
+            #           fraction of the difference (in ln(pressure)) between these
+            #           two values that the layer pressure lies.
 
-        plog = log(pavel)
-        jp = max(1, min(58, 36.0 - 5.0 * (plog + 0.04))) - 1
-        jp1 = jp + 1
-        fp = 5.0 * (preflog[0, 0, 0][jp] - plog)
+            plog = log(pavel)
+            jp = max(1, min(58, 36.0 - 5.0 * (plog + 0.04))) - 1
+            jp1 = jp + 1
+            fp = 5.0 * (preflog[0, 0, 0][jp] - plog)
 
-        #  --- ...  determine, for each reference pressure (jp and jp1), which
-        #          reference temperature (these are different for each reference
-        #          pressure) is nearest the layer temperature but does not exceed it.
-        #          store these indices in jt and jt1, resp. store in ft (resp. ft1)
-        #          the fraction of the way between jt (jt1) and the next highest
-        #          reference temperature that the layer temperature falls.
+            #  --- ...  determine, for each reference pressure (jp and jp1), which
+            #          reference temperature (these are different for each reference
+            #          pressure) is nearest the layer temperature but does not exceed it.
+            #          store these indices in jt and jt1, resp. store in ft (resp. ft1)
+            #          the fraction of the way between jt (jt1) and the next highest
+            #          reference temperature that the layer temperature falls.
 
-        tem1 = (tavel - tref[0, 0, 0][jp]) / 15.0
-        tem2 = (tavel - tref[0, 0, 0][jp1]) / 15.0
-        jt = max(1, min(4, 3.0 + tem1)) - 1
-        jt1 = max(1, min(4, 3.0 + tem2)) - 1
-        ft = tem1 - (jt - 2)
-        ft1 = tem2 - (jt1 - 2)
+            tem1 = (tavel - tref[0, 0, 0][jp]) / 15.0
+            tem2 = (tavel - tref[0, 0, 0][jp1]) / 15.0
+            jt = max(1, min(4, 3.0 + tem1)) - 1
+            jt1 = max(1, min(4, 3.0 + tem2)) - 1
+            ft = tem1 - (jt - 2)
+            ft1 = tem2 - (jt1 - 2)
 
-        #  --- ...  we have now isolated the layer ln pressure and temperature,
-        #           between two reference pressures and two reference temperatures
-        #           (for each reference pressure).  we multiply the pressure
-        #           fraction fp with the appropriate temperature fractions to get
-        #           the factors that will be needed for the interpolation that yields
-        #           the optical depths (performed in routines taugbn for band n).
+            #  --- ...  we have now isolated the layer ln pressure and temperature,
+            #           between two reference pressures and two reference temperatures
+            #           (for each reference pressure).  we multiply the pressure
+            #           fraction fp with the appropriate temperature fractions to get
+            #           the factors that will be needed for the interpolation that yields
+            #           the optical depths (performed in routines taugbn for band n).
 
-        fp1 = 1.0 - fp
-        fac10 = fp1 * ft
-        fac00 = fp1 * (1.0 - ft)
-        fac11 = fp * ft1
-        fac01 = fp * (1.0 - ft1)
+            fp1 = 1.0 - fp
+            fac10 = fp1 * ft
+            fac00 = fp1 * (1.0 - ft)
+            fac11 = fp * ft1
+            fac01 = fp * (1.0 - ft1)
 
-        #  --- ...  if the pressure is less than ~100mb, perform a different
-        #           set of species interpolations.
+            #  --- ...  if the pressure is less than ~100mb, perform a different
+            #           set of species interpolations.
 
-        if plog > 4.56:
+            if plog > 4.56:
 
-            laytrop = True  # Flag for being in the troposphere
+                laytrop = True  # Flag for being in the troposphere
 
-            #  --- ...  set up factors needed to separately include the water vapor
-            #           foreign-continuum in the calculation of absorption coefficient.
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           foreign-continuum in the calculation of absorption coefficient.
 
-            tem1 = (332.0 - tavel) / 36.0
-            indfor = min(2, max(1, tem1))
-            forfrac = tem1 - indfor
+                tem1 = (332.0 - tavel) / 36.0
+                indfor = min(2, max(1, tem1))
+                forfrac = tem1 - indfor
 
-            #  --- ...  set up factors needed to separately include the water vapor
-            #           self-continuum in the calculation of absorption coefficient.
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           self-continuum in the calculation of absorption coefficient.
 
-            tem2 = (tavel - 188.0) / 7.2
-            indself = min(9, max(1, tem2 - 7))
-            selffrac = tem2 - (indself + 7)
-            selffac = h2ovmr * forfac
+                tem2 = (tavel - 188.0) / 7.2
+                indself = min(9, max(1, tem2 - 7))
+                selffrac = tem2 - (indself + 7)
+                selffac = h2ovmr * forfac
 
-        else:
+            else:
 
-            #  --- ...  set up factors needed to separately include the water vapor
-            #           foreign-continuum in the calculation of absorption coefficient.
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           foreign-continuum in the calculation of absorption coefficient.
 
-            tem1 = (tavel - 188.0) / 36.0
-            indfor = 3
-            forfrac = tem1 - 1.0
+                tem1 = (tavel - 188.0) / 36.0
+                indfor = 3
+                forfrac = tem1 - 1.0
 
-            indself = 0
-            selffrac = 0.0
-            selffac = 0.0
+                indself = 0
+                selffrac = 0.0
+                selffac = 0.0
 
-        # Add one to indices for consistency with Fortran
-        jp += 1
-        jt += 1
-        jt1 += 1
+            # Add one to indices for consistency with Fortran
+            jp += 1
+            jt += 1
+            jt1 += 1
 
 
 setcoef(
     indict_gt4py["pavel"],
     indict_gt4py["tavel"],
     indict_gt4py["h2ovmr"],
+    indict_gt4py["idxday"],
     outdict_gt4py["laytrop"],
     outdict_gt4py["jp"],
     outdict_gt4py["jt"],
@@ -260,10 +272,10 @@ outdict_val = dict()
 for var in outvars:
     if var == "laytrop":
         outdict_np[var] = (
-            outdict_gt4py[var][0, :, :].view(np.ndarray).astype(int).squeeze().sum()
+            outdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
         )
     else:
-        outdict_np[var] = outdict_gt4py[var][0, :, :].view(np.ndarray).squeeze()
+        outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
     outdict_val[var] = serializer.read(
         var, serializer.savepoint["swrad-setcoef-output-000000"]
     )
