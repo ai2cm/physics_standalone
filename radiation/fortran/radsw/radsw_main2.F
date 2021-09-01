@@ -1152,9 +1152,7 @@
 !> -# For cloudy sky column, call cldprop() to compute the cloud
 !!    optical properties for each cloudy layer.
 
-        if (zcf1(j1) > f_zero) then     ! cloudy sky column
-
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-cldprop-input-"//trim(ser_count_str)
@@ -1162,6 +1160,8 @@
   !$ser data cdat1=cdat1 cdat2=cdat2 cdat3=cdat3 cdat4=cdat4 zcf1=zcf1 
   !$ser data nlay=nlay ipseed=ipseed(j1) dz=dz delgth=delgth
 !$ser verbatim end if
+
+        if (zcf1(j1) > f_zero) then     ! cloudy sky column
 
           call cldprop                                                  &
 !  ---  inputs:
@@ -1172,14 +1172,6 @@
 !  ---  outputs:
      &       taucw(j1,:,:), ssacw(j1,:,:), asycw(j1,:,:), cldfrc(j1,:), cldfmc(j1,:,:)                        &
      &     )
-
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
-  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
-  !$ser data cldfmc=cldfmc
-!$ser verbatim end if
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band 10 is approx to the 0.55 mu spectrum
@@ -1206,6 +1198,14 @@
             enddo
           enddo
         endif   ! end if_zcf1_block
+
+!$ser verbatim if (ipt == NDAY) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
+  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
+  !$ser data cldfmc=cldfmc
+!$ser verbatim end if
       enddo lab_do_ipt2
 
       lab_do_ipt3 : do ipt = 1, NDAY

@@ -10,17 +10,17 @@ from gt4py.gtscript import (
     index,
 )
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
-from radsw_param import ftiny, nbandssw, idxebc, nblow, ngptsw
-from radphysparam import iswcliq, iswcice
+sys.path.insert(0, "..")
 from config import *
+from radsw.radsw_param import ftiny, nbandssw, idxebc, nblow, ngptsw
+from radphysparam import iswcliq, iswcice
 from util import create_storage_from_array, create_storage_zeros, compare_data
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
+
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radsw/dump"
+ddir = "../../fortran/radsw/dump"
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
 savepoints = serializer.savepoint_list()
 
@@ -86,9 +86,9 @@ indict = dict()
 for var in invars:
     tmp = serializer.read(var, serializer.savepoint["swrad-cldprop-input-000000"])
     if var == "zcf1" or var == "delgth":
-        indict[var] = np.tile(tmp, (npts, 1, nlay))
+        indict[var] = np.tile(tmp[:, None, None], (1, 1, nlay))
     else:
-        indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
+        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
 
 indict_gt4py = dict()
 for var in invars:
@@ -99,9 +99,11 @@ for var in invars:
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
 ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
-rand2d = ds["rand2d"][0, :].data
-cdfunc = np.reshape(rand2d, (nlay, ngptsw), order="F")
-indict["cdfunc"] = np.tile(cdfunc[None, None, :, :], (npts, 1, 1, 1))
+rand2d = ds["rand2d"].data
+cdfunc = np.zeros((npts, nlay, ngptsw))
+for n in range(npts):
+    cdfunc[n, :, :] = np.reshape(rand2d[n, :], (nlay, ngptsw), order="F")
+indict["cdfunc"] = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
 
 indict_gt4py["cdfunc"] = create_storage_from_array(
     indict["cdfunc"], backend, shape_nlay, type_ngptsw
@@ -731,12 +733,12 @@ for var in outvars:
     valdict[var] = serializer.read(
         var, serializer.savepoint["swrad-cldprop-output-000000"]
     )
-    outdict_np[var] = outdict_gt4py[var][0, :, ...].view(np.ndarray).squeeze()
+    outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
 
-compare_data(outdict_np, valdict)
+# compare_data(outdict_np, valdict)
 
-# print(f"Python = {outdict_np['ssacw']}")
-# print(" ")
-# print(f"Fortran = {valdict['ssacw']}")
-# print(" ")
-# print(f"Difference = {outdict_np['ssacw']-valdict['ssacw']}")
+print(f"Python = {outdict_np['ssacw'][0, ...]}")
+print(" ")
+print(f"Fortran = {valdict['ssacw'][0, ...]}")
+print(" ")
+print(f"Difference = {outdict_np['ssacw'][0, ...]-valdict['ssacw'][0, ...]}")
