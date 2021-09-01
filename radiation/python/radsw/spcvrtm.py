@@ -412,18 +412,7 @@ def spcvrtm(
             zldbt0[k] = zexp4
             ztdbt0 = zexp4 * ztdbt0
 
-        if jg == 0:
-            print(f"zrefb = {zrefb}")
-            print(f"zrefd = {zrefd}")
-            print(f"ztrab = {ztrab}")
-            print(f"ztrad = {ztrad}")
-            print(f"zldbt = {zldbt}")
-            print(f"ztdbt = {ztdbt}")
-
-        zfu, zfd = vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1)
-        if jg == 0:
-            print(f"zfu = {zfu}")
-            print(f"zfd = {zfd}")
+        zfu, zfd = vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1, jg)
 
         #  --- ...  compute upward and downward fluxes at levels
         for k in range(nlp1):
@@ -643,7 +632,7 @@ def spcvrtm(
 
             #  --- ...  perform vertical quadrature
 
-            zfu, zfd = vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1)
+            zfu, zfd = vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1, jg)
 
             #  --- ...  compute upward and downward fluxes at levels
             for k in range(nlp1):
@@ -745,7 +734,7 @@ def spcvrtm(
 # \param zfu             upward flux at layer interface
 # \param zfd             downward flux at layer interface
 # \section General_swflux General Algorithm
-def vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1):
+def vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1, jg):
     #  ===================  program usage description  ===================  !
     #                                                                       !
     #   purpose:  computes the upward and downward radiation fluxes         !
@@ -817,6 +806,8 @@ def vrtqdr(zrefb, zrefd, ztrab, ztrad, zldbt, ztdbt, nlay, nlp1):
     # -# Up and down-welling fluxes at levels.
     for k in range(nlp1):
         zden1 = 1.0 / (1.0 - zrdnd[k] * zrupd[k])
+        if k < 5 and jg == 0:
+            print(f"zden1 = {zden1}")
         zfu[k] = (ztdbt[k] * zrupb[k] + (ztdn[k] - ztdbt[k]) * zrupd[k]) * zden1
         zfd[k] = (
             ztdbt[k] + (ztdn[k] - ztdbt[k] + ztdbt[k] * zrupb[k] * zrdnd[k]) * zden1

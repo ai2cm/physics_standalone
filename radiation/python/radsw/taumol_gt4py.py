@@ -44,7 +44,7 @@ from radsw.radsw_param import (
 from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
 
-rebuild = False
+rebuild = True
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
