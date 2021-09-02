@@ -44,7 +44,7 @@ from radsw.radsw_param import (
 from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
 
-rebuild = True
+rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
@@ -95,10 +95,11 @@ locvars = [
     "indsp",
     "indf",
     "indfp",
+    "fs",
     "js",
     "jsa",
-    "colm1a",
-    "colm2a",
+    "colm1",
+    "colm2",
 ]
 
 indict = dict()
@@ -117,6 +118,9 @@ for var in invars:
         for n in range(npts):
             laytrop[n, :, : tmp[n]] = True
         indict[var] = laytrop
+
+        laytropind = np.tile(tmp[:, None], (1, 1))
+        indict["laytropind"] = laytropind - 1
     elif var == "idxday":
         tmp2 = np.zeros(npts, dtype=bool)
         for n in range(npts):
@@ -153,6 +157,10 @@ for var in invars:
             indict[var], backend, shape_nlay, DTYPE_FLT
         )
 
+indict_gt4py["laytropind"] = create_storage_from_array(
+    indict["laytropind"], backend, shape_2D, DTYPE_INT
+)
+
 outdict_gt4py = dict()
 
 for var in outvars:
@@ -168,8 +176,8 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_zeros(
             backend, shape_nlay, type_nbandssw_int
         )
-    elif var in ["colm1a", "colm2a"]:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
+    elif var in ["colm1", "colm2"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
 
@@ -260,22 +268,23 @@ lookupdict_ref["ibx"] = lookupdict_ref["ibx"] - 1
     backend=backend,
     rebuild=rebuild,
     externals={
-        "nbands": nbandssw,
-        "njb16": ng[0],
-        "njb17": ng[1],
-        "njb18": ng[2],
-        "njb19": ng[3],
-        "njb20": ng[4],
-        "njb21": ng[5],
-        "njb22": ng[6],
-        "njb23": ng[7],
-        "njb24": ng[8],
-        "njb25": ng[9],
-        "njb26": ng[10],
-        "njb27": ng[11],
-        "njb28": ng[12],
-        "njb29": ng[13],
+        "nbandssw": nbandssw,
+        "NG16": NG16,
+        "NG17": NG17,
+        "NG18": NG18,
+        "NG19": NG19,
+        "NG20": NG20,
+        "NG21": NG21,
+        "NG22": NG22,
+        "NG23": NG23,
+        "NG24": NG24,
+        "NG25": NG25,
+        "NG26": NG26,
+        "NG27": NG27,
+        "NG28": NG28,
+        "NG29": NG29,
         "scalekur": lookupdict_ref["scalekur"],
+        "oneminus": oneminus,
     },
 )
 def taumolsetup(
@@ -284,6 +293,7 @@ def taumolsetup(
     jt: FIELD_INT,
     jt1: FIELD_INT,
     laytrop: FIELD_BOOL,
+    laytropind: FIELD_2DINT,
     idxday: FIELD_2DBOOL,
     sfluxzen: Field[gtscript.IJ, type_ngptsw],
     layind: FIELD_INT,
@@ -294,8 +304,8 @@ def taumolsetup(
     id1: Field[type_nbandssw_int],
     js: FIELD_INT,
     jsa: FIELD_INT,
-    colm1a: FIELD_2D,
-    colm2a: FIELD_2D,
+    colm1: FIELD_FLT,
+    colm2: FIELD_FLT,
     sfluxref01: Field[(DTYPE_FLT, (16, 1, 7))],
     sfluxref02: Field[(DTYPE_FLT, (16, 5, 2))],
     sfluxref03: Field[(DTYPE_FLT, (16, 9, 5))],
@@ -307,27 +317,28 @@ def taumolsetup(
     specwt: Field[type_nbandssw_flt],
 ):
     from __externals__ import (
-        nbands,
-        njb16,
-        njb17,
-        njb18,
-        njb19,
-        njb20,
-        njb21,
-        njb22,
-        njb23,
-        njb24,
-        njb25,
-        njb26,
-        njb27,
-        njb28,
-        njb29,
+        nbandssw,
+        NG16,
+        NG17,
+        NG18,
+        NG19,
+        NG20,
+        NG21,
+        NG22,
+        NG23,
+        NG24,
+        NG25,
+        NG26,
+        NG27,
+        NG28,
+        NG29,
         scalekur,
+        oneminus,
     )
 
     with computation(FORWARD), interval(...):
         if idxday:
-            for jb in range(nbands):
+            for jb in range(nbandssw):
                 if laytrop:
                     id0[0, 0, 0][jb] = ((jp - 1) * 5 + (jt - 1)) * nspa[0, 0][jb]
                     id1[0, 0, 0][jb] = (jp * 5 + (jt1 - 1)) * nspa[0, 0][jb]
@@ -335,48 +346,56 @@ def taumolsetup(
                     id0[0, 0, 0][jb] = ((jp - 13) * 5 + (jt - 1)) * nspb[0, 0][jb]
                     id1[0, 0, 0][jb] = ((jp - 12) * 5 + (jt1 - 1)) * nspb[0, 0][jb]
 
-            for j in range(njb16):
+            for j in range(NG16):
                 sfluxzen[0, 0][ngs[0, 0][0] + j] = sfluxref01[0, 0, 0][
                     j, 0, ibx[0, 0, 0][0]
                 ]
-            for j2 in range(njb20):
+            for j2 in range(NG20):
                 sfluxzen[0, 0][ngs[0, 0][4] + j2] = sfluxref01[0, 0, 0][
                     j2, 0, ibx[0, 0, 0][4]
                 ]
-            for j3 in range(njb23):
+            for j3 in range(NG23):
                 sfluxzen[0, 0][ngs[0, 0][7] + j3] = sfluxref01[0, 0, 0][
                     j3, 0, ibx[0, 0, 0][7]
                 ]
-            for j4 in range(njb25):
+            for j4 in range(NG25):
                 sfluxzen[0, 0][ngs[0, 0][9] + j4] = sfluxref01[0, 0, 0][
                     j4, 0, ibx[0, 0, 0][9]
                 ]
-            for j5 in range(njb26):
+            for j5 in range(NG26):
                 sfluxzen[0, 0][ngs[0, 0][10] + j5] = sfluxref01[0, 0, 0][
                     j5, 0, ibx[0, 0, 0][10]
                 ]
-            for j6 in range(njb29):
+            for j6 in range(NG29):
                 sfluxzen[0, 0][ngs[0, 0][13] + j6] = sfluxref01[0, 0, 0][
                     j6, 0, ibx[0, 0, 0][13]
                 ]
 
-            for j7 in range(njb27):
+            for j7 in range(NG27):
                 sfluxzen[0, 0][ngs[0, 0][11] + j7] = (
                     scalekur * sfluxref01[0, 0, 0][j7, 0, ibx[0, 0, 0][11]]
                 )
 
+    with computation(FORWARD), interval(0, -1):
+        if idxday:
             if not laytrop:
                 # case default
-                if jp < layreffr[0, 0, 0][1] and jp[0, 0, 1] >= layreffr[0, 0, 0][1]:
+                cond = jp < layreffr[0, 0, 0][1] and jp[0, 0, 1] >= layreffr[0, 0, 0][1]
+
+                if cond:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][1]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][1]]
+                elif sfluxzen[0, 0][ngs[0, 0][1]] == 0.0 and layind == 61:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][1]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][1]]
 
+                if colm1 != 0.0:
                     speccomb = colm1 + strrat[0, 0, 0][1] * colm2
                     specmult = specwt[0, 0, 0][1] * min(oneminus, colm1 / speccomb)
                     js = specmult
                     fs = mod(specmult, 1.0)
 
-                    for jj in range(njb17):
+                    for jj in range(NG17):
                         sfluxzen[0, 0][ngs[0, 0][1] + jj] = sfluxref02[0, 0, 0][
                             jj, js, ibx[0, 0, 0][1]
                         ] + fs * (
@@ -384,36 +403,45 @@ def taumolsetup(
                             - sfluxref02[0, 0, 0][jj, js, ibx[0, 0, 0][1]]
                         )
 
+                colm1 = 0.0
+                colm2 = 0.0
+
                 if jp < layreffr[0, 0, 0][12] and jp[0, 0, 1] >= layreffr[0, 0, 0][12]:
-                    colm1a = colamt[0, 0, 1][ix1[0, 0, 0][12]]
-                    colm2a = colamt[0, 0, 1][ix2[0, 0, 0][12]]
-                elif layind == 62 and colm1a == 0.0:
-                    colm1a = colamt[0, 0, 0][ix1[0, 0, 0][12]]
-                    colm2a = colamt[0, 0, 0][ix2[0, 0, 0][12]]
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][12]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][12]]
+                elif sfluxzen[0, 0][ngs[0, 0][12]] == 0.0 and layind == 61:
+                    colm1 = colamt[0, 0, 1][ix1[0, 0, 0][12]]
+                    colm2 = colamt[0, 0, 1][ix2[0, 0, 0][12]]
 
-                speccomba = colm1a + strrat[0, 0, 0][12] * colm2a
-                specmulta = specwt[0, 0, 0][12] * min(oneminus, colm1a / speccomba)
-                jsa = specmulta
-                fsa = mod(specmulta, 1.0)
+                if colm1 != 0.0:
+                    speccomb = colm1 + strrat[0, 0, 0][12] * colm2
+                    specmult = specwt[0, 0, 0][12] * min(oneminus, colm1 / speccomb)
+                    jsa = specmult
+                    fsa = mod(specmult, 1.0)
 
-                for jj2 in range(njb28):
-                    sfluxzen[0, 0][ngs[0, 0][12] + jj2] = sfluxref02[0, 0, 0][
-                        jj2, jsa, ibx[0, 0, 0][12]
-                    ] + fsa * (
-                        sfluxref02[0, 0, 0][jj2, jsa + 1, ibx[0, 0, 0][12]]
-                        - sfluxref02[0, 0, 0][jj2, jsa, ibx[0, 0, 0][12]]
-                    )
+                    for jj2 in range(NG28):
+                        sfluxzen[0, 0][ngs[0, 0][12] + jj2] = sfluxref02[0, 0, 0][
+                            jj2, jsa, ibx[0, 0, 0][12]
+                        ] + fsa * (
+                            sfluxref02[0, 0, 0][jj2, jsa + 1, ibx[0, 0, 0][12]]
+                            - sfluxref02[0, 0, 0][jj2, jsa, ibx[0, 0, 0][12]]
+                        )
 
             if laytrop:
                 if jp < layreffr[0, 0, 0][2] and jp[0, 0, 1] >= layreffr[0, 0, 0][2]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][2]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][2]]
+                if layind == laytropind and sfluxzen[0, 0][ngs[0, 0][2]] == 0.0:
+                    colm1 = colamt[0, 0, 0][ix1[0, 0, 0][2]]
+                    colm2 = colamt[0, 0, 0][ix2[0, 0, 0][2]]
+
+                if colm1 != 0.0:
                     speccomb = colm1 + strrat[0, 0, 0][2] * colm2
                     specmult = specwt[0, 0, 0][2] * min(oneminus, colm1 / speccomb)
                     js = specmult
                     fs = mod(specmult, 1.0)
 
-                    for jj3 in range(njb18):
+                    for jj3 in range(NG18):
                         sfluxzen[0, 0][ngs[0, 0][2] + jj3] = sfluxref03[0, 0, 0][
                             jj3, js, ibx[0, 0, 0][2]
                         ] + fs * (
@@ -421,15 +449,23 @@ def taumolsetup(
                             - sfluxref03[0, 0, 0][jj3, js, ibx[0, 0, 0][2]]
                         )
 
+                colm1 = 0.0
+                colm2 = 0.0
+
                 if jp < layreffr[0, 0, 0][3] and jp[0, 0, 1] >= layreffr[0, 0, 0][3]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][3]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][3]]
+                elif layind == laytropind and sfluxzen[0, 0][ngs[0, 0][3]] == 0.0:
+                    colm1 = colamt[0, 0, 0][ix1[0, 0, 0][3]]
+                    colm2 = colamt[0, 0, 0][ix2[0, 0, 0][3]]
+
+                if colm1 != 0.0:
                     speccomb = colm1 + strrat[0, 0, 0][3] * colm2
                     specmult = specwt[0, 0, 0][3] * min(oneminus, colm1 / speccomb)
                     js = specmult
                     fs = mod(specmult, 1.0)
 
-                    for jj4 in range(njb19):
+                    for jj4 in range(NG19):
                         sfluxzen[0, 0][ngs[0, 0][3] + jj4] = sfluxref03[0, 0, 0][
                             jj4, js, ibx[0, 0, 0][3]
                         ] + fs * (
@@ -437,15 +473,23 @@ def taumolsetup(
                             - sfluxref03[0, 0, 0][jj4, js, ibx[0, 0, 0][3]]
                         )
 
+                colm1 = 0.0
+                colm2 = 0.0
+
                 if jp < layreffr[0, 0, 0][5] and jp[0, 0, 1] >= layreffr[0, 0, 0][5]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][5]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][5]]
+                elif layind == laytropind and sfluxzen[0, 0][ngs[0, 0][5]] == 0.0:
+                    colm1 = colamt[0, 0, 0][ix1[0, 0, 0][5]]
+                    colm2 = colamt[0, 0, 0][ix2[0, 0, 0][5]]
+
+                if colm1 != 0.0:
                     speccomb = colm1 + strrat[0, 0, 0][5] * colm2
                     specmult = specwt[0, 0, 0][5] * min(oneminus, colm1 / speccomb)
                     js = specmult
                     fs = mod(specmult, 1.0)
 
-                    for jj5 in range(njb21):
+                    for jj5 in range(NG21):
                         sfluxzen[0, 0][ngs[0, 0][5] + jj5] = sfluxref03[0, 0, 0][
                             jj5, js, ibx[0, 0, 0][5]
                         ] + fs * (
@@ -453,15 +497,23 @@ def taumolsetup(
                             - sfluxref03[0, 0, 0][jj5, js, ibx[0, 0, 0][5]]
                         )
 
+                colm1 = 0.0
+                colm2 = 0.0
+
                 if jp < layreffr[0, 0, 0][6] and jp[0, 0, 1] >= layreffr[0, 0, 0][6]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][6]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][6]]
+                elif layind == laytropind and sfluxzen[0, 0][ngs[0, 0][6]] == 0.0:
+                    colm1 = colamt[0, 0, 0][ix1[0, 0, 0][6]]
+                    colm2 = colamt[0, 0, 0][ix2[0, 0, 0][6]]
+
+                if colm1 != 0.0:
                     speccomb = colm1 + strrat[0, 0, 0][6] * colm2
                     specmult = specwt[0, 0, 0][6] * min(oneminus, colm1 / speccomb)
                     js = specmult
                     fs = mod(specmult, 1.0)
 
-                    for jj6 in range(njb22):
+                    for jj6 in range(NG22):
                         sfluxzen[0, 0][ngs[0, 0][6] + jj6] = sfluxref03[0, 0, 0][
                             jj6, js, ibx[0, 0, 0][6]
                         ] + fs * (
@@ -469,15 +521,23 @@ def taumolsetup(
                             - sfluxref03[0, 0, 0][jj6, js, ibx[0, 0, 0][6]]
                         )
 
+                colm1 = 0.0
+                colm2 = 0.0
+
                 if jp < layreffr[0, 0, 0][8] and jp[0, 0, 1] >= layreffr[0, 0, 0][8]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][8]]
+                if layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
+                    colm1 = colamt[0, 0, 0][ix1[0, 0, 0][8]]
+                    colm2 = colamt[0, 0, 0][ix2[0, 0, 0][8]]
+
+                if colm1 != 0.0:
                     speccomb = colm1 + strrat[0, 0, 0][8] * colm2
                     specmult = specwt[0, 0, 0][8] * min(oneminus, colm1 / speccomb)
                     js = specmult
                     fs = mod(specmult, 1.0)
 
-                    for jj7 in range(njb24):
+                    for jj7 in range(NG24):
                         sfluxzen[0, 0][ngs[0, 0][8] + jj7] = sfluxref03[0, 0, 0][
                             jj7, js, ibx[0, 0, 0][8]
                         ] + fs * (
@@ -2079,6 +2139,7 @@ taumolsetup(
     indict_gt4py["jt"],
     indict_gt4py["jt1"],
     indict_gt4py["laytrop"],
+    indict_gt4py["laytropind"],
     indict_gt4py["idxday"],
     outdict_gt4py["sfluxzen"],
     locdict_gt4py["layind"],
@@ -2089,8 +2150,8 @@ taumolsetup(
     locdict_gt4py["id1"],
     locdict_gt4py["js"],
     locdict_gt4py["jsa"],
-    locdict_gt4py["colm1a"],
-    locdict_gt4py["colm2a"],
+    locdict_gt4py["colm1"],
+    locdict_gt4py["colm2"],
     lookupdict_ref["sfluxref01"],
     lookupdict_ref["sfluxref02"],
     lookupdict_ref["sfluxref03"],
@@ -2598,19 +2659,4 @@ for var in outvars:
         var, serializer.savepoint["swrad-taumol-output-000000"]
     )
 
-# compare_data(outdict_np, valdict_np)
-
-print(f"index = {ngs}")
-
-print(f"Python = {outdict_np['sfluxzen'][:,94]}")
-print(" ")
-print(f"Fortran = {valdict_np['sfluxzen'][:, 94]}")
-print(" ")
-print(f"Difference = {outdict_np['sfluxzen'][:, 94] - valdict_np['sfluxzen'][:, 94]}")
-print(" ")
-print(f"colm1 = {locdict_gt4py['colm1a'][10, :]}")
-print(f"colm2 = {locdict_gt4py['colm2a'][10, :]}")
-
-for n in range(ngptsw):
-    if not np.allclose(outdict_np["sfluxzen"][:, n], valdict_np["sfluxzen"][:, n]):
-        print(f"Bad n = {n}")
+compare_data(outdict_np, valdict_np)
