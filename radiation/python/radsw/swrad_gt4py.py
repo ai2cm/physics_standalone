@@ -6,7 +6,7 @@ sys.path.insert(0, "..")
 from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
 from stencils_sw_gt4py import *
-from radsw.radsw_param import idxebc, nspa, nspb, ngs, ng
+from radsw.radsw_param import idxebc, nspa, nspb, ngs, ng, NGB, idxsfc
 
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
@@ -43,6 +43,7 @@ invars = [
     "lmk",
     "lmp",
     "lprnt",
+    "exp_tbl",
 ]
 
 locvars_firstloop = [
@@ -165,12 +166,105 @@ locvars_taumol = [
     "taur",
 ]
 
+locvars_spcvrtm = [
+    "ztaus",
+    "zssas",
+    "zasys",
+    "zldbt0",
+    "zrefb",
+    "zrefd",
+    "ztrab",
+    "ztrad",
+    "ztdbt",
+    "zldbt",
+    "zfu",
+    "zfd",
+    "ztau1",
+    "zssa1",
+    "zasy1",
+    "ztau0",
+    "zssa0",
+    "zasy0",
+    "zasy3",
+    "zssaw",
+    "zasyw",
+    "zgam1",
+    "zgam2",
+    "zgam3",
+    "zgam4",
+    "za1",
+    "za2",
+    "zb1",
+    "zb2",
+    "zrk",
+    "zrk2",
+    "zrp",
+    "zrp1",
+    "zrm1",
+    "zrpp",
+    "zrkg1",
+    "zrkg3",
+    "zrkg4",
+    "zexp1",
+    "zexm1",
+    "zexp2",
+    "zexm2",
+    "zden1",
+    "zexp3",
+    "zexp4",
+    "ze1r45",
+    "ftind",
+    "zsolar",
+    "ztdbt0",
+    "zr1",
+    "zr2",
+    "zr3",
+    "zr4",
+    "zr5",
+    "zt1",
+    "zt2",
+    "zt3",
+    "zf1",
+    "zf2",
+    "zrpp1",
+    "zrupb",
+    "zrupd",
+    "ztdn",
+    "zrdnd",
+    "jb",
+    "ib",
+    "ibd",
+    "itind",
+    "zb11",
+    "zb22",
+    "fxupc",
+    "fxdnc",
+    "fxup0",
+    "fxdn0",
+    "ftoauc",
+    "ftoau0",
+    "ftoadc",
+    "fsfcuc",
+    "fsfcu0",
+    "fsfcdc",
+    "fsfcd0",
+    "sfbmc",
+    "sfdfc",
+    "sfbm0",
+    "sfdf0",
+    "suvbfc",
+    "suvbf0",
+]
+
 temvars = ["tem0", "tem1", "tem2"]
 
 indict = dict()
 
 for var in invars:
-    tmp = serializer.read(var, serializer.savepoint["swrad-in-000000"])
+    if var == "exp_tbl":
+        tmp = serializer2.read(var, serializer2.savepoint["swrad-spcvrtm-input-000000"])
+    else:
+        tmp = serializer.read(var, serializer.savepoint["swrad-in-000000"])
     if var in ["plyr", "tlyr", "qlyr", "olyr", "dz", "delp"]:
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
@@ -193,6 +287,8 @@ for var in invars:
                 tmp2[tmp[n] - 1] = True
 
         indict[var] = np.tile(tmp2[:, None], (1, 1))
+    elif var == "exp_tbl":
+        indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     else:
         indict[var] = tmp[0]
 
@@ -229,13 +325,17 @@ for var in invars:
         )
     elif var == "solcon":
         indict_gt4py[var] = indict["solcon"]
+    elif var == "exp_tbl":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_nlp1, type_ntbmx
+        )
 
 
 locdict_gt4py = dict()
 for var in locvars_firstloop:
     if var in ["tauae", "ssaae", "asyae"]:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbdsw)
-    elif var in ["zcf0", "zcf1"]:
+    elif var in ["zcf0", "zcf1", "cosz1", "sntz1", "ssolar"]:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
     elif var in ["albbm", "albdf"]:
         locdict_gt4py[var] = create_storage_zeros(
@@ -354,6 +454,38 @@ locdict_gt4py["ng"] = create_storage_from_array(
 )
 locdict_gt4py["ngs"] = create_storage_from_array(
     ngs, backend, shape_2D, type_nbandssw_int
+)
+
+for var in locvars_spcvrtm:
+    if var in ["jb", "ib", "ibd", "itind"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
+    elif var in ["zb11", "zb22"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, type_ngptsw)
+    elif var in ["fxupc", "fxdnc", "fxup0", "fxdn0"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbdsw)
+    elif var in ["sfbmc", "sfdfc", "sfbm0", "sfdf0"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, (DTYPE_FLT, (2,)))
+    elif var in [
+        "suvbfc",
+        "suvbf0",
+        "ftoadc",
+        "ftoauc",
+        "ftoau0",
+        "fsfcuc",
+        "fsfcu0",
+        "fsfcdc",
+        "fsfcd0",
+    ]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw)
+
+NGB = np.tile(np.array(NGB)[None, None, None, :], (npts, 1, nlp1, 1))
+locdict_gt4py["NGB"] = create_storage_from_array(NGB, backend, shape_nlp1, type_ngptsw)
+
+idxsfc = np.tile(np.array(idxsfc)[None, None, None, :], (npts, 1, nlp1, 1))
+locdict_gt4py["idxsfc"] = create_storage_from_array(
+    idxsfc, backend, shape_nlp1, (DTYPE_FLT, (14,))
 )
 
 
@@ -489,11 +621,11 @@ for var in locvars_firstloop:
     valdict_firstloop[var] = serializer2.read(
         var, serializer2.savepoint["swrad-firstloop-output-000000"]
     )
-    if var in ["cosz1", "sntz1", "ssolar", "albbm", "albdf", "tem0", "tem1", "tem2"]:
+    if var in ["albbm", "albdf", "tem0", "tem1", "tem2"]:
         outdict_firstloop[var] = (
             locdict_gt4py[var][:, :, 0, ...].view(np.ndarray).squeeze()
         )
-    elif var in ["zcf1", "zcf0"]:
+    elif var in ["zcf1", "zcf0", "cosz1", "sntz1", "ssolar"]:
         outdict_firstloop[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
     else:
         outdict_firstloop[var] = (
@@ -1219,3 +1351,260 @@ for var in outvars_taumol:
     )
 
 compare_data(outdict_taumol, valdict_taumol)
+
+spcvrtm_clearsky(
+    locdict_gt4py["ssolar"],
+    locdict_gt4py["cosz1"],
+    locdict_gt4py["sntz1"],
+    locdict_gt4py["albbm"],
+    locdict_gt4py["albdf"],
+    locdict_gt4py["sfluxzen"],
+    locdict_gt4py["cldfmc"],
+    locdict_gt4py["zcf1"],
+    locdict_gt4py["zcf0"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["tauae"],
+    locdict_gt4py["ssaae"],
+    locdict_gt4py["asyae"],
+    locdict_gt4py["taucw"],
+    locdict_gt4py["ssacw"],
+    locdict_gt4py["asycw"],
+    indict_gt4py["exp_tbl"],
+    locdict_gt4py["ztaus"],
+    locdict_gt4py["zssas"],
+    locdict_gt4py["zasys"],
+    locdict_gt4py["zldbt0"],
+    locdict_gt4py["zrefb"],
+    locdict_gt4py["zrefd"],
+    locdict_gt4py["ztrab"],
+    locdict_gt4py["ztrad"],
+    locdict_gt4py["ztdbt"],
+    locdict_gt4py["zldbt"],
+    locdict_gt4py["zfu"],
+    locdict_gt4py["zfd"],
+    locdict_gt4py["ztau1"],
+    locdict_gt4py["zssa1"],
+    locdict_gt4py["zasy1"],
+    locdict_gt4py["ztau0"],
+    locdict_gt4py["zssa0"],
+    locdict_gt4py["zasy0"],
+    locdict_gt4py["zasy3"],
+    locdict_gt4py["zssaw"],
+    locdict_gt4py["zasyw"],
+    locdict_gt4py["zgam1"],
+    locdict_gt4py["zgam2"],
+    locdict_gt4py["zgam3"],
+    locdict_gt4py["zgam4"],
+    locdict_gt4py["za1"],
+    locdict_gt4py["za2"],
+    locdict_gt4py["zb1"],
+    locdict_gt4py["zb2"],
+    locdict_gt4py["zrk"],
+    locdict_gt4py["zrk2"],
+    locdict_gt4py["zrp"],
+    locdict_gt4py["zrp1"],
+    locdict_gt4py["zrm1"],
+    locdict_gt4py["zrpp"],
+    locdict_gt4py["zrkg1"],
+    locdict_gt4py["zrkg3"],
+    locdict_gt4py["zrkg4"],
+    locdict_gt4py["zexp1"],
+    locdict_gt4py["zexm1"],
+    locdict_gt4py["zexp2"],
+    locdict_gt4py["zexm2"],
+    locdict_gt4py["zden1"],
+    locdict_gt4py["zexp3"],
+    locdict_gt4py["zexp4"],
+    locdict_gt4py["ze1r45"],
+    locdict_gt4py["ftind"],
+    locdict_gt4py["zsolar"],
+    locdict_gt4py["ztdbt0"],
+    locdict_gt4py["zr1"],
+    locdict_gt4py["zr2"],
+    locdict_gt4py["zr3"],
+    locdict_gt4py["zr4"],
+    locdict_gt4py["zr5"],
+    locdict_gt4py["zt1"],
+    locdict_gt4py["zt2"],
+    locdict_gt4py["zt3"],
+    locdict_gt4py["zf1"],
+    locdict_gt4py["zf2"],
+    locdict_gt4py["zrpp1"],
+    locdict_gt4py["zrupd"],
+    locdict_gt4py["zrupb"],
+    locdict_gt4py["ztdn"],
+    locdict_gt4py["zrdnd"],
+    locdict_gt4py["zb11"],
+    locdict_gt4py["zb22"],
+    locdict_gt4py["jb"],
+    locdict_gt4py["ib"],
+    locdict_gt4py["ibd"],
+    locdict_gt4py["NGB"],
+    locdict_gt4py["idxsfc"],
+    locdict_gt4py["itind"],
+    locdict_gt4py["fxupc"],
+    locdict_gt4py["fxdnc"],
+    locdict_gt4py["fxup0"],
+    locdict_gt4py["fxdn0"],
+    locdict_gt4py["ftoauc"],
+    locdict_gt4py["ftoau0"],
+    locdict_gt4py["ftoadc"],
+    locdict_gt4py["fsfcuc"],
+    locdict_gt4py["fsfcu0"],
+    locdict_gt4py["fsfcdc"],
+    locdict_gt4py["fsfcd0"],
+    locdict_gt4py["sfbmc"],
+    locdict_gt4py["sfdfc"],
+    locdict_gt4py["sfbm0"],
+    locdict_gt4py["sfdf0"],
+    locdict_gt4py["suvbfc"],
+    locdict_gt4py["suvbf0"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+spcvrtm_allsky(
+    locdict_gt4py["ssolar"],
+    locdict_gt4py["cosz1"],
+    locdict_gt4py["sntz1"],
+    locdict_gt4py["albbm"],
+    locdict_gt4py["albdf"],
+    locdict_gt4py["sfluxzen"],
+    locdict_gt4py["cldfmc"],
+    locdict_gt4py["zcf1"],
+    locdict_gt4py["zcf0"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["tauae"],
+    locdict_gt4py["ssaae"],
+    locdict_gt4py["asyae"],
+    locdict_gt4py["taucw"],
+    locdict_gt4py["ssacw"],
+    locdict_gt4py["asycw"],
+    indict_gt4py["exp_tbl"],
+    locdict_gt4py["ztaus"],
+    locdict_gt4py["zssas"],
+    locdict_gt4py["zasys"],
+    locdict_gt4py["zldbt0"],
+    locdict_gt4py["zrefb"],
+    locdict_gt4py["zrefd"],
+    locdict_gt4py["ztrab"],
+    locdict_gt4py["ztrad"],
+    locdict_gt4py["ztdbt"],
+    locdict_gt4py["zldbt"],
+    locdict_gt4py["zfu"],
+    locdict_gt4py["zfd"],
+    locdict_gt4py["ztau1"],
+    locdict_gt4py["zssa1"],
+    locdict_gt4py["zasy1"],
+    locdict_gt4py["ztau0"],
+    locdict_gt4py["zssa0"],
+    locdict_gt4py["zasy0"],
+    locdict_gt4py["zasy3"],
+    locdict_gt4py["zssaw"],
+    locdict_gt4py["zasyw"],
+    locdict_gt4py["zgam1"],
+    locdict_gt4py["zgam2"],
+    locdict_gt4py["zgam3"],
+    locdict_gt4py["zgam4"],
+    locdict_gt4py["za1"],
+    locdict_gt4py["za2"],
+    locdict_gt4py["zb1"],
+    locdict_gt4py["zb2"],
+    locdict_gt4py["zrk"],
+    locdict_gt4py["zrk2"],
+    locdict_gt4py["zrp"],
+    locdict_gt4py["zrp1"],
+    locdict_gt4py["zrm1"],
+    locdict_gt4py["zrpp"],
+    locdict_gt4py["zrkg1"],
+    locdict_gt4py["zrkg3"],
+    locdict_gt4py["zrkg4"],
+    locdict_gt4py["zexp1"],
+    locdict_gt4py["zexm1"],
+    locdict_gt4py["zexp2"],
+    locdict_gt4py["zexm2"],
+    locdict_gt4py["zden1"],
+    locdict_gt4py["zexp3"],
+    locdict_gt4py["zexp4"],
+    locdict_gt4py["ze1r45"],
+    locdict_gt4py["ftind"],
+    locdict_gt4py["zsolar"],
+    locdict_gt4py["ztdbt0"],
+    locdict_gt4py["zr1"],
+    locdict_gt4py["zr2"],
+    locdict_gt4py["zr3"],
+    locdict_gt4py["zr4"],
+    locdict_gt4py["zr5"],
+    locdict_gt4py["zt1"],
+    locdict_gt4py["zt2"],
+    locdict_gt4py["zt3"],
+    locdict_gt4py["zf1"],
+    locdict_gt4py["zf2"],
+    locdict_gt4py["zrpp1"],
+    locdict_gt4py["zrupd"],
+    locdict_gt4py["zrupb"],
+    locdict_gt4py["ztdn"],
+    locdict_gt4py["zrdnd"],
+    locdict_gt4py["zb11"],
+    locdict_gt4py["zb22"],
+    locdict_gt4py["jb"],
+    locdict_gt4py["ib"],
+    locdict_gt4py["ibd"],
+    locdict_gt4py["NGB"],
+    locdict_gt4py["idxsfc"],
+    locdict_gt4py["itind"],
+    locdict_gt4py["fxupc"],
+    locdict_gt4py["fxdnc"],
+    locdict_gt4py["fxup0"],
+    locdict_gt4py["fxdn0"],
+    locdict_gt4py["ftoauc"],
+    locdict_gt4py["ftoau0"],
+    locdict_gt4py["ftoadc"],
+    locdict_gt4py["fsfcuc"],
+    locdict_gt4py["fsfcu0"],
+    locdict_gt4py["fsfcdc"],
+    locdict_gt4py["fsfcd0"],
+    locdict_gt4py["sfbmc"],
+    locdict_gt4py["sfdfc"],
+    locdict_gt4py["sfbm0"],
+    locdict_gt4py["sfdf0"],
+    locdict_gt4py["suvbfc"],
+    locdict_gt4py["suvbf0"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+outvars_spcvrtm = [
+    "fxupc",
+    "fxdnc",
+    "fxup0",
+    "fxdn0",
+    "ftoauc",
+    "ftoau0",
+    "ftoadc",
+    "fsfcuc",
+    "fsfcu0",
+    "fsfcdc",
+    "fsfcd0",
+    "sfbmc",
+    "sfdfc",
+    "sfbm0",
+    "sfdf0",
+    "suvbfc",
+    "suvbf0",
+]
+
+
+outdict_spcvrtm = dict()
+valdict_spcvrtm = dict()
+for var in outvars_spcvrtm:
+    outdict_spcvrtm[var] = locdict_gt4py[var][:, ...].view(np.ndarray).squeeze()
+    valdict_spcvrtm[var] = serializer2.read(
+        var, serializer2.savepoint["swrad-spcvrtm-output-000000"]
+    )
+
+compare_data(outdict_spcvrtm, valdict_spcvrtm)

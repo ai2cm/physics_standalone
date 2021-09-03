@@ -50,6 +50,11 @@ ftiny = 1.0e-12
 flimit = 1.0e-20
 s0 = 1368.22
 
+zcrit = 0.9999995  # thresold for conservative scattering
+zsr3 = np.sqrt(3.0)
+od_lo = 0.06
+eps1 = 1.0e-8
+
 # The actual number of g-point for bands 16-29
 NG16 = 6
 NG17 = 12

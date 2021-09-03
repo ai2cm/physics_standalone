@@ -31,6 +31,13 @@ from radsw.radsw_param import (
     flimit,
     eps,
     nuvb,
+    bpade,
+    flimit,
+    zcrit,
+    zsr3,
+    od_lo,
+    eps1,
+    eps,
 )
 from radphysparam import iswmode
 from util import create_storage_from_array, create_storage_zeros, compare_data
@@ -181,8 +188,10 @@ for var in invars:
     ]:
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
-    elif var in ["sfluxzen", "albbm", "albdf"]:
+    elif var in ["albbm", "albdf"]:
         indict[var] = np.tile(tmp[:, None, None, :], (1, 1, nlp1, 1))
+    elif var == "sfluxzen":
+        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
     elif var in ["zcf1", "zcf0"]:
         indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
     elif var == "exp_tbl":
@@ -192,9 +201,13 @@ for var in invars:
 
 indict_gt4py = dict()
 for var in invars:
-    if var in ["taug", "taur", "cldfmc", "sfluxzen"]:
+    if var in ["taug", "taur", "cldfmc"]:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlp1, type_ngptsw
+        )
+    elif var == "sfluxzen":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, type_ngptsw
         )
     elif var in ["taucw", "ssacw", "asycw", "tauae", "ssaae", "asyae"]:
         indict_gt4py[var] = create_storage_from_array(
@@ -284,7 +297,7 @@ def spcvrtm_clearsky(
     sntz: FIELD_2D,
     albbm: Field[(DTYPE_FLT, (2,))],
     albdf: Field[(DTYPE_FLT, (2,))],
-    sfluxzen: Field[type_ngptsw],
+    sfluxzen: Field[gtscript.IJ, type_ngptsw],
     cldfmc: Field[type_ngptsw],
     cf1: FIELD_FLT,
     cf0: FIELD_FLT,
@@ -406,7 +419,7 @@ def spcvrtm_clearsky(
             ib = jb + 1 - nblow
             ibd = idxsfc[0, 0, 0][jb - 15] - 1  # spectral band index
 
-            zsolar[0, 0, 0][jg] = ssolar * sfluxzen[0, 0, 0][jg]
+            zsolar[0, 0, 0][jg] = ssolar * sfluxzen[0, 0][jg]
             ztdbt0[0, 0, 0][jg] = 1.0
 
     with computation(PARALLEL), interval(-1, None):
@@ -893,7 +906,7 @@ def spcvrtm_allsky(
     sntz: FIELD_2D,
     albbm: Field[(DTYPE_FLT, (2,))],
     albdf: Field[(DTYPE_FLT, (2,))],
-    sfluxzen: Field[type_ngptsw],
+    sfluxzen: Field[gtscript.IJ, type_ngptsw],
     cldfmc: Field[type_ngptsw],
     cf1: FIELD_FLT,
     cf0: FIELD_FLT,
