@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import os
+import gt4py
 
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
 
@@ -11,7 +12,7 @@ else:
         0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python/radlw"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw
-from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw
+from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
@@ -19,6 +20,10 @@ if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
 else:
     SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
+
+gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
+    ["-fno-strict-aliasing"]
+)
 
 npts = 24
 
@@ -55,5 +60,6 @@ type_nbands3 = (DTYPE_FLT, (nbands, 3))
 type_maxgas = (DTYPE_FLT, (maxgas,))
 type_maxxsec = (DTYPE_FLT, (maxxsec,))
 type_nbdsw = (DTYPE_FLT, (nbdsw,))
+type_ntbmx = (DTYPE_FLT, ((ntbmx + 1),))
 type_9 = (DTYPE_FLT, (9,))
 type_10 = (DTYPE_FLT, (10,))

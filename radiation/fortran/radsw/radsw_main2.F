@@ -1326,7 +1326,7 @@ enddo lab_do_ipt3
 
         else                         ! use mcica cloud scheme
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-spcvrtm-input-"//trim(ser_count_str)
@@ -1352,7 +1352,7 @@ enddo lab_do_ipt3
      &       suvbfc(j1),suvbf0(j1)                          &
      &     )
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-spcvrtm-output-"//trim(ser_count_str)
