@@ -4398,18 +4398,6 @@ enddo lab_do_ipt3
 !$ser verbatim end if
 
 !> - Call taumol## (##: 16-29) to calculate layer optical depth.
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
-  !$ser data colamtin=colamt colmolin=colmol fac00in=fac00
-  !$ser data fac01in=fac01 fac10in=fac10 fac11in=fac11
-  !$ser data jpin=jp jtin=jt jt1in=jt1 laytropin=laytrop
-  !$ser data forfacin=forfac forfracin=forfrac indforin=indfor
-  !$ser data selffacin=selffac selffracin=selffrac indselfin=indself
-  !$ser data id0in=id0 id1in=id1
-!$ser verbatim end if
-
 !>  - call taumol16()
 !$ser verbatim if (ipt == 1) then
   !$ser mode write

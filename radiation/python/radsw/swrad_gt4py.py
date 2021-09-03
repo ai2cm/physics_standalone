@@ -6,7 +6,7 @@ sys.path.insert(0, "..")
 from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
 from stencils_sw_gt4py import *
-from radsw.radsw_param import idxebc
+from radsw.radsw_param import idxebc, nspa, nspb, ngs, ng
 
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
@@ -138,6 +138,31 @@ locvars_setcoef = [
     "jt",
     "jt1",
     "laytrop",
+]
+
+locvars_taumol = [
+    "id0",
+    "id1",
+    "ind01",
+    "ind02",
+    "ind03",
+    "ind04",
+    "ind11",
+    "ind12",
+    "ind13",
+    "ind14",
+    "inds",
+    "indsp",
+    "indf",
+    "indfp",
+    "fs",
+    "js",
+    "jsa",
+    "colm1",
+    "colm2",
+    "sfluxzen",
+    "taug",
+    "taur",
 ]
 
 temvars = ["tem0", "tem1", "tem2"]
@@ -294,6 +319,43 @@ for var in locvars_setcoef:
     else:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
+for var in locvars_taumol:
+    if var in ["id0", "id1"]:
+        locdict_gt4py[var] = create_storage_zeros(
+            backend, shape_nlp1, type_nbandssw_int
+        )
+    elif var in ["colm1", "colm2"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+    elif var == "sfluxzen":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, type_ngptsw)
+    elif var in ["taug", "taur"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw)
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
+
+layind = np.arange(nlay, dtype=np.int32)
+layind = np.insert(layind, 0, 0)
+layind = np.tile(layind[None, None, :], (npts, 1, 1))
+nspa = np.tile(np.array(nspa)[None, None, :], (npts, 1, 1))
+nspb = np.tile(np.array(nspb)[None, None, :], (npts, 1, 1))
+ngtmp = np.tile(np.array(ng)[None, None, :], (npts, 1, 1))
+ngs = np.tile(np.array(ngs)[None, None, :], (npts, 1, 1))
+locdict_gt4py["layind"] = create_storage_from_array(
+    layind, backend, shape_nlp1, DTYPE_INT
+)
+locdict_gt4py["nspa"] = create_storage_from_array(
+    nspa, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["nspb"] = create_storage_from_array(
+    nspb, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ng"] = create_storage_from_array(
+    ngtmp, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ngs"] = create_storage_from_array(
+    ngs, backend, shape_2D, type_nbandssw_int
+)
+
 
 def loadlookupdata(name):
     """
@@ -323,7 +385,7 @@ def loadlookupdata(name):
 
         if len(ds.data_vars[var].shape) >= 1:
             lookupdict_gt4py[var] = create_storage_from_array(
-                lookupdict[var], backend, shape_nlp1, (DTYPE_FLT, ds[var].shape)
+                lookupdict[var], backend, shape_nlp1, (ds[var].dtype, ds[var].shape)
             )
         else:
             lookupdict_gt4py[var] = float(ds[var].data)
@@ -347,6 +409,27 @@ lookupdict_setcoef["preflog"] = create_storage_from_array(
 lookupdict_setcoef["tref"] = create_storage_from_array(
     tref, backend, shape_nlp1, (DTYPE_FLT, (59,))
 )
+
+lookupdict_ref = loadlookupdata("sflux")
+lookupdict16 = loadlookupdata("kgb16")
+lookupdict17 = loadlookupdata("kgb17")
+lookupdict18 = loadlookupdata("kgb18")
+lookupdict19 = loadlookupdata("kgb19")
+lookupdict20 = loadlookupdata("kgb20")
+lookupdict21 = loadlookupdata("kgb21")
+lookupdict22 = loadlookupdata("kgb22")
+lookupdict23 = loadlookupdata("kgb23")
+lookupdict24 = loadlookupdata("kgb24")
+lookupdict25 = loadlookupdata("kgb25")
+lookupdict26 = loadlookupdata("kgb26")
+lookupdict27 = loadlookupdata("kgb27")
+lookupdict28 = loadlookupdata("kgb28")
+lookupdict29 = loadlookupdata("kgb29")
+
+# Subtract one from indexing variables for Fortran -> Python conversion
+lookupdict_ref["ix1"] = lookupdict_ref["ix1"] - 1
+lookupdict_ref["ix2"] = lookupdict_ref["ix2"] - 1
+lookupdict_ref["ibx"] = lookupdict_ref["ibx"] - 1
 
 
 firstloop(
@@ -587,3 +670,552 @@ for var in outvars_setcoef:
     )
 
 compare_data(outdict_setcoef, valdict_setcoef)
+
+laytropind = locdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
+locdict_gt4py["laytropind"] = create_storage_from_array(
+    laytropind[:, None] - 1, backend, shape_2D, DTYPE_INT
+)
+
+taumolsetup(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["jp"],
+    locdict_gt4py["jt"],
+    locdict_gt4py["jt1"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["laytropind"],
+    indict_gt4py["idxday"],
+    locdict_gt4py["sfluxzen"],
+    locdict_gt4py["layind"],
+    locdict_gt4py["nspa"],
+    locdict_gt4py["nspb"],
+    locdict_gt4py["ngs"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["js"],
+    locdict_gt4py["jsa"],
+    locdict_gt4py["colm1"],
+    locdict_gt4py["colm2"],
+    lookupdict_ref["sfluxref01"],
+    lookupdict_ref["sfluxref02"],
+    lookupdict_ref["sfluxref03"],
+    lookupdict_ref["layreffr"],
+    lookupdict_ref["ix1"],
+    lookupdict_ref["ix2"],
+    lookupdict_ref["ibx"],
+    lookupdict_ref["strrat"],
+    lookupdict_ref["specwt"],
+    lookupdict_ref["scalekur"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol16(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict16["selfref"],
+    lookupdict16["forref"],
+    lookupdict16["absa"],
+    lookupdict16["absb"],
+    lookupdict16["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol17(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict17["selfref"],
+    lookupdict17["forref"],
+    lookupdict17["absa"],
+    lookupdict17["absb"],
+    lookupdict17["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol18(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict18["selfref"],
+    lookupdict18["forref"],
+    lookupdict18["absa"],
+    lookupdict18["absb"],
+    lookupdict18["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol19(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict19["selfref"],
+    lookupdict19["forref"],
+    lookupdict19["absa"],
+    lookupdict19["absb"],
+    lookupdict19["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol20(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict20["selfref"],
+    lookupdict20["forref"],
+    lookupdict20["absa"],
+    lookupdict20["absb"],
+    lookupdict20["absch4"],
+    lookupdict20["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol21(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict21["selfref"],
+    lookupdict21["forref"],
+    lookupdict21["absa"],
+    lookupdict21["absb"],
+    lookupdict21["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol22(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict22["selfref"],
+    lookupdict22["forref"],
+    lookupdict22["absa"],
+    lookupdict22["absb"],
+    lookupdict22["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol23(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict23["selfref"],
+    lookupdict23["forref"],
+    lookupdict23["absa"],
+    lookupdict23["rayl"],
+    lookupdict23["givfac"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol24(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict_ref["strrat"],
+    lookupdict24["selfref"],
+    lookupdict24["forref"],
+    lookupdict24["absa"],
+    lookupdict24["absb"],
+    lookupdict24["rayla"],
+    lookupdict24["raylb"],
+    lookupdict24["abso3a"],
+    lookupdict24["abso3b"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    locdict_gt4py["js"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol25(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    lookupdict25["absa"],
+    lookupdict25["rayl"],
+    lookupdict25["abso3a"],
+    lookupdict25["abso3b"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol26(
+    locdict_gt4py["colmol"],
+    lookupdict26["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol27(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    lookupdict27["absa"],
+    lookupdict27["absb"],
+    lookupdict27["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol28(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    lookupdict_ref["strrat"],
+    lookupdict28["absa"],
+    lookupdict28["absb"],
+    lookupdict28["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind03"],
+    locdict_gt4py["ind04"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["ind13"],
+    locdict_gt4py["ind14"],
+    locdict_gt4py["js"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+taumol29(
+    locdict_gt4py["colamt"],
+    locdict_gt4py["colmol"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    lookupdict29["forref"],
+    lookupdict29["absa"],
+    lookupdict29["absb"],
+    lookupdict29["selfref"],
+    lookupdict29["absh2o"],
+    lookupdict29["absco2"],
+    lookupdict29["rayl"],
+    locdict_gt4py["taug"],
+    locdict_gt4py["taur"],
+    locdict_gt4py["id0"],
+    locdict_gt4py["id1"],
+    locdict_gt4py["ind01"],
+    locdict_gt4py["ind02"],
+    locdict_gt4py["ind11"],
+    locdict_gt4py["ind12"],
+    locdict_gt4py["inds"],
+    locdict_gt4py["indsp"],
+    locdict_gt4py["indf"],
+    locdict_gt4py["indfp"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+outvars_taumol = ["taug", "taur", "sfluxzen"]
+
+outdict_taumol = dict()
+valdict_taumol = dict()
+
+for var in outvars_taumol:
+    if var == "sfluxzen":
+        outdict_taumol[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
+    else:
+        outdict_taumol[var] = (
+            locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+        )
+
+    valdict_taumol[var] = serializer2.read(
+        var, serializer2.savepoint["swrad-taumol-output-000000"]
+    )
+
+compare_data(outdict_taumol, valdict_taumol)
