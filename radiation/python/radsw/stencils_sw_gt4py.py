@@ -68,7 +68,12 @@ rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
-isubcsw = 2  # Eventually this will be provided by rad_initialize
+# Eventually these will be provided by rad_initialize
+isubcsw = 2
+lhsw0 = True
+lhswb = False
+lflxprf = False
+lfdncmp = True
 
 
 @stencil(
@@ -288,6 +293,7 @@ def cldprop(
     ssacw: Field[type_nbdsw],
     asycw: Field[type_nbdsw],
     cldfrc: FIELD_FLT,
+    cldtau: FIELD_FLT,
     tauliq: Field[type_nbandssw_flt],
     tauice: Field[type_nbandssw_flt],
     ssaliq: Field[type_nbandssw_flt],
@@ -704,6 +710,9 @@ def cldprop(
                 cldfmc[0, 0, 0][n3] = 1.0
             else:
                 cldfmc[0, 0, 0][n3] = 0.0
+
+        if zcf1 > 0:
+            cldtau = taucw[0, 0, 0][9]
 
 
 @stencil(backend=backend, rebuild=rebuild, externals={"stpfac": stpfac})
@@ -3968,3 +3977,130 @@ def spcvrtm_allsky(
             if cf1 > eps:  # cloudy column, compute total-sky fluxes
                 for b4 in range(nbdsw):
                     ftoauc = ftoauc + fxupc[0, 0, 0][b4]
+
+
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "nbdsw": nbdsw,
+        "lhsw0": lhsw0,
+        "lhswb": lhswb,
+        "lflxprf": lflxprf,
+        "lfdncmp": lfdncmp,
+    },
+)
+def finalloop(
+    idxday: FIELD_2DBOOL,
+    delp: FIELD_FLT,
+    fxupc: Field[type_nbdsw],
+    fxdnc: Field[type_nbdsw],
+    fxup0: Field[type_nbdsw],
+    fxdn0: Field[type_nbdsw],
+    suvbf0: FIELD_2D,
+    suvbfc: FIELD_2D,
+    sfbmc: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
+    sfdfc: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
+    ftoauc: FIELD_2D,
+    ftoadc: FIELD_2D,
+    ftoau0: FIELD_2D,
+    fsfcuc: FIELD_2D,
+    fsfcdc: FIELD_2D,
+    fsfcu0: FIELD_2D,
+    fsfcd0: FIELD_2D,
+    upfxc_t: FIELD_2D,
+    dnfxc_t: FIELD_2D,
+    upfx0_t: FIELD_2D,
+    upfxc_s: FIELD_2D,
+    dnfxc_s: FIELD_2D,
+    upfx0_s: FIELD_2D,
+    dnfx0_s: FIELD_2D,
+    hswc: FIELD_FLT,
+    hsw0: FIELD_FLT,
+    hswb: Field[type_nbdsw],
+    uvbf0: FIELD_2D,
+    uvbfc: FIELD_2D,
+    nirbm: FIELD_2D,
+    nirdf: FIELD_2D,
+    visbm: FIELD_2D,
+    visdf: FIELD_2D,
+    rfdelp: FIELD_FLT,
+    fnet: FIELD_FLT,
+    fnetc: FIELD_FLT,
+    fnetb: FIELD_FLT,
+    flxuc: FIELD_FLT,
+    flxdc: FIELD_FLT,
+    flxu0: FIELD_FLT,
+    flxd0: FIELD_FLT,
+    heatfac: float,
+):
+    from __externals__ import nbdsw, lhsw0, lhswb, lflxprf, lfdncmp
+
+    with computation(PARALLEL), interval(...):
+        if idxday:
+            #  --- ...  sum up total spectral fluxes for total-sky
+            for ib in range(nbdsw):
+                flxuc = flxuc + fxupc[0, 0, 0][ib]
+                flxdc = flxdc + fxdnc[0, 0, 0][ib]
+
+                if lhsw0 or lflxprf:
+                    flxu0 = flxu0 + fxup0[0, 0, 0][ib]
+                    flxd0 = flxd0 + fxdn0[0, 0, 0][ib]
+
+    with computation(FORWARD):
+        with interval(0, 1):
+            if idxday:
+                if lfdncmp:
+                    # --- ...  optional uv-b surface downward flux
+                    uvbf0 = suvbf0
+                    uvbfc = suvbfc
+
+                    # --- ...  optional beam and diffuse sfc fluxes
+                    nirbm = sfbmc[0, 0][0]
+                    nirdf = sfdfc[0, 0][0]
+                    visbm = sfbmc[0, 0][1]
+                    visdf = sfdfc[0, 0][1]
+
+                #  --- ...  toa and sfc fluxes
+
+                upfxc_t = ftoauc
+                dnfxc_t = ftoadc
+                upfx0_t = ftoau0
+
+                upfxc_s = fsfcuc
+                dnfxc_s = fsfcdc
+                upfx0_s = fsfcu0
+                dnfx0_s = fsfcd0
+
+                fnet = flxdc - flxuc
+                fnetc = flxd0 - flxu0
+
+                if lhswb:
+                    for mb in range(nbdsw):
+                        fnetb = fxdnc[0, 0, 0][mb] - fxupc[0, 0, 0][mb]
+
+        with interval(1, None):
+            if idxday:
+                rfdelp = heatfac / delp
+
+                fnet = flxdc - flxuc
+                fnetc = flxd0 - flxu0
+
+                if lhswb:
+                    for mb2 in range(nbdsw):
+                        fnetb = fxdnc[0, 0, 0][mb2] - fxupc[0, 0, 0][mb2]
+
+    with computation(PARALLEL):
+        with interval(1, None):
+            if idxday:
+                #  --- ...  compute heating rates
+                hswc = (fnet - fnet[0, 0, -1]) * rfdelp
+
+                # --- ...  optional clear sky heating rates
+                if lhsw0:
+                    hsw0 = (fnetc - fnetc[0, 0, -1]) * rfdelp
+
+                # --- ...  optional spectral band heating rates
+                if lhswb:
+                    for mb3 in range(nbdsw):
+                        hswb[0, 0, 0][mb3] = (fnetb[0, 0, 1] - fnet) * rfdelp

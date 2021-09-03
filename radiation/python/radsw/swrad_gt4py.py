@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.shape_base import _column_stack_dispatcher
 import xarray as xr
 import sys
 
@@ -7,6 +8,8 @@ from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
 from stencils_sw_gt4py import *
 from radsw.radsw_param import idxebc, nspa, nspb, ngs, ng, NGB, idxsfc
+from radphysparam import iswrate
+from phys_const import con_g, con_cp
 
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
@@ -256,7 +259,48 @@ locvars_spcvrtm = [
     "suvbf0",
 ]
 
+locvars_finalloop = [
+    "flxuc",
+    "flxdc",
+    "flxu0",
+    "flxd0",
+    "fnet",
+    "fnetc",
+    "fnetb",
+    "heatfac",
+    "rfdelp",
+]
+
 temvars = ["tem0", "tem1", "tem2"]
+
+outvars = [
+    "upfxc_t",
+    "dnfxc_t",
+    "upfx0_t",
+    "upfxc_s",
+    "dnfxc_s",
+    "upfx0_s",
+    "dnfx0_s",
+    "htswc",
+    "htsw0",
+    "htswb",
+    "uvbf0",
+    "uvbfc",
+    "nirbm",
+    "nirdf",
+    "visbm",
+    "visdf",
+    "cldtausw",
+]
+
+outdict_gt4py = dict()
+for var in outvars:
+    if var in ["htswc", "cldtausw", "htsw0"]:
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+    elif var == "htswb":
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbdsw)
+    else:
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
 
 indict = dict()
 
@@ -542,6 +586,15 @@ lookupdict_setcoef["tref"] = create_storage_from_array(
     tref, backend, shape_nlp1, (DTYPE_FLT, (59,))
 )
 
+for var in locvars_finalloop:
+    if var == "heatfac":
+        if iswrate == 1:
+            locdict_gt4py[var] = con_g * 864.0 / con_cp
+        else:
+            locdict_gt4py[var] = con_g * 1.0e-2 / con_cp
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+
 lookupdict_ref = loadlookupdata("sflux")
 lookupdict16 = loadlookupdata("kgb16")
 lookupdict17 = loadlookupdata("kgb17")
@@ -653,6 +706,7 @@ cldprop(
     locdict_gt4py["ssacw"],
     locdict_gt4py["asycw"],
     locdict_gt4py["cldfrc"],
+    outdict_gt4py["cldtausw"],
     locdict_gt4py["tauliq"],
     locdict_gt4py["tauice"],
     locdict_gt4py["ssaliq"],
@@ -1608,3 +1662,75 @@ for var in outvars_spcvrtm:
     )
 
 compare_data(outdict_spcvrtm, valdict_spcvrtm)
+
+finalloop(
+    indict_gt4py["idxday"],
+    indict_gt4py["delp"],
+    locdict_gt4py["fxupc"],
+    locdict_gt4py["fxdnc"],
+    locdict_gt4py["fxup0"],
+    locdict_gt4py["fxdn0"],
+    locdict_gt4py["suvbf0"],
+    locdict_gt4py["suvbfc"],
+    locdict_gt4py["sfbmc"],
+    locdict_gt4py["sfdfc"],
+    locdict_gt4py["ftoauc"],
+    locdict_gt4py["ftoadc"],
+    locdict_gt4py["ftoau0"],
+    locdict_gt4py["fsfcuc"],
+    locdict_gt4py["fsfcdc"],
+    locdict_gt4py["fsfcu0"],
+    locdict_gt4py["fsfcd0"],
+    outdict_gt4py["upfxc_t"],
+    outdict_gt4py["dnfxc_t"],
+    outdict_gt4py["upfx0_t"],
+    outdict_gt4py["upfxc_s"],
+    outdict_gt4py["dnfxc_s"],
+    outdict_gt4py["upfx0_s"],
+    outdict_gt4py["dnfx0_s"],
+    outdict_gt4py["htswc"],
+    outdict_gt4py["htsw0"],
+    outdict_gt4py["htswb"],
+    outdict_gt4py["uvbf0"],
+    outdict_gt4py["uvbfc"],
+    outdict_gt4py["nirbm"],
+    outdict_gt4py["nirdf"],
+    outdict_gt4py["visbm"],
+    outdict_gt4py["visdf"],
+    locdict_gt4py["rfdelp"],
+    locdict_gt4py["fnet"],
+    locdict_gt4py["fnetc"],
+    locdict_gt4py["fnetb"],
+    locdict_gt4py["flxuc"],
+    locdict_gt4py["flxdc"],
+    locdict_gt4py["flxu0"],
+    locdict_gt4py["flxd0"],
+    locdict_gt4py["heatfac"],
+)
+
+outdict_final = dict()
+valdict_final = dict()
+
+for var in outvars:
+    print(var)
+    if var in ["htswc", "cldtausw", "htsw0"]:
+        outdict_final[var] = outdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
+    elif var == "htswb":
+        if lhswb:
+            outdict_final[var] = (
+                outdict_gt4py[var][:, :, 1:, :].view(np.ndarray).squeeze()
+            )
+    else:
+        outdict_final[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
+
+    if lhswb:
+        valdict_final[var] = serializer.read(
+            var, serializer.savepoint["swrad-out-000000"]
+        )
+    else:
+        if var != "htswb":
+            valdict_final[var] = serializer.read(
+                var, serializer.savepoint["swrad-out-000000"]
+            )
+
+compare_data(outdict_final, valdict_final)
