@@ -867,6 +867,7 @@ def taumolsetup(
     ngs: Field[gtscript.IJ, type_nbandssw_int],
     id0: Field[type_nbandssw_int],
     id1: Field[type_nbandssw_int],
+    fs: FIELD_FLT,
     js: FIELD_INT,
     jsa: FIELD_INT,
     colm1: FIELD_FLT,
@@ -1092,7 +1093,7 @@ def taumolsetup(
                 if jp < layreffr[0, 0, 0][8] and jp[0, 0, 1] >= layreffr[0, 0, 0][8]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][8]]
-                if layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
+                elif layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
                     colm1 = colamt[0, 0, 0][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 0][ix2[0, 0, 0][8]]
 

@@ -2,6 +2,7 @@ import numpy as np
 from numpy.lib.shape_base import _column_stack_dispatcher
 import xarray as xr
 import sys
+import time
 
 sys.path.insert(0, "..")
 from util import compare_data, create_storage_from_array, create_storage_zeros
@@ -17,6 +18,9 @@ import serialbox as ser
 rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
+
+# Flag to say whether or not to do intermediate tests
+do_test = False
 
 ddir = "../../fortran/data/SW"
 ddir2 = "../../fortran/radsw/dump"
@@ -468,7 +472,7 @@ for var in locvars_taumol:
         locdict_gt4py[var] = create_storage_zeros(
             backend, shape_nlp1, type_nbandssw_int
         )
-    elif var in ["colm1", "colm2"]:
+    elif var in ["colm1", "colm2", "fs"]:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
     elif var == "sfluxzen":
         locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, type_ngptsw)
@@ -616,7 +620,7 @@ lookupdict_ref["ix1"] = lookupdict_ref["ix1"] - 1
 lookupdict_ref["ix2"] = lookupdict_ref["ix2"] - 1
 lookupdict_ref["ibx"] = lookupdict_ref["ibx"] - 1
 
-
+start = time.time()
 firstloop(
     indict_gt4py["plyr"],
     indict_gt4py["plvl"],
@@ -665,27 +669,6 @@ firstloop(
     locdict_gt4py["zcf0"],
     locdict_gt4py["zcf1"],
 )
-
-
-valdict_firstloop = dict()
-outdict_firstloop = dict()
-
-for var in locvars_firstloop:
-    valdict_firstloop[var] = serializer2.read(
-        var, serializer2.savepoint["swrad-firstloop-output-000000"]
-    )
-    if var in ["albbm", "albdf", "tem0", "tem1", "tem2"]:
-        outdict_firstloop[var] = (
-            locdict_gt4py[var][:, :, 0, ...].view(np.ndarray).squeeze()
-        )
-    elif var in ["zcf1", "zcf0", "cosz1", "sntz1", "ssolar"]:
-        outdict_firstloop[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
-    else:
-        outdict_firstloop[var] = (
-            locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
-        )
-
-compare_data(valdict_firstloop, outdict_firstloop)
 
 cldprop(
     locdict_gt4py["cfrac"],
@@ -776,19 +759,6 @@ cldprop(
     validate_args=validate,
 )
 
-valdict_cldprop = dict()
-outdict_cldprop = dict()
-
-outvars_cldprop = ["cldfmc", "taucw", "ssacw", "asycw", "cldfrc"]
-
-for var in outvars_cldprop:
-    valdict_cldprop[var] = serializer2.read(
-        var, serializer2.savepoint["swrad-cldprop-output-000000"]
-    )
-    outdict_cldprop[var] = locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
-
-compare_data(outdict_cldprop, valdict_cldprop)
-
 setcoef(
     locdict_gt4py["pavel"],
     locdict_gt4py["tavel"],
@@ -823,41 +793,8 @@ setcoef(
     validate_args=validate,
 )
 
-outvars_setcoef = [
-    "fac00",
-    "fac01",
-    "fac10",
-    "fac11",
-    "selffac",
-    "selffrac",
-    "forfac",
-    "forfrac",
-    "indself",
-    "indfor",
-    "jp",
-    "jt",
-    "jt1",
-    "laytrop",
-]
-
-outdict_setcoef = dict()
-valdict_setcoef = dict()
-for var in outvars_setcoef:
-    if var == "laytrop":
-        outdict_setcoef[var] = (
-            locdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
-        )
-    else:
-        outdict_setcoef[var] = (
-            locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
-        )
-    valdict_setcoef[var] = serializer2.read(
-        var, serializer2.savepoint["swrad-setcoef-output-000000"]
-    )
-
-compare_data(outdict_setcoef, valdict_setcoef)
-
-laytropind = locdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
+# Compute integer indices of troposphere height
+laytropind = locdict_gt4py["laytrop"].view(np.ndarray).astype(int).squeeze().sum(axis=1)
 locdict_gt4py["laytropind"] = create_storage_from_array(
     laytropind[:, None] - 1, backend, shape_2D, DTYPE_INT
 )
@@ -877,6 +814,7 @@ taumolsetup(
     locdict_gt4py["ngs"],
     locdict_gt4py["id0"],
     locdict_gt4py["id1"],
+    locdict_gt4py["fs"],
     locdict_gt4py["js"],
     locdict_gt4py["jsa"],
     locdict_gt4py["colm1"],
@@ -1387,24 +1325,6 @@ taumol29(
     validate_args=validate,
 )
 
-outvars_taumol = ["taug", "taur", "sfluxzen"]
-
-outdict_taumol = dict()
-valdict_taumol = dict()
-
-for var in outvars_taumol:
-    if var == "sfluxzen":
-        outdict_taumol[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
-    else:
-        outdict_taumol[var] = (
-            locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
-        )
-
-    valdict_taumol[var] = serializer2.read(
-        var, serializer2.savepoint["swrad-taumol-output-000000"]
-    )
-
-compare_data(outdict_taumol, valdict_taumol)
 
 spcvrtm_clearsky(
     locdict_gt4py["ssolar"],
@@ -1632,37 +1552,6 @@ spcvrtm_allsky(
     validate_args=validate,
 )
 
-outvars_spcvrtm = [
-    "fxupc",
-    "fxdnc",
-    "fxup0",
-    "fxdn0",
-    "ftoauc",
-    "ftoau0",
-    "ftoadc",
-    "fsfcuc",
-    "fsfcu0",
-    "fsfcdc",
-    "fsfcd0",
-    "sfbmc",
-    "sfdfc",
-    "sfbm0",
-    "sfdf0",
-    "suvbfc",
-    "suvbf0",
-]
-
-
-outdict_spcvrtm = dict()
-valdict_spcvrtm = dict()
-for var in outvars_spcvrtm:
-    outdict_spcvrtm[var] = locdict_gt4py[var][:, ...].view(np.ndarray).squeeze()
-    valdict_spcvrtm[var] = serializer2.read(
-        var, serializer2.savepoint["swrad-spcvrtm-output-000000"]
-    )
-
-compare_data(outdict_spcvrtm, valdict_spcvrtm)
-
 finalloop(
     indict_gt4py["idxday"],
     indict_gt4py["delp"],
@@ -1708,11 +1597,13 @@ finalloop(
     locdict_gt4py["heatfac"],
 )
 
+end = time.time()
+print(f"Elapsed time = {end-start}")
+
 outdict_final = dict()
 valdict_final = dict()
 
 for var in outvars:
-    print(var)
     if var in ["htswc", "cldtausw", "htsw0"]:
         outdict_final[var] = outdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
     elif var == "htswb":
@@ -1734,3 +1625,127 @@ for var in outvars:
             )
 
 compare_data(outdict_final, valdict_final)
+
+if do_test:
+    # Run tests for output of first loop
+    valdict_firstloop = dict()
+    outdict_firstloop = dict()
+
+    for var in locvars_firstloop:
+        valdict_firstloop[var] = serializer2.read(
+            var, serializer2.savepoint["swrad-firstloop-output-000000"]
+        )
+        if var in ["albbm", "albdf", "tem0", "tem1", "tem2"]:
+            outdict_firstloop[var] = (
+                locdict_gt4py[var][:, :, 0, ...].view(np.ndarray).squeeze()
+            )
+        elif var in ["zcf1", "zcf0", "cosz1", "sntz1", "ssolar"]:
+            outdict_firstloop[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
+        else:
+            outdict_firstloop[var] = (
+                locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+            )
+
+    compare_data(valdict_firstloop, outdict_firstloop)
+
+    # Run test for cldprop output
+    valdict_cldprop = dict()
+    outdict_cldprop = dict()
+
+    outvars_cldprop = ["cldfmc", "taucw", "ssacw", "asycw", "cldfrc"]
+
+    for var in outvars_cldprop:
+        valdict_cldprop[var] = serializer2.read(
+            var, serializer2.savepoint["swrad-cldprop-output-000000"]
+        )
+        outdict_cldprop[var] = (
+            locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+        )
+
+    compare_data(outdict_cldprop, valdict_cldprop)
+
+    # Run tests for output of setcoef
+    outvars_setcoef = [
+        "fac00",
+        "fac01",
+        "fac10",
+        "fac11",
+        "selffac",
+        "selffrac",
+        "forfac",
+        "forfrac",
+        "indself",
+        "indfor",
+        "jp",
+        "jt",
+        "jt1",
+        "laytrop",
+    ]
+
+    outdict_setcoef = dict()
+    valdict_setcoef = dict()
+    for var in outvars_setcoef:
+        if var == "laytrop":
+            outdict_setcoef[var] = (
+                locdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
+            )
+        else:
+            outdict_setcoef[var] = (
+                locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+            )
+        valdict_setcoef[var] = serializer2.read(
+            var, serializer2.savepoint["swrad-setcoef-output-000000"]
+        )
+
+    compare_data(outdict_setcoef, valdict_setcoef)
+
+    # Test output from taumol
+    outvars_taumol = ["taug", "taur", "sfluxzen"]
+
+    outdict_taumol = dict()
+    valdict_taumol = dict()
+
+    for var in outvars_taumol:
+        if var == "sfluxzen":
+            outdict_taumol[var] = locdict_gt4py[var].view(np.ndarray).squeeze()
+        else:
+            outdict_taumol[var] = (
+                locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+            )
+
+        valdict_taumol[var] = serializer2.read(
+            var, serializer2.savepoint["swrad-taumol-output-000000"]
+        )
+
+    compare_data(outdict_taumol, valdict_taumol)
+
+    # Test output for spcvrtm
+    outvars_spcvrtm = [
+        "fxupc",
+        "fxdnc",
+        "fxup0",
+        "fxdn0",
+        "ftoauc",
+        "ftoau0",
+        "ftoadc",
+        "fsfcuc",
+        "fsfcu0",
+        "fsfcdc",
+        "fsfcd0",
+        "sfbmc",
+        "sfdfc",
+        "sfbm0",
+        "sfdf0",
+        "suvbfc",
+        "suvbf0",
+    ]
+
+    outdict_spcvrtm = dict()
+    valdict_spcvrtm = dict()
+    for var in outvars_spcvrtm:
+        outdict_spcvrtm[var] = locdict_gt4py[var][:, ...].view(np.ndarray).squeeze()
+        valdict_spcvrtm[var] = serializer2.read(
+            var, serializer2.savepoint["swrad-spcvrtm-output-000000"]
+        )
+
+    compare_data(outdict_spcvrtm, valdict_spcvrtm)
