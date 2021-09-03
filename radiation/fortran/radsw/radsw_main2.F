@@ -914,7 +914,6 @@
       lab_do_ipt : do ipt = 1, NDAY
 
         j1 = idxday(ipt)
-        write(*,*) "j1 =",j1 
 
         cosz1(j1)  = cosz(j1)
         sntz1(j1)  = f_one / cosz(j1)
@@ -4403,11 +4402,11 @@ enddo lab_do_ipt3
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
-  !$ser data colamt1=colamt colmol1=colmol fac001=fac00 fac011=fac01 fac101=fac10
-  !$ser data fac111=fac11 jp1=jp jt1=jt jt11=jt1 laytrop1=laytrop forfac1=forfac
-  !$ser data forfrac1=forfrac indfor1=indfor selffac1=selffac selffrac1=selffrac
-  !$ser data indself1=indself nlay1=nlay
-  !$ser data id0=id0 id1=id1
+  !$ser data colamtin=colamt colmolin=colmol fac00in=fac00 fac01in=fac01 fac10in=fac10
+  !$ser data fac11in=fac11 jpin=jp jtin=jt jt1in=jt1 laytropin=laytrop forfacin=forfac
+  !$ser data forfracin=forfrac indforin=indfor selffacin=selffac selffracin=selffrac
+  !$ser data indselfin=indself nlayin=nlay
+  !$ser data id0in=id0 id1in=id1
 !$ser verbatim end if
       call taumol16
 !$ser verbatim if (ipt == 1) then

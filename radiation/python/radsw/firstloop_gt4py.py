@@ -12,29 +12,27 @@ from gt4py.gtscript import (
     mod,
 )
 
-sys.path.insert(0, "/work/radiation/python")
+sys.path.insert(0, "..")
 
 from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
-from phys_const import con_g, con_avgd, con_amd, con_amw, con_amo3
+from phys_const import con_g, con_avgd, con_amd, con_amw, amdw, amdo3
 from radphysparam import iswrgas, iswcliq, iovrsw
 
-from radsw.radsw_param import ftiny, oneminus
+from radsw.radsw_param import ftiny, oneminus, s0
 
 rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
-SERIALBOX_DIR = "/usr/local/serialbox"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/work/radiation/fortran/data/SW"
-ddir2 = "/work/radiation/fortran/radsw/dump"
+ddir = "../../fortran/data/SW"
+ddir2 = "../../fortran/radsw/dump"
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank1")
 serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank1")
-savepoints = serializer.savepoint_list()
 
 invars = [
     "plyr",
@@ -152,6 +150,8 @@ for var in invars:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_2D, DTYPE_BOOL
         )
+    elif var == "solcon":
+        indict_gt4py[var] = indict["solcon"]
 
 locdict_gt4py = dict()
 for var in locvars:
@@ -171,20 +171,12 @@ for var in locvars:
 for var in temvars:
     locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
-s0 = 1368.22
-s0fac = indict["solcon"] / s0
-
-amdw = con_amd / con_amw
-amdo3 = con_amd / con_amo3
-
 
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    verbose=True,
     externals={
-        "solcon": indict["solcon"],
-        "s0fac": s0fac,
+        "s0": s0,
         "con_g": con_g,
         "con_avgd": con_avgd,
         "con_amd": con_amd,
@@ -215,6 +207,7 @@ def firstloop(
     de_lgth: FIELD_2D,
     cosz: FIELD_2D,
     idxday: FIELD_2DBOOL,
+    solcon: float,
     cosz1: FIELD_FLT,
     sntz1: FIELD_FLT,
     ssolar: FIELD_FLT,
@@ -247,8 +240,7 @@ def firstloop(
     zcf1: FIELD_2D,
 ):
     from __externals__ import (
-        solcon,
-        s0fac,
+        s0,
         con_g,
         con_avgd,
         con_amd,
@@ -264,6 +256,9 @@ def firstloop(
     )
 
     with computation(FORWARD), interval(0, 1):
+
+        s0fac = solcon / s0
+
         if idxday:
             cosz1 = cosz
             sntz1 = 1.0 / cosz
@@ -378,6 +373,7 @@ firstloop(
     indict_gt4py["de_lgth"],
     indict_gt4py["coszen"],
     indict_gt4py["idxday"],
+    indict_gt4py["solcon"],
     locdict_gt4py["cosz1"],
     locdict_gt4py["sntz1"],
     locdict_gt4py["ssolar"],

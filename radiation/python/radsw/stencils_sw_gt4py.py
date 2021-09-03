@@ -1,222 +1,215 @@
-import sys
 import numpy as np
 import xarray as xr
+import os
+import sys
 from gt4py.gtscript import (
     stencil,
     computation,
-    PARALLEL,
     interval,
-    log,
-    index,
+    PARALLEL,
+    FORWARD,
+    BACKWARD,
+    mod,
 )
 
 sys.path.insert(0, "..")
+from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
-from radsw.radsw_param import ftiny, nbandssw, idxebc, nblow, ngptsw
-from radphysparam import iswcliq, iswcice
-from util import create_storage_from_array, create_storage_zeros, compare_data
+from phys_const import con_g, con_avgd, con_amd, con_amw, amdw, amdo3
+from radphysparam import iswrgas, iswcliq, iovrsw, iswcice
 
-
-sys.path.append(SERIALBOX_DIR + "/python")
-import serialbox as ser
-
-ddir = "../../fortran/radsw/dump"
-ddir2 = "../../fortran/data/SW"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
-serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Generator_rank1")
-savepoints = serializer.savepoint_list()
-
-invars = [
-    "cfrac",
-    "cliqp",
-    "reliq",
-    "cicep",
-    "reice",
-    "cdat1",
-    "cdat2",
-    "cdat3",
-    "cdat4",
-    "zcf1",
-    "dz",
-    "delgth",
-    "idxday",
-]
-
-outvars = ["cldfmc", "taucw", "ssacw", "asycw", "cldfrc"]
-
-locvars = [
-    "tauliq",
-    "tauice",
-    "ssaliq",
-    "ssaice",
-    "ssaran",
-    "ssasnw",
-    "asyliq",
-    "asyice",
-    "asyran",
-    "asysnw",
-    "cldf",
-    "dgeice",
-    "factor",
-    "fint",
-    "tauran",
-    "tausnw",
-    "cldliq",
-    "refliq",
-    "cldice",
-    "refice",
-    "cldran",
-    "cldsnw",
-    "refsnw",
-    "extcoliq",
-    "ssacoliq",
-    "asycoliq",
-    "extcoice",
-    "ssacoice",
-    "asycoice",
-    "dgesnw",
-    "lcloudy",
-    "index",
-    "ia",
-    "jb",
-]
+from radsw.radsw_param import ftiny, oneminus, s0, nbandssw
 
 rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
-indict = dict()
-for var in invars:
-    if var == "idxday":
-        tmp = serializer2.read(var, serializer2.savepoint["swrad-in-000000"])
-    else:
-        tmp = serializer.read(var, serializer.savepoint["swrad-cldprop-input-000000"])
+isubcsw = 2  # Eventually this will be provided by rad_initialize
 
-    if var == "zcf1":
-        indict[var] = np.tile(tmp[:, None], (1, 1))
-    elif var == "delgth":
-        indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
-    elif var == "idxday":
-        tmp2 = np.zeros(npts, dtype=bool)
-        for n in range(npts):
-            if tmp[n] > 1 and tmp[n] < 25:
-                tmp2[tmp[n] - 1] = True
 
-        indict[var] = np.tile(tmp2[:, None], (1, 1))
-    else:
-        tmp2 = np.insert(tmp, 0, 0, axis=1)
-        indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
-
-indict_gt4py = dict()
-for var in invars:
-    if var == "idxday":
-        indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_2D, DTYPE_BOOL
-        )
-    elif var == "zcf1":
-        indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_2D, DTYPE_FLT
-        )
-    else:
-        indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlp1, DTYPE_FLT
-        )
-
-# Read in 2-D array of random numbers used in mcica_subcol, this will change
-# in the future once there is a solution for the RNG in python/gt4py
-ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
-rand2d = ds["rand2d"].data
-cdfunc = np.zeros((npts, nlay, ngptsw))
-idxday = serializer2.read("idxday", serializer2.savepoint["swrad-in-000000"])
-for n in range(npts):
-    myind = idxday[n]
-    if myind > 1 and myind < 25:
-        cdfunc[myind - 1, :, :] = np.reshape(rand2d[n, :], (nlay, ngptsw), order="F")
-indict["cdfunc"] = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
-indict["cdfunc"] = np.insert(indict["cdfunc"], 0, 0, axis=2)
-
-indict_gt4py["cdfunc"] = create_storage_from_array(
-    indict["cdfunc"], backend, shape_nlp1, type_ngptsw
+@stencil(
+    backend=backend,
+    rebuild=rebuild,
+    externals={
+        "s0": s0,
+        "con_g": con_g,
+        "con_avgd": con_avgd,
+        "con_amd": con_amd,
+        "con_amw": con_amw,
+        "amdw": amdw,
+        "amdo3": amdo3,
+        "iswrgas": iswrgas,
+        "iswcliq": iswcliq,
+        "iovrsw": iovrsw,
+        "nbdsw": nbdsw,
+        "ftiny": ftiny,
+        "oneminus": oneminus,
+    },
 )
+def firstloop(
+    plyr: FIELD_FLT,
+    plvl: FIELD_FLT,
+    tlyr: FIELD_FLT,
+    tlvl: FIELD_FLT,
+    qlyr: FIELD_FLT,
+    olyr: FIELD_FLT,
+    gasvmr: Field[type_10],
+    clouds: Field[type_9],
+    aerosols: Field[(DTYPE_FLT, (nbdsw, 3))],
+    sfcalb: Field[(DTYPE_FLT, (4,))],
+    dzlyr: FIELD_FLT,
+    delpin: FIELD_FLT,
+    de_lgth: FIELD_2D,
+    cosz: FIELD_2D,
+    idxday: FIELD_2DBOOL,
+    solcon: float,
+    cosz1: FIELD_FLT,
+    sntz1: FIELD_FLT,
+    ssolar: FIELD_FLT,
+    albbm: Field[(DTYPE_FLT, (2,))],
+    albdf: Field[(DTYPE_FLT, (2,))],
+    tem1: FIELD_FLT,
+    tem2: FIELD_FLT,
+    pavel: FIELD_FLT,
+    tavel: FIELD_FLT,
+    h2ovmr: FIELD_FLT,
+    o3vmr: FIELD_FLT,
+    tem0: FIELD_FLT,
+    coldry: FIELD_FLT,
+    temcol: FIELD_FLT,
+    colamt: Field[type_maxgas],
+    colmol: FIELD_FLT,
+    tauae: Field[type_nbdsw],
+    ssaae: Field[type_nbdsw],
+    asyae: Field[type_nbdsw],
+    cfrac: FIELD_FLT,
+    cliqp: FIELD_FLT,
+    reliq: FIELD_FLT,
+    cicep: FIELD_FLT,
+    reice: FIELD_FLT,
+    cdat1: FIELD_FLT,
+    cdat2: FIELD_FLT,
+    cdat3: FIELD_FLT,
+    cdat4: FIELD_FLT,
+    zcf0: FIELD_2D,
+    zcf1: FIELD_2D,
+):
+    from __externals__ import (
+        s0,
+        con_g,
+        con_avgd,
+        con_amd,
+        con_amw,
+        amdw,
+        amdo3,
+        iswrgas,
+        iswcliq,
+        iovrsw,
+        nbdsw,
+        ftiny,
+        oneminus,
+    )
 
-outdict_gt4py = dict()
-for var in outvars:
-    if var == "cldfrc":
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
-    elif var == "cldfmc":
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw)
-    else:
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbdsw)
+    with computation(FORWARD), interval(0, 1):
 
-locdict_gt4py = dict()
-for var in locvars:
-    if var in [
-        "tauliq",
-        "tauice",
-        "ssaliq",
-        "ssaice",
-        "ssaran",
-        "ssasnw",
-        "asyliq",
-        "asyice",
-        "asyran",
-        "asysnw",
-    ]:
-        locdict_gt4py[var] = create_storage_zeros(
-            backend, shape_nlp1, type_nbandssw_flt
-        )
-    elif var == "lcloudy":
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw_bool)
-    elif var in ["index", "ia", "jb"]:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
-    else:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+        s0fac = solcon / s0
 
-idxebc = np.tile(np.array(idxebc)[None, None, None, :], (npts, 1, nlp1, 1))
-locdict_gt4py["idxebc"] = create_storage_from_array(
-    idxebc, backend, shape_nlp1, type_nbandssw_int
-)
+        if idxday:
+            cosz1 = cosz
+            sntz1 = 1.0 / cosz
+            ssolar = s0fac * cosz
 
+            # Prepare surface albedo: bm,df - dir,dif; 1,2 - nir,uvv.
+            albbm[0, 0, 0][0] = sfcalb[0, 0, 0][0]
+            albdf[0, 0, 0][0] = sfcalb[0, 0, 0][1]
+            albbm[0, 0, 0][1] = sfcalb[0, 0, 0][2]
+            albdf[0, 0, 0][1] = sfcalb[0, 0, 0][3]
 
-def loadlookupdata(name):
-    """
-    Load lookup table data for the given subroutine
-    This is a workaround for now, in the future this could change to a dictionary
-    or some kind of map object when gt4py gets support for lookup tables
-    """
-    ds = xr.open_dataset("../lookupdata/radsw_" + name + "_data.nc")
+            zcf0 = 1.0
+            zcf1 = 1.0
 
-    lookupdict = dict()
-    lookupdict_gt4py = dict()
+    with computation(FORWARD), interval(1, None):
+        if idxday:
+            tem1 = 100.0 * con_g
+            tem2 = 1.0e-20 * 1.0e3 * con_avgd
 
-    for var in ds.data_vars.keys():
-        # print(f"{var} = {ds.data_vars[var].shape}")
-        if len(ds.data_vars[var].shape) == 1:
-            lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :], (npts, 1, nlp1, 1)
-            )
-        elif len(ds.data_vars[var].shape) == 2:
-            lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1)
-            )
-        elif len(ds.data_vars[var].shape) == 3:
-            lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :, :, :], (npts, 1, nlp1, 1, 1, 1)
-            )
+            pavel = plyr
+            tavel = tlyr
 
-        if len(ds.data_vars[var].shape) >= 1:
-            lookupdict_gt4py[var] = create_storage_from_array(
-                lookupdict[var], backend, shape_nlp1, (DTYPE_FLT, ds[var].shape)
-            )
-        else:
-            lookupdict_gt4py[var] = float(ds[var].data)
+            h2ovmr = max(0.0, qlyr * amdw / (1.0 - qlyr))  # input specific humidity
+            o3vmr = max(0.0, olyr * amdo3)  # input mass mixing ratio
 
-    return lookupdict_gt4py
+            tem0 = (1.0 - h2ovmr) * con_amd + h2ovmr * con_amw
+            coldry = tem2 * delpin / (tem1 * tem0 * (1.0 + h2ovmr))
+            temcol = 1.0e-12 * coldry
 
+            colamt[0, 0, 0][0] = max(0.0, coldry * h2ovmr)  # h2o
+            colamt[0, 0, 0][1] = max(temcol, coldry * gasvmr[0, 0, 0][0])  # co2
+            colamt[0, 0, 0][2] = max(0.0, coldry * o3vmr)  # o3
+            colmol = coldry + colamt[0, 0, 0][0]
 
-lookupdict = loadlookupdata("cldprtb")
+            #  --- ...  set up gas column amount, convert from volume mixing ratio
+            #           to molec/cm2 based on coldry (scaled to 1.0e-20)
 
-isubcsw = 2
+            if iswrgas > 0:
+                colamt[0, 0, 0][3] = max(temcol, coldry * gasvmr[0, 0, 0][1])  # n2o
+                colamt[0, 0, 0][4] = max(temcol, coldry * gasvmr[0, 0, 0][2])  # ch4
+                colamt[0, 0, 0][5] = max(temcol, coldry * gasvmr[0, 0, 0][3])  # o2
+            else:
+                colamt[0, 0, 0][3] = temcol  # n2o
+                colamt[0, 0, 0][4] = temcol  # ch4
+                colamt[0, 0, 0][5] = temcol
+
+            #  --- ...  set aerosol optical properties
+            for ib in range(nbdsw):
+                tauae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 0]
+                ssaae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 1]
+                asyae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 2]
+
+            if iswcliq > 0:  # use prognostic cloud method
+                cfrac = clouds[0, 0, 0][0]  # cloud fraction
+                cliqp = clouds[0, 0, 0][1]  # cloud liq path
+                reliq = clouds[0, 0, 0][2]  # liq partical effctive radius
+                cicep = clouds[0, 0, 0][3]  # cloud ice path
+                reice = clouds[0, 0, 0][4]  # ice partical effctive radius
+                cdat1 = clouds[0, 0, 0][5]  # cloud rain drop path
+                cdat2 = clouds[0, 0, 0][6]  # rain partical effctive radius
+                cdat3 = clouds[0, 0, 0][7]  # cloud snow path
+                cdat4 = clouds[0, 0, 0][8]  # snow partical effctive radius
+            else:  # use diagnostic cloud method
+                cfrac = clouds[0, 0, 0][0]  # cloud fraction
+                cdat1 = clouds[0, 0, 0][1]  # cloud optical depth
+                cdat2 = clouds[0, 0, 0][2]  # cloud single scattering albedo
+                cdat3 = clouds[0, 0, 0][3]  # cloud asymmetry factor
+
+            # -# Compute fractions of clear sky view:
+            #    - random overlapping
+            #    - max/ran overlapping
+            #    - maximum overlapping
+
+            if iovrsw == 0:
+                zcf0 = zcf0 * (1.0 - cfrac)
+            elif iovrsw == 1:
+                if cfrac > ftiny:  # cloudy layer
+                    zcf1 = min(zcf1, 1.0 - cfrac)
+                elif zcf1 < 1.0:  # clear layer
+                    zcf0 = zcf0 * zcf1
+                    zcf1 = 1.0
+
+            elif iovrsw >= 2:
+                zcf0 = min(zcf0, 1.0 - cfrac)  # used only as clear/cloudy indicator
+
+    with computation(FORWARD), interval(0, 1):
+        if idxday:
+            if iovrsw == 1:
+                zcf0 = zcf0 * zcf1
+
+            if zcf0 <= ftiny:
+                zcf0 = 0.0
+            if zcf0 > oneminus:
+                zcf0 = 1.0
+
+            zcf1 = 1.0 - zcf0
 
 
 @stencil(
@@ -667,103 +660,3 @@ def cldprop(
                 cldfmc[0, 0, 0][n3] = 1.0
             else:
                 cldfmc[0, 0, 0][n3] = 0.0
-
-
-cldprop(
-    indict_gt4py["cfrac"],
-    indict_gt4py["cliqp"],
-    indict_gt4py["reliq"],
-    indict_gt4py["cicep"],
-    indict_gt4py["reice"],
-    indict_gt4py["cdat1"],
-    indict_gt4py["cdat2"],
-    indict_gt4py["cdat3"],
-    indict_gt4py["cdat4"],
-    indict_gt4py["zcf1"],
-    indict_gt4py["dz"],
-    indict_gt4py["delgth"],
-    indict_gt4py["idxday"],
-    outdict_gt4py["cldfmc"],
-    outdict_gt4py["taucw"],
-    outdict_gt4py["ssacw"],
-    outdict_gt4py["asycw"],
-    outdict_gt4py["cldfrc"],
-    locdict_gt4py["tauliq"],
-    locdict_gt4py["tauice"],
-    locdict_gt4py["ssaliq"],
-    locdict_gt4py["ssaice"],
-    locdict_gt4py["ssaran"],
-    locdict_gt4py["ssasnw"],
-    locdict_gt4py["asyliq"],
-    locdict_gt4py["asyice"],
-    locdict_gt4py["asyran"],
-    locdict_gt4py["asysnw"],
-    locdict_gt4py["cldf"],
-    locdict_gt4py["dgeice"],
-    locdict_gt4py["factor"],
-    locdict_gt4py["fint"],
-    locdict_gt4py["tauran"],
-    locdict_gt4py["tausnw"],
-    locdict_gt4py["cldliq"],
-    locdict_gt4py["refliq"],
-    locdict_gt4py["cldice"],
-    locdict_gt4py["refice"],
-    locdict_gt4py["cldran"],
-    locdict_gt4py["cldsnw"],
-    locdict_gt4py["refsnw"],
-    locdict_gt4py["extcoliq"],
-    locdict_gt4py["ssacoliq"],
-    locdict_gt4py["asycoliq"],
-    locdict_gt4py["extcoice"],
-    locdict_gt4py["ssacoice"],
-    locdict_gt4py["asycoice"],
-    locdict_gt4py["dgesnw"],
-    locdict_gt4py["lcloudy"],
-    locdict_gt4py["index"],
-    locdict_gt4py["ia"],
-    locdict_gt4py["jb"],
-    locdict_gt4py["idxebc"],
-    indict_gt4py["cdfunc"],
-    lookupdict["extliq1"],
-    lookupdict["extliq2"],
-    lookupdict["ssaliq1"],
-    lookupdict["ssaliq2"],
-    lookupdict["asyliq1"],
-    lookupdict["asyliq2"],
-    lookupdict["extice2"],
-    lookupdict["ssaice2"],
-    lookupdict["asyice2"],
-    lookupdict["extice3"],
-    lookupdict["ssaice3"],
-    lookupdict["asyice3"],
-    lookupdict["fdlice3"],
-    lookupdict["abari"],
-    lookupdict["bbari"],
-    lookupdict["cbari"],
-    lookupdict["dbari"],
-    lookupdict["ebari"],
-    lookupdict["fbari"],
-    lookupdict["b0s"],
-    lookupdict["b1s"],
-    lookupdict["c0s"],
-    lookupdict["b0r"],
-    lookupdict["c0r"],
-    lookupdict["a0r"],
-    lookupdict["a1r"],
-    lookupdict["a0s"],
-    lookupdict["a1s"],
-    domain=shape_nlp1,
-    origin=default_origin,
-    validate_args=validate,
-)
-
-valdict = dict()
-outdict_np = dict()
-
-for var in outvars:
-    valdict[var] = serializer.read(
-        var, serializer.savepoint["swrad-cldprop-output-000000"]
-    )
-    outdict_np[var] = outdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
-
-compare_data(outdict_np, valdict)
