@@ -29,7 +29,8 @@ for var in invars:
     else:
         tmp = serializer.read(var, serializer.savepoint["swrad-setcoef-input-000000"])
     if var in ["pavel", "tavel", "h2ovmr"]:
-        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
+        indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
     elif var == "idxday":
         tmp2 = np.zeros(npts, dtype=bool)
         for n in range(npts):
@@ -44,7 +45,7 @@ indict_gt4py = dict()
 for var in invars:
     if var in ["pavel", "tavel", "h2ovmr"]:
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, DTYPE_FLT
+            indict[var], backend, shape_nlp1, DTYPE_FLT
         )
     elif var == "idxday":
         indict_gt4py[var] = create_storage_from_array(
@@ -69,33 +70,33 @@ outvars_int = ["indself", "indfor", "jp", "jt", "jt1"]
 outdict_gt4py = dict()
 
 for var in outvars_flt:
-    outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
+    outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 for var in outvars_int:
-    outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
+    outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
 
-outdict_gt4py["laytrop"] = create_storage_zeros(backend, shape_nlay, DTYPE_BOOL)
+outdict_gt4py["laytrop"] = create_storage_zeros(backend, shape_nlp1, DTYPE_BOOL)
 
 locvars = ["plog", "fp", "fp1", "ft", "ft1", "tem1", "tem2", "jp1"]
 
 locdict_gt4py = dict()
 for var in locvars:
     if var == "jp1":
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
     else:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
 ds = xr.open_dataset("../lookupdata/radsw_ref_data.nc")
 preflog = ds["preflog"].data
-preflog = np.tile(preflog[None, None, None, :], (npts, 1, nlay, 1))
+preflog = np.tile(preflog[None, None, None, :], (npts, 1, nlp1, 1))
 tref = ds["tref"].data
-tref = np.tile(tref[None, None, None, :], (npts, 1, nlay, 1))
+tref = np.tile(tref[None, None, None, :], (npts, 1, nlp1, 1))
 lookupdict_gt4py = dict()
 
 lookupdict_gt4py["preflog"] = create_storage_from_array(
-    preflog, backend, shape_nlay, (DTYPE_FLT, (59,))
+    preflog, backend, shape_nlp1, (DTYPE_FLT, (59,))
 )
 lookupdict_gt4py["tref"] = create_storage_from_array(
-    tref, backend, shape_nlay, (DTYPE_FLT, (59,))
+    tref, backend, shape_nlp1, (DTYPE_FLT, (59,))
 )
 
 stpfac = 296.0 / 1013.0
@@ -134,7 +135,7 @@ def setcoef(
 ):
     from __externals__ import stpfac
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
         if idxday:
             forfac = pavel * stpfac / (tavel * (1.0 + h2ovmr))
 
@@ -245,7 +246,7 @@ setcoef(
     locdict_gt4py["jp1"],
     lookupdict_gt4py["preflog"],
     lookupdict_gt4py["tref"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -275,7 +276,7 @@ for var in outvars:
             outdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
         )
     else:
-        outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
+        outdict_np[var] = outdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
     outdict_val[var] = serializer.read(
         var, serializer.savepoint["swrad-setcoef-output-000000"]
     )

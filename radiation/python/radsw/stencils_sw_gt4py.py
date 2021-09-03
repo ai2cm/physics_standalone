@@ -10,6 +10,7 @@ from gt4py.gtscript import (
     FORWARD,
     BACKWARD,
     mod,
+    log,
 )
 
 sys.path.insert(0, "..")
@@ -18,7 +19,7 @@ from config import *
 from phys_const import con_g, con_avgd, con_amd, con_amw, amdw, amdo3
 from radphysparam import iswrgas, iswcliq, iovrsw, iswcice
 
-from radsw.radsw_param import ftiny, oneminus, s0, nbandssw
+from radsw.radsw_param import ftiny, oneminus, s0, nbandssw, stpfac
 
 rebuild = False
 validate = True
@@ -660,3 +661,118 @@ def cldprop(
                 cldfmc[0, 0, 0][n3] = 1.0
             else:
                 cldfmc[0, 0, 0][n3] = 0.0
+
+
+@stencil(backend=backend, rebuild=rebuild, externals={"stpfac": stpfac})
+def setcoef(
+    pavel: FIELD_FLT,
+    tavel: FIELD_FLT,
+    h2ovmr: FIELD_FLT,
+    idxday: FIELD_2DBOOL,
+    laytrop: FIELD_BOOL,
+    jp: FIELD_INT,
+    jt: FIELD_INT,
+    jt1: FIELD_INT,
+    fac00: FIELD_FLT,
+    fac01: FIELD_FLT,
+    fac10: FIELD_FLT,
+    fac11: FIELD_FLT,
+    selffac: FIELD_FLT,
+    selffrac: FIELD_FLT,
+    indself: FIELD_INT,
+    forfac: FIELD_FLT,
+    forfrac: FIELD_FLT,
+    indfor: FIELD_INT,
+    plog: FIELD_FLT,
+    fp: FIELD_FLT,
+    fp1: FIELD_FLT,
+    ft: FIELD_FLT,
+    ft1: FIELD_FLT,
+    tem1: FIELD_FLT,
+    tem2: FIELD_FLT,
+    jp1: FIELD_INT,
+    preflog: Field[(DTYPE_FLT, (59,))],
+    tref: Field[(DTYPE_FLT, (59,))],
+):
+    from __externals__ import stpfac
+
+    with computation(PARALLEL), interval(1, None):
+        if idxday:
+            forfac = pavel * stpfac / (tavel * (1.0 + h2ovmr))
+
+            #  --- ...  find the two reference pressures on either side of the
+            #           layer pressure.  store them in jp and jp1.  store in fp the
+            #           fraction of the difference (in ln(pressure)) between these
+            #           two values that the layer pressure lies.
+
+            plog = log(pavel)
+            jp = max(1, min(58, 36.0 - 5.0 * (plog + 0.04))) - 1
+            jp1 = jp + 1
+            fp = 5.0 * (preflog[0, 0, 0][jp] - plog)
+
+            #  --- ...  determine, for each reference pressure (jp and jp1), which
+            #          reference temperature (these are different for each reference
+            #          pressure) is nearest the layer temperature but does not exceed it.
+            #          store these indices in jt and jt1, resp. store in ft (resp. ft1)
+            #          the fraction of the way between jt (jt1) and the next highest
+            #          reference temperature that the layer temperature falls.
+
+            tem1 = (tavel - tref[0, 0, 0][jp]) / 15.0
+            tem2 = (tavel - tref[0, 0, 0][jp1]) / 15.0
+            jt = max(1, min(4, 3.0 + tem1)) - 1
+            jt1 = max(1, min(4, 3.0 + tem2)) - 1
+            ft = tem1 - (jt - 2)
+            ft1 = tem2 - (jt1 - 2)
+
+            #  --- ...  we have now isolated the layer ln pressure and temperature,
+            #           between two reference pressures and two reference temperatures
+            #           (for each reference pressure).  we multiply the pressure
+            #           fraction fp with the appropriate temperature fractions to get
+            #           the factors that will be needed for the interpolation that yields
+            #           the optical depths (performed in routines taugbn for band n).
+
+            fp1 = 1.0 - fp
+            fac10 = fp1 * ft
+            fac00 = fp1 * (1.0 - ft)
+            fac11 = fp * ft1
+            fac01 = fp * (1.0 - ft1)
+
+            #  --- ...  if the pressure is less than ~100mb, perform a different
+            #           set of species interpolations.
+
+            if plog > 4.56:
+
+                laytrop = True  # Flag for being in the troposphere
+
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           foreign-continuum in the calculation of absorption coefficient.
+
+                tem1 = (332.0 - tavel) / 36.0
+                indfor = min(2, max(1, tem1))
+                forfrac = tem1 - indfor
+
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           self-continuum in the calculation of absorption coefficient.
+
+                tem2 = (tavel - 188.0) / 7.2
+                indself = min(9, max(1, tem2 - 7))
+                selffrac = tem2 - (indself + 7)
+                selffac = h2ovmr * forfac
+
+            else:
+
+                #  --- ...  set up factors needed to separately include the water vapor
+                #           foreign-continuum in the calculation of absorption coefficient.
+
+                tem1 = (tavel - 188.0) / 36.0
+                indfor = 3
+                forfrac = tem1 - 1.0
+
+                indself = 0
+                selffrac = 0.0
+                selffac = 0.0
+
+            # Add one to indices for consistency with Fortran
+            jp += 1
+            jt += 1
+            jt1 += 1

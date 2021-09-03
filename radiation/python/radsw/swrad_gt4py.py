@@ -117,6 +117,29 @@ locvars_cldprop = [
     "cldfrc",
 ]
 
+locvars_setcoef = [
+    "plog",
+    "fp",
+    "fp1",
+    "ft",
+    "ft1",
+    "jp1",
+    "fac00",
+    "fac01",
+    "fac10",
+    "fac11",
+    "selffac",
+    "selffrac",
+    "forfac",
+    "forfrac",
+    "indself",
+    "indfor",
+    "jp",
+    "jt",
+    "jt1",
+    "laytrop",
+]
+
 temvars = ["tem0", "tem1", "tem2"]
 
 indict = dict()
@@ -250,6 +273,27 @@ locdict_gt4py["idxebc"] = create_storage_from_array(
     idxebc, backend, shape_nlp1, type_nbandssw_int
 )
 
+for var in locvars_setcoef:
+    if var == "jp1":
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
+    elif var in [
+        "fac00",
+        "fac01",
+        "fac10",
+        "fac11",
+        "selffac",
+        "selffrac",
+        "forfac",
+        "forfrac",
+    ]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+    elif var in ["indself", "indfor", "jp", "jt", "jt1"]:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
+    elif var == "laytrop":
+        locdict_gt4py["laytrop"] = create_storage_zeros(backend, shape_nlp1, DTYPE_BOOL)
+    else:
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
+
 
 def loadlookupdata(name):
     """
@@ -288,6 +332,21 @@ def loadlookupdata(name):
 
 
 lookupdict = loadlookupdata("cldprtb")
+
+# Load lookup data for setcoef
+ds = xr.open_dataset("../lookupdata/radsw_ref_data.nc")
+preflog = ds["preflog"].data
+preflog = np.tile(preflog[None, None, None, :], (npts, 1, nlp1, 1))
+tref = ds["tref"].data
+tref = np.tile(tref[None, None, None, :], (npts, 1, nlp1, 1))
+lookupdict_setcoef = dict()
+
+lookupdict_setcoef["preflog"] = create_storage_from_array(
+    preflog, backend, shape_nlp1, (DTYPE_FLT, (59,))
+)
+lookupdict_setcoef["tref"] = create_storage_from_array(
+    tref, backend, shape_nlp1, (DTYPE_FLT, (59,))
+)
 
 
 firstloop(
@@ -460,3 +519,71 @@ for var in outvars_cldprop:
     outdict_cldprop[var] = locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
 
 compare_data(outdict_cldprop, valdict_cldprop)
+
+setcoef(
+    locdict_gt4py["pavel"],
+    locdict_gt4py["tavel"],
+    locdict_gt4py["h2ovmr"],
+    indict_gt4py["idxday"],
+    locdict_gt4py["laytrop"],
+    locdict_gt4py["jp"],
+    locdict_gt4py["jt"],
+    locdict_gt4py["jt1"],
+    locdict_gt4py["fac00"],
+    locdict_gt4py["fac01"],
+    locdict_gt4py["fac10"],
+    locdict_gt4py["fac11"],
+    locdict_gt4py["selffac"],
+    locdict_gt4py["selffrac"],
+    locdict_gt4py["indself"],
+    locdict_gt4py["forfac"],
+    locdict_gt4py["forfrac"],
+    locdict_gt4py["indfor"],
+    locdict_gt4py["plog"],
+    locdict_gt4py["fp"],
+    locdict_gt4py["fp1"],
+    locdict_gt4py["ft"],
+    locdict_gt4py["ft1"],
+    locdict_gt4py["tem1"],
+    locdict_gt4py["tem2"],
+    locdict_gt4py["jp1"],
+    lookupdict_setcoef["preflog"],
+    lookupdict_setcoef["tref"],
+    domain=shape_nlp1,
+    origin=default_origin,
+    validate_args=validate,
+)
+
+outvars_setcoef = [
+    "fac00",
+    "fac01",
+    "fac10",
+    "fac11",
+    "selffac",
+    "selffrac",
+    "forfac",
+    "forfrac",
+    "indself",
+    "indfor",
+    "jp",
+    "jt",
+    "jt1",
+    "laytrop",
+]
+
+outdict_setcoef = dict()
+valdict_setcoef = dict()
+for var in outvars_setcoef:
+    if var == "laytrop":
+        outdict_setcoef[var] = (
+            locdict_gt4py[var].view(np.ndarray).astype(int).squeeze().sum(axis=1)
+        )
+    else:
+        outdict_setcoef[var] = (
+            locdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
+        )
+    valdict_setcoef[var] = serializer2.read(
+        var, serializer2.savepoint["swrad-setcoef-output-000000"]
+    )
+
+compare_data(outdict_setcoef, valdict_setcoef)
