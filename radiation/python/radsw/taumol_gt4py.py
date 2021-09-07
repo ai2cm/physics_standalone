@@ -304,8 +304,6 @@ def taumolsetup(
     id1: Field[type_nbandssw_int],
     js: FIELD_INT,
     jsa: FIELD_INT,
-    colm1: FIELD_FLT,
-    colm2: FIELD_FLT,
     sfluxref01: Field[(DTYPE_FLT, (16, 1, 7))],
     sfluxref02: Field[(DTYPE_FLT, (16, 5, 2))],
     sfluxref03: Field[(DTYPE_FLT, (16, 9, 5))],
@@ -377,6 +375,10 @@ def taumolsetup(
                 )
 
     with computation(FORWARD), interval(0, -1):
+
+        colm1 = 0.0
+        colm2 = 0.0
+
         if idxday:
             if not laytrop:
                 # case default
@@ -527,7 +529,7 @@ def taumolsetup(
                 if jp < layreffr[0, 0, 0][8] and jp[0, 0, 1] >= layreffr[0, 0, 0][8]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][8]]
-                if layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
+                elif layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
                     colm1 = colamt[0, 0, 0][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 0][ix2[0, 0, 0][8]]
 
@@ -2150,8 +2152,6 @@ taumolsetup(
     locdict_gt4py["id1"],
     locdict_gt4py["js"],
     locdict_gt4py["jsa"],
-    locdict_gt4py["colm1"],
-    locdict_gt4py["colm2"],
     lookupdict_ref["sfluxref01"],
     lookupdict_ref["sfluxref02"],
     lookupdict_ref["sfluxref03"],
