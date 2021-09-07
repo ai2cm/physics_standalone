@@ -382,8 +382,7 @@ class RadLWClass:
             for i in range(npts):
                 ipseed[i] = icseed[i]
 
-        for iplon in range(0, 1):
-            print(f"iplon = {iplon}")
+        for iplon in range(npts):
             if sfemis[iplon] > self.eps and sfemis[iplon] <= 1.0:
                 for j in range(nbands):
                     semiss[j] = sfemis[iplon]
@@ -2083,14 +2082,6 @@ class RadLWClass:
                     #  --- ... clear sky radiance
                     radclru = radclru * trng + gasu
                     clrurad[k + 1, ib] = clrurad[k + 1, ib] + radclru
-
-                if ig == 0:
-                    print(f"radtotu = {radtotu}")
-                    print(f"clfm = {clfm}")
-                    print(f"trng = {trng}")
-                    print(f"efclrfr = {efclrfr}")
-                    print(f"gasu = {gasu}")
-                    print(f"totsrcu = {totsrcu}")
 
         # Process longwave output from band for total and clear streams.
         # Calculate upward, downward, and net flux.
