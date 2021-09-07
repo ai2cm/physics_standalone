@@ -3,8 +3,8 @@
 *.F90
 *.o
 *.mod
-fortran/*.dat
+*.dat
 *.sdfg
-fortran/*/dump/*.json
-fortran/*/dump/*.dat
 *.x
+python/radlw/taugb10
+
