@@ -1,10 +1,8 @@
 import numpy as np
-import sys
-import os
 
 from config import *
 from radphysparam import *
-from phys_const import con_eps, con_epsm1
+from phys_const import con_eps, con_epsm1, con_rocp, con_fvirt, con_rog
 from funcphys import fpvs
 
 from radlw.radiation_astronomy import AstronomyClass
@@ -14,6 +12,7 @@ from radlw.radiation_gases import GasClass
 from radlw.radiation_sfc import SurfaceClass
 from radlw.radlw_main import RadLWClass
 from radlw.radsw_main import RadSWClass
+from radlw.coszmn import coszmn
 
 
 class RadiationDriver:
@@ -132,7 +131,7 @@ class RadiationDriver:
         #  --- ...  lw radiation initialization routine
         self.rlw = RadLWClass(me, iovrlw, isubclw)
         #  --- ...  sw radiation initialization routine
-        self.rsw = RadSWClass(me, iovrsw, isubcsw, iswcliq, exp_tbl)
+        self.rsw = RadSWClass(me, iovrsw, isubcsw, iswcliq)
 
     def radupdate(
         self, idate, jdate, deltsw, deltim, lsswr, me, slag, sdec, cdec, solcon
@@ -298,14 +297,28 @@ class RadiationDriver:
         LP1 = LM + 1  # num of in/out levels
 
         tskn = np.zeros(IM)
+        tsfa = np.zeros(IM)
         tsfg = np.zeros(IM)
+        tem1d = np.zeros(IM)
+        idxday = np.zeros(IM, dtype=DTYPE_INT)
 
         plvl = np.zeros((IM, Model.levr + self.LTP + 1))
+        tlvl = np.zeros((IM, Model.levr + self.LTP + 1))
+        tem2db = np.zeros((IM, Model.levr + self.LTP + 1))
+
         plyr = np.zeros((IM, Model.levr + self.LTP))
         tlyr = np.zeros((IM, Model.levr + self.LTP))
+        olyr = np.zeros((IM, Model.levr + self.LTP))
+        qlyr = np.zeros((IM, Model.levr + self.LTP))
         rhly = np.zeros((IM, Model.levr + self.LTP))
+        tvly = np.zeros((IM, Model.levr + self.LTP))
+        delp = np.zeros((IM, Model.levr + self.LTP))
         qstl = np.zeros((IM, Model.levr + self.LTP))
+        dz = np.zeros((IM, Model.levr + self.LTP))
         prslk1 = np.zeros((IM, Model.levr + self.LTP))
+        tem2da = np.zeros((IM, Model.levr + self.LTP))
+
+        tracer1 = np.zeros((IM, Model.levr + self.LTP, NTRAC - 1))
 
         #  --- ...  set local /level/layer indexes corresponding to in/out variables
 
@@ -379,3 +392,201 @@ class RadiationDriver:
                     0.0, min(1.0, max(self.QMIN, Statein.qgrs(i, k2, 1)) / qs)
                 )
                 qstl[i, k1] = qs
+
+        # --- recast remaining all tracers (except sphum) forcing them all to be positive
+        for j in range(1, NTRAC):
+            for k in range(LM):
+                k1 = k + kd
+                k2 = k + lsk
+                tracer1[:, k1, j] = max(0.0, Statein.qgrs[:, k2, j])
+
+        if ivflip == 0:  # input data from toa to sfc
+            for i in range(IM):
+                plvl[i, 1 + kd] = 0.01 * Statein.prsi[i, 0]  # pa to mb (hpa)
+
+            if lsk != 0:
+                for i in range(IM):
+                    plvl[i, 1 + kd] = 0.5 * (plvl[i, 2 + kd] + plvl[i, 1 + kd])
+        else:  # input data from sfc to top
+            for i in range(IM):
+                plvl[i, LP1 + kd] = 0.01 * Statein.prsi[i, LP1 + lsk]  # pa to mb (hpa)
+
+            if lsk != 0:
+                for i in range(IM):
+                    plvl[i, LM + kd] = 0.5 * (plvl[i, LP1 + kd] + plvl[i, LM + kd])
+
+        if self.lextop:  # values for extra top layer
+            for i in range(IM):
+                plvl[i, llb] = self.prsmin
+                if plvl[i, lla] <= self.prsmin:
+                    plvl[i, lla] = 2.0 * self.prsmin
+
+                plyr[i, lyb] = 0.5 * plvl[i, lla]
+                tlyr[i, lyb] = tlyr[i, lya]
+                prslk1[i, lyb] = (plyr[i, lyb] * 0.00001) ** con_rocp  # plyr in Pa
+                rhly[i, lyb] = rhly[i, lya]
+                qstl[i, lyb] = qstl[i, lya]
+
+            #  ---  note: may need to take care the top layer amount
+            tracer1[:, lyb, :] = tracer1[:, lya, :]
+
+        #  - Get layer ozone mass mixing ratio (if use ozone climatology data,
+        #    call getozn()).
+
+        if Model.ntoz > 0:  # interactive ozone generation
+            for k in range(LMK):
+                for i in range(IM):
+                    olyr[i, k] = max(self.QMIN, tracer1[i, k, Model.ntoz])
+        else:  # climatological ozone
+            olyr = getozn(prslk1, Grid.xlat, IM, LMK)
+
+        #  - Call coszmn(), to compute cosine of zenith angle (only when SW is called)
+
+        if Model.lsswr:
+            coszen, coszdg = coszmn(
+                Grid.xlon, Grid.sinlat, Grid.coslat, Model.solhr, IM, me
+            )
+
+        #  - Call getgases(), to set up non-prognostic gas volume mixing
+        #    ratioes (gasvmr).
+        #  - gasvmr(:,:,1)  -  co2 volume mixing ratio
+        #  - gasvmr(:,:,2)  -  n2o volume mixing ratio
+        #  - gasvmr(:,:,3)  -  ch4 volume mixing ratio
+        #  - gasvmr(:,:,4)  -  o2  volume mixing ratio
+        #  - gasvmr(:,:,5)  -  co  volume mixing ratio
+        #  - gasvmr(:,:,6)  -  cf11 volume mixing ratio
+        #  - gasvmr(:,:,7)  -  cf12 volume mixing ratio
+        #  - gasvmr(:,:,8)  -  cf22 volume mixing ratio
+        #  - gasvmr(:,:,9)  -  ccl4 volume mixing ratio
+
+        #  --- ...  set up non-prognostic gas volume mixing ratioes
+
+        gasvmr = getgases(
+            plvl,
+            Grid.xlon,
+            Grid.xlat,
+            IM,
+            LMK,
+        )
+
+        #  - Get temperature at layer interface, and layer moisture.
+        for k in range(1, LMK):
+            for i in range(IM):
+                tem2da[i, k] = np.log(plyr[i, k])
+                tem2db[i, k] = np.log(plvl[i, k])
+
+        if ivflip == 0:  # input data from toa to sfc
+            for i in range(IM):
+                tem1d[i] = self.QME6
+                tem2da[i, 0] = np.log(plyr[i, 0])
+                tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0]))
+                tem2db[i, LMP] = np.log(plvl[i, LMP])
+                tsfa[i] = tlyr[i, LMK]  # sfc layer air temp
+                tlvl[i, 0] = tlyr[i, 0]
+                tlvl[i, LMP] = tskn[i]
+
+            for k in range(LM):
+                k1 = k + kd
+                for i in range(IM):
+                    qlyr[i, k1] = max(tem1d[i], Statein.qgrs[i, k, 0])
+                    tem1d[i] = min(self.QME5, qlyr[i, k1])
+                    tvly[i, k1] = Statein.tgrs[i, k] * (
+                        1.0 + con_fvirt * qlyr[i, k1]
+                    )  # virtual T (K)
+                    delp[i, k1] = plvl[i, k1 + 1] - plvl[i, k1]
+
+            if self.lextop:
+                for i in range(IM):
+                    qlyr[i, lyb] = qlyr[i, lya]
+                    tvly[i, lyb] = tvly[i, lya]
+                    delp[i, lyb] = plvl[i, lla] - plvl[i, llb]
+
+            for k in range(1, LMK):
+                for i in range(IM):
+                    tlvl[i, k] = tlyr[i, k] + (tlyr[i, k - 1] - tlyr[i, k]) * (
+                        tem2db[i, k] - tem2da[i, k]
+                    ) / (tem2da[i, k - 1] - tem2da[i, k])
+
+            #  ---  ...  level height and layer thickness (km)
+
+            tem0d = 0.001 * con_rog
+            for i in range(IM):
+                for k in range(LMK):
+                    dz[i, k] = tem0d * (tem2db[i, k + 1] - tem2db[i, k]) * tvly[i, k]
+        else:
+
+            for i in range(IM):
+                tem1d[i] = self.QME6
+                tem2da[i, 0] = np.log(plyr[i, 0])
+                tem2db[i, 0] = np.log(plvl[i, 0])
+                tem2db[i, LMP] = np.log(max(self.prsmin, plvl[i, LMP]))
+                tsfa[i] = tlyr[i, 0]  # sfc layer air temp
+                tlvl[i, 0] = tskn[i]
+                tlvl[i, LMP] = tlyr[i, LMK]
+
+            for k in range(LM - 1, -1, -1):
+                for i in range(IM):
+                    qlyr[i, k] = max(tem1d[i], Statein.qgrs[i, k, 0])
+                    tem1d[i] = min(self.QME5, qlyr[i, k])
+                    tvly[i, k] = Statein.tgrs[i, k] * (
+                        1.0 + con_fvirt * qlyr[i, k]
+                    )  # virtual T (K)
+                    delp[i, k] = plvl[i, k] - plvl[i, k + 1]
+
+            if self.lextop:
+                for i in range(IM):
+                    qlyr[i, lyb] = qlyr[i, lya]
+                    tvly[i, lyb] = tvly[i, lya]
+                    delp[i, lyb] = plvl[i, lla] - plvl[i, llb]
+
+            for k in range(LMK - 1):
+                for i in range(IM):
+                    tlvl[i, k + 1] = tlyr[i, k] + (tlyr[i, k + 1] - tlyr[i, k]) * (
+                        tem2db[i, k + 1] - tem2da[i, k]
+                    ) / (tem2da[i, k + 1] - tem2da[i, k])
+
+            #  ---  ...  level height and layer thickness (km)
+
+            tem0d = 0.001 * con_rog
+            for i in range(IM):
+                for k in range(LMK - 1, -1, -1):
+                    dz[i, k] = tem0d * (tem2db[i, k] - tem2db[i, k + 1]) * tvly[i, k]
+
+        #  - Check for daytime points for SW radiation.
+
+        nday = 0
+        for i in range(IM):
+            if Radtend.coszen[i] >= 0.0001:
+                nday += 1
+                idxday[nday - 1] = i
+
+        #  - Call module_radiation_aerosols::setaer(),to setup aerosols
+        # property profile for radiation.
+
+        faersw, faerlw, aerodp = setaer(
+            plvl,
+            plyr,
+            prslk1,
+            tvly,
+            rhly,
+            Sfcprop.slmsk,
+            tracer1,
+            Grid.xlon,
+            Grid.xlat,
+            IM,
+            LMK,
+            LMP,
+            Model.lsswr,
+            Model.lslwr,
+        )
+
+        #  - Obtain cloud information for radiation calculations
+        #    (clouds,cldsa,mtopa,mbota)
+        #     for  prognostic cloud:
+        #    - For Zhao/Moorthi's prognostic cloud scheme,
+        #      call module_radiation_clouds::progcld1()
+        #    - For Zhao/Moorthi's prognostic cloud+pdfcld,
+        #      call module_radiation_clouds::progcld3()
+        #      call module_radiation_clouds::progclduni() for unified cloud and ncld=2
+
+        #  --- ...  obtain cloud information for radiation calculations
