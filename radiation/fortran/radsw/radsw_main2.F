@@ -914,7 +914,6 @@
       lab_do_ipt : do ipt = 1, NDAY
 
         j1 = idxday(ipt)
-        write(*,*) "j1 =",j1 
 
         cosz1(j1)  = cosz(j1)
         sntz1(j1)  = f_one / cosz(j1)
