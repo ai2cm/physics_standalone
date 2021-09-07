@@ -11,7 +11,7 @@ else:
         0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python/radlw"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw
-from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw
+from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
 from gt4py import gtscript
 from gt4py.gtscript import Field
 

@@ -1145,6 +1145,18 @@
         zcf1(j1) = f_one - zcf0(j1)
       enddo lab_do_ipt
 
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser savepoint "swrad-firstloop-output-"//trim(ser_count_str)
+!$ser data cosz1=cosz1 sntz1=sntz1 ssolar=ssolar albbm=albbm albdf=albdf
+!$ser data tem1=tem1 tem2=tem2 pavel=pavel tavel=tavel h2ovmr=h2ovmr
+!$ser data o3vmr=o3vmr tem0=tem0 coldry=coldry temcol=temcol colamt=colamt
+!$ser data colmol=colmol tauae=tauae ssaae=ssaae asyae=asyae cfrac=cfrac
+!$ser data cliqp=cliqp reliq=reliq cicep=cicep reice=reice cdat1=cdat1 
+!$ser data cdat2=cdat2 cdat3=cdat3 cdat4=cdat4 zcf0=zcf0 zcf1=zcf1
+
+
       lab_do_ipt2 : do ipt = 1, NDAY
 
         j1 = idxday(ipt)
