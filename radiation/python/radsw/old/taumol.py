@@ -3,7 +3,7 @@ import xarray as xr
 import os
 import sys
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from radsw_param import (
     ngptsw,
     nblow,
@@ -43,12 +43,12 @@ from radsw_param import (
     NS29,
 )
 from util import compare_data
+from config import *
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radsw/dump"
+ddir = "../../fortran/radsw/dump"
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
 savepoints = serializer.savepoint_list()
@@ -75,9 +75,14 @@ invars = [
 
 indict = dict()
 for var in invars:
-    indict[var] = serializer.read(
-        var, serializer.savepoint["swrad-taumol-input-000000"]
-    )
+    if var == "NLAY":
+        indict[var] = serializer.read(
+            var, serializer.savepoint["swrad-taumol-input-000000"]
+        )[0]
+    else:
+        indict[var] = serializer.read(
+            var, serializer.savepoint["swrad-taumol-input-000000"]
+        )[10, ...]
 
 ibx = [1, 1, 1, 2, 2, 3, 4, 3, 5, 4, 5, 6, 2, 7]
 
@@ -250,6 +255,7 @@ def taumol(
 
                 colm1 = colamt[ks, ix1[b] - 1]
                 colm2 = colamt[ks, ix2[b] - 1]
+
                 speccomb = colm1 + strrat[b] * colm2
                 specmult = specwt[b] * min(oneminus, colm1 / speccomb)
                 js = 1 + int(specmult) - 1
@@ -2159,14 +2165,14 @@ sfluxzen, taug, taur, id0, id1 = taumol(
     indict["jp"],
     indict["jt"],
     indict["jt1"],
-    indict["laytrop"][0],
+    indict["laytrop"],
     indict["forfac"],
     indict["forfrac"],
     indict["indfor"],
     indict["selffac"],
     indict["selffrac"],
     indict["indself"],
-    indict["NLAY"][0],
+    indict["NLAY"],
 )
 
 outdict = dict()
@@ -2179,6 +2185,6 @@ valdict = dict()
 for var in valvars:
     valdict[var] = serializer.read(
         var, serializer.savepoint["swrad-taumol-output-000000"]
-    )
+    )[10, ...]
 
 compare_data(outdict, valdict)
