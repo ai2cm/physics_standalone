@@ -11,7 +11,7 @@ from gt4py.gtscript import (
 import sys
 
 # sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
-sys.path.insert(0, "/work/radiation/python")
+sys.path.insert(0, "..")
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
 from radlw.radlw_param import (
     nbands,
@@ -66,7 +66,7 @@ from radlw.radlw_param import (
 from radphysparam import ilwcice, ilwcliq
 from config import *
 
-rebuild = True
+rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
@@ -4522,9 +4522,9 @@ def rtrnmc(
     cldfmc: Field[type_ngptlw],
     pklay: Field[type_nbands],
     pklev: Field[type_nbands],
-    exp_tbl: Field[type_ntbl],
-    tau_tbl: Field[type_ntbl],
-    tfn_tbl: Field[type_ntbl],
+    exp_tbl: Field[type_ntbmx],
+    tau_tbl: Field[type_ntbmx],
+    tfn_tbl: Field[type_ntbmx],
     NGB: Field[gtscript.IJ, (np.int32, (140,))],
     htr: FIELD_FLT,
     htrcl: FIELD_FLT,
