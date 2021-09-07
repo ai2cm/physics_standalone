@@ -2,7 +2,7 @@ import numpy as np
 
 from config import *
 from radphysparam import *
-from phys_const import con_eps, con_epsm1, con_rocp, con_fvirt, con_rog
+from phys_const import con_eps, con_epsm1, con_rocp, con_fvirt, con_rog, con_epsq
 from funcphys import fpvs
 
 from radlw.radiation_astronomy import AstronomyClass
@@ -590,3 +590,51 @@ class RadiationDriver:
         #      call module_radiation_clouds::progclduni() for unified cloud and ncld=2
 
         #  --- ...  obtain cloud information for radiation calculations
+
+        ccnd = 0.0
+        if Model.ncnd == 1:  # Zhao_Carr_Sundqvist
+            for k in range(LMK):
+                for i in range(IM):
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water/ice
+        elif Model.ncnd == 2:  # MG
+            for k in range(LMK):
+                for i in range(IM):
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw]  # ice water
+        elif Model.ncnd == 4:  # MG2
+            for k in range(LMK):
+                for i in range(IM):
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw]  # ice water
+                    ccnd[i, k, 2] = tracer1[i, k, ntrw]  # rain water
+                    ccnd[i, k, 3] = tracer1[i, k, ntsw]  # snow water
+        elif Model.ncnd == 5:  # GFDL MP, Thompson, MG3
+            for k in range(LMK):
+                for i in range(IM):
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw]  # ice water
+                    ccnd[i, k, 2] = tracer1[i, k, ntrw]  # rain water
+                    ccnd[i, k, 3] = (
+                        tracer1[i, k, ntsw] + tracer1[i, k, ntgl]
+                    )  # snow + grapuel
+
+        for n in range(ncndl):
+            for k in range(LMK):
+                for i in range(IM):
+                    if ccnd[i, k, n] < con_epsq:
+                        ccnd[i, k, n] = 0.0
+
+        if Model.imp_physics == 11:
+            if not Model.lgfdlmprad:
+
+                # rsun the  summation methods and order make the difference in calculation
+                ccnd[:, :, 0] = tracer1[:, :LMK, ntcw]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntrw]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntiw]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntsw]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntgl]
+
+            for k in range(LMK):
+                for i in range(IM):
+                    if ccnd[i, k, 0] < self.EPSQ:
+                        ccnd[i, k, 0] = 0.0

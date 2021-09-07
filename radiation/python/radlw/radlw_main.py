@@ -1,10 +1,9 @@
 import numpy as np
-from numpy.matrixlib.defmatrix import _convert_from_string
 import xarray as xr
 import sys
 import time
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from radphysparam import (
     ilwrgas as ilwrgas,
     icldflg as icldflg,
@@ -12,7 +11,7 @@ from radphysparam import (
     ilwrate as ilwrate,
     ilwcice as ilwcice,
 )
-from radlw_param import (
+from radlw.radlw_param import (
     ntbl,
     nbands,
     nrates,
@@ -381,7 +380,6 @@ class RadLWClass:
         elif self.isubclw == 2:
             for i in range(npts):
                 ipseed[i] = icseed[i]
-
 
         for iplon in range(npts):
             print(f"iplon = {iplon}")

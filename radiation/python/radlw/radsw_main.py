@@ -1,11 +1,10 @@
-from python.radlw.radsw_param import NGPTSW
 import sys
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 import numpy as np
 from radphysparam import iswmode, iswrgas, icldflg, iswrate
 from phys_const import con_g, con_cp, con_amd, con_amw, con_amo3, con_avgd
-from radsw_param import ntbmx, ngptsw, nbdsw, maxgas, nblow, nbhgh
+from radsw.radsw_param import ntbmx, ngptsw, nbdsw, maxgas, nblow, nbhgh
 
 
 class RadSWClass:
