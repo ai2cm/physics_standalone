@@ -1,13 +1,20 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update &&\
+    apt install -y --no-install-recommends \
+    software-properties-common
+
+RUN add-apt-repository ppa:deadsnakes/ppa 
+
 RUN apt-get update \
-  && apt-get install -y \
+  && apt-get install -y --no-install-recommends\
     apt-utils \
     sudo \
     build-essential \
-    gcc \
-    g++ \
+    gcc-9 \
+    g++-9 \
     gfortran \
     gdb \
     wget \
@@ -15,20 +22,22 @@ RUN apt-get update \
     tar \
     git \
     vim \
+    nano \
     make \
     cmake \
     cmake-curses-gui \
-    python3-pip \
-    python3-dev \
+    python3.9-dev \
+    python3.9-distutils \
     libssl-dev \
     libboost-all-dev \
     libnetcdf-dev \
     libnetcdff-dev
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10 && \
-    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 10 && \
-    update-alternatives  --set python /usr/bin/python3 && \
-    update-alternatives  --set pip /usr/bin/pip3
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+RUN python3.9 get-pip.py
+
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 10 && \
+    update-alternatives  --set python /usr/bin/python3.9
 
 # download and install NCEP libraries
 RUN git config --global http.sslverify false && \
@@ -56,12 +65,14 @@ RUN cd /serialbox && \
     make install && \
     /bin/rm -rf /serialbox
 
+# install gt4py
+RUN cd /
+RUN git clone -b v35 https://github.com/VulcanClimateModeling/gt4py.git
+RUN pip install -e ./gt4py && \
+    python -m gt4py.gt_src_manager install -m 2
+
 # install some python packages
 RUN pip install numpy xarray[complete]
-
-# install gt4py
-RUN pip install git+https://github.com/VulcanClimateModeling/gt4py.git@tmp_forloop_fixes && \
-    python -m gt4py.gt_src_manager install -m 2
 
 # add default user
 ARG USER=user

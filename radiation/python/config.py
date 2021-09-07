@@ -1,17 +1,28 @@
 import numpy as np
 import sys
+import os
+import gt4py
 
-sys.path.insert(
-    0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python/radlw"
-)
-from radlw_param import nbands, maxgas, maxxsec, ngptlw
-from radsw_param import ngptsw, nbhgh, nblow, nbdsw
+IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
+
+if IS_DOCKER:
+    sys.path.insert(0, "/work/radiation/python")
+else:
+    sys.path.insert(
+        0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python/radlw"
+    )
+from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw
+from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
 gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
     ["-fno-strict-aliasing"]
 )
+if IS_DOCKER:
+    SERIALBOX_DIR = "/usr/local/serialbox"
+else:
+    SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
 
 npts = 24
 
@@ -32,16 +43,13 @@ FIELD_2D = Field[gtscript.IJ, DTYPE_FLT]
 FIELD_2DINT = Field[gtscript.IJ, DTYPE_INT]
 FIELD_2DBOOL = Field[gtscript.IJ, DTYPE_BOOL]
 
-domain = (npts, 1, 1)
-domain2 = (npts, 1, nlay)
-
-shape0 = (1, 1, 1)
 shape = (npts, 1, 1)
 shape_2D = (npts, 1)
 shape_nlay = (npts, 1, nlay)
 shape_nlp1 = (npts, 1, nlp1)
 shape_nlp2 = (npts, 1, nlp1 + 1)
 default_origin = (0, 0, 0)
+
 type_nbands = (DTYPE_FLT, (nbands,))
 type_nbandssw_int = (DTYPE_INT, (nbhgh - nblow + 1,))
 type_nbandssw_flt = (DTYPE_FLT, (nbhgh - nblow + 1,))
@@ -52,5 +60,6 @@ type_nbands3 = (DTYPE_FLT, (nbands, 3))
 type_maxgas = (DTYPE_FLT, (maxgas,))
 type_maxxsec = (DTYPE_FLT, (maxxsec,))
 type_nbdsw = (DTYPE_FLT, (nbdsw,))
+type_ntbmx = (DTYPE_FLT, ((ntbmx + 1),))
 type_9 = (DTYPE_FLT, (9,))
 type_10 = (DTYPE_FLT, (10,))

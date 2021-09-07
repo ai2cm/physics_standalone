@@ -4,7 +4,7 @@ import os
 import sys
 from gt4py.gtscript import stencil, computation, interval, PARALLEL, BACKWARD, mod
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 
 from util import compare_data, create_storage_from_array, create_storage_zeros
 from config import *
@@ -13,11 +13,10 @@ rebuild = False
 validate = True
 backend = "gtc:gt:cpu_ifirst"
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radsw/dump"
+ddir = "../../fortran/radsw/dump"
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank1")
 savepoints = serializer.savepoint_list()
