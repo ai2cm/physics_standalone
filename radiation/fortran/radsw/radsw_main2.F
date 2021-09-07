@@ -1164,9 +1164,7 @@
 !> -# For cloudy sky column, call cldprop() to compute the cloud
 !!    optical properties for each cloudy layer.
 
-        if (zcf1(j1) > f_zero) then     ! cloudy sky column
-
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-cldprop-input-"//trim(ser_count_str)
@@ -1174,6 +1172,8 @@
   !$ser data cdat1=cdat1 cdat2=cdat2 cdat3=cdat3 cdat4=cdat4 zcf1=zcf1 
   !$ser data nlay=nlay ipseed=ipseed(j1) dz=dz delgth=delgth
 !$ser verbatim end if
+
+        if (zcf1(j1) > f_zero) then     ! cloudy sky column
 
           call cldprop                                                  &
 !  ---  inputs:
@@ -1184,14 +1184,6 @@
 !  ---  outputs:
      &       taucw(j1,:,:), ssacw(j1,:,:), asycw(j1,:,:), cldfrc(j1,:), cldfmc(j1,:,:)                        &
      &     )
-
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
-  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
-  !$ser data cldfmc=cldfmc
-!$ser verbatim end if
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band 10 is approx to the 0.55 mu spectrum
@@ -1218,6 +1210,14 @@
             enddo
           enddo
         endif   ! end if_zcf1_block
+
+!$ser verbatim if (ipt == NDAY) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "swrad-cldprop-output-"//trim(ser_count_str)
+  !$ser data taucw=taucw ssacw=ssacw asycw=asycw cldfrc=cldfrc 
+  !$ser data cldfmc=cldfmc
+!$ser verbatim end if
       enddo lab_do_ipt2
 
       lab_do_ipt3 : do ipt = 1, NDAY
@@ -1245,8 +1245,6 @@
      &       forfrac(j1,:),indfor(j1,:)             &
      &     )
 
-enddo lab_do_ipt3
-
 !$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
@@ -1256,6 +1254,10 @@ enddo lab_do_ipt3
   !$ser data selffrac=selffrac indself=indself forfac=forfac
   !$ser data forfrac=forfrac indfor=indfor
 !$ser verbatim end if
+
+enddo lab_do_ipt3
+
+
 
 !$ser verbatim if (ipt == NDAY) then
   !$ser mode write
@@ -1322,7 +1324,7 @@ enddo lab_do_ipt3
 
         else                         ! use mcica cloud scheme
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-spcvrtm-input-"//trim(ser_count_str)
@@ -1348,7 +1350,7 @@ enddo lab_do_ipt3
      &       suvbfc(j1),suvbf0(j1)                          &
      &     )
 
-!$ser verbatim if (ipt == 1) then
+!$ser verbatim if (ipt == NDAY) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
   !$ser savepoint "swrad-spcvrtm-output-"//trim(ser_count_str)
@@ -4396,16 +4398,6 @@ enddo lab_do_ipt3
 !> - Call taumol## (##: 16-29) to calculate layer optical depth.
 
 !>  - call taumol16()
-!$ser verbatim if (ipt == 1) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "swrad-taugb16-input-"//trim(ser_count_str)
-  !$ser data colamt1=colamt colmol1=colmol fac001=fac00 fac011=fac01 fac101=fac10
-  !$ser data fac111=fac11 jp1=jp jt1=jt jt11=jt1 laytrop1=laytrop forfac1=forfac
-  !$ser data forfrac1=forfrac indfor1=indfor selffac1=selffac selffrac1=selffrac
-  !$ser data indself1=indself nlay1=nlay
-  !$ser data id0=id0 id1=id1
-!$ser verbatim end if
       call taumol16
 !$ser verbatim if (ipt == 1) then
   !$ser mode write
