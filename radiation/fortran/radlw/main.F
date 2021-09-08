@@ -145,11 +145,11 @@ program test
       imp_physics, norad_precip, idate,   iflip,  me)
 !$ser cleanup
       ser_count_max = 6
-      num_tiles = 0
+      num_tiles = 6
 
       call cdstart(num_tiles * ser_count_max * 2)
 
-      do tile = 0,5
+      do tile = 0,num_tiles-1
 
 !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=tile
 
