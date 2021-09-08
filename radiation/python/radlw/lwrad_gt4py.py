@@ -469,6 +469,9 @@ for name, info in cldprop_types.items():
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
 
+# This serialized set of random numbers will be used for testing, and the python
+# RNG for running the model.
+
 # rand2d is shape (npts, ngptlw*nlay), and I will reshape it to (npts, 1, nlp1, ngptlw)
 # First reshape to (npts, ngptlw, nlay)
 # Second pad k axis with one zero
