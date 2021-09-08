@@ -298,21 +298,36 @@ for var in invars:
         tmp = serializer.read(var, serializer.savepoint["lwrad-in-000000"])
 
     if var in ["semis", "icsdlw", "tsfg", "de_lgth"]:
+        # These fields are shape npts, tile to be 3D fields
         indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
     elif var == "faerlw":
+        # This is shape(npts, nlay, nbands, 3).
+        # Pad k axis with 0 and tile to give them the extra
+        # horizontal dimension
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :, :], (1, 1, 1, 1, 1))
     elif var == "gasvmr" or var == "clouds":
+        # These fields are size (npts, nlay, 9).
+        # Pad k axis with 0 and tile to give them the extra
+        # horizontal dimension
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
     elif var in ["plyr", "tlyr", "qlyr", "olyr", "dz", "delp"]:
+        # These fields are size (npts, nlay).
+        # Pad k axis with 0 and tile to give them the extra
+        # horizontal dimension
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
     elif var in ["plvl", "tlvl"]:
+        # These fields are size (npts, nlp1).
+        # Tile to give them the extra
+        # horizontal dimension
         indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
     elif var[-3:] == "tbl":
+        # This field has shape (ntbmx). Tile to give it the spatial dimensions
         indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     else:
+        # Otherwise input is a scalar, grab from array.
         indict[var] = tmp[0]
 
 indict_gt4py = dict()
@@ -436,31 +451,21 @@ locdict_gt4py["A2"] = create_storage_from_array(a2, backend, shape_nlp1, type_nb
 # Read in lookup table data for cldprop calculations
 ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
 
-absliq1 = ds["absliq1"].data
-absice0 = ds["absice0"].data
-absice1 = ds["absice1"].data
-absice2 = ds["absice2"].data
-absice3 = ds["absice3"].data
+cldprop_types = {
+    "absliq1": {"ctype": (DTYPE_FLT, (58, nbands)), "data": ds["absliq1"].data},
+    "absice0": {"ctype": (DTYPE_FLT, (2,)), "data": ds["absice0"].data},
+    "absice1": {"ctype": (DTYPE_FLT, (2, 5)), "data": ds["absice1"].data},
+    "absice2": {"ctype": (DTYPE_FLT, (43, nbands)), "data": ds["absice2"].data},
+    "absice3": {"ctype": (DTYPE_FLT, (46, nbands)), "data": ds["absice3"].data},
+    "ipat": {"ctype": (DTYPE_INT, (nbands,)), "data": ipat},
+}
 
 lookup_dict = dict()
-lookup_dict["absliq1"] = create_storage_from_array(
-    absliq1, backend, (npts, 1, nlp1 + 1), (np.float64, (58, nbands))
-)
-lookup_dict["absice0"] = create_storage_from_array(
-    absice0, backend, (npts, 1, nlp1 + 1), (np.float64, (2,))
-)
-lookup_dict["absice1"] = create_storage_from_array(
-    absice1, backend, (npts, 1, nlp1 + 1), (np.float64, (2, 5))
-)
-lookup_dict["absice2"] = create_storage_from_array(
-    absice2, backend, (npts, 1, nlp1 + 1), (np.float64, (43, nbands))
-)
-lookup_dict["absice3"] = create_storage_from_array(
-    absice3, backend, (npts, 1, nlp1 + 1), (np.float64, (46, nbands))
-)
-lookup_dict["ipat"] = create_storage_from_array(
-    ipat, backend, (npts, 1, nlp1 + 1), (DTYPE_INT, (nbands,))
-)
+
+for name, info in cldprop_types.items():
+    lookup_dict[name] = create_storage_from_array(
+        info["data"], backend, shape_nlp1, info["ctype"]
+    )
 
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
