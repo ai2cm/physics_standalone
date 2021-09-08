@@ -470,7 +470,7 @@ class RadiationDriver:
 
         #  --- ...  set up non-prognostic gas volume mixing ratioes
 
-        gasvmr = getgases(
+        gasvmr = self.gas.getgases(
             plvl,
             Grid.xlon,
             Grid.xlat,

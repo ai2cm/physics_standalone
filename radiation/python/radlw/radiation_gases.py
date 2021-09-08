@@ -362,3 +362,113 @@ class GasClass:
 
             self.co2vmr_sav = co2vmr_sav
             self.gco2cyc = gco2cyc
+
+    def getgases(self, plvl, xlon, xlat, IMAX, LMAX):
+        #  ===================================================================  !
+        #                                                                       !
+        #  getgases set up global distribution of radiation absorbing  gases    !
+        #  in volume mixing ratio.  currently only co2 has the options from     !
+        #  observed values, all other gases are asigned to the climatological   !
+        #  values.                                                              !
+        #                                                                       !
+        #  inputs:                                                              !
+        #     plvl(IMAX,LMAX+1)- pressure at model layer interfaces (mb)        !
+        #     xlon(IMAX)       - grid longitude in radians, ok both 0->2pi or   !
+        #                        -pi -> +pi arrangements                        !
+        #     xlat(IMAX)       - grid latitude in radians, default range to     !
+        #                        pi/2 -> -pi/2, otherwise see in-line comment   !
+        #     IMAX, LMAX       - horiz, vert dimensions for output data         !
+        #                                                                       !
+        #  outputs:                                                             !
+        #     gasdat(IMAX,LMAX,NF_VGAS) - gases volume mixing ratioes           !
+        #               (:,:,1)           - co2                                 !
+        #               (:,:,2)           - n2o                                 !
+        #               (:,:,3)           - ch4                                 !
+        #               (:,:,4)           - o2                                  !
+        #               (:,:,5)           - co                                  !
+        #               (:,:,6)           - cfc11                               !
+        #               (:,:,7)           - cfc12                               !
+        #               (:,:,8)           - cfc22                               !
+        #               (:,:,9)           - ccl4                                !
+        #               (:,:,10)          - cfc113                              !
+        #                                                                       !
+        #  external module variables:  (in physparam)                           !
+        #     ico2flg    - co2 data source control flag                         !
+        #                   =0: use prescribed co2 global mean value            !
+        #                   =1: use input global mean co2 value (co2_glb)       !
+        #                   =2: use input 2-d monthly co2 value (co2vmr_sav)    !
+        #     ivflip     - vertical profile indexing flag                       !
+        #                                                                       !
+        #  internal module variables used:                                      !
+        #     co2vmr_sav - saved monthly co2 concentration from sub gas_update  !
+        #     co2_glb    - saved global annual mean co2 value from  gas_update  !
+        #     gco2cyc    - saved global seasonal variation of co2 climatology   !
+        #                  in 12-month form                                     !
+        #  ** note: for lower atmos co2vmr_sav may have clim monthly deviations !
+        #           superimposed on init-cond co2 value, while co2_glb only     !
+        #           contains the global mean value, thus needs to add the       !
+        #           monthly dglobal mean deviation gco2cyc at upper atmos. for  !
+        #           ictmflg/=-2, this value will be zero.                       !
+        #                                                                       !
+        #  usage:    call getgases                                              !
+        #                                                                       !
+        #  subprograms called:  none                                            !
+        #                                                                       !
+        #  ===================================================================  !
+        #
+
+        gasdat = np.zeros((IMAX, LMAX, 10))
+
+        #  --- ...  assign default values
+
+        for k in range(LMAX):
+            for i in range(IMAX):
+                gasdat[i, k, 0] = co2vmr_def
+                gasdat[i, k, 1] = n2ovmr_def
+                gasdat[i, k, 2] = ch4vmr_def
+                gasdat[i, k, 3] = o2vmr_def
+                gasdat[i, k, 4] = covmr_def
+                gasdat[i, k, 5] = f11vmr_def
+                gasdat[i, k, 6] = f12vmr_def
+                gasdat[i, k, 7] = f22vmr_def
+                gasdat[i, k, 8] = cl4vmr_def
+                gasdat[i, k, 9] = f113vmr_def
+
+        #  --- ...  co2 section
+
+        if self.ico2flg == 1:
+            #  ---  use obs co2 global annual mean value only
+
+            for k in range(LMAX):
+                for i in range(IMAX):
+                    gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav]
+
+        elif self.ico2flg == 2:
+            #  ---  use obs co2 monthly data with 2-d variation at lower atmos
+            #       otherwise use global mean value
+
+            tmp = self.raddeg / self.resco2
+            for i in range(IMAX):
+                xlon1 = xlon[i]
+                if xlon1 < 0.0:
+                    xlon1 = xlon1 + con_pi  # if xlon in -pi->pi, convert to 0->2pi
+
+                xlat1 = self.hfpi - xlat[i]  # if xlat in pi/2 -> -pi/2 range
+
+                ilon = min(self.IMXCO2, int(xlon1 * tmp + 1))
+                ilat = min(self.JMXCO2, int(xlat1 * tmp + 1))
+
+                if self.ivflip == 0:  # index from toa to sfc
+                    for k in range(LMAX):
+                        if plvl[i, k] >= self.prsco2:
+                            gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav]
+                        else:
+                            gasdat[i, k, 0] = self.co2_glb + self.gco2cyc(self.kmonsav)
+                else:  # index from sfc to toa
+                    for k in range(LMAX):
+                        if plvl[i, k + 1] >= self.prsco2:
+                            gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav]
+                        else:
+                            gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav]
+
+        return gasdat
