@@ -329,6 +329,8 @@ class RadiationDriver:
 
         tracer1 = np.zeros((IM, Model.levr + self.LTP, NTRAC - 1))
 
+        cldtausw = np.zeros((IM, Model.levr + self.LTP))
+
         #  --- ...  set local /level/layer indexes corresponding to in/out variables
 
         LMK = LM + self.LTP  # num of local layers
@@ -720,7 +722,7 @@ class RadiationDriver:
         if Model.imp_physics == 99:
             ccnd[:IM, :LMK, 0] = ccnd[:IM, :LMK, 0] + cnvw[:IM, :LMK]
 
-        clouds, cldsa, mtopa, mbota, de_lgth = progclduni(
+        clouds, cldsa, mtopa, mbota, de_lgth = self.cld.progclduni(
             plyr,
             plvl,
             tlyr,
@@ -752,10 +754,7 @@ class RadiationDriver:
         #  ---  turn vegetation fraction pattern into percentile pattern
 
         if Model.do_sfcperts:
-            if Model.pertalb[0] > 0.0:
-                for i in range(IM):
-                    cdfnor(Coupling.sfc_wts[i, 4], cdfz)
-                    alb1d[i] = cdfz
+            print("Surface perturbation not implemented!")
 
         # mg, sfc-perts
 
@@ -773,7 +772,7 @@ class RadiationDriver:
             #  - Call module_radiation_surface::setalb() to setup surface albedo.
             #  for SW radiation.
 
-            sfcalb = setalb(
+            sfcalb = self.sfc.setalb(
                 Sfcprop.slmsk,
                 Sfcprop.snowd,
                 Sfcprop.sncovr,
@@ -881,7 +880,7 @@ class RadiationDriver:
                 if Model.swhtr:
                     for k in range(LM):
                         k1 = k + kd
-                        Radtend.swhc[:IM, k] = htsw0[:im, k1]
+                        Radtend.swhc[:IM, k] = htsw0[:IM, k1]
 
                     # --- repopulate the points above levr i.e. LM
                     if LM < LEVS:
@@ -936,7 +935,7 @@ class RadiationDriver:
             #  - Call module_radiation_surface::setemis(),to setup surface
             # emissivity for LW radiation.
 
-            Radtend.semis = setemis(
+            Radtend.semis = self.sfc.setemis(
                 Grid.xlon,
                 Grid.xlat,
                 Sfcprop.slmsk,
