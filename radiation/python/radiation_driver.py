@@ -300,6 +300,7 @@ class RadiationDriver:
         tsfa = np.zeros(IM)
         tsfg = np.zeros(IM)
         tem1d = np.zeros(IM)
+        alb1d = np.zeros(IM)
         idxday = np.zeros(IM, dtype=DTYPE_INT)
 
         plvl = np.zeros((IM, Model.levr + self.LTP + 1))
@@ -314,6 +315,14 @@ class RadiationDriver:
         tvly = np.zeros((IM, Model.levr + self.LTP))
         delp = np.zeros((IM, Model.levr + self.LTP))
         qstl = np.zeros((IM, Model.levr + self.LTP))
+        cldcov = np.zeros((IM, Model.levr + self.LTP))
+        deltaq = np.zeros((IM, Model.levr + self.LTP))
+        cnvc = np.zeros((IM, Model.levr + self.LTP))
+        cnvw = np.zeros((IM, Model.levr + self.LTP))
+        effrl = np.zeros((IM, Model.levr + self.LTP))
+        effri = np.zeros((IM, Model.levr + self.LTP))
+        effrr = np.zeros((IM, Model.levr + self.LTP))
+        effrs = np.zeros((IM, Model.levr + self.LTP))
         dz = np.zeros((IM, Model.levr + self.LTP))
         prslk1 = np.zeros((IM, Model.levr + self.LTP))
         tem2da = np.zeros((IM, Model.levr + self.LTP))
@@ -438,7 +447,7 @@ class RadiationDriver:
                 for i in range(IM):
                     olyr[i, k] = max(self.QMIN, tracer1[i, k, Model.ntoz])
         else:  # climatological ozone
-            olyr = getozn(prslk1, Grid.xlat, IM, LMK)
+            print("Climatological ozone not implemented")
 
         #  - Call coszmn(), to compute cosine of zenith angle (only when SW is called)
 
@@ -638,3 +647,529 @@ class RadiationDriver:
                 for i in range(IM):
                     if ccnd[i, k, 0] < self.EPSQ:
                         ccnd[i, k, 0] = 0.0
+
+        if Model.uni_cld:
+            if Model.effr_in:
+                for k in range(LM):
+                    k1 = k + kd
+                    for i in range(IM):
+                        cldcov[i, k1] = Tbd.phy_f3d[i, k, Model.indcld]
+                        effrl[i, k1] = Tbd.phy_f3d[i, k, 1]
+                        effri[i, k1] = Tbd.phy_f3d[i, k, 2]
+                        effrr[i, k1] = Tbd.phy_f3d[i, k, 3]
+                        effrs[i, k1] = Tbd.phy_f3d[i, k, 4]
+            else:
+                for k in range(LM):
+                    k1 = k + kd
+                    for i in range(IM):
+                        cldcov[i, k1] = Tbd.phy_f3d[i, k, Model.indcld]
+        elif Model.imp_physics == 11:  # GFDL MP
+            cldcov[:IM, 1 + kd : LM + kd] = tracer1[:IM, :LM, Model.ntclamt]
+            if Model.effr_in:
+                for k in range(LM):
+                    k1 = k + kd
+                    for i in range(IM):
+                        effrl[i, k1] = Tbd.phy_f3d[i, k, 0]
+                        effri[i, k1] = Tbd.phy_f3d[i, k, 1]
+                        effrr[i, k1] = Tbd.phy_f3d[i, k, 2]
+                        effrs[i, k1] = Tbd.phy_f3d[i, k, 3]
+        else:  # neither of the other two cases
+            cldcov = 0.0
+
+        #  --- add suspended convective cloud water to grid-scale cloud water
+        #      only for cloud fraction & radiation computation
+        #      it is to enhance cloudiness due to suspended convec cloud water
+        #      for zhao/moorthi's (imp_phys=99) &
+        #          ferrier's (imp_phys=5) microphysics schemes
+
+        if Model.num_p3d == 4 and Model.npdf3d == 3:  # same as Model%imp_physics = 99
+            for k in range(LM):
+                k1 = k + kd
+                for i in range(IM):
+                    deltaq[i, k1] = Tbd.phy_f3d[i, k, 4]
+                    cnvw[i, k1] = Tbd.phy_f3d[i, k, 5]
+                    cnvc[i, k1] = Tbd.phy_f3d[i, k, 6]
+        elif Model.npdf3d == 0 and Model.ncnvcld3d == 1:  # same as MOdel%imp_physics=98
+            for k in range(LM):
+                k1 = k + kd
+                for i in range(IM):
+                    deltaq[i, k1] = 0.0
+                    cnvw[i, k1] = Tbd.phy_f3d[i, k, Model.num_p3d + 1]
+                    cnvc[i, k1] = 0.0
+        else:  # all the rest
+            for k in range(LMK):
+                for i in range(IM):
+                    deltaq[i, k] = 0.0
+                    cnvw[i, k] = 0.0
+                    cnvc[i, k] = 0.0
+
+        if self.lextop:
+            for i in range(IM):
+                cldcov[i, lyb] = cldcov[i, lya]
+                deltaq[i, lyb] = deltaq[i, lya]
+                cnvw[i, lyb] = cnvw[i, lya]
+                cnvc[i, lyb] = cnvc[i, lya]
+
+            if Model.effr_in:
+                for i in range(IM):
+                    effrl[i, lyb] = effrl[i, lya]
+                    effri[i, lyb] = effri[i, lya]
+                    effrr[i, lyb] = effrr[i, lya]
+                    effrs[i, lyb] = effrs[i, lya]
+
+        if Model.imp_physics == 99:
+            ccnd[:IM, :LMK, 0] = ccnd[:IM, :LMK, 0] + cnvw[:IM, :LMK]
+
+        clouds, cldsa, mtopa, mbota, de_lgth = progclduni(
+            plyr,
+            plvl,
+            tlyr,
+            tvly,
+            ccnd,
+            ncndl,
+            Grid.xlat,
+            Grid.xlon,
+            Sfcprop.slmsk,
+            dz,
+            delp,
+            IM,
+            LMK,
+            LMP,
+            cldcov,
+            effrl,
+            effri,
+            effrr,
+            effrs,
+            Model.effr_in,
+        )
+
+        #  --- ...  start radiation calculations
+        #           remember to set heating rate unit to k/sec!
+
+        # mg, sfc-perts
+        #  ---  scale random patterns for surface perturbations with
+        #  perturbation size
+        #  ---  turn vegetation fraction pattern into percentile pattern
+
+        if Model.do_sfcperts:
+            if Model.pertalb[0] > 0.0:
+                for i in range(IM):
+                    cdfnor(Coupling.sfc_wts[i, 4], cdfz)
+                    alb1d[i] = cdfz
+
+        # mg, sfc-perts
+
+        if Model.do_only_clearsky_rad:
+            clouds[:, :, 0] = 0.0  # layer total cloud fraction
+            clouds[:, :, 1] = 0.0  # layer cloud liq water path
+            clouds[:, :, 3] = 0.0  # layer cloud ice water path
+            clouds[:, :, 5] = 0.0  # layer rain water path
+            clouds[:, :, 7] = 0.0  # layer snow water path
+            cldsa[:, :] = 0.0  # fraction of clouds for low, mid, hi, tot, bl
+
+        # Start SW radiation calculations
+        if Model.lsswr:
+
+            #  - Call module_radiation_surface::setalb() to setup surface albedo.
+            #  for SW radiation.
+
+            sfcalb = setalb(
+                Sfcprop.slmsk,
+                Sfcprop.snowd,
+                Sfcprop.sncovr,
+                Sfcprop.snoalb,
+                Sfcprop.zorl,
+                Radtend.coszen,
+                tsfg,
+                tsfa,
+                Sfcprop.hprime[:, 0],
+                Sfcprop.alvsf,
+                Sfcprop.alnsf,
+                Sfcprop.alvwf,
+                Sfcprop.alnwf,
+                Sfcprop.facsf,
+                Sfcprop.facwf,
+                Sfcprop.fice,
+                Sfcprop.tisfc,
+                IM,
+                alb1d,
+                Model.pertalb,
+            )
+
+            # Approximate mean surface albedo from vis- and nir-  diffuse values.
+            Radtend.sfalb[:] = max(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
+
+            if nday > 0:
+
+                #  - Call module_radsw_main::swrad(), to compute SW heating rates and
+                #   fluxes.
+
+                if Model.swhtr:
+                    (
+                        htswc,
+                        Diag.topfsw,
+                        Radtend.sfcfsw,
+                        cldtausw,
+                        htsw0,
+                        scmpsw,
+                    ) = self.rsw.swrad(
+                        plyr,
+                        plvl,
+                        tlyr,
+                        tlvl,
+                        qlyr,
+                        olyr,
+                        gasvmr,
+                        clouds,
+                        Tbd.icsdsw,
+                        faersw,
+                        sfcalb,
+                        dz,
+                        delp,
+                        de_lgth,
+                        Radtend.coszen,
+                        Model.solcon,
+                        nday,
+                        idxday,
+                        IM,
+                        LMK,
+                        LMP,
+                        Model.lprnt,
+                    )
+                else:
+                    (
+                        htswc,
+                        Diag.topfsw,
+                        Radtend.sfcfsw,
+                        cldtausw,
+                        scmpsw,
+                    ) = self.rsw.swrad(
+                        plyr,
+                        plvl,
+                        tlyr,
+                        tlvl,
+                        qlyr,
+                        olyr,
+                        gasvmr,
+                        clouds,
+                        Tbd.icsdsw,
+                        faersw,
+                        sfcalb,
+                        dz,
+                        delp,
+                        de_lgth,
+                        Radtend.coszen,
+                        Model.solcon,
+                        nday,
+                        idxday,
+                        IM,
+                        LMK,
+                        LMP,
+                        Model.lprnt,
+                    )
+
+                for k in range(LM):
+                    k1 = k + kd
+                    Radtend.htrsw[:IM, k] = htswc[:IM, k1]
+
+                #     We are assuming that radiative tendencies are from bottom to top
+                # --- repopulate the points above levr i.e. LM
+                if LM < LEVS:
+                    for k in range(LM, LEVS):
+                        Radtend.htrsw[:IM, k] = Radtend.htrsw[:IM, LM]
+
+                if Model.swhtr:
+                    for k in range(LM):
+                        k1 = k + kd
+                        Radtend.swhc[:IM, k] = htsw0[:im, k1]
+
+                    # --- repopulate the points above levr i.e. LM
+                    if LM < LEVS:
+                        for k in range(LM, LEVS):
+                            Radtend.swhc[:IM, k] = Radtend.swhc[:IM, LM]
+
+                #  --- surface down and up spectral component fluxes
+                #  - Save two spectral bands' surface downward and upward fluxes for
+                #    output.
+
+                for i in range(IM):
+                    Coupling.nirbmdi[i] = scmpsw[i].nirbm
+                    Coupling.nirdfdi[i] = scmpsw[i].nirdf
+                    Coupling.visbmdi[i] = scmpsw[i].visbm
+                    Coupling.visdfdi[i] = scmpsw[i].visdf
+
+                    Coupling.nirbmui[i] = scmpsw[i].nirbm * sfcalb[i, 0]
+                    Coupling.nirdfui[i] = scmpsw[i].nirdf * sfcalb[i, 1]
+                    Coupling.visbmui[i] = scmpsw[i].visbm * sfcalb[i, 2]
+                    Coupling.visdfui[i] = scmpsw[i].visdf * sfcalb[i, 3]
+
+            else:
+
+                Radtend.htrsw[:, :] = 0.0
+
+                Radtend.sfcfsw = sfcfsw_type(0.0, 0.0, 0.0, 0.0)
+                Diag.topfsw = topfsw_type(0.0, 0.0, 0.0)
+                scmpsw = cmpfsw_type(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+                for i in range(IM):
+                    Coupling.nirbmdi[i] = 0.0
+                    Coupling.nirdfdi[i] = 0.0
+                    Coupling.visbmdi[i] = 0.0
+                    Coupling.visdfdi[i] = 0.0
+                    Coupling.nirbmui[i] = 0.0
+                    Coupling.nirdfui[i] = 0.0
+                    Coupling.visbmui[i] = 0.0
+                    Coupling.visdfui[i] = 0.0
+
+                if Model.swhtr:
+                    Radtend.swhc[:, :] = 0
+                    cldtausw[:, :] = 0.0
+
+            # --- radiation fluxes for other physics processes
+            for i in range(IM):
+                Coupling.sfcnsw[i] = Radtend.sfcfsw[i].dnfxc - Radtend.sfcfsw[i].upfxc
+                Coupling.sfcdsw[i] = Radtend.sfcfsw[i].dnfxc
+
+        # Start LW radiation calculations
+        if Model.lslwr:
+
+            #  - Call module_radiation_surface::setemis(),to setup surface
+            # emissivity for LW radiation.
+
+            Radtend.semis = setemis(
+                Grid.xlon,
+                Grid.xlat,
+                Sfcprop.slmsk,
+                Sfcprop.snowd,
+                Sfcprop.sncovr,
+                Sfcprop.zorl,
+                tsfg,
+                tsfa,
+                Sfcprop.hprime[:, 0],
+                IM,
+            )
+
+            #  - Call module_radlw_main::lwrad(), to compute LW heating rates and
+            #    fluxes.
+
+            if Model.lwhtr:
+                htlwc, Diag.topflw, Radtend.sfcflw, cldtaulw, htlw0 = self.rlw.lwrad(
+                    plyr,
+                    plvl,
+                    tlyr,
+                    tlvl,
+                    qlyr,
+                    olyr,
+                    gasvmr,
+                    clouds,
+                    Tbd.icsdlw,
+                    faerlw,
+                    Radtend.semis,
+                    tsfg,
+                    dz,
+                    delp,
+                    de_lgth,
+                    IM,
+                    LMK,
+                    LMP,
+                    Model.lprnt,
+                )
+            else:
+                htlwc, Diag.topflw, Radtend.sfcflw, cldtaulw = self.rlw.lwrad(
+                    plyr,
+                    plvl,
+                    tlyr,
+                    tlvl,
+                    qlyr,
+                    olyr,
+                    gasvmr,
+                    clouds,
+                    Tbd.icsdlw,
+                    faerlw,
+                    Radtend.semis,
+                    tsfg,
+                    dz,
+                    delp,
+                    de_lgth,
+                    IM,
+                    LMK,
+                    LMP,
+                    Model.lprnt,
+                )
+
+            # Save calculation results
+            #  - Save surface air temp for diurnal adjustment at model t-steps
+            Radtend.tsflw[:] = tsfa[:]
+
+            for k in range(LM):
+                k1 = k + kd
+                Radtend.htrlw[:IM, k] = htlwc[:IM, k1]
+
+            # --- repopulate the points above levr
+            if LM < LEVS:
+                for k in range(LM, LEVS):
+                    Radtend.htrlw[IM, k] = Radtend.htrlw[:IM, LM]
+
+            if Model.lwhtr:
+                for k in range(LM):
+                    k1 = k + kd
+                    Radtend.lwhc[:IM, k] = htlw0[:IM, k1]
+
+                # --- repopulate the points above levr
+                if LM < LEVS:
+                    for k in range(LM, LEVS):
+                        Radtend.lwhc[:IM, k] = Radtend.lwhc[:IM, LM]
+
+            # --- radiation fluxes for other physics processes
+            Coupling.sfcdlw[:] = Radtend.sfcflw[:].dnfxc
+
+        #  - For time averaged output quantities (including total-sky and
+        #    clear-sky SW and LW fluxes at TOA and surface; conventional
+        #    3-domain cloud amount, cloud top and base pressure, and cloud top
+        #    temperature; aerosols AOD, etc.), store computed results in
+        #    corresponding slots of array fluxr with appropriate time weights.
+
+        #  --- ...  collect the fluxr data for wrtsfc
+
+        if Model.lssav:
+            if Model.lsswr:
+                for i in range(IM):
+                    Diag.fluxr[i, 33] = (
+                        Diag.fluxr[i, 33] + Model.fhswr * aerodp[i, 0]
+                    )  # total aod at 550nm
+                    Diag.fluxr[i, 34] = (
+                        Diag.fluxr[i, 34] + Model.fhswr * aerodp[i, 1]
+                    )  # DU aod at 550nm
+                    Diag.fluxr[i, 35] = (
+                        Diag.fluxr[i, 35] + Model.fhswr * aerodp[i, 2]
+                    )  # BC aod at 550nm
+                    Diag.fluxr[i, 36] = (
+                        Diag.fluxr[i, 36] + Model.fhswr * aerodp[i, 3]
+                    )  # OC aod at 550nm
+                    Diag.fluxr[i, 37] = (
+                        Diag.fluxr[i, 37] + Model.fhswr * aerodp[i, 4]
+                    )  # SU aod at 550nm
+                    Diag.fluxr[i, 38] = (
+                        Diag.fluxr[i, 38] + Model.fhswr * aerodp[i, 5]
+                    )  # SS aod at 550nm
+
+            #  ---  save lw toa and sfc fluxes
+            if Model.lslwr:
+                #  ---  lw total-sky fluxes
+                for i in range(IM):
+                    Diag.fluxr[i, 0] = (
+                        Diag.fluxr[i, 0] + Model.fhlwr * Diag.topflw[i].upfxc
+                    )  # total sky top lw up
+                    Diag.fluxr[i, 18] = (
+                        Diag.fluxr[i, 18] + Model.fhlwr * Radtend.sfcflw[i].dnfxc
+                    )  # total sky sfc lw dn
+                    Diag.fluxr[i, 19] = (
+                        Diag.fluxr[i, 19] + Model.fhlwr * Radtend.sfcflw[i].upfxc
+                    )  # total sky sfc lw up
+                    #  ---  lw clear-sky fluxes
+                    Diag.fluxr[i, 27] = (
+                        Diag.fluxr[i, 27] + Model.fhlwr * Diag.topflw[i].upfx0
+                    )  # clear sky top lw up
+                    Diag.fluxr[i, 29] = (
+                        Diag.fluxr[i, 29] + Model.fhlwr * Radtend.sfcflw[i].dnfx0
+                    )  # clear sky sfc lw dn
+                    Diag.fluxr[i, 32] = (
+                        Diag.fluxr[i, 32] + Model.fhlwr * Radtend.sfcflw[i].upfx0
+                    )  # clear sky sfc lw up
+
+            #  ---  save sw toa and sfc fluxes with proper diurnal sw wgt. coszen=mean cosz over daylight
+            #       part of sw calling interval, while coszdg= mean cosz over entire interval
+            if Model.lsswr:
+                for i in range(IM):
+                    if Radtend.coszen[i] > 0.0:
+                        #  --- sw total-sky fluxes
+                        #      -------------------
+                        tem0d = Model.fhswr * Radtend.coszdg[i] / Radtend % coszen[i]
+                        Diag.fluxr[i, 1] = (
+                            Diag.fluxr[i, 1] + Diag.topfsw[i].upfxc * tem0d
+                        )  # total sky top sw up
+                        Diag.fluxr[i, 2] = (
+                            Diag.fluxr[i, 2] + Radtend.sfcfsw[i].upfxc * tem0d
+                        )  # total sky sfc sw up
+                        Diag.fluxr[i, 3] = (
+                            Diag.fluxr[i, 4] + Radtend.sfcfsw[i].dnfxc * tem0d
+                        )  # total sky sfc sw dn
+                        #  --- sw uv-b fluxes
+                        #      --------------
+                        Diag.fluxr[i, 20] = (
+                            Diag.fluxr[i, 20] + scmpsw[i].uvbfc * tem0d
+                        )  # total sky uv-b sw dn
+                        Diag.fluxr[i, 21] = (
+                            Diag.fluxr[i, 21] + scmpsw[i].uvbf0 * tem0d
+                        )  # clear sky uv-b sw dn
+                        #  --- sw toa incoming fluxes
+                        #      ----------------------
+                        Diag.fluxr[i, 22] = (
+                            Diag.fluxr[i, 22] + Diag.topfsw[i].dnfxc * tem0d
+                        )  # top sw dn
+                        #  --- sw sfc flux components
+                        #      ----------------------
+                        Diag.fluxr[i, 23] = (
+                            Diag.fluxr[i, 23] + scmpsw[i].visbm * tem0d
+                        )  # uv/vis beam sw dn
+                        Diag.fluxr[i, 24] = (
+                            Diag.fluxr[i, 24] + scmpsw[i].visdf * tem0d
+                        )  # uv/vis diff sw dn
+                        Diag.fluxr[i, 25] = (
+                            Diag.fluxr[i, 25] + scmpsw[i].nirbm * tem0d
+                        )  # nir beam sw dn
+                        Diag.fluxr[i, 26] = (
+                            Diag.fluxr[i, 26] + scmpsw[i].nirdf * tem0d
+                        )  # nir diff sw dn
+                        #  --- sw clear-sky fluxes
+                        #      -------------------
+                        Diag.fluxr[i, 28] = (
+                            Diag.fluxr[i, 28] + Diag.topfsw[i].upfx0 * tem0d
+                        )  # clear sky top sw up
+                        Diag.fluxr[i, 30] = (
+                            Diag.fluxr[i, 30] + Radtend.sfcfsw[i].upfx0 * tem0d
+                        )  # clear sky sfc sw up
+                        Diag.fluxr[i, 31] = (
+                            Diag.fluxr[i, 31] + Radtend.sfcfsw[i].dnfx0 * tem0d
+                        )  # clear sky sfc sw dn
+
+            #  ---  save total and boundary layer clouds
+
+            if Model.lsswr or Model.lslwr:
+                for i in range(IM):
+                    Diag.fluxr[i, 16] = Diag.fluxr[i, 16] + raddt * cldsa[i, 3]
+                    Diag.fluxr[i, 17] = Diag.fluxr[i, 17] + raddt * cldsa[i, 4]
+
+                #  ---  save cld frac,toplyr,botlyr and top temp, note that the order
+                #       of h,m,l cloud is reversed for the fluxr output.
+                #  ---  save interface pressure (pa) of top/bot
+
+                for j in range(3):
+                    for i in range(IM):
+                        tem0d = raddt * cldsa[i, j]
+                        itop = mtopa[i, j] - kd
+                        ibtc = mbota[i, j] - kd
+                        Diag.fluxr[i, 6 - j] = Diag.fluxr[i, 6 - j] + tem0d
+                        Diag.fluxr[i, 9 - j] = (
+                            Diag.fluxr[i, 9 - j] + tem0d * Statein.prsi[i, itop + kt]
+                        )
+                        Diag.fluxr[i, 12 - j] = (
+                            Diag.fluxr[i, 12 - j] + tem0d * Statein.prsi[i, ibtc + kb]
+                        )
+                        Diag.fluxr[i, 15 - j] = (
+                            Diag.fluxr[i, 15 - j] + tem0d * Statein.tgrs[i, itop]
+                        )
+
+                        # Anning adds optical depth and emissivity output
+                        tem1 = 0.0
+                        tem2 = 0.0
+                        for k in range(ibtc - 1, itop):
+                            tem1 = tem1 + cldtausw[i, k]  # approx .55 mu channel
+                            tem2 = tem2 + cldtaulw[i, k]  # approx 10. mu channel
+
+                        Diag.fluxr[i, 41 - j] = Diag.fluxr[i, 41 - j] + tem0d * tem1
+                        Diag.fluxr[i, 44 - j] = Diag.fluxr[i, 44 - j] + tem0d * (
+                            1.0 - np.exp(-tem2)
+                        )
+
+        return Cldprop, Radtend, Diag
