@@ -2,7 +2,6 @@ import sys
 import time
 import numpy as np
 import xarray as xr
-import gt4py.gtscript as gtscript
 
 sys.path.insert(0, "..")
 from radlw_param import a0, a1, a2, nbands, nrates, ipat, delwave
@@ -17,7 +16,6 @@ from util import (
 )
 from config import *
 
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 ddir = "../../fortran/data/LW"
@@ -29,7 +27,7 @@ serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
 savepoints2 = serializer2.savepoint_list()
 
 # Flag for doing intermediate tests of individual stencil output
-do_test = False
+do_test = True
 
 rebuild = False
 validate = True
@@ -645,6 +643,7 @@ if do_test:
         )
 
     print("Testing firstloop...")
+    print(" ")
     compare_data(outdict_firstloop, valdict_firstloop)
     print(" ")
     print("Firstloop validates!")
@@ -709,6 +708,7 @@ if do_test:
         )
 
     print("Testing cldprop...")
+    print(" ")
     compare_data(outdict_cldprop, valdict_cldprop)
     print(" ")
     print("cldprop validates!")
@@ -814,6 +814,7 @@ if do_test:
             )
 
     print("Testing setcoef...")
+    print(" ")
     compare_data(outdict_setcoef, valdict_setcoef)
     print(" ")
     print("setcoef validates!")
@@ -1759,6 +1760,7 @@ if do_test:
         )
 
     print("Testing taumol...")
+    print(" ")
     compare_data(outdict_taumol, valdict_taumol)
     print(" ")
     print("taumol validates!")
@@ -1862,6 +1864,7 @@ if do_test:
         )
 
     print("Testing rtrnmc...")
+    print(" ")
     compare_data(outdict_rtrnmc, valdict_rtrnmc)
     print(" ")
     print("rtrnmc validates!")
@@ -1901,6 +1904,7 @@ for var in outvars:
         outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
 
 print("Testing final output...")
+print(" ")
 compare_data(valdict, outdict_np)
 print(" ")
 print("lwrad validates!")
