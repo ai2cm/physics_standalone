@@ -77,7 +77,6 @@ amdo3 = con_amd / con_amo3
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    verbose=True,
     externals={
         "nbands": nbands,
         "maxgas": maxgas,
@@ -900,7 +899,6 @@ def taugb01(
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    verbose=True,
     externals={
         "nspa": nspa[1],
         "nspb": nspb[1],
@@ -1019,7 +1017,6 @@ def taugb02(
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    verbose=True,
     externals={
         "nspa": nspa[2],
         "nspb": nspb[2],
