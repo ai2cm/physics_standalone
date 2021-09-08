@@ -572,7 +572,7 @@ class RadiationDriver:
         #  - Call module_radiation_aerosols::setaer(),to setup aerosols
         # property profile for radiation.
 
-        faersw, faerlw, aerodp = setaer(
+        faersw, faerlw, aerodp = self.aer.setaer(
             plvl,
             plyr,
             prslk1,

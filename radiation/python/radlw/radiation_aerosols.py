@@ -1962,18 +1962,18 @@ class AerosolClass:
         aerodp = np.zeros((IMAX, self.NSPC1))
 
         #  ---  locals:
-        cmix = np.zeros(self.NCM)
-        denn = np.zeros(2)
-        spcodp = np.zeros(self.NSPC)
+        self.cmix = np.zeros(self.NCM)
+        self.denn = np.zeros(2)
+        self.spcodp = np.zeros(self.NSPC)
 
-        delz = np.zeros(NLAY)
-        rh1 = np.zeros(NLAY)
-        dz1 = np.zeros(NLAY)
-        idmaer = np.zeros(NLAY, dtype=DTYPE_INT)
+        self.delz = np.zeros(NLAY)
+        self.rh1 = np.zeros(NLAY)
+        self.dz1 = np.zeros(NLAY)
+        self.idmaer = np.zeros(NLAY, dtype=DTYPE_INT)
 
-        tauae = np.zeros((NLAY, self.NSWLWBD))
-        ssaae = np.zeros((NLAY, self.NSWLWBD))
-        asyae = np.zeros((NLAY, self.NSWLWBD))
+        self.tauae = np.zeros((NLAY, self.NSWLWBD))
+        self.ssaae = np.zeros((NLAY, self.NSWLWBD))
+        self.asyae = np.zeros((NLAY, self.NSWLWBD))
 
         #  ---  conversion constants
         dltg = 360.0 / float(self.IMXAE)
@@ -2065,7 +2065,7 @@ class AerosolClass:
                 self.kprfg[i2, j2],
             )
             h1 = self.haer[0, kp]
-            denn[1] = 0.0
+            self.denn[1] = 0.0
             ii = 1
 
             if kp != kpa:
@@ -2104,7 +2104,7 @@ class AerosolClass:
             #   (denn)
 
             for m in range(ii):  # ii=1 for domain 1; =2 for domain 2.
-                denn[m] = (
+                self.denn[m] = (
                     w11 * self.denng[m, i1 - 1, j1 - 1]
                     + w12 * self.denng[m, i1 - 1, j2 - 1]
                     + w21 * self.denng[m, i2 - 1, j1 - 1]
@@ -2113,27 +2113,27 @@ class AerosolClass:
 
             # -# Do horizontal bi-linear interpolation on mixing ratios
 
-            cmix[:] = 0.0
+            self.cmix[:] = 0.0
             for m in range(self.NXC):
                 ii = self.idxcg[m, i1 - 1, j1 - 1] - 1
                 if ii > -1:
-                    cmix[ii] = cmix[ii] + w11 * self.cmixg[m, i1 - 1, j1 - 1]
+                    self.cmix[ii] = self.cmix[ii] + w11 * self.cmixg[m, i1 - 1, j1 - 1]
                 ii = self.idxcg[m, i1 - 1, j2 - 1] - 1
                 if ii > -1:
-                    cmix[ii] = cmix[ii] + w12 * self.cmixg[m, i1 - 1, j2 - 1]
+                    self.cmix[ii] = self.cmix[ii] + w12 * self.cmixg[m, i1 - 1, j2 - 1]
                 ii = self.idxcg[m, i2 - 1, j1 - 1] - 1
                 if ii > -1:
-                    cmix[ii] = cmix[ii] + w21 * self.cmixg[m, i2 - 1, j1 - 1]
+                    self.cmix[ii] = self.cmix[ii] + w21 * self.cmixg[m, i2 - 1, j1 - 1]
                 ii = self.idxcg[m, i2 - 1, j2 - 1]
                 if ii > -1:
-                    cmix[ii] = cmix[ii] + w22 * self.cmixg[m, i2 - 1, j2 - 1]
+                    self.cmix[ii] = self.cmix[ii] + w22 * self.cmixg[m, i2 - 1, j2 - 1]
 
             # -# Prepare to setup domain index array and effective layer thickness,
             #    also convert pressure level to sigma level to follow the terrain.
 
             for k in range(NLAY):
-                rh1[k] = rhlay[i, k]
-                dz1[k] = dz[i, k]
+                self.rh1[k] = rhlay[i, k]
+                self.dz1[k] = dz[i, k]
 
                 if self.ivflip == 1:  # input from sfc to toa
 
@@ -2151,7 +2151,7 @@ class AerosolClass:
                             ii += 1
                             if ii == 2 and self.prsref[1, kp] == self.prsref[2, kp]:
                                 ii = 3
-                        idmaer[k] = ii + 1
+                        self.idmaer[k] = ii + 1
 
                         if ii > 1:
                             tmp1 = self.haer[ii, kp]
@@ -2160,11 +2160,11 @@ class AerosolClass:
 
                         if tmp1 > 0.0:
                             tmp2 = 1.0 / tmp1
-                            delz[k] = tmp1 * (
+                            self.delz[k] = tmp1 * (
                                 np.exp(-hz[i, k] * tmp2) - np.exp(-hz[i, k + 1] * tmp2)
                             )
                         else:
-                            delz[k] = dz1[k]
+                            self.delz[k] = self.dz1[k]
 
                 else:  # input from toa to sfc
 
@@ -2183,7 +2183,7 @@ class AerosolClass:
                             if ii == 1 and self.prsref[1, kp] == self.prsref[2, kp]:
                                 ii = 2
 
-                        idmaer[k] = ii + 1
+                        self.idmaer[k] = ii + 1
 
                         if ii > 0:
                             tmp1 = self.haer[ii, kp]
@@ -2192,11 +2192,11 @@ class AerosolClass:
 
                         if tmp1 > 0.0:
                             tmp2 = 1.0 / tmp1
-                            delz[k] = tmp1 * (
+                            self.delz[k] = tmp1 * (
                                 np.exp(-hz[i, k + 1] * tmp2) - np.exp(-hz[i, k] * tmp2)
                             )
                         else:
-                            delz[k] = dz1[k]
+                            self.delz[k] = self.dz1[k]
 
                 # -# Call radclimaer() to calculate SW/LW aerosol optical properties
                 #    for the corresponding frequency bands.
@@ -2206,342 +2206,308 @@ class AerosolClass:
                 if laersw:
                     for m in range(nbdsw):
                         for k in range(NLAY):
-                            aerosw[i, k, m, 0] = tauae[k, m]
-                            aerosw[i, k, m, 1] = ssaae[k, m]
-                            aerosw[i, k, m, 2] = asyae[k, m]
+                            aerosw[i, k, m, 0] = self.tauae[k, m]
+                            aerosw[i, k, m, 1] = self.ssaae[k, m]
+                            aerosw[i, k, m, 2] = self.asyae[k, m]
 
                     #  ---  total aod (optional)
                     for k in range(NLAY):
-                        aerodp[i, 0] = aerodp[i, 0] + tauae[k, self.nv_aod - 1]
+                        aerodp[i, 0] = aerodp[i, 0] + self.tauae[k, self.nv_aod - 1]
 
                     #  ---  for diagnostic output (optional)
                     for m in range(self.NSPC):
-                        aerodp[i, m + 1] = spcodp[m]
+                        aerodp[i, m + 1] = self.spcodp[m]
 
                 if laerlw:
                     if self.NLWBND == 1:
                         m1 = self.NSWBND + 1
                         for m in range(NBDLW):
                             for k in range(NLAY):
-                                aerolw[i, k, m, 0] = tauae[k, m1]
-                                aerolw[i, k, m, 1] = ssaae[k, m1]
-                                aerolw[i, k, m, 2] = asyae[k, m1]
+                                aerolw[i, k, m, 0] = self.tauae[k, m1]
+                                aerolw[i, k, m, 1] = self.ssaae[k, m1]
+                                aerolw[i, k, m, 2] = self.asyae[k, m1]
                     else:
                         for m in range(NBDLW):
                             m1 = self.NSWBND + m
                             for k in range(NLAY):
-                                aerolw[i, k, m, 0] = tauae[k, m1]
-                                aerolw[i, k, m, 1] = ssaae[k, m1]
-                                aerolw[i, k, m, 2] = asyae[k, m1]
+                                aerolw[i, k, m, 0] = self.tauae[k, m1]
+                                aerolw[i, k, m, 1] = self.ssaae[k, m1]
+                                aerolw[i, k, m, 2] = self.asyae[k, m1]
 
+    # This subroutine computes aerosols optical properties in NSWLWBD
+    # bands. there are seven different vertical profile structures. in the
+    # troposphere, aerosol distribution at each grid point is composed
+    # from up to six components out of ten different substances.
 
-# ! =================
-#       contains
-# ! =================
+    def radclimaer(self):
+        #  ==================================================================  !
+        #                                                                      !
+        #  compute aerosols optical properties in NSWLWBD bands. there are     !
+        #  seven different vertical profile structures. in the troposphere,    !
+        #  aerosol distribution at each grid point is composed from up to      !
+        #  six components out of a total of ten different substances.          !
+        #                                                                      !
+        #  ref: wmo report wcp-112 (1986)                                      !
+        #                                                                      !
+        #  input variables:                                                    !
+        #     cmix   - mixing ratioes of aerosol components  -     NCM         !
+        #     denn   - aerosol number densities              -     2           !
+        #     rh1    - relative humidity                     -     NLAY        !
+        #     delz   - effective layer thickness             km    NLAY        !
+        #     idmaer - aerosol domain index                  -     NLAY        !
+        #     NXC    - number of different aerosol components-     1           !
+        #     NLAY   - vertical dimensions                   -     1           !
+        #                                                                      !
+        #  output variables:                                                   !
+        #     tauae  - optical depth                         -     NLAY*NSWLWBD!
+        #     ssaae  - single scattering albedo              -     NLAY*NSWLWBD!
+        #     asyae  - asymmetry parameter                   -     NLAY*NSWLWBD!
+        #!    aerodp - vertically integrated aer-opt-depth   -     IMAX*NSPC+1 !
+        #                                                                      !
+        #  ==================================================================  !
+        #
+        crt1 = 30.0
+        crt2 = 0.03333
 
-# !> This subroutine computes aerosols optical properties in NSWLWBD
-# !! bands. there are seven different vertical profile structures. in the
-# !! troposphere, aerosol distribution at each grid point is composed
-# !! from up to six components out of ten different substances.
-# !--------------------------------
-#       subroutine radclimaer
-# !................................
+        spcodp = 0.0
 
-# !  ---  inputs:  (in scope variables)
-# !  ---  outputs: (in scope variables)
+        # ===> ... loop over vertical layers from top to surface
 
-# !  ==================================================================  !
-# !                                                                      !
-# !  compute aerosols optical properties in NSWLWBD bands. there are     !
-# !  seven different vertical profile structures. in the troposphere,    !
-# !  aerosol distribution at each grid point is composed from up to      !
-# !  six components out of a total of ten different substances.          !
-# !                                                                      !
-# !  ref: wmo report wcp-112 (1986)                                      !
-# !                                                                      !
-# !  input variables:                                                    !
-# !     cmix   - mixing ratioes of aerosol components  -     NCM         !
-# !     denn   - aerosol number densities              -     2           !
-# !     rh1    - relative humidity                     -     NLAY        !
-# !     delz   - effective layer thickness             km    NLAY        !
-# !     idmaer - aerosol domain index                  -     NLAY        !
-# !     NXC    - number of different aerosol components-     1           !
-# !     NLAY   - vertical dimensions                   -     1           !
-# !                                                                      !
-# !  output variables:                                                   !
-# !     tauae  - optical depth                         -     NLAY*NSWLWBD!
-# !     ssaae  - single scattering albedo              -     NLAY*NSWLWBD!
-# !     asyae  - asymmetry parameter                   -     NLAY*NSWLWBD!
-# !!    aerodp - vertically integrated aer-opt-depth   -     IMAX*NSPC+1 !
-# !                                                                      !
-# !  ==================================================================  !
-# !
-#       real (kind=kind_phys) :: crt1, crt2
-#       parameter (crt1=30.0, crt2=0.03333)
+        for kk in range(self.NLAY):
 
-# !  ---  inputs:
-# !  ---  outputs:
+            # --- linear interp coeffs for rh-dep species
 
-# !  ---  locals:
-#       real (kind=kind_phys) :: cm, hd, hdi, sig0u, sig0l, ratio, tt0,   &
-#      &      ex00, sc00, ss00, as00, ex01, sc01, ss01, as01,     tt1,    &
-#      &      ex02, sc02, ss02, as02, ex03, sc03, ss03, as03,     tt2,    &
-#      &      ext1, sca1, ssa1, asy1, drh0, drh1, rdrh
+            ih2 = 0
+            while self.rh1[kk] > self.rhlev[ih2]:
+                ih2 += 1
+                if ih2 > self.NRHLEV:
+                    break
 
-#       integer :: ih1, ih2, kk, idom, icmp, ib, ii, ic, ic1
-#       integer :: idx
+            ih1 = max(1, ih2) - 1
+            ih2 = min(self.NRHLEV, ih2 + 1) - 1
 
-# !===> ...  begin here
+            drh0 = self.rhlev[ih2] - self.rhlev[ih1]
+            drh1 = self.rh1[kk] - self.rhlev[ih1]
+            if ih1 == ih2:
+                rdrh = 0.0
+            else:
+                rdrh = drh1 / drh0
 
-#        spcodp = f_zero
+            # --- assign optical properties in each domain
 
-# !===> ... loop over vertical layers from top to surface
+            idom = self.idmaer[kk]
 
-#       lab_do_layer : do kk = 1, NLAY
+            if idom == 5:
+                # --- 5th domain - upper stratosphere assume no aerosol
 
-# ! --- linear interp coeffs for rh-dep species
+                for ib in range(self.NSWLWBD):
+                    self.tauae[kk, ib] = 0.0
+                    if ib <= self.NSWBND:
+                        self.ssaae[kk, ib] = 0.99
+                        self.asyae[kk, ib] = 0.696
+                    else:
+                        self.ssaae[kk, ib] = 0.5
+                        self.asyae[kk, ib] = 0.3
 
-#         ih2 = 1
-#         do while ( rh1(kk) > rhlev(ih2) )
-#           ih2 = ih2 + 1
-#           if ( ih2 > NRHLEV ) exit
-#         enddo
-#         ih1 = max( 1, ih2-1 )
-#         ih2 = min( NRHLEV, ih2 )
+            elif idom == 4:
+                # --- 4th domain - stratospheric layers
 
-#         drh0 = rhlev(ih2) - rhlev(ih1)
-#         drh1 = rh1(kk) - rhlev(ih1)
-#         if ( ih1 == ih2 ) then
-#           rdrh = f_zero
-#         else
-#           rdrh = drh1 / drh0
-#         endif
+                for ib in range(self.NSWLWBD):
+                    self.tauae[kk, ib] = self.extstra[ib] * self.delz[kk]
+                    if ib <= self.NSWBND:
+                        self.ssaae[kk, ib] = 0.99
+                        self.asyae[kk, ib] = 0.696
+                    else:
+                        self.ssaae[kk, ib] = 0.5
+                        self.asyae[kk, ib] = 0.3
 
-# ! --- assign optical properties in each domain
+                # --- compute aod from individual species' contribution (optional)
+                idx = self.idxspc[10]  # for sulfate
+                spcodp[idx] = spcodp[idx] + self.tauae[kk, self.nv_aod]
 
-#         idom = idmaer(kk)
+            elif idom == 3:
+                # --- 3rd domain - free tropospheric layers
+                #   1:inso 0.17e-3; 2:soot 0.4; 7:waso 0.59983; n:730
 
-#         lab_if_idom : if (idom == 5) then
-# ! --- 5th domain - upper stratosphere assume no aerosol
+                for ib in range(self.NSWLWBD):
+                    ex01 = self.extrhi[0, ib]
+                    sc01 = self.scarhi[0, ib]
+                    ss01 = self.ssarhi[0, ib]
+                    as01 = self.asyrhi[0, ib]
 
-#           do ib = 1, NSWLWBD
-#             tauae(kk,ib) = f_zero
-#             if ( ib <= NSWBND ) then
-#               ssaae(kk,ib) = 0.99
-#               asyae(kk,ib) = 0.696
-#             else
-#               ssaae(kk,ib) = 0.5
-#               asyae(kk,ib) = 0.3
-#             endif
-#           enddo
+                    ex02 = self.extrhi[1, ib]
+                    sc02 = self.scarhi[1, ib]
+                    ss02 = self.ssarhi[1, ib]
+                    as02 = self.asyrhi[1, ib]
 
-#         elseif (idom == 4) then    lab_if_idom
-# ! --- 4th domain - stratospheric layers
+                    ex03 = self.extrhd[ih1, 0, ib] + rdrh * (
+                        self.extrhd[ih2, 0, ib] - self.extrhd[ih1, 0, ib]
+                    )
+                    sc03 = self.scarhd[ih1, 0, ib] + rdrh * (
+                        self.scarhd[ih2, 0, ib] - self.scarhd[ih1, 0, ib]
+                    )
+                    ss03 = self.ssarhd[ih1, 0, ib] + rdrh * (
+                        self.ssarhd[ih2, 0, ib] - self.ssarhd[ih1, 0, ib]
+                    )
+                    as03 = self.asyrhd[ih1, 0, ib] + rdrh * (
+                        self.asyrhd[ih2, 0, ib] - self.asyrhd[ih1, 0, ib]
+                    )
 
-#           do ib = 1, NSWLWBD
-#             tauae(kk,ib) = extstra(ib) * delz(kk)
-#             if ( ib <= NSWBND ) then
-#               ssaae(kk,ib) = 0.99
-#               asyae(kk,ib) = 0.696
-#             else
-#               ssaae(kk,ib) = 0.5
-#               asyae(kk,ib) = 0.3
-#             endif
-#           enddo
+                    ext1 = 0.17e-3 * ex01 + 0.4 * ex02 + 0.59983 * ex03
+                    sca1 = 0.17e-3 * sc01 + 0.4 * sc02 + 0.59983 * sc03
+                    ssa1 = (
+                        0.17e-3 * ss01 * ex01
+                        + 0.4 * ss02 * ex02
+                        + 0.59983 * ss03 * ex03
+                    )
+                    asy1 = (
+                        0.17e-3 * as01 * sc01
+                        + 0.4 * as02 * sc02
+                        + 0.59983 * as03 * sc03
+                    )
 
-# ! --- compute aod from individual species' contribution (optional)
-#           idx = idxspc(10)             ! for sulfate
-#           spcodp(idx) = spcodp(idx) + tauae(kk,nv_aod)
+                    self.tauae[kk, ib] = ext1 * 730.0 * self.delz[kk]
+                    self.ssaae[kk, ib] = min(1.0, ssa1 / ext1)
+                    self.asyae[kk, ib] = min(1.0, asy1 / sca1)
 
-#         elseif (idom == 3) then    lab_if_idom
-# ! --- 3rd domain - free tropospheric layers
-# !   1:inso 0.17e-3; 2:soot 0.4; 7:waso 0.59983; n:730
+                    # --- compute aod from individual species' contribution (optional)
+                    if ib == self.nv_aod - 1:
+                        spcodp[0] = (
+                            spcodp[0] + 0.17e-3 * ex01 * 730.0 * self.delz[kk]
+                        )  # dust (inso)   #1
+                        spcodp[1] = (
+                            spcodp[1] + 0.4 * ex02 * 730.0 * self.delz[kk]
+                        )  # black carbon  #2
+                        spcodp[2] = (
+                            spcodp[2] + 0.59983 * ex03 * 730.0 * self.delz[kk]
+                        )  # water soluble #7
 
-#           do ib = 1, NSWLWBD
-#             ex01 = extrhi(1,ib)
-#             sc01 = scarhi(1,ib)
-#             ss01 = ssarhi(1,ib)
-#             as01 = asyrhi(1,ib)
+            elif idom == 1:
+                # --- 1st domain - mixing layer
 
-#             ex02 = extrhi(2,ib)
-#             sc02 = scarhi(2,ib)
-#             ss02 = ssarhi(2,ib)
-#             as02 = asyrhi(2,ib)
+                for ib in range(self.NSWLWBD):
+                    ext1 = 0.0
+                    sca1 = 0.0
+                    ssa1 = 0.0
+                    asy1 = 0.0
 
-#             ex03 = extrhd(ih1,1,ib)                                     &
-#      &           + rdrh * (extrhd(ih2,1,ib) - extrhd(ih1,1,ib))
-#             sc03 = scarhd(ih1,1,ib)                                     &
-#      &           + rdrh * (scarhd(ih2,1,ib) - scarhd(ih1,1,ib))
-#             ss03 = ssarhd(ih1,1,ib)                                     &
-#      &           + rdrh * (ssarhd(ih2,1,ib) - ssarhd(ih1,1,ib))
-#             as03 = asyrhd(ih1,1,ib)                                     &
-#      &           + rdrh * (asyrhd(ih2,1,ib) - asyrhd(ih1,1,ib))
+                    for icmp in range(self.NCM):
+                        ic = icmp
+                        idx = self.idxspc[icmp]
 
-#             ext1 = 0.17e-3*ex01 + 0.4*ex02 + 0.59983*ex03
-#             sca1 = 0.17e-3*sc01 + 0.4*sc02 + 0.59983*sc03
-#             ssa1 = 0.17e-3*ss01*ex01 + 0.4*ss02*ex02 + 0.59983*ss03*ex03
-#             asy1 = 0.17e-3*as01*sc01 + 0.4*as02*sc02 + 0.59983*as03*sc03
+                        cm = self.cmix[icmp]
+                        if cm > 0.0:
 
-#             tauae(kk,ib) = ext1 * 730.0 * delz(kk)
-#             ssaae(kk,ib) = min(f_one, ssa1/ext1)
-#             asyae(kk,ib) = min(f_one, asy1/sca1)
+                            if ic <= self.NCM1:  # component withour rh dep
+                                tt0 = cm * self.extrhi[ic, ib]
+                                ext1 = ext1 + tt0
+                                sca1 = sca1 + cm * self.scarhi[ic, ib]
+                                ssa1 = (
+                                    ssa1
+                                    + cm * self.ssarhi[ic, ib] * self.extrhi[ic, ib]
+                                )
+                                asy1 = (
+                                    asy1
+                                    + cm * self.asyrhi[ic, ib] * self.scarhi[ic, ib]
+                                )
+                            else:  # component with rh dep
+                                ic1 = ic - self.NCM1
 
-# ! --- compute aod from individual species' contribution (optional)
-#             if ( ib==nv_aod ) then
-#              spcodp(1) = spcodp(1) + 0.17e-3*ex01*730.0*delz(kk)   ! dust (inso)   #1
-#              spcodp(2) = spcodp(2) + 0.4    *ex02*730.0*delz(kk)   ! black carbon  #2
-#              spcodp(3) = spcodp(3) + 0.59983*ex03*730.0*delz(kk)   ! water soluble #7
-#             endif
+                                ex00 = self.extrhd[ih1, ic1, ib] + rdrh * (
+                                    self.extrhd[ih2, ic1, ib]
+                                    - self.extrhd[ih1, ic1, ib]
+                                )
+                                sc00 = self.scarhd[ih1, ic1, ib] + rdrh * (
+                                    self.scarhd[ih2, ic1, ib]
+                                    - self.scarhd[ih1, ic1, ib]
+                                )
+                                ss00 = self.ssarhd[ih1, ic1, ib] + rdrh * (
+                                    self.ssarhd[ih2, ic1, ib]
+                                    - self.ssarhd[ih1, ic1, ib]
+                                )
+                                as00 = self.asyrhd[ih1, ic1, ib] + rdrh * (
+                                    self.asyrhd[ih2, ic1, ib]
+                                    - self.asyrhd[ih1, ic1, ib]
+                                )
 
-#           enddo
+                                tt0 = cm * ex00
+                                ext1 = ext1 + tt0
+                                sca1 = sca1 + cm * sc00
+                                ssa1 = ssa1 + cm * ss00 * ex00
+                                asy1 = asy1 + cm * as00 * sc00
 
-#         elseif (idom == 1) then    lab_if_idom
-# ! --- 1st domain - mixing layer
+                            # --- compute aod from individual species' contribution (optional)
+                            if ib == self.nv_aod - 1:
+                                spcodp[idx] = (
+                                    spcodp[idx] + tt0 * self.denn[0] * self.delz[kk]
+                                )  # idx for dif species
 
-#           lab_do_ib : do ib = 1, NSWLWBD
-#             ext1 = f_zero
-#             sca1 = f_zero
-#             ssa1 = f_zero
-#             asy1 = f_zero
+                    self.tauae[kk, ib] = ext1 * self.denn[0] * self.delz[kk]
+                    self.ssaae[kk, ib] = min(1.0, ssa1 / ext1)
+                    self.asyae[kk, ib] = min(1.0, asy1 / sca1)
 
-#             lab_do_icmp : do icmp = 1, NCM
-#               ic = icmp
-#               idx = idxspc(icmp)
+            elif idom == 2:
+                # --- 2nd domain - mineral transport layers
 
-#               cm = cmix(icmp)
-#               lab_if_cm : if ( cm > f_zero ) then
+                for ib in range(self.NSWLWBD):
+                    self.tauae[kk, ib] = (
+                        self.extrhi[5, ib] * self.denn[1] * self.delz[kk]
+                    )
+                    self.ssaae[kk, ib] = self.ssarhi[5, ib]
+                    self.asyae[kk, ib] = self.asyrhi[5, ib]
 
-#                 lab_if_ic : if ( ic <= NCM1 ) then        ! component withour rh dep
-#                   tt0  = cm * extrhi(ic,ib)
-#                   ext1 = ext1 + tt0
-#                   sca1 = sca1 + cm * scarhi(ic,ib)
-#                   ssa1 = ssa1 + cm * ssarhi(ic,ib) * extrhi(ic,ib)
-#                   asy1 = asy1 + cm * asyrhi(ic,ib) * scarhi(ic,ib)
-#                 else  lab_if_ic                           ! component with rh dep
-#                   ic1 = ic - NCM1
+                # --- compute aod from individual species' contribution (optional)
+                spcodp[0] = spcodp[0] + self.tauae[kk, self.nv_aod - 1]  # dust
 
-#                   ex00 = extrhd(ih1,ic1,ib)                             &
-#      &               + rdrh * (extrhd(ih2,ic1,ib) - extrhd(ih1,ic1,ib))
-#                   sc00 = scarhd(ih1,ic1,ib)                             &
-#      &               + rdrh * (scarhd(ih2,ic1,ib) - scarhd(ih1,ic1,ib))
-#                   ss00 = ssarhd(ih1,ic1,ib)                             &
-#      &               + rdrh * (ssarhd(ih2,ic1,ib) - ssarhd(ih1,ic1,ib))
-#                   as00 = asyrhd(ih1,ic1,ib)                             &
-#      &               + rdrh * (asyrhd(ih2,ic1,ib) - asyrhd(ih1,ic1,ib))
+            else:
+                # --- domain index out off range, assume no aerosol
 
-#                   tt0  = cm * ex00
-#                   ext1 = ext1 + tt0
-#                   sca1 = sca1 + cm * sc00
-#                   ssa1 = ssa1 + cm * ss00 * ex00
-#                   asy1 = asy1 + cm * as00 * sc00
-#                 endif  lab_if_ic
+                for ib in range(self.NSWLWBD):
+                    self.tauae[kk, ib] = 0.0
+                    self.ssaae[kk, ib] = 1.0
+                    self.asyae[kk, ib] = 0.0
 
-# ! --- compute aod from individual species' contribution (optional)
-#                 if ( ib==nv_aod ) then
-#                  spcodp(idx) = spcodp(idx) + tt0*denn(1)*delz(kk)   ! idx for dif species
-#                 endif
+        #
+        # ===> ... smooth profile at domain boundaries
+        #
+        if self.ivflip == 0:  # input from toa to sfc
 
-#               endif  lab_if_cm
-#             enddo  lab_do_icmp
+            for ib in range(self.NSWLWBD):
+                for kk in range(1, self.NLAY):
+                    if self.tauae[kk, ib] > 0.0:
+                        ratio = self.tauae[kk - 1, ib] / self.tauae[kk, ib]
+                    else:
+                        ratio = 1.0
 
-#             tauae(kk,ib) = ext1 * denn(1) * delz(kk)
-#             ssaae(kk,ib) = min(f_one, ssa1/ext1)
-#             asyae(kk,ib) = min(f_one, asy1/sca1)
-#           enddo  lab_do_ib
+                    tt0 = self.tauae[kk, ib] + self.tauae[kk - 1, ib]
+                    tt1 = 0.2 * tt0
+                    tt2 = tt0 - tt1
 
-#         elseif (idom == 2) then    lab_if_idom
-# ! --- 2nd domain - mineral transport layers
+                    if ratio > crt1:
+                        self.tauae[kk, ib] = tt1
+                        self.tauae[kk - 1, ib] = tt2
 
-#           do ib = 1, NSWLWBD
-#             tauae(kk,ib) = extrhi(6,ib) * denn(2) * delz(kk)
-#             ssaae(kk,ib) = ssarhi(6,ib)
-#             asyae(kk,ib) = asyrhi(6,ib)
-#           enddo
+                    if ratio < crt2:
+                        self.tauae[kk, ib] = tt2
+                        self.tauae[kk - 1, ib] = tt1
 
-# ! --- compute aod from individual species' contribution (optional)
-#           spcodp(1) = spcodp(1) + tauae(kk,nv_aod)            ! dust
+        else:  # input from sfc to toa
 
-#         else  lab_if_idom
-# ! --- domain index out off range, assume no aerosol
+            for ib in range(self.NSWLWBD):
+                for kk in range(self.NLAY - 2, -1, -1):
+                    if self.tauae[kk, ib] > 0.0:
+                        ratio = self.tauae[kk + 1, ib] / self.tauae[kk, ib]
+                    else:
+                        ratio = 1.0
 
-#           do ib = 1, NSWLWBD
-#             tauae(kk,ib) = f_zero
-#             ssaae(kk,ib) = f_one
-#             asyae(kk,ib) = f_zero
-#           enddo
+                    tt0 = self.tauae[kk, ib] + self.tauae[kk + 1, ib]
+                    tt1 = 0.2 * tt0
+                    tt2 = tt0 - tt1
 
-# !         write(6,19) kk,idom
-# ! 19      format(/'  ***  ERROR in sub AEROS: domain index out'         &
-# !    &,            ' of range!  K, IDOM =',3i5,' ***')
-# !         stop 19
+                    if ratio > crt1:
+                        self.tauae[kk, ib] = tt1
+                        self.tauae[kk + 1, ib] = tt2
 
-#         endif  lab_if_idom
-
-#       enddo  lab_do_layer
-
-# !
-# !===> ... smooth profile at domain boundaries
-# !
-#       if ( ivflip == 0 ) then    ! input from toa to sfc
-
-#         do ib = 1, NSWLWBD
-#         do kk = 2, NLAY
-#           if ( tauae(kk,ib) > f_zero ) then
-#             ratio = tauae(kk-1,ib) / tauae(kk,ib)
-#           else
-#             ratio = f_one
-#           endif
-
-#           tt0 = tauae(kk,ib) + tauae(kk-1,ib)
-#           tt1 = 0.2 * tt0
-#           tt2 = tt0 - tt1
-
-#           if ( ratio > crt1 ) then
-#             tauae(kk,ib)   = tt1
-#             tauae(kk-1,ib) = tt2
-#           endif
-
-#           if ( ratio < crt2 ) then
-#             tauae(kk,ib)   = tt2
-#             tauae(kk-1,ib) = tt1
-#           endif
-#         enddo   ! do_kk_loop
-#         enddo   ! do_ib_loop
-
-#       else                      ! input from sfc to toa
-
-#         do ib = 1, NSWLWBD
-#         do kk = NLAY-1, 1, -1
-#           if ( tauae(kk,ib) > f_zero ) then
-#             ratio = tauae(kk+1,ib) / tauae(kk,ib)
-#           else
-#             ratio = f_one
-#           endif
-
-#           tt0 = tauae(kk,ib) + tauae(kk+1,ib)
-#           tt1 = 0.2 * tt0
-#           tt2 = tt0 - tt1
-
-#           if ( ratio > crt1 ) then
-#             tauae(kk,ib)   = tt1
-#             tauae(kk+1,ib) = tt2
-#           endif
-
-#           if ( ratio < crt2 ) then
-#             tauae(kk,ib)   = tt2
-#             tauae(kk+1,ib) = tt1
-#           endif
-#         enddo   ! do_kk_loop
-#         enddo   ! do_ib_loop
-
-#       endif
-
-# !
-#       return
-# !................................
-#       end subroutine radclimaer
-# !--------------------------------
-# !
-# !...................................
-#       end subroutine aer_property
-# !-----------------------------------
+                    if ratio < crt2:
+                        self.tauae[kk, ib] = tt2
+                        self.tauae[kk + 1, ib] = tt1
