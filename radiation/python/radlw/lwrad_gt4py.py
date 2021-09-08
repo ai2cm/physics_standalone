@@ -469,6 +469,11 @@ for name, info in cldprop_types.items():
 
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
+
+# rand2d is shape (npts, ngptlw*nlay), and I will reshape it to (npts, 1, nlp1, ngptlw)
+# First reshape to (npts, ngptlw, nlay)
+# Second pad k axis with one zero
+# Third switch order of k and data axes
 ds = xr.open_dataset("../lookupdata/rand2d.nc")
 rand2d = ds["rand2d"][:, :].data
 cdfunc = np.zeros((npts, ngptlw, nlay))
