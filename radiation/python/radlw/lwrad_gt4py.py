@@ -1783,13 +1783,18 @@ rtrnmc(
     indict_gt4py["tau_tbl"],
     indict_gt4py["tfn_tbl"],
     locdict_gt4py["NGB"],
-    locdict_gt4py["htr"],
-    locdict_gt4py["htrcl"],
-    locdict_gt4py["htrb"],
     locdict_gt4py["totuflux"],
     locdict_gt4py["totdflux"],
     locdict_gt4py["totuclfl"],
     locdict_gt4py["totdclfl"],
+    outdict_gt4py["upfxc_t"],
+    outdict_gt4py["upfx0_t"],
+    outdict_gt4py["upfxc_s"],
+    outdict_gt4py["upfx0_s"],
+    outdict_gt4py["dnfxc_s"],
+    outdict_gt4py["dnfx0_s"],
+    outdict_gt4py["htlwc"],
+    outdict_gt4py["htlw0"],
     locdict_gt4py["clrurad"],
     locdict_gt4py["clrdrad"],
     locdict_gt4py["toturad"],
@@ -1840,11 +1845,8 @@ if do_test:
     outvars_rtrnmc = [
         "totuflux",
         "totdflux",
-        "htr",
         "totuclfl",
         "totdclfl",
-        "htrcl",
-        "htrb",
     ]
     outdict_rtrnmc = dict()
 
@@ -1853,12 +1855,7 @@ if do_test:
     outdict_rtrnmc = view_gt4py_storage(outdict_rtrnmc)
 
     for var in outdict_rtrnmc.keys():
-        if var == "htr" or var == "htrcl":
-            outdict_rtrnmc[var] = outdict_rtrnmc[var][:, 1:].squeeze()
-        elif var == "htrb":
-            outdict_rtrnmc[var] = outdict_rtrnmc[var][:, 1:, :].squeeze()
-        else:
-            outdict_rtrnmc[var] = outdict_rtrnmc[var][:, :]
+        outdict_rtrnmc[var] = outdict_rtrnmc[var][:, :]
 
     valdict_rtrnmc = dict()
     for var in outvars_rtrnmc:
@@ -1872,26 +1869,6 @@ if do_test:
     print(" ")
     print("rtrnmc validates!")
     print(" ")
-
-finalloop(
-    locdict_gt4py["totuflux"],
-    locdict_gt4py["totuclfl"],
-    locdict_gt4py["totdflux"],
-    locdict_gt4py["totdclfl"],
-    locdict_gt4py["htr"],
-    locdict_gt4py["htrcl"],
-    outdict_gt4py["upfxc_t"],
-    outdict_gt4py["upfx0_t"],
-    outdict_gt4py["upfxc_s"],
-    outdict_gt4py["upfx0_s"],
-    outdict_gt4py["dnfxc_s"],
-    outdict_gt4py["dnfx0_s"],
-    outdict_gt4py["htlwc"],
-    outdict_gt4py["htlw0"],
-    domain=(shape_nlp1),
-    origin=default_origin,
-    validate_args=validate,
-)
 
 end0 = time.time()
 print(f"Total time taken = {end0 - start0}")

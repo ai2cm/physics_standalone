@@ -4523,13 +4523,18 @@ def rtrnmc(
     tau_tbl: Field[type_ntbmx],
     tfn_tbl: Field[type_ntbmx],
     NGB: Field[gtscript.IJ, (np.int32, (140,))],
-    htr: FIELD_FLT,
-    htrcl: FIELD_FLT,
-    htrb: Field[type_nbands],
     totuflux: FIELD_FLT,
     totdflux: FIELD_FLT,
     totuclfl: FIELD_FLT,
     totdclfl: FIELD_FLT,
+    upfxc_t: FIELD_2D,
+    upfx0_t: FIELD_2D,
+    upfxc_s: FIELD_2D,
+    upfx0_s: FIELD_2D,
+    dnfxc_s: FIELD_2D,
+    dnfx0_s: FIELD_2D,
+    hlwc: FIELD_FLT,
+    hlw0: FIELD_FLT,
     clrurad: Field[type_nbands],
     clrdrad: Field[type_nbands],
     toturad: Field[type_nbands],
@@ -4916,10 +4921,21 @@ def rtrnmc(
 
     # calculate net fluxes and heating rates (fnet, htr)
     # also compute optional clear sky heating rates (fnetc, htrcl)
-    with computation(FORWARD), interval(0, 1):
-        fnet = totuflux - totdflux
-        if lhlw0:
-            fnetc = totuclfl - totdclfl
+    with computation(FORWARD):
+        with interval(0, 1):
+            # Output surface fluxes
+            upfxc_s = totuflux
+            upfx0_s = totuclfl
+            dnfxc_s = totdflux
+            dnfx0_s = totdclfl
+
+            fnet = totuflux - totdflux
+            if lhlw0:
+                fnetc = totuclfl - totdclfl
+        with interval(-1, None):
+            # Output TOA fluxes
+            upfxc_t = totuflux
+            upfx0_t = totuclfl
 
     with computation(PARALLEL), interval(1, None):
         fnet = totuflux - totdflux
@@ -4928,45 +4944,6 @@ def rtrnmc(
 
     with computation(PARALLEL), interval(1, None):
         rfdelp = heatfac / delp
-        htr = (fnet[0, 0, -1] - fnet) * rfdelp
+        hlwc = (fnet[0, 0, -1] - fnet) * rfdelp
         if lhlw0:
-            htrcl = (fnetc[0, 0, -1] - fnetc) * rfdelp
-
-
-@stencil(backend=backend, rebuild=rebuild, externals={"lhlw0": lhlw0})
-def finalloop(
-    totuflux: FIELD_FLT,
-    totuclfl: FIELD_FLT,
-    totdflux: FIELD_FLT,
-    totdclfl: FIELD_FLT,
-    htr: FIELD_FLT,
-    htrcl: FIELD_FLT,
-    upfxc_t: FIELD_2D,
-    upfx0_t: FIELD_2D,
-    upfxc_s: FIELD_2D,
-    upfx0_s: FIELD_2D,
-    dnfxc_s: FIELD_2D,
-    dnfx0_s: FIELD_2D,
-    hlwc: FIELD_FLT,
-    hlw0: FIELD_FLT,
-):
-    from __externals__ import lhlw0
-
-    with computation(FORWARD):
-        with interval(0, 1):
-            # Output surface fluxes
-            upfxc_s = totuflux
-            upfx0_s = totuclfl
-            dnfxc_s = totdflux
-            dnfx0_s = totdclfl
-        with interval(-1, None):
-            # Output TOA fluxes
-            upfxc_t = totuflux
-            upfx0_t = totuclfl
-
-    with computation(PARALLEL):
-        with interval(1, None):
-            hlwc = htr
-
-            if lhlw0:
-                hlw0 = htrcl
+            hlw0 = (fnetc[0, 0, -1] - fnetc) * rfdelp
