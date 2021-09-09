@@ -16,7 +16,7 @@ from util import (
 )
 from config import *
 
-tile = 5
+tile = 0
 
 import serialbox as ser
 
