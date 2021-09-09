@@ -24,6 +24,8 @@ if IS_DOCKER:
 else:
     SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
 
+backend = "gtc:gt:cpu_ifirst"
+
 sys.path.append(SERIALBOX_DIR + "/python")
 
 npts = 24
