@@ -12,4 +12,4 @@ rlw = RadLWClass(me, iovrlw, isubclw)
 
 for tile in range(6):
     rlw.create_input_data(tile)
-    rlw.lwrad(do_subtest=True)
+    rlw.lwrad(tile, do_subtest=True)

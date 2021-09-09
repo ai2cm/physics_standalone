@@ -12,7 +12,7 @@ from radphysparam import (
     ilwcice as ilwcice,
 )
 from radlw.radlw_param import *
-from phys_const import con_g, con_avgd, con_cp, con_amd, con_amw, con_amo3
+from phys_const import con_g, con_cp, con_amd, con_amw, con_amo3
 from util import (
     create_storage_from_array,
     create_storage_zeros,
@@ -122,6 +122,18 @@ class RadLWClass:
         0.00,
         0.00,
     ]
+
+    A0 = create_storage_from_array(a0, backend, shape_nlp1, type_nbands)
+    A1 = create_storage_from_array(a1, backend, shape_nlp1, type_nbands)
+    A2 = create_storage_from_array(a2, backend, shape_nlp1, type_nbands)
+
+    NGB = create_storage_from_array(
+        np.tile(np.array(ngb)[None, None, :], (npts, 1, 1)),
+        backend,
+        shape_2D,
+        (DTYPE_INT, (ngptlw,)),
+        default_origin=(0, 0),
+    )
 
     def __init__(self, me, iovrlw, isubclw):
         self.lhlwb = False
@@ -239,7 +251,27 @@ class RadLWClass:
                     - (self.exp_tbl[i] / (1.0 - self.exp_tbl[i]))
                 )
 
+        self.exp_tbl = np.tile(self.exp_tbl[None, None, None, :], (npts, 1, nlp1, 1))
+        self.tau_tbl = np.tile(self.tau_tbl[None, None, None, :], (npts, 1, nlp1, 1))
+        self.tfn_tbl = np.tile(self.tfn_tbl[None, None, None, :], (npts, 1, nlp1, 1))
+
+        self.exp_tbl = create_storage_from_array(
+            self.exp_tbl, backend, shape_nlp1, type_ntbmx
+        )
+        self.tau_tbl = create_storage_from_array(
+            self.tau_tbl, backend, shape_nlp1, type_ntbmx
+        )
+        self.tfn_tbl = create_storage_from_array(
+            self.tfn_tbl, backend, shape_nlp1, type_ntbmx
+        )
+
+        self._load_lookup_table_data()
+
     def return_initdata(self):
+        """
+        Return output of init routine for validation against Fortran
+        """
+
         outdict = {
             "semiss0": self.semiss0,
             "fluxfac": self.fluxfac,
@@ -251,6 +283,11 @@ class RadLWClass:
         return outdict
 
     def create_input_data(self, tile):
+        """
+        Load input data from serialized Fortran model output and transform into
+        gt4py storages. Also creates the necessary local variables as gt4py storages
+        """
+
         ddir = "../../fortran/data/LW"
         self.serializer = ser.Serializer(
             ser.OpenModeKind.Read, ddir, "Generator_rank" + str(tile)
@@ -281,9 +318,6 @@ class RadLWClass:
             "lmk",
             "lmp",
             "lprnt",
-            "exp_tbl",
-            "tau_tbl",
-            "tfn_tbl",
         ]
 
         outvars = [
@@ -440,7 +474,6 @@ class RadLWClass:
             "jmcop",
             "jmn2",
             "jmn2p",
-            "NGB",
         ]
         locvars_flt = [
             "taug",
@@ -519,14 +552,9 @@ class RadLWClass:
 
         indict = dict()
         for var in invars:
-            if var[-3:] == "tbl":
-                tmp = self.serializer2.read(
-                    var, self.serializer2.savepoint["lwrad-rtrnmc-input-000000"]
-                )
-            else:
-                tmp = self.serializer.read(
-                    var, self.serializer.savepoint["lwrad-in-000000"]
-                )
+            tmp = self.serializer.read(
+                var, self.serializer.savepoint["lwrad-in-000000"]
+            )
 
             if var in ["semis", "icsdlw", "tsfg", "de_lgth"]:
                 # These fields are shape npts, tile to be 3D fields
@@ -554,9 +582,6 @@ class RadLWClass:
                 # Tile to give them the extra
                 # horizontal dimension
                 indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
-            elif var[-3:] == "tbl":
-                # This field has shape (ntbmx). Tile to give it the spatial dimensions
-                indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
             else:
                 # Otherwise input is a scalar, grab from array.
                 indict[var] = tmp[0]
@@ -578,10 +603,6 @@ class RadLWClass:
             elif var == "icsdlw":
                 indict_gt4py[var] = create_storage_from_array(
                     indict[var], backend, shape_nlp1, DTYPE_INT
-                )
-            elif var[-3:] == "tbl":
-                indict_gt4py[var] = create_storage_from_array(
-                    indict[var], backend, shape_nlp1, type_ntbmx
                 )
             elif indict[var].size > 1:
                 indict_gt4py[var] = create_storage_from_array(
@@ -668,14 +689,6 @@ class RadLWClass:
         for var in locvars_int:
             if var == "ib":
                 locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_INT)
-            elif var == "NGB":
-                locdict_gt4py[var] = create_storage_from_array(
-                    np.tile(np.array(ngb)[None, None, :], (npts, 1, 1)),
-                    backend,
-                    shape_2D,
-                    (DTYPE_INT, (ngptlw,)),
-                    default_origin=(0, 0),
-                )
             else:
                 locdict_gt4py[var] = create_storage_zeros(
                     backend, shape_nlp1, DTYPE_INT
@@ -712,17 +725,17 @@ class RadLWClass:
                     backend, shape_nlp1, type_ngptlw
                 )
 
-        locdict_gt4py["A0"] = create_storage_from_array(
-            self.a0, backend, shape_nlp1, type_nbands
-        )
-        locdict_gt4py["A1"] = create_storage_from_array(
-            self.a1, backend, shape_nlp1, type_nbands
-        )
-        locdict_gt4py["A2"] = create_storage_from_array(
-            self.a2, backend, shape_nlp1, type_nbands
-        )
+        self.indict_gt4py = indict_gt4py
+        self.locdict_gt4py = locdict_gt4py
+        self.outdict_gt4py = outdict_gt4py
+        self.outvars = outvars
 
-        # Read in lookup table data for cldprop calculations
+    def _load_lookup_table_data(self):
+        """
+        Read in lookup table data from netcdf data that has been serialized out from
+        radlw_datatb.F
+        """
+
         ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
 
         cldprop_types = {
@@ -734,37 +747,13 @@ class RadLWClass:
             "ipat": {"ctype": (DTYPE_INT, (nbands,)), "data": ipat},
         }
 
-        self.lookup_dict = dict()
+        lookupdict_gt4py = dict()
 
         for name, info in cldprop_types.items():
-            self.lookup_dict[name] = create_storage_from_array(
+            lookupdict_gt4py[name] = create_storage_from_array(
                 info["data"], backend, shape_nlp1, info["ctype"]
             )
 
-        # Read in 2-D array of random numbers used in mcica_subcol, this will change
-        # in the future once there is a solution for the RNG in python/gt4py
-
-        # This serialized set of random numbers will be used for testing, and the python
-        # RNG for running the model.
-
-        # rand2d is shape (npts, ngptlw*nlay), and I will reshape it to (npts, 1, nlp1, ngptlw)
-        # First reshape to (npts, ngptlw, nlay)
-        # Second pad k axis with one zero
-        # Third switch order of k and data axes
-        ds = xr.open_dataset("../lookupdata/rand2d_tile" + str(tile) + "_lw.nc")
-        rand2d = ds["rand2d"][:, :].data
-        cdfunc = np.zeros((npts, ngptlw, nlay))
-        for n in range(npts):
-            cdfunc[n, :, :] = np.reshape(rand2d[n, :], (ngptlw, nlay), order="C")
-        cdfunc = np.insert(cdfunc, 0, 0, axis=2)
-        cdfunc = np.transpose(cdfunc, (0, 2, 1))
-
-        cdfunc = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
-        locdict_gt4py["cdfunc"] = create_storage_from_array(
-            cdfunc, backend, shape_nlp1, type_ngptlw
-        )
-
-        lookupdict_gt4py = dict()
         ds = xr.open_dataset("../lookupdata/totplnk.nc")
         totplnk = ds["totplnk"].data
 
@@ -792,7 +781,7 @@ class RadLWClass:
 
         delwave = np.tile(self.delwave[None, None, None, :], (npts, 1, nlp1, 1))
         delwave = create_storage_from_array(delwave, backend, shape_nlp1, type_nbands)
-        locdict_gt4py["delwave"] = delwave
+        lookupdict_gt4py["delwave"] = delwave
 
         print("Loading lookup table data . . .")
         self.lookupdict_gt4py1 = loadlookupdata("kgb01")
@@ -814,13 +803,46 @@ class RadLWClass:
         print("Done")
         print(" ")
 
-        self.indict_gt4py = indict_gt4py
-        self.locdict_gt4py = locdict_gt4py
-        self.outdict_gt4py = outdict_gt4py
         self.lookupdict_gt4py = lookupdict_gt4py
-        self.outvars = outvars
 
-    def lwrad(self, do_subtest=False):
+    def _load_random_numbers(self, tile):
+        """
+        Read in 2-D array of random numbers used in mcica_subcol, this will change
+        in the future once there is a solution for the RNG in python/gt4py
+
+        This serialized set of random numbers will be used for testing, and the python
+        RNG for running the model.
+
+        rand2d is shape (npts, ngptlw*nlay), and I will reshape it to (npts, 1, nlp1, ngptlw)
+        - First reshape to (npts, ngptlw, nlay)
+        - Second pad k axis with one zero
+        - Third switch order of k and data axes
+        """
+        ds = xr.open_dataset("../lookupdata/rand2d_tile" + str(tile) + "_lw.nc")
+        rand2d = ds["rand2d"][:, :].data
+        cdfunc = np.zeros((npts, ngptlw, nlay))
+        for n in range(npts):
+            cdfunc[n, :, :] = np.reshape(rand2d[n, :], (ngptlw, nlay), order="C")
+        cdfunc = np.insert(cdfunc, 0, 0, axis=2)
+        cdfunc = np.transpose(cdfunc, (0, 2, 1))
+
+        cdfunc = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
+        self.lookupdict_gt4py["cdfunc"] = create_storage_from_array(
+            cdfunc, backend, shape_nlp1, type_ngptlw
+        )
+
+    def lwrad(self, tile, do_subtest=False):
+        """
+        Run the main longwave radiation scheme
+
+        Requires create_input_data to have been run before calling
+        Currently uses serialized random number arrays in cldprop
+
+        Inputs:
+        - tile: integer denoting current tile
+        - do_subtest: flag to test individual stencil outputs
+        """
+
         start0 = time.time()
         firstloop(
             self.indict_gt4py["plyr"],
@@ -866,9 +888,9 @@ class RadLWClass:
             self.locdict_gt4py["cda3"],
             self.locdict_gt4py["cda4"],
             self.locdict_gt4py["secdiff"],
-            self.locdict_gt4py["A0"],
-            self.locdict_gt4py["A1"],
-            self.locdict_gt4py["A2"],
+            self.A0,
+            self.A1,
+            self.A2,
             domain=shape_nlp1,
             origin=default_origin,
             validate_args=validate,
@@ -939,6 +961,8 @@ class RadLWClass:
             print("Firstloop validates!")
             print(" ")
 
+        self._load_random_numbers(tile)
+
         cldprop(
             self.locdict_gt4py["cldfrc"],
             self.locdict_gt4py["clwp"],
@@ -953,11 +977,11 @@ class RadLWClass:
             self.locdict_gt4py["cldfmc"],
             self.locdict_gt4py["taucld"],
             self.outdict_gt4py["cldtaulw"],
-            self.lookup_dict["absliq1"],
-            self.lookup_dict["absice1"],
-            self.lookup_dict["absice2"],
-            self.lookup_dict["absice3"],
-            self.lookup_dict["ipat"],
+            self.lookupdict_gt4py["absliq1"],
+            self.lookupdict_gt4py["absice1"],
+            self.lookupdict_gt4py["absice2"],
+            self.lookupdict_gt4py["absice3"],
+            self.lookupdict_gt4py["ipat"],
             self.locdict_gt4py["tauliq"],
             self.locdict_gt4py["tauice"],
             self.locdict_gt4py["cldf"],
@@ -973,7 +997,7 @@ class RadLWClass:
             self.locdict_gt4py["index"],
             self.locdict_gt4py["ia"],
             self.locdict_gt4py["lcloudy"],
-            self.locdict_gt4py["cdfunc"],
+            self.lookupdict_gt4py["cdfunc"],
             self.locdict_gt4py["tem1"],
             self.locdict_gt4py["lcf1"],
             self.locdict_gt4py["cldsum"],
@@ -1017,7 +1041,7 @@ class RadLWClass:
             self.lookupdict_gt4py["preflog"],
             self.lookupdict_gt4py["tref"],
             self.lookupdict_gt4py["chi_mls"],
-            self.locdict_gt4py["delwave"],
+            self.lookupdict_gt4py["delwave"],
             self.locdict_gt4py["laytrop"],
             self.locdict_gt4py["pklay"],
             self.locdict_gt4py["pklev"],
@@ -2024,7 +2048,7 @@ class RadLWClass:
         )
 
         combine_optical_depth(
-            self.locdict_gt4py["NGB"],
+            self.NGB,
             self.locdict_gt4py["ib"],
             self.locdict_gt4py["taug"],
             self.locdict_gt4py["tauaer"],
@@ -2069,10 +2093,10 @@ class RadLWClass:
             self.locdict_gt4py["cldfmc"],
             self.locdict_gt4py["pklay"],
             self.locdict_gt4py["pklev"],
-            self.indict_gt4py["exp_tbl"],
-            self.indict_gt4py["tau_tbl"],
-            self.indict_gt4py["tfn_tbl"],
-            self.locdict_gt4py["NGB"],
+            self.exp_tbl,
+            self.tau_tbl,
+            self.tfn_tbl,
+            self.NGB,
             self.locdict_gt4py["totuflux"],
             self.locdict_gt4py["totdflux"],
             self.locdict_gt4py["totuclfl"],
