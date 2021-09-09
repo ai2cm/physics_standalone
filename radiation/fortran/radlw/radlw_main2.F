@@ -715,7 +715,7 @@
       integer, dimension(npts) :: ipseed, laytrop
       integer, dimension(npts,nlay) :: jp, jt, jt1, indself, indfor, indminor
       integer                  :: iplon, i, j, k, k1
-      logical :: lcf1
+      logical, dimension(npts) :: lcf1
 
 !
 !===> ... begin
@@ -1014,10 +1014,10 @@
 !> -# For cloudy atmosphere, call cldprop() to set cloud optical
 !!    properties.
 
-        lcf1 = .false.
+        lcf1(iplon) = .false.
         lab_do_k0 : do k = 1, nlay
           if ( cldfrc(iplon,k) > eps ) then
-            lcf1 = .true.
+            lcf1(iplon) = .true.
             exit lab_do_k0
           endif
         enddo  lab_do_k0
@@ -1034,7 +1034,6 @@
 !$ser data secdiff=secdiff
 
       lab_do_iplon3 : do iplon = 1, npts
-        if ( lcf1 ) then
 
 !$ser verbatim if (iplon == npts) then
   !$ser mode write
@@ -1045,6 +1044,7 @@
   !$ser data dz=dz delgth=delgth  
 !$ser verbatim endif
 
+        if ( lcf1(iplon) ) then
 
           call cldprop                                                  &
 !  ---  inputs:
@@ -1056,13 +1056,6 @@
 !  ---  outputs:
      &       cldfmc(iplon,:,:), taucld(iplon,:,:)                                             &
      &     )
-
-!$ser verbatim if (iplon == npts) then
-  !$ser mode write
-  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "lw-cldprop-output-"//trim(ser_count_str)
-  !$ser data cldfmc=cldfmc taucld=taucld
-!$ser verbatim endif
 
 !  --- ...  save computed layer cloud optical depth for output
 !           rrtm band-7 is apprx 10mu channel (or use spectral mean of bands 6-8)
@@ -1082,6 +1075,13 @@
           cldfmc(iplon, :, :) = f_zero
           taucld(iplon, :, :) = f_zero
         endif
+
+!$ser verbatim if (iplon == npts) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lw-cldprop-output-"//trim(ser_count_str)
+  !$ser data cldfmc=cldfmc taucld=taucld
+!$ser verbatim endif
 
 !> -# Calling setcoef() to compute various coefficients needed in
 !!    radiative transfer calculations.
@@ -1949,6 +1949,9 @@
       type (random_stat) :: stat          ! for thread safe random generator
 
       integer :: k, n, k1
+
+      character(len=6) :: ser_count_str
+      character(len=2) :: iplon_str
 !
 !===> ...  begin here
 !
@@ -1986,6 +1989,14 @@
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
+
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser verbatim write(iplon_str, '(i2.2)') iplon
+!$ser savepoint "random_number-output-"//trim(ser_count_str)//"-"//trim(iplon_str)
+!$ser data rand2d=rand2d
+
 
           k1 = 0
           do n = 1, ngptlw

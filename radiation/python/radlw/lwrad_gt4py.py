@@ -16,14 +16,18 @@ from util import (
 )
 from config import *
 
+tile = 0
+
 import serialbox as ser
 
 ddir = "../../fortran/data/LW"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank" + str(tile))
 savepoints = serializer.savepoint_list()
 
 ddir2 = "../../fortran/radlw/dump"
-serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
+serializer2 = ser.Serializer(
+    ser.OpenModeKind.Read, ddir2, "Serialized_rank" + str(tile)
+)
 savepoints2 = serializer2.savepoint_list()
 
 # Flag for doing intermediate tests of individual stencil output
@@ -476,7 +480,7 @@ for name, info in cldprop_types.items():
 # First reshape to (npts, ngptlw, nlay)
 # Second pad k axis with one zero
 # Third switch order of k and data axes
-ds = xr.open_dataset("../lookupdata/rand2d.nc")
+ds = xr.open_dataset("../lookupdata/rand2d_tile" + str(tile) + "_lw.nc")
 rand2d = ds["rand2d"][:, :].data
 cdfunc = np.zeros((npts, ngptlw, nlay))
 for n in range(npts):
@@ -1783,13 +1787,18 @@ rtrnmc(
     indict_gt4py["tau_tbl"],
     indict_gt4py["tfn_tbl"],
     locdict_gt4py["NGB"],
-    locdict_gt4py["htr"],
-    locdict_gt4py["htrcl"],
-    locdict_gt4py["htrb"],
     locdict_gt4py["totuflux"],
     locdict_gt4py["totdflux"],
     locdict_gt4py["totuclfl"],
     locdict_gt4py["totdclfl"],
+    outdict_gt4py["upfxc_t"],
+    outdict_gt4py["upfx0_t"],
+    outdict_gt4py["upfxc_s"],
+    outdict_gt4py["upfx0_s"],
+    outdict_gt4py["dnfxc_s"],
+    outdict_gt4py["dnfx0_s"],
+    outdict_gt4py["htlwc"],
+    outdict_gt4py["htlw0"],
     locdict_gt4py["clrurad"],
     locdict_gt4py["clrdrad"],
     locdict_gt4py["toturad"],
@@ -1840,11 +1849,8 @@ if do_test:
     outvars_rtrnmc = [
         "totuflux",
         "totdflux",
-        "htr",
         "totuclfl",
         "totdclfl",
-        "htrcl",
-        "htrb",
     ]
     outdict_rtrnmc = dict()
 
@@ -1853,12 +1859,7 @@ if do_test:
     outdict_rtrnmc = view_gt4py_storage(outdict_rtrnmc)
 
     for var in outdict_rtrnmc.keys():
-        if var == "htr" or var == "htrcl":
-            outdict_rtrnmc[var] = outdict_rtrnmc[var][:, 1:].squeeze()
-        elif var == "htrb":
-            outdict_rtrnmc[var] = outdict_rtrnmc[var][:, 1:, :].squeeze()
-        else:
-            outdict_rtrnmc[var] = outdict_rtrnmc[var][:, :]
+        outdict_rtrnmc[var] = outdict_rtrnmc[var][:, :]
 
     valdict_rtrnmc = dict()
     for var in outvars_rtrnmc:
@@ -1872,26 +1873,6 @@ if do_test:
     print(" ")
     print("rtrnmc validates!")
     print(" ")
-
-finalloop(
-    locdict_gt4py["totuflux"],
-    locdict_gt4py["totuclfl"],
-    locdict_gt4py["totdflux"],
-    locdict_gt4py["totdclfl"],
-    locdict_gt4py["htr"],
-    locdict_gt4py["htrcl"],
-    outdict_gt4py["upfxc_t"],
-    outdict_gt4py["upfx0_t"],
-    outdict_gt4py["upfxc_s"],
-    outdict_gt4py["upfx0_s"],
-    outdict_gt4py["dnfxc_s"],
-    outdict_gt4py["dnfx0_s"],
-    outdict_gt4py["htlwc"],
-    outdict_gt4py["htlw0"],
-    domain=(shape_nlp1),
-    origin=default_origin,
-    validate_args=validate,
-)
 
 end0 = time.time()
 print(f"Total time taken = {end0 - start0}")

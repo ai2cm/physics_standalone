@@ -143,13 +143,15 @@ program test
       ntoz,        iovr_sw,      iovr_lw, isubc_sw,  &
       isubc_lw,    icliq_sw,     crick_proof, ccnorm,&
       imp_physics, norad_precip, idate,   iflip,  me)
+
 !$ser cleanup
+
       ser_count_max = 6
       num_tiles = 6
 
       call cdstart(num_tiles * ser_count_max * 2)
 
-      do tile = 0,num_tiles-1
+      do tile = 0, num_tiles-1
 
 !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=tile
 
@@ -193,24 +195,26 @@ program test
       call check_r_1d(sfcflw%upfxc, upfxc_s_ref, "upfxc_s")
       call check_r_1d(sfcflw%upfx0, upfx0_s_ref, "upfx0_s")
       call check_r_2d(cldtaulw, cldtaulw_ref, "cldtaulw")
+
       end do
       
 !$ser cleanup
+
       end do
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
-      !$ser mode read
-      !$ser savepoint "rad-update"
-      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
-      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
-      
-
-      write(*,*) 'Running update'
-
-      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
-                      me,   slag, sdec,  cdec, solcon)
-        
-      !$ser cleanup
+!      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
+!      !$ser mode read
+!      !$ser savepoint "rad-update"
+!      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
+!      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
+!      
+!
+!      write(*,*) 'Running update'
+!
+!      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
+!                      me,   slag, sdec,  cdec, solcon)
+!        
+!      !$ser cleanup
 
       call cdstop()
 
