@@ -504,3 +504,6 @@ for var in outvars:
         )
 
 compare_data(outdict_np, outdict_val)
+
+print(f"totplnk = {lookupdict_gt4py['totplnk'][0, 0, 0, :]}")
+print(f"delwave = {delwave[0, 0, 0, :]}")

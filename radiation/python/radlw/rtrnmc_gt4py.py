@@ -64,17 +64,17 @@ for var in invars:
     if var == "semiss" or var == "secdiff" or var[-3:] == "tbl":
         indict[var] = np.tile(tmp[None, None, None, :], (npts, 1, nlp1, 1))
     elif var == "htrb":
-        tmp2 = np.append(tmp, np.zeros((1, tmp.shape[1])), axis=0)
+        tmp2 = np.insert(tmp, 0, 0, axis=0)
         indict[var] = np.tile(tmp2[None, None, :, :], (npts, 1, 1, 1))
     elif var == "delp" or var[:3] == "htr":
-        tmp2 = np.append(tmp, np.array([0]), axis=0)
+        tmp2 = np.insert(tmp, 0, 0, axis=0)
         indict[var] = np.tile(tmp2[None, None, :], (npts, 1, 1))
     elif var[:3] == "tot" or var[:3] == "htr":
         indict[var] = np.tile(tmp[None, None, :], (npts, 1, 1))
     elif var == "pklay" or var == "pklev":
         indict[var] = np.tile(tmp.T[None, None, :, :], (npts, 1, 1, 1))
     elif tmp.size > 1:
-        tmp2 = np.append(tmp, np.zeros((tmp.shape[0], 1)), axis=1)
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2.T[None, None, :, :], (npts, 1, 1, 1))
     else:
         indict[var] = tmp
@@ -243,7 +243,6 @@ def rtrnmc(
     reflct: Field[type_ngptlw],
     totfac: Field[type_ngptlw],
     gasfac: Field[type_ngptlw],
-    flxfac: Field[type_ngptlw],
     plfrac: Field[type_ngptlw],
     blay: Field[type_ngptlw],
     bbdgas: Field[type_ngptlw],
@@ -277,7 +276,7 @@ def rtrnmc(
             ib = NGB[0, 0][ig0] - 1
 
             # clear sky, gases contribution
-            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0, 0][ib] * tautot[0, 0, 0][ig0])
+            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0])
             if odepth[0, 0, 0][ig0] <= 0.06:
                 atrgas[0, 0, 0][ig0] = (
                     odepth[0, 0, 0][ig0]
@@ -296,7 +295,7 @@ def rtrnmc(
                 gasfac[0, 0, 0][ig0] = tfn_tbl[0, 0, 0][itgas[0, 0, 0][ig0]]
                 odepth[0, 0, 0][ig0] = tau_tbl[0, 0, 0][itgas[0, 0, 0][ig0]]
 
-            plfrac[0, 0, 0][ig0] = fracs[0, 0, 0][ig0]
+            plfrac[0, 0, 0][ig0] = fracs[0, 0, 1][ig0]
             blay[0, 0, 0][ig0] = pklay[0, 0, 1][ib]
 
             dplnku[0, 0, 0][ig0] = pklev[0, 0, 1][ib] - blay[0, 0, 0][ig0]
@@ -315,7 +314,7 @@ def rtrnmc(
             clfm[0, 0, 0][ig0] = cldfmc[0, 0, 0][ig0]
             if clfm[0, 0, 0][ig0] >= eps:
                 # cloudy layer
-                odcld[0, 0, 0][ig0] = secdif[0, 0, 0][ib] * taucld[0, 0, 0][ib]
+                odcld[0, 0, 0][ig0] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
                 efclrfr[0, 0, 0][ig0] = (
                     1.0 - (1.0 - exp(-odcld[0, 0, 0][ig0])) * clfm[0, 0, 0][ig0]
                 )
@@ -379,7 +378,7 @@ def rtrnmc(
             ib = NGB[0, 0][ig] - 1
 
             # clear sky, gases contribution
-            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0, 0][ib] * tautot[0, 0, 0][ig])
+            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig])
             if odepth[0, 0, 0][ig] <= 0.06:
                 atrgas[0, 0, 0][ig] = (
                     odepth[0, 0, 0][ig]
@@ -397,7 +396,7 @@ def rtrnmc(
                 gasfac[0, 0, 0][ig] = tfn_tbl[0, 0, 0][itgas[0, 0, 0][ig]]
                 odepth[0, 0, 0][ig] = tau_tbl[0, 0, 0][itgas[0, 0, 0][ig]]
 
-            plfrac[0, 0, 0][ig] = fracs[0, 0, 0][ig]
+            plfrac[0, 0, 0][ig] = fracs[0, 0, 1][ig]
             blay[0, 0, 0][ig] = pklay[0, 0, 1][ib]
 
             dplnku[0, 0, 0][ig] = pklev[0, 0, 1][ib] - blay[0, 0, 0][ig]
@@ -413,10 +412,10 @@ def rtrnmc(
             trngas[0, 0, 0][ig] = trng[0, 0, 0][ig]
 
             # total sky, gases+clouds contribution
-            clfm[0, 0, 0][ig] = cldfmc[0, 0, 0][ig]
+            clfm[0, 0, 0][ig] = cldfmc[0, 0, 1][ig]
             if clfm[0, 0, 0][ig] >= eps:
                 # cloudy layer
-                odcld[0, 0, 0][ig] = secdif[0, 0, 0][ib] * taucld[0, 0, 0][ib]
+                odcld[0, 0, 0][ig] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
                 efclrfr[0, 0, 0][ig] = (
                     1.0 - (1.0 - exp(-odcld[0, 0, 0][ig])) * clfm[0, 0, 0][ig]
                 )
@@ -472,7 +471,7 @@ def rtrnmc(
                 )
                 clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig]
 
-            reflct[0, 0, 0][ig] = 1.0 - semiss[0, 0, 0][ib]
+            reflct[0, 0, 0][ig] = 1.0 - semiss[0, 0, 1][ib]
 
     # Compute spectral emissivity & reflectance, include the
     # contribution of spectrally varying longwave emissivity and
@@ -484,7 +483,7 @@ def rtrnmc(
         for ig2 in range(ngptlw):
             ib = NGB[0, 0][ig2] - 1
             rad0[0, 0, 0][ig2] = (
-                semiss[0, 0, 0][ib] * fracs[0, 0, 0][ig2] * pklay[0, 0, 0][ib]
+                semiss[0, 0, 1][ib] * fracs[0, 0, 1][ig2] * pklay[0, 0, 0][ib]
             )
 
             # Compute total sky radiance
@@ -509,7 +508,7 @@ def rtrnmc(
     with computation(FORWARD), interval(0, 1):
         for ig3 in range(ngptlw):
             ib = NGB[0, 0][ig3] - 1
-            clfm[0, 0, 0][ig3] = cldfmc[0, 0, 0][ig3]
+            clfm[0, 0, 0][ig3] = cldfmc[0, 0, 1][ig3]
             trng[0, 0, 0][ig3] = trngas[0, 0, 0][ig3]
             gasu[0, 0, 0][ig3] = gassrcu[0, 0, 0][ig3]
 
@@ -541,16 +540,15 @@ def rtrnmc(
                     radclru[0, 0, 0][ig3] * trng[0, 0, 0][ig3] + gasu[0, 0, 0][ig3]
                 )
 
-    with computation(FORWARD), interval(1, None):
+    with computation(FORWARD), interval(1, -1):
         for ig4 in range(ngptlw):
             ib = NGB[0, 0][ig4] - 1
-            clfm[0, 0, 0][ig4] = cldfmc[0, 0, 0][ig4]
+            clfm[0, 0, 0][ig4] = cldfmc[0, 0, 1][ig4]
             trng[0, 0, 0][ig4] = trngas[0, 0, 0][ig4]
             gasu[0, 0, 0][ig4] = gassrcu[0, 0, 0][ig4]
 
             if clfm[0, 0, 0][ig4] > eps:
                 #  --- ...  cloudy layer
-
                 #  --- ... total sky radiance
                 radtotu[0, 0, 0][ig4] = (
                     radtotu[0, 0, -1][ig4] * trng[0, 0, 0][ig4] * efclrfr[0, 0, 0][ig4]
@@ -558,27 +556,40 @@ def rtrnmc(
                     + clfm[0, 0, 0][ig4] * (totsrcu[0, 0, 0][ig4] - gasu[0, 0, 0][ig4])
                 )
                 toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig4]
-
                 #  --- ... clear sky radiance
                 radclru[0, 0, 0][ig4] = (
                     radclru[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
                 )
                 clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig4]
-
             else:
                 #  --- ...  clear layer
-
                 #  --- ... total sky radiance
                 radtotu[0, 0, 0][ig4] = (
                     radtotu[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
                 )
                 toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig4]
-
                 #  --- ... clear sky radiance
                 radclru[0, 0, 0][ig4] = (
                     radclru[0, 0, -1][ig4] * trng[0, 0, 0][ig4] + gasu[0, 0, 0][ig4]
                 )
                 clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig4]
+
+    with computation(FORWARD), interval(-1, None):
+        for ig5 in range(ngptlw):
+            ib = NGB[0, 0][ig5] - 1
+
+            if clfm[0, 0, 0][ig5] > eps:
+                #  --- ...  cloudy layer
+                #  --- ... total sky radiance
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig5]
+                #  --- ... clear sky radiance
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig5]
+            else:
+                #  --- ...  clear layer
+                #  --- ... total sky radiance
+                toturad[0, 0, 0][ib] = toturad[0, 0, 0][ib] + radtotu[0, 0, -1][ig5]
+                #  --- ... clear sky radiance
+                clrurad[0, 0, 0][ib] = clrurad[0, 0, 0][ib] + radclru[0, 0, -1][ig5]
 
     # Process longwave output from band for total and clear streams.
     # Calculate upward, downward, and net flux.
@@ -606,11 +617,11 @@ def rtrnmc(
         if lhlw0:
             fnetc = totuclfl - totdclfl
 
-    with computation(PARALLEL), interval(0, -1):
+    with computation(PARALLEL), interval(1, None):
         rfdelp = heatfac / delp
-        htr = (fnet - fnet[0, 0, 1]) * rfdelp
+        htr = (fnet[0, 0, -1] - fnet) * rfdelp
         if lhlw0:
-            htrcl = (fnetc - fnetc[0, 0, 1]) * rfdelp
+            htrcl = (fnetc[0, 0, -1] - fnetc) * rfdelp
 
 
 start = time.time()
@@ -657,7 +668,6 @@ rtrnmc(
     locdict_gt4py["reflct"],
     locdict_gt4py["totfac"],
     locdict_gt4py["gasfac"],
-    locdict_gt4py["flxfac"],
     locdict_gt4py["plfrac"],
     locdict_gt4py["blay"],
     locdict_gt4py["bbdgas"],
@@ -683,6 +693,8 @@ rtrnmc(
 )
 end = time.time()
 print(f"Elapsed time = {end-start}")
+
+print(f"delp = {indict_gt4py['delp']}")
 
 outvars = ["totuflux", "totdflux", "htr", "totuclfl", "totdclfl", "htrcl", "htrb"]
 
@@ -712,9 +724,9 @@ outdict_np = view_gt4py_storage(outdict_gt4py)
 
 for var in outdict_np.keys():
     if var == "htr" or var == "htrcl":
-        outdict_np[var] = outdict_np[var][-1, :-1].squeeze()
+        outdict_np[var] = outdict_np[var][-1, 1:].squeeze()
     elif var == "htrb":
-        outdict_np[var] = outdict_np[var][-1, :-1, :].squeeze()
+        outdict_np[var] = outdict_np[var][-1, 1:, :].squeeze()
     else:
         outdict_np[var] = outdict_np[var][-1, :]
 
