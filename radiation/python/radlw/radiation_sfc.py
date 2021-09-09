@@ -44,12 +44,12 @@ class SurfaceClass:
         # = 0: fixed SFC emissivity at 1.0
         # = 1: input SFC emissivity type map from "semis_file"
 
-        iemslw = self.iemsflg % 10  # emissivity control
-        if iemslw == 0:  # fixed sfc emis at 1.0
+        self.iemslw = self.iemsflg % 10  # emissivity control
+        if self.iemslw == 0:  # fixed sfc emis at 1.0
             if me == 0:
                 print("- Using Fixed Surface Emissivity = 1.0 for lw")
 
-        elif iemslw == 1:  # input sfc emiss type map
+        elif self.iemslw == 1:  # input sfc emiss type map
             if "idxems" not in vars():
                 idxems = np.zeros((self.IMXEMS, self.JMXEMS))
 
@@ -462,31 +462,31 @@ class SurfaceClass:
                     i2 = 1
                     j2 = 1
 
-                    tmp1 = xlon[i] * rad2dg
+                    tmp1 = xlon[i] * self.rad2dg
                     if tmp1 < 0.0:
                         tmp1 += 360.0
 
-                        for i1 in range(self.IMXEMS):
-                            tmp2 = dltg * i1 + hdlt
+                    for i1 in range(self.IMXEMS):
+                        tmp2 = dltg * i1 + hdlt
 
-                            if abs(tmp1 - tmp2) <= hdlt:
-                                i2 = i1
-                                break
+                        if abs(tmp1 - tmp2) <= hdlt:
+                            i2 = i1
+                            break
 
-                        #   ---  map grid in latitude direction
-                        tmp1 = xlat[i] * rad2dg  # if xlat in pi/2 -> -pi/2 range
+                    #   ---  map grid in latitude direction
+                    tmp1 = xlat[i] * self.rad2dg  # if xlat in pi/2 -> -pi/2 range
 
-                        for j1 in range(self.JMXEMS):
-                            tmp2 = 90.0 - dltg * j1
+                    for j1 in range(self.JMXEMS):
+                        tmp2 = 90.0 - dltg * j1
 
-                            if abs(tmp1 - tmp2) <= hdlt:
-                                j2 = j1
-                                break
+                        if abs(tmp1 - tmp2) <= hdlt:
+                            j2 = j1
+                            break
 
-                        idx = max(2, self.idxems[i2, j2]) - 1
-                        if idx >= 6:
-                            idx = 1
-                        sfcemis[i] = emsref[idx]
+                    idx = max(2, self.idxems[i2, j2]) - 1
+                    if idx >= 6:
+                        idx = 1
+                    sfcemis[i] = emsref[idx]
 
                 # Check for snow covered area.
 
