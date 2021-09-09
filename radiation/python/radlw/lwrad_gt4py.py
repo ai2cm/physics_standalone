@@ -16,14 +16,18 @@ from util import (
 )
 from config import *
 
+tile = 5
+
 import serialbox as ser
 
 ddir = "../../fortran/data/LW"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank" + str(tile))
 savepoints = serializer.savepoint_list()
 
 ddir2 = "../../fortran/radlw/dump"
-serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
+serializer2 = ser.Serializer(
+    ser.OpenModeKind.Read, ddir2, "Serialized_rank" + str(tile)
+)
 savepoints2 = serializer2.savepoint_list()
 
 # Flag for doing intermediate tests of individual stencil output
@@ -476,7 +480,7 @@ for name, info in cldprop_types.items():
 # First reshape to (npts, ngptlw, nlay)
 # Second pad k axis with one zero
 # Third switch order of k and data axes
-ds = xr.open_dataset("../lookupdata/rand2d.nc")
+ds = xr.open_dataset("../lookupdata/rand2d_tile" + str(tile) + "_lw.nc")
 rand2d = ds["rand2d"][:, :].data
 cdfunc = np.zeros((npts, ngptlw, nlay))
 for n in range(npts):

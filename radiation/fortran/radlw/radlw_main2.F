@@ -1949,6 +1949,9 @@
       type (random_stat) :: stat          ! for thread safe random generator
 
       integer :: k, n, k1
+
+      character(len=6) :: ser_count_str
+      character(len=2) :: iplon_str
 !
 !===> ...  begin here
 !
@@ -1986,6 +1989,14 @@
 !  ---  inputs: ( none )
 !  ---  outputs:
      &     ( rand2d, stat )
+
+
+!$ser mode write
+!$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+!$ser verbatim write(iplon_str, '(i2.2)') iplon
+!$ser savepoint "random_number-output-"//trim(ser_count_str)//"-"//trim(iplon_str)
+!$ser data rand2d=rand2d
+
 
           k1 = 0
           do n = 1, ngptlw

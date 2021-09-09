@@ -202,19 +202,19 @@ program test
 
       end do
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
-      !$ser mode read
-      !$ser savepoint "rad-update"
-      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
-      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
-      
-
-      write(*,*) 'Running update'
-
-      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
-                      me,   slag, sdec,  cdec, solcon)
-        
-      !$ser cleanup
+!      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
+!      !$ser mode read
+!      !$ser savepoint "rad-update"
+!      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
+!      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
+!      
+!
+!      write(*,*) 'Running update'
+!
+!      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
+!                      me,   slag, sdec,  cdec, solcon)
+!        
+!      !$ser cleanup
 
       call cdstop()
 
