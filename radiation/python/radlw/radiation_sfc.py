@@ -5,11 +5,14 @@ import xarray as xr
 
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from radphysparam import semis_file
-from phys_const import con_tice, con_ttp, con_t0c
+from phys_const import con_tice, con_ttp, con_t0c, con_pi
 
 
 class SurfaceClass:
     VTAGSFC = "NCEP-Radiation_surface   v5.1  Nov 2012"
+
+    NF_ALBD = 4
+    rad2dg = 180.0 / con_pi
     IMXEMS = 360
     JMXEMS = 180
 
