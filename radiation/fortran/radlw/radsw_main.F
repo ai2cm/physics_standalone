@@ -590,7 +590,7 @@
 !> @{
 !-----------------------------------
       subroutine swrad                                                  &
-     &     ( plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr,                      &    !  ---  inputs
+     &     ( ser_count,plyr,plvl,tlyr,tlvl,qlyr,olyr,gasvmr,                      &    !  ---  inputs
      &       clouds,icseed,aerosols,sfcalb,                             &
      &       dzlyr,delpin,de_lgth,                                      &
      &       cosz,solcon,NDAY,idxday,                                   &
@@ -774,7 +774,7 @@
 !  =====================    end of definitions    ====================  !
 
 !  ---  inputs:
-      integer, intent(in) :: npts, nlay, nlp1, NDAY
+      integer, intent(in) :: npts, nlay, nlp1, NDAY, ser_count
 
       integer, dimension(:), intent(in) :: idxday, icseed
 

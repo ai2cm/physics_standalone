@@ -4,6 +4,8 @@
 *.o
 *.mod
 *.dat
-*.sdfg
 *.json
+*.sdfg
 *.x
+python/radlw/taugb10
+

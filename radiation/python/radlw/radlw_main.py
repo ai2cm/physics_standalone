@@ -382,7 +382,6 @@ class RadLWClass:
                 ipseed[i] = icseed[i]
 
         for iplon in range(npts):
-            print(f"iplon = {iplon}")
             if sfemis[iplon] > self.eps and sfemis[iplon] <= 1.0:
                 for j in range(nbands):
                     semiss[j] = sfemis[iplon]
