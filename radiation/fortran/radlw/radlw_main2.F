@@ -1025,7 +1025,7 @@
 
 !$ser mode write
 !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-!$ser savepoint "lw_firstloop_out_"//trim(ser_count_str)
+!$ser savepoint "lwrad-firstloop-output-"//trim(ser_count_str)
 !$ser data pavel=pavel tavel=tavel delp=delp colbrd=colbrd cldfrc=cldfrc
 !$ser data temcol=temcol tem0=tem0 taucld=taucld semiss0=semiss0 tz=tz dz=dz
 !$ser data semiss=semiss coldry=coldry colamt=colamt tauaer=tauaer
@@ -1038,7 +1038,7 @@
 !$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "lw-cldprop-input-"//trim(ser_count_str)
+  !$ser savepoint "lwrad-cldprop-input-"//trim(ser_count_str)
   !$ser data cldfrc=cldfrc clwp=clwp relw=relw ciwp=ciwp reiw=reiw cda1=cda1
   !$ser data cda2=cda2 cda3=cda3 cda4=cda4 nlay=nlay nlp1=nlp1 ipseed=ipseed
   !$ser data dz=dz delgth=delgth  
@@ -1079,7 +1079,7 @@
 !$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser savepoint "lw-cldprop-output-"//trim(ser_count_str)
+  !$ser savepoint "lwrad-cldprop-output-"//trim(ser_count_str)
   !$ser data cldfmc=cldfmc taucld=taucld
 !$ser verbatim endif
 

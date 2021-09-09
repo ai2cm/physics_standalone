@@ -4,6 +4,7 @@ from gt4py.gtscript import (
     interval,
     PARALLEL,
     FORWARD,
+    BACKWARD,
     exp,
     log,
     mod,
@@ -102,11 +103,11 @@ def firstloop(
     clouds: Field[(DTYPE_FLT, (9,))],
     icseed: FIELD_INT,
     aerosols: Field[(DTYPE_FLT, (nbands, 3))],
-    sfemis: FIELD_FLT,
-    sfgtmp: FIELD_FLT,
+    sfemis: FIELD_2D,
+    sfgtmp: FIELD_2D,
     dzlyr: FIELD_FLT,
     delpin: FIELD_FLT,
-    de_lgth: FIELD_FLT,
+    de_lgth: FIELD_2D,
     cldfrc: FIELD_FLT,
     pavel: FIELD_FLT,
     tavel: FIELD_FLT,
@@ -119,8 +120,8 @@ def firstloop(
     colamt: Field[type_maxgas],
     wx: Field[type_maxxsec],
     tauaer: Field[type_nbands],
-    semiss0: Field[type_nbands],
-    semiss: Field[type_nbands],
+    semiss0: Field[gtscript.IJ, type_nbands],
+    semiss: Field[gtscript.IJ, type_nbands],
     tem11: FIELD_FLT,
     tem22: FIELD_FLT,
     tem00: FIELD_2D,
@@ -134,7 +135,7 @@ def firstloop(
     cda2: FIELD_FLT,
     cda3: FIELD_FLT,
     cda4: FIELD_FLT,
-    secdiff: Field[type_nbands],
+    secdiff: Field[gtscript.IJ, type_nbands],
     a0: Field[type_nbands],
     a1: Field[type_nbands],
     a2: Field[type_nbands],
@@ -153,17 +154,17 @@ def firstloop(
         eps,
     )
 
-    with computation(PARALLEL):
-        with interval(1, None):
-            if sfemis > eps and sfemis <= 1.0:
+    with computation(FORWARD):
+        with interval(0, 1):
+            for j0 in range(nbands):
+                semiss0[0, 0][j0] = 1.0
+
+            if sfemis[0, 0] > eps and sfemis[0, 0] <= 1.0:
                 for j in range(nbands):
-                    semiss[0, 0, 0][j] = sfemis
+                    semiss[0, 0][j] = sfemis[0, 0]
             else:
                 for j2 in range(nbands):
-                    semiss[0, 0, 0][j2] = semiss0[0, 0, 0][j2]
-
-            tem1 = 100.0 * con_g
-            tem2 = 1.0e-20 * 1.0e3 * con_avgd
+                    semiss[0, 0][j2] = semiss0[0, 0][j2]
 
     with computation(PARALLEL):
         with interval(1, None):
@@ -171,6 +172,9 @@ def firstloop(
             delp = delpin
             tavel = tlyr
             dz = dzlyr
+
+            tem1 = 100.0 * con_g
+            tem2 = 1.0e-20 * 1.0e3 * con_avgd
 
             h2ovmr = max(0.0, qlyr * amdw / (1.0 - qlyr))  # input specific humidity
             o3vmr = max(0.0, olyr * amdo3)  # input mass mixing ratio
@@ -259,19 +263,15 @@ def firstloop(
         with interval(0, 1):
             pwvcm[0, 0] = tem00[0, 0] * plvl[0, 0, 0]
 
-    with computation(PARALLEL):
-        with interval(1, None):
-            for m in range(1, maxgas):
-                summol += colamt[0, 0, 0][m]
-            colbrd = coldry - summol
-
+    with computation(FORWARD):
+        with interval(0, 1):
             tem1 = 1.80
             tem2 = 1.50
             for j4 in range(nbands):
                 if j4 == 0 or j4 == 3 or j4 == 9:
-                    secdiff[0, 0, 0][j4] = 1.66
+                    secdiff[0, 0][j4] = 1.66
                 else:
-                    secdiff[0, 0, 0][j4] = min(
+                    secdiff[0, 0][j4] = min(
                         tem1,
                         max(
                             tem2,
@@ -279,6 +279,10 @@ def firstloop(
                             + a1[0, 0, 0][j4] * exp(a2[0, 0, 0][j4] * pwvcm),
                         ),
                     )
+        with interval(1, None):
+            for m in range(1, maxgas):
+                summol += colamt[0, 0, 0][m]
+            colbrd = coldry - summol
 
 
 @gtscript.stencil(
@@ -489,7 +493,7 @@ def setcoef(
     pavel: FIELD_FLT,
     tavel: FIELD_FLT,
     tz: FIELD_FLT,
-    stemp: FIELD_FLT,
+    stemp: FIELD_2D,
     h2ovmr: FIELD_FLT,
     colamt: Field[type_maxgas],
     coldry: FIELD_FLT,
@@ -4510,8 +4514,8 @@ lhlw0 = True
     },
 )
 def rtrnmc(
-    semiss: Field[type_nbands],
-    secdif: Field[type_nbands],
+    semiss: Field[gtscript.IJ, type_nbands],
+    secdif: Field[gtscript.IJ, type_nbands],
     delp: FIELD_FLT,
     taucld: Field[type_nbands],
     fracs: Field[type_ngptlw],
@@ -4590,7 +4594,7 @@ def rtrnmc(
             ib = NGB[0, 0][ig0] - 1
 
             # clear sky, gases contribution
-            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig0])
+            odepth[0, 0, 0][ig0] = max(0.0, secdif[0, 0][ib] * tautot[0, 0, 1][ig0])
             if odepth[0, 0, 0][ig0] <= 0.06:
                 atrgas[0, 0, 0][ig0] = (
                     odepth[0, 0, 0][ig0]
@@ -4628,7 +4632,7 @@ def rtrnmc(
             clfm[0, 0, 0][ig0] = cldfmc[0, 0, 0][ig0]
             if clfm[0, 0, 0][ig0] >= eps:
                 # cloudy layer
-                odcld[0, 0, 0][ig0] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
+                odcld[0, 0, 0][ig0] = secdif[0, 0][ib] * taucld[0, 0, 1][ib]
                 efclrfr[0, 0, 0][ig0] = (
                     1.0 - (1.0 - exp(-odcld[0, 0, 0][ig0])) * clfm[0, 0, 0][ig0]
                 )
@@ -4685,14 +4689,14 @@ def rtrnmc(
                 )
                 clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig0]
 
-            reflct[0, 0, 0][ig0] = 1.0 - semiss[0, 0, 0][ib]
+            reflct[0, 0, 0][ig0] = 1.0 - semiss[0, 0][ib]
 
     with computation(BACKWARD), interval(0, -2):
         for ig in range(ngptlw):
             ib = NGB[0, 0][ig] - 1
 
             # clear sky, gases contribution
-            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0, 1][ib] * tautot[0, 0, 1][ig])
+            odepth[0, 0, 0][ig] = max(0.0, secdif[0, 0][ib] * tautot[0, 0, 1][ig])
             if odepth[0, 0, 0][ig] <= 0.06:
                 atrgas[0, 0, 0][ig] = (
                     odepth[0, 0, 0][ig]
@@ -4729,7 +4733,7 @@ def rtrnmc(
             clfm[0, 0, 0][ig] = cldfmc[0, 0, 1][ig]
             if clfm[0, 0, 0][ig] >= eps:
                 # cloudy layer
-                odcld[0, 0, 0][ig] = secdif[0, 0, 1][ib] * taucld[0, 0, 1][ib]
+                odcld[0, 0, 0][ig] = secdif[0, 0][ib] * taucld[0, 0, 1][ib]
                 efclrfr[0, 0, 0][ig] = (
                     1.0 - (1.0 - exp(-odcld[0, 0, 0][ig])) * clfm[0, 0, 0][ig]
                 )
@@ -4785,7 +4789,7 @@ def rtrnmc(
                 )
                 clrdrad[0, 0, 0][ib] = clrdrad[0, 0, 0][ib] + radclrd[0, 0, 0][ig]
 
-            reflct[0, 0, 0][ig] = 1.0 - semiss[0, 0, 1][ib]
+            reflct[0, 0, 0][ig] = 1.0 - semiss[0, 0][ib]
 
     # Compute spectral emissivity & reflectance, include the
     # contribution of spectrally varying longwave emissivity and
@@ -4797,7 +4801,7 @@ def rtrnmc(
         for ig2 in range(ngptlw):
             ib = NGB[0, 0][ig2] - 1
             rad0[0, 0, 0][ig2] = (
-                semiss[0, 0, 1][ib] * fracs[0, 0, 1][ig2] * pklay[0, 0, 0][ib]
+                semiss[0, 0][ib] * fracs[0, 0, 1][ig2] * pklay[0, 0, 0][ib]
             )
 
             # Compute total sky radiance

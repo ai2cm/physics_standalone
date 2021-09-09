@@ -15,11 +15,13 @@ from radlw.radlw_param import *
 from phys_const import con_g, con_cp, con_amd, con_amw, con_amo3
 from util import (
     create_storage_from_array,
-    create_storage_zeros,
-    create_storage_ones,
     loadlookupdata,
     compare_data,
-    view_gt4py_storage,
+    read_data,
+    read_intermediate_data,
+    numpy_dict_to_gt4py_dict,
+    create_gt4py_dict_zeros,
+    convert_gt4py_output_for_validation,
 )
 from config import *
 from stencils_gt4py import *
@@ -288,442 +290,265 @@ class RadLWClass:
         gt4py storages. Also creates the necessary local variables as gt4py storages
         """
 
-        ddir = "../../fortran/data/LW"
-        self.serializer = ser.Serializer(
-            ser.OpenModeKind.Read, ddir, "Generator_rank" + str(tile)
-        )
-
         ddir2 = "../../fortran/radlw/dump"
         self.serializer2 = ser.Serializer(
             ser.OpenModeKind.Read, ddir2, "Serialized_rank" + str(tile)
         )
 
-        invars = [
-            "plyr",
-            "plvl",
-            "tlyr",
-            "tlvl",
-            "qlyr",
-            "olyr",
-            "gasvmr",
-            "clouds",
-            "icsdlw",
-            "faerlw",
-            "semis",
-            "tsfg",
-            "dz",
-            "delp",
-            "de_lgth",
-            "im",
-            "lmk",
-            "lmp",
-            "lprnt",
-        ]
+        invars = {
+            "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
+            "clouds": {"shape": (npts, nlay, 9), "type": type_9},
+            "icsdlw": {"shape": (npts,), "type": DTYPE_INT},
+            "faerlw": {"shape": (npts, nlay, nbands, 3), "type": type_nbands3},
+            "semis": {"shape": (npts,), "type": DTYPE_FLT},
+            "tsfg": {"shape": (npts,), "type": DTYPE_FLT},
+            "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
+            "im": {"shape": (), "type": DTYPE_INT},
+            "lmk": {"shape": (), "type": DTYPE_INT},
+            "lmp": {"shape": (), "type": DTYPE_INT},
+            "lprnt": {"shape": (), "type": DTYPE_BOOL},
+        }
 
-        outvars = [
-            "htlwc",
-            "htlw0",
-            "cldtaulw",
-            "upfxc_t",
-            "upfx0_t",
-            "upfxc_s",
-            "upfx0_s",
-            "dnfxc_s",
-            "dnfx0_s",
-        ]
+        indict = read_data("../../fortran/data/LW", tile, 0, True, invars)
+        indict_gt4py = numpy_dict_to_gt4py_dict(indict, invars)
 
-        locvars = [
-            "cldfrc",
-            "totuflux",
-            "totdflux",
-            "totuclfl",
-            "totdclfl",
-            "tz",
-            "htr",
-            "htrb",
-            "htrcl",
-            "pavel",
-            "tavel",
-            "delp",
-            "clwp",
-            "ciwp",
-            "relw",
-            "reiw",
-            "cda1",
-            "cda2",
-            "cda3",
-            "cda4",
-            "coldry",
-            "colbrd",
-            "h2ovmr",
-            "o3vmr",
-            "fac00",
-            "fac01",
-            "fac10",
-            "fac11",
-            "selffac",
-            "selffrac",
-            "forfac",
-            "forfrac",
-            "minorfrac",
-            "scaleminor",
-            "scaleminorn2",
-            "temcol",
-            "dz",
-            "pklev",
-            "pklay",
-            "htrb",
-            "taucld",
-            "tauaer",
-            "fracs",
-            "tautot",
-            "cldfmc",
-            "taucld",
-            "semiss",
-            "semiss0",
-            "secdiff",
-            "colamt",
-            "wx",
-            "rfrate",
-            "tem0",
-            "tem1",
-            "tem2",
-            "pwvcm",
-            "summol",
-            "stemp",
-            "delgth",
-            "ipseed",
-            "jp",
-            "jt",
-            "jt1",
-            "indself",
-            "indfor",
-            "indminor",
-            "tem00",
-            "tem11",
-            "tem22",
-            "tauliq",
-            "tauice",
-            "cldf",
-            "dgeice",
-            "factor",
-            "fint",
-            "tauran",
-            "tausnw",
-            "cldliq",
-            "refliq",
-            "cldice",
-            "refice",
-            "index",
-            "ia",
-            "lcloudy",
-            "tem1",
-            "summol",
-            "lcf1",
-            "cldsum",
-            "tlvlfr",
-            "tlyrfr",
-            "plog",
-            "fp",
-            "ft",
-            "ft1",
-            "indlay",
-            "indlev",
-            "jp1",
-            "tzint",
-            "stempint",
-            "tavelint",
-            "laytrop",
-        ]
+        outvars = {
+            "htlwc": {
+                "shape": shape_nlp1,
+                "type": DTYPE_FLT,
+                "fortran_shape": (npts, nlay),
+            },
+            "htlw0": {
+                "shape": shape_nlp1,
+                "type": DTYPE_FLT,
+                "fortran_shape": (npts, nlay),
+            },
+            "cldtaulw": {
+                "shape": shape_nlp1,
+                "type": DTYPE_FLT,
+                "fortran_shape": (npts, nlay),
+            },
+            "upfxc_t": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "upfx0_t": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "upfxc_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "upfx0_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "dnfxc_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "dnfx0_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+        }
 
-        locvars_int = [
-            "ib",
-            "ind0",
-            "ind0p",
-            "ind1",
-            "ind1p",
-            "inds",
-            "indsp",
-            "indf",
-            "indfp",
-            "indm",
-            "indmp",
-            "js",
-            "js1",
-            "jmn2o",
-            "jmn2op",
-            "jpl",
-            "jplp",
-            "id000",
-            "id010",
-            "id100",
-            "id110",
-            "id200",
-            "id210",
-            "id001",
-            "id011",
-            "id101",
-            "id111",
-            "id201",
-            "id211",
-            "jmo3",
-            "jmo3p",
-            "jmco2",
-            "jmco2p",
-            "jmco",
-            "jmcop",
-            "jmn2",
-            "jmn2p",
-        ]
-        locvars_flt = [
-            "taug",
-            "pp",
-            "corradj",
-            "scalen2",
-            "tauself",
-            "taufor",
-            "taun2",
-            "fpl",
-            "speccomb",
-            "speccomb1",
-            "fac001",
-            "fac101",
-            "fac201",
-            "fac011",
-            "fac111",
-            "fac211",
-            "fac000",
-            "fac100",
-            "fac200",
-            "fac010",
-            "fac110",
-            "fac210",
-            "specparm",
-            "specparm1",
-            "specparm_planck",
-            "ratn2o",
-            "ratco2",
-        ]
+        outdict_gt4py = create_gt4py_dict_zeros(outvars)
 
-        locvars_rtrnmc = [
-            "clrurad",
-            "clrdrad",
-            "toturad",
-            "totdrad",
-            "gassrcu",
-            "totsrcu",
-            "trngas",
-            "efclrfr",
-            "rfdelp",
-            "fnet",
-            "fnetc",
-            "totsrcd",
-            "gassrcd",
-            "tblind",
-            "odepth",
-            "odtot",
-            "odcld",
-            "atrtot",
-            "atrgas",
-            "reflct",
-            "totfac",
-            "gasfac",
-            "flxfac",
-            "plfrac",
-            "blay",
-            "bbdgas",
-            "bbdtot",
-            "bbugas",
-            "bbutot",
-            "dplnku",
-            "dplnkd",
-            "radtotu",
-            "radclru",
-            "radtotd",
-            "radclrd",
-            "rad0",
-            "clfm",
-            "trng",
-            "gasu",
-            "itgas",
-            "ittot",
-            "ib",
-        ]
+        locvars = {
+            "cldfrc": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totuflux": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totdflux": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totuclfl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totdclfl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tz": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "htr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "htrb": {"shape": shape_nlp1, "type": type_nbands},
+            "htrcl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "pavel": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tavel": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "delp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "clwp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ciwp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "relw": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "reiw": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda3": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda4": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "coldry": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "colbrd": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "h2ovmr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "o3vmr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac00": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac01": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac10": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac11": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "selffac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "selffrac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "forfac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "forfrac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "minorfrac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "scaleminor": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "scaleminorn2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "temcol": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "dz": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "pklev": {"shape": shape_nlp1, "type": type_nbands},
+            "pklay": {"shape": shape_nlp1, "type": type_nbands},
+            "taucld": {"shape": shape_nlp1, "type": type_nbands},
+            "tauaer": {"shape": shape_nlp1, "type": type_nbands},
+            "fracs": {"shape": shape_nlp1, "type": type_ngptlw},
+            "tautot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "cldfmc": {"shape": shape_nlp1, "type": type_ngptlw},
+            "semiss": {"shape": shape_2D, "type": type_nbands},
+            "semiss0": {"shape": shape_2D, "type": type_nbands},
+            "secdiff": {"shape": shape_2D, "type": type_nbands},
+            "colamt": {"shape": shape_nlp1, "type": type_maxgas},
+            "wx": {"shape": shape_nlp1, "type": type_maxxsec},
+            "rfrate": {"shape": shape_nlp1, "type": type_nrates},
+            "tem0": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tem1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tem2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "pwvcm": {"shape": shape_2D, "type": DTYPE_FLT},
+            "summol": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "stemp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "delgth": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ipseed": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jt": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jt1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indself": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indfor": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indminor": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "tem00": {"shape": shape_2D, "type": DTYPE_FLT},
+            "tem11": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tem22": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tauliq": {"shape": shape_nlp1, "type": type_nbands},
+            "tauice": {"shape": shape_nlp1, "type": type_nbands},
+            "cldf": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "dgeice": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "factor": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fint": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tauran": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tausnw": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cldliq": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "refliq": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cldice": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "refice": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "index": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ia": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "lcloudy": {"shape": shape_nlp1, "type": (DTYPE_INT, (ngptlw,))},
+            "lcf1": {"shape": shape_2D, "type": DTYPE_BOOL},
+            "cldsum": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tlvlfr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tlyrfr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "plog": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "indlay": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indlev": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jp1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "tzint": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "stempint": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "tavelint": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "laytrop": {"shape": shape_nlp1, "type": DTYPE_BOOL},
+            "ib": {"shape": shape_2D, "type": DTYPE_INT},
+            "ind0": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ind0p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ind1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ind1p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "inds": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indsp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indf": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indfp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indm": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indmp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "js": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "js1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2o": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2op": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jpl": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jplp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id000": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id010": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id100": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id110": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id200": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id210": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id001": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id011": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id101": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id111": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id201": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id211": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmo3": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmo3p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmco2": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmco2p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmco": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmcop": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "taug": {"shape": shape_nlp1, "type": type_ngptlw},
+            "pp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "corradj": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "scalen2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tauself": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "taufor": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "taun2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fpl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "speccomb": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "speccomb1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac001": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac101": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac201": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac011": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac111": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac211": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac000": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac100": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac200": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac010": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac110": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac210": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "specparm": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "specparm1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "specparm_planck": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ratn2o": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ratco2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "clrurad": {"shape": shape_nlp1, "type": type_nbands},
+            "clrdrad": {"shape": shape_nlp1, "type": type_nbands},
+            "toturad": {"shape": shape_nlp1, "type": type_nbands},
+            "totdrad": {"shape": shape_nlp1, "type": type_nbands},
+            "gassrcu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "totsrcu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "trngas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "efclrfr": {"shape": shape_nlp1, "type": type_ngptlw},
+            "rfdelp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fnet": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fnetc": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totsrcd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "gassrcd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "tblind": {"shape": shape_nlp1, "type": type_ngptlw},
+            "odepth": {"shape": shape_nlp1, "type": type_ngptlw},
+            "odtot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "odcld": {"shape": shape_nlp1, "type": type_ngptlw},
+            "atrtot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "atrgas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "reflct": {"shape": shape_nlp1, "type": type_ngptlw},
+            "totfac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "gasfac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "flxfac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "plfrac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "blay": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbdgas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbdtot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbugas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbutot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "dplnku": {"shape": shape_nlp1, "type": type_ngptlw},
+            "dplnkd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radtotu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radclru": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radtotd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radclrd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "rad0": {"shape": shape_nlp1, "type": type_ngptlw},
+            "clfm": {"shape": shape_nlp1, "type": type_ngptlw},
+            "trng": {"shape": shape_nlp1, "type": type_ngptlw},
+            "gasu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "itgas": {"shape": shape_nlp1, "type": (DTYPE_INT, (ngptlw,))},
+            "ittot": {"shape": shape_nlp1, "type": (DTYPE_INT, (ngptlw,))},
+        }
 
-        indict = dict()
-        for var in invars:
-            tmp = self.serializer.read(
-                var, self.serializer.savepoint["lwrad-in-000000"]
-            )
-
-            if var in ["semis", "icsdlw", "tsfg", "de_lgth"]:
-                # These fields are shape npts, tile to be 3D fields
-                indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
-            elif var == "faerlw":
-                # This is shape(npts, nlay, nbands, 3).
-                # Pad k axis with 0 and tile to give them the extra
-                # horizontal dimension
-                tmp2 = np.insert(tmp, 0, 0, axis=1)
-                indict[var] = np.tile(tmp2[:, None, :, :, :], (1, 1, 1, 1, 1))
-            elif var == "gasvmr" or var == "clouds":
-                # These fields are size (npts, nlay, 9).
-                # Pad k axis with 0 and tile to give them the extra
-                # horizontal dimension
-                tmp2 = np.insert(tmp, 0, 0, axis=1)
-                indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
-            elif var in ["plyr", "tlyr", "qlyr", "olyr", "dz", "delp"]:
-                # These fields are size (npts, nlay).
-                # Pad k axis with 0 and tile to give them the extra
-                # horizontal dimension
-                tmp2 = np.insert(tmp, 0, 0, axis=1)
-                indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
-            elif var in ["plvl", "tlvl"]:
-                # These fields are size (npts, nlp1).
-                # Tile to give them the extra
-                # horizontal dimension
-                indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
-            else:
-                # Otherwise input is a scalar, grab from array.
-                indict[var] = tmp[0]
-
-        indict_gt4py = dict()
-
-        for var in invars:
-            if var == "faerlw":
-                indict_gt4py[var] = create_storage_from_array(
-                    indict[var], backend, shape_nlp1, (DTYPE_FLT, (nbands, 3))
-                )
-            elif var == "gasvmr" or var == "clouds":
-                indict_gt4py[var] = create_storage_from_array(
-                    indict[var],
-                    backend,
-                    shape_nlp1,
-                    (DTYPE_FLT, (indict[var].shape[3],)),
-                )
-            elif var == "icsdlw":
-                indict_gt4py[var] = create_storage_from_array(
-                    indict[var], backend, shape_nlp1, DTYPE_INT
-                )
-            elif indict[var].size > 1:
-                indict_gt4py[var] = create_storage_from_array(
-                    indict[var], backend, shape_nlp1, DTYPE_FLT
-                )
-            else:
-                indict_gt4py[var] = indict[var]
-
-        outdict_gt4py = dict()
-
-        for var in outvars:
-            if var in ["htlwc", "htlw0", "cldtaulw"]:
-                outdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_FLT
-                )
-            else:
-                outdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
-
-        locdict_gt4py = dict()
-
-        for var in locvars:
-            if var == "rfrate":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, (DTYPE_FLT, (nrates, 2))
-                )
-            elif var == "wx":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_maxxsec
-                )
-            elif var == "pwvcm" or var == "tem00":
-                locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_FLT)
-            elif var == "lcf1":
-                locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_BOOL)
-            elif var == "colamt":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_maxgas
-                )
-            elif var in [
-                "semiss",
-                "secdiff",
-                "pklay",
-                "pklev",
-                "htrb",
-            ]:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_nbands
-                )
-            elif var == "semiss0":
-                locdict_gt4py[var] = create_storage_ones(
-                    backend, shape_nlp1, type_nbands
-                )
-            elif var in ["taucld", "tauaer", "tauliq", "tauice", "htrb"]:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_nbands
-                )
-            elif var in ["fracs", "tautot", "cldfmc"]:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_ngptlw
-                )
-            elif var in ["ipseed", "jp", "jt", "jt1", "indself", "indfor", "indminor"]:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_INT
-                )
-            elif var in ["jp1", "tzint", "stempint", "indlev", "indlay", "tavelint"]:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_INT
-                )
-            elif var == "lcloudy":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, (DTYPE_INT, (ngptlw))
-                )
-            elif var == "laytrop":
-                locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, bool)
-            elif var == "index" or var == "ia":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_INT
-                )
-            else:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_FLT
-                )
-
-        # Initialize local vars for taumol
-        for var in locvars_int:
-            if var == "ib":
-                locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, DTYPE_INT)
-            else:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_INT
-                )
-
-        for var in locvars_flt:
-            if var == "taug":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_ngptlw
-                )
-            else:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_FLT
-                )
-
-        # Initialize local vars for rtrnmc
-        for var in locvars_rtrnmc:
-            if var[-3:] == "rad":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_nbands
-                )
-            elif var == "fnet" or var == "fnetc" or var == "rfdelp":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, DTYPE_FLT
-                )
-            elif var == "itgas" or var == "ittot":
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, (np.int32, (ngptlw,))
-                )
-            elif var == "ib":
-                locdict_gt4py[var] = create_storage_zeros(backend, shape_2D, np.int32)
-            else:
-                locdict_gt4py[var] = create_storage_zeros(
-                    backend, shape_nlp1, type_ngptlw
-                )
+        locdict_gt4py = create_gt4py_dict_zeros(locvars)
 
         self.indict_gt4py = indict_gt4py
         self.locdict_gt4py = locdict_gt4py
@@ -898,61 +723,39 @@ class RadLWClass:
 
         if do_subtest:
 
-            outvars_firstloop = [
-                "pavel",
-                "tavel",
-                "delp",
-                "colbrd",
-                "cldfrc",
-                "taucld",
-                "semiss0",
-                "dz",
-                "semiss",
-                "coldry",
-                "colamt",
-                "tauaer",
-                "h2ovmr",
-                "o3vmr",
-                "wx",
-                "clwp",
-                "relw",
-                "ciwp",
-                "reiw",
-                "cda1",
-                "cda2",
-                "cda3",
-                "cda4",
-                "pwvcm",
-                "secdiff",
-            ]
+            outvars_firstloop = {
+                "pavel": {"fortran_shape": (npts, nlay)},
+                "tavel": {"fortran_shape": (npts, nlay)},
+                "delp": {"fortran_shape": (npts, nlay)},
+                "colbrd": {"fortran_shape": (npts, nlay)},
+                "cldfrc": {"fortran_shape": (npts, nlp1 + 1)},
+                "taucld": {"fortran_shape": (npts, nbands, nlay)},
+                "dz": {"fortran_shape": (npts, nlay)},
+                "semiss": {"fortran_shape": (npts, nbands)},
+                "coldry": {"fortran_shape": (npts, nlay)},
+                "colamt": {"fortran_shape": (npts, nlay, maxgas)},
+                "tauaer": {"fortran_shape": (npts, nbands, nlay)},
+                "h2ovmr": {"fortran_shape": (npts, nlay)},
+                "o3vmr": {"fortran_shape": (npts, nlay)},
+                "wx": {"fortran_shape": (npts, nlay, maxxsec)},
+                "clwp": {"fortran_shape": (npts, nlay)},
+                "relw": {"fortran_shape": (npts, nlay)},
+                "ciwp": {"fortran_shape": (npts, nlay)},
+                "reiw": {"fortran_shape": (npts, nlay)},
+                "cda1": {"fortran_shape": (npts, nlay)},
+                "cda2": {"fortran_shape": (npts, nlay)},
+                "cda3": {"fortran_shape": (npts, nlay)},
+                "cda4": {"fortran_shape": (npts, nlay)},
+                "pwvcm": {"fortran_shape": (npts,)},
+                "secdiff": {"fortran_shape": (npts, nbands)},
+            }
 
-            outdict_firstloop = dict()
-            valdict_firstloop = dict()
-            for var in outvars_firstloop:
-                if var == "cldfrc":
-                    tmp = self.locdict_gt4py[var].view(np.ndarray).squeeze()
-                    outdict_firstloop[var] = np.append(tmp, np.zeros((npts, 1)), axis=1)
-                elif var == "pwvcm":
-                    outdict_firstloop[var] = (
-                        self.locdict_gt4py[var].view(np.ndarray).squeeze()
-                    )
-                elif var == "taucld" or var == "tauaer":
-                    tmp = (
-                        self.locdict_gt4py[var][:, :, 1:, :].view(np.ndarray).squeeze()
-                    )
-                    outdict_firstloop[var] = np.transpose(tmp, [0, 2, 1])
-                elif var == "semiss" or var == "secdiff":
-                    outdict_firstloop[var] = (
-                        self.locdict_gt4py[var][:, :, 1, :].view(np.ndarray).squeeze()
-                    )
-                else:
-                    outdict_firstloop[var] = (
-                        self.locdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
-                    )
-
-                valdict_firstloop[var] = self.serializer2.read(
-                    var, self.serializer2.savepoint["lw_firstloop_out_000000"]
-                )
+            outdict_firstloop = convert_gt4py_output_for_validation(
+                self.locdict_gt4py, outvars_firstloop
+            )
+            valdict_firstloop = read_intermediate_data(
+                "../../fortran/radlw/dump", tile, 0, "firstloop", outvars_firstloop
+            )
 
             print("Testing firstloop...")
             print(" ")
@@ -1007,18 +810,18 @@ class RadLWClass:
         )
 
         if do_subtest:
-            outdict_cldprop = dict()
-            valdict_cldprop = dict()
 
-            outvars_cldprop = ["cldfmc", "taucld"]
+            outvars_cldprop = {
+                "cldfmc": {"fortran_shape": (npts, ngptlw, nlay)},
+                "taucld": {"fortran_shape": (npts, nbands, nlay)},
+            }
 
-            for var in outvars_cldprop:
-                outdict_cldprop[var] = (
-                    self.locdict_gt4py[var][:, :, 1:, :].squeeze().transpose((0, 2, 1))
-                )
-                valdict_cldprop[var] = self.serializer2.read(
-                    var, self.serializer2.savepoint["lw-cldprop-output-000000"]
-                )
+            outdict_cldprop = convert_gt4py_output_for_validation(
+                self.locdict_gt4py, outvars_cldprop
+            )
+            valdict_cldprop = read_intermediate_data(
+                "../../fortran/radlw/dump", tile, 0, "cldprop", outvars_cldprop
+            )
 
             print("Testing cldprop...")
             print(" ")
@@ -1078,55 +881,36 @@ class RadLWClass:
         )
 
         if do_subtest:
-            outvars_setcoef = [
-                "laytrop",
-                "pklay",
-                "pklev",
-                "jp",
-                "jt",
-                "jt1",
-                "rfrate",
-                "fac00",
-                "fac01",
-                "fac10",
-                "fac11",
-                "selffac",
-                "selffrac",
-                "indself",
-                "forfac",
-                "forfrac",
-                "indfor",
-                "minorfrac",
-                "scaleminor",
-                "scaleminorn2",
-                "indminor",
-            ]
+            outvars_setcoef = {
+                "laytrop": {"fortran_shape": (npts,)},
+                "pklay": {"fortran_shape": (npts, nbands, nlp1)},
+                "pklev": {"fortran_shape": (npts, nbands, nlp1)},
+                "jp": {"fortran_shape": (npts, nlay)},
+                "jt": {"fortran_shape": (npts, nlay)},
+                "jt1": {"fortran_shape": (npts, nlay)},
+                "rfrate": {"fortran_shape": (npts, nlay, nrates, 2)},
+                "fac00": {"fortran_shape": (npts, nlay)},
+                "fac01": {"fortran_shape": (npts, nlay)},
+                "fac10": {"fortran_shape": (npts, nlay)},
+                "fac11": {"fortran_shape": (npts, nlay)},
+                "selffac": {"fortran_shape": (npts, nlay)},
+                "selffrac": {"fortran_shape": (npts, nlay)},
+                "indself": {"fortran_shape": (npts, nlay)},
+                "forfac": {"fortran_shape": (npts, nlay)},
+                "forfrac": {"fortran_shape": (npts, nlay)},
+                "indfor": {"fortran_shape": (npts, nlay)},
+                "minorfrac": {"fortran_shape": (npts, nlay)},
+                "scaleminor": {"fortran_shape": (npts, nlay)},
+                "scaleminorn2": {"fortran_shape": (npts, nlay)},
+                "indminor": {"fortran_shape": (npts, nlay)},
+            }
 
-            outdict_setcoef = dict()
-            valdict_setcoef = dict()
-
-            for var in outvars_setcoef:
-                valdict_setcoef[var] = self.serializer2.read(
-                    var, self.serializer2.savepoint["lwrad-setcoef-output-000000"]
-                )
-                if var != "laytrop":
-                    outdict_setcoef[var] = (
-                        self.locdict_gt4py[var][:, 0, ...].squeeze().view(np.ndarray)
-                    )
-                    if var == "pklay" or var == "pklev":
-                        outdict_setcoef[var] = np.transpose(
-                            outdict_setcoef[var], (0, 2, 1)
-                        )
-                    else:
-                        outdict_setcoef[var] = outdict_setcoef[var][:, 1:, ...]
-                else:
-                    outdict_setcoef[var] = (
-                        self.locdict_gt4py[var][0, :, 1:]
-                        .squeeze()
-                        .view(np.ndarray)
-                        .astype(np.int32)
-                        .sum()
-                    )
+            outdict_setcoef = convert_gt4py_output_for_validation(
+                self.locdict_gt4py, outvars_setcoef
+            )
+            valdict_setcoef = read_intermediate_data(
+                "../../fortran/radlw/dump", tile, 0, "setcoef", outvars_setcoef
+            )
 
             print("Testing setcoef...")
             print(" ")
@@ -2059,22 +1843,19 @@ class RadLWClass:
         )
 
         if do_subtest:
-            outdict_taumol = {
-                "fracs": np.transpose(
-                    self.locdict_gt4py["fracs"][:, :, 1:, :].squeeze(), (0, 2, 1)
-                ),
-                "tautot": np.transpose(
-                    self.locdict_gt4py["tautot"][:, :, 1:, :].squeeze(), (0, 2, 1)
-                ),
+
+            outvars_t = {
+                "fracs": {"fortran_shape": (npts, ngptlw, nlay)},
+                "tautot": {"fortran_shape": (npts, ngptlw, nlay)},
             }
 
-            outvars_t = ["fracs", "tautot"]
+            valdict_taumol = read_intermediate_data(
+                "../../fortran/radlw/dump", tile, 0, "taumol", outvars_t
+            )
 
-            valdict_taumol = dict()
-            for var in outvars_t:
-                valdict_taumol[var] = self.serializer2.read(
-                    var, self.serializer2.savepoint["lwrad-taumol-output-000000"]
-                )
+            outdict_taumol = convert_gt4py_output_for_validation(
+                self.locdict_gt4py, outvars_t
+            )
 
             print("Testing taumol...")
             print(" ")
@@ -2156,26 +1937,20 @@ class RadLWClass:
         )
 
         if do_subtest:
-            outvars_rtrnmc = [
-                "totuflux",
-                "totdflux",
-                "totuclfl",
-                "totdclfl",
-            ]
-            outdict_rtrnmc = dict()
+            outvars_rtrnmc = {
+                "totuflux": {"fortran_shape": (npts, nlp1), "type": DTYPE_FLT},
+                "totdflux": {"fortran_shape": (npts, nlp1), "type": DTYPE_FLT},
+                "totuclfl": {"fortran_shape": (npts, nlp1), "type": DTYPE_FLT},
+                "totdclfl": {"fortran_shape": (npts, nlp1), "type": DTYPE_FLT},
+            }
 
-            for var in outvars_rtrnmc:
-                outdict_rtrnmc[var] = self.locdict_gt4py[var]
-            outdict_rtrnmc = view_gt4py_storage(outdict_rtrnmc)
+            outdict_rtrnmc = convert_gt4py_output_for_validation(
+                self.locdict_gt4py, outvars_rtrnmc
+            )
 
-            for var in outdict_rtrnmc.keys():
-                outdict_rtrnmc[var] = outdict_rtrnmc[var][:, :]
-
-            valdict_rtrnmc = dict()
-            for var in outvars_rtrnmc:
-                valdict_rtrnmc[var] = self.serializer2.read(
-                    var, self.serializer2.savepoint["lwrad-rtrnmc-output-000000"]
-                )
+            valdict_rtrnmc = read_intermediate_data(
+                "../../fortran/radlw/dump", tile, 0, "rtrnmc", outvars_rtrnmc
+            )
 
             print("Testing rtrnmc...")
             print(" ")
@@ -2190,16 +1965,10 @@ class RadLWClass:
         valdict = dict()
         outdict_np = dict()
 
-        for var in self.outvars:
-            valdict[var] = self.serializer.read(
-                var, self.serializer.savepoint["lwrad-out-000000"]
-            )
-            if var == "htlwc" or var == "htlw0" or var == "cldtaulw":
-                outdict_np[var] = (
-                    self.outdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
-                )
-            else:
-                outdict_np[var] = self.outdict_gt4py[var].view(np.ndarray).squeeze()
+        valdict = read_data("../../fortran/data/LW", tile, 0, False, self.outvars)
+        outdict_np = convert_gt4py_output_for_validation(
+            self.outdict_gt4py, self.outvars
+        )
 
         print("Testing final output...")
         print(" ")
