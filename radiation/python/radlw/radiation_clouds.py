@@ -13,7 +13,7 @@ class CloudClass:
     gord = con_g / con_rd
     NF_CLDS = 9
     NK_CLDS = 3
-    ptopc = [1050.0, 650.0, 400.0, 0.0, 1050.0, 750.0, 500.0, 0.0]
+    ptopc = np.array([[1050.0, 650.0, 400.0, 0.0], [1050.0, 750.0, 500.0, 0.0]]).T
     climit = 0.001
     climit2 = 0.05
     ovcst = 1.0 - 1.0e-8
@@ -27,6 +27,8 @@ class CloudClass:
     def __init__(self, si, NLAY, imp_physics, me, ivflip, icldflg, iovrsw, iovrlw):
 
         self.iovr = max(iovrsw, iovrlw)
+        self.ivflip = ivflip
+
         if me == 0:
             print(self.VTAGCLD)  # print out version tag
 
@@ -1128,7 +1130,7 @@ class CloudClass:
         tem2d = np.zeros((IX, NLAY))
         clwf = np.zeros((IX, NLAY))
 
-        ptop1 = np.zerso((IX, self.NK_CLDS + 1))
+        ptop1 = np.zeros((IX, self.NK_CLDS + 1))
         rxlat = np.zeros(IX)
 
         clouds = np.zeros((IX, NLAY, self.NF_CLDS))
@@ -1146,7 +1148,7 @@ class CloudClass:
         if lcrick:
             for i in range(IX):
                 clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
-                clwf[i, NLAY] = 0.75 * clw[i, NLAY] + 0.25 * clw[i, NLAY - 1]
+                clwf[i, NLAY - 1] = 0.75 * clw[i, NLAY - 1] + 0.25 * clw[i, NLAY - 2]
             for k in range(1, NLAY - 1):
                 for i in range(IX):
                     clwf[i, k] = (
@@ -1845,7 +1847,7 @@ class CloudClass:
 
         dz1 = np.zeros(IX)
 
-        idom = np.zeros(IX)
+        idom = np.zeros(IX, dtype=np.int32)
         kbt1 = np.zeros(IX)
         kth1 = np.zeros(IX)
         kbt2 = np.zeros(IX)
@@ -1880,10 +1882,10 @@ class CloudClass:
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = 1.0 - cl1[i]  # save bl cloud
+                        clds[i, 4] = 1.0 - cl1[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = 1.0 - cl1[i]  # save total cloud
+                clds[i, 3] = 1.0 - cl1[i]  # save total cloud
 
         elif self.iovr == 1:  # max/ran overlap
 
@@ -1898,10 +1900,10 @@ class CloudClass:
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = 1.0 - cl1[i] * cl2[i]  # save bl cloud
+                        clds[i, 4] = 1.0 - cl1[i] * cl2[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = 1.0 - cl1[i] * cl2[i]  # save total cloud
+                clds[i, 3] = 1.0 - cl1[i] * cl2[i]  # save total cloud
 
         elif self.iovr == 2:  # maximum overlap all levels
 
@@ -1913,10 +1915,10 @@ class CloudClass:
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = cl1[i]  # save bl cloud
+                        clds[i, 4] = cl1[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = cl1[i]  # save total cloud
+                clds[i, 3] = cl1[i]  # save total cloud
 
         elif self.iovr == 3:  # random if clear-layer divided,
             # otherwise de-corrlength method
@@ -1940,10 +1942,10 @@ class CloudClass:
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = 1.0 - cl1[i] * cl2[i]  # save bl cloud
+                        clds[i, 4] = 1.0 - cl1[i] * cl2[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = 1.0 - cl1[i] * cl2[i]  # save total cloud
+                clds[i, 3] = 1.0 - cl1[i] * cl2[i]  # save total cloud
 
         #  ---  high, mid, low clouds, where cl1, cl2 are cloud fractions
         #       layer processed from one layer below llyr and up
@@ -1968,9 +1970,9 @@ class CloudClass:
                 mbot[i, 2] = NLAY - 1
                 mtop[i, 2] = NLAY - 1
 
-            for k in range(NLAY, None, -1):
+            for k in range(NLAY, -1, -1):
                 for i in range(IX):
-                    id = idom[i]
+                    id = idom[i] - 1
                     id1 = id + 1
 
                     pcur = plyr[i, k]
@@ -2037,23 +2039,23 @@ class CloudClass:
                 kth1[i] = 0
                 kth2[i] = 0
                 idom[i] = 1
-                mbot[i, 1] = 1
-                mtop[i, 1] = 1
+                mbot[i, 0] = 1
+                mtop[i, 0] = 1
+                mbot[i, 1] = 2
+                mtop[i, 1] = 2
                 mbot[i, 2] = 2
                 mtop[i, 2] = 2
-                mbot[i, 3] = 2
-                mtop[i, 3] = 2
 
             for k in range(NLAY):
                 for i in range(IX):
-                    id = idom[i]
+                    id = idom[i] - 1
                     id1 = id + 1
 
                     pcur = plyr[i, k]
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
 
-                    if k < NLAY:
-                        pnxt = plyr(i, k + 1)
+                    if k < NLAY - 1:
+                        pnxt = plyr[i, k + 1]
                         cnxt = min(self.ovcst, max(cldtot[i, k + 1], cldcnv[i, k + 1]))
                     else:
                         pnxt = -1.0
