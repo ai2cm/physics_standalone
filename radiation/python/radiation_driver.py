@@ -420,26 +420,32 @@ class RadiationDriver:
                     plvl[i, 1 + kd] = 0.5 * (plvl[i, 2 + kd] + plvl[i, 1 + kd])
         else:  # input data from sfc to top
             for i in range(IM):
-                plvl[i, LP1 + kd] = 0.01 * Statein.prsi[i, LP1 + lsk]  # pa to mb (hpa)
+                plvl[i, LP1 + kd - 1] = (
+                    0.01 * Statein.prsi[i, LP1 + lsk - 1]
+                )  # pa to mb (hpa)
 
             if lsk != 0:
                 for i in range(IM):
-                    plvl[i, LM + kd] = 0.5 * (plvl[i, LP1 + kd] + plvl[i, LM + kd])
+                    plvl[i, LM + kd - 1] = 0.5 * (
+                        plvl[i, LP1 + k - 1] + plvl[i, LM + kd - 1]
+                    )
 
         if self.lextop:  # values for extra top layer
             for i in range(IM):
-                plvl[i, llb] = self.prsmin
-                if plvl[i, lla] <= self.prsmin:
-                    plvl[i, lla] = 2.0 * self.prsmin
+                plvl[i, llb - 1] = self.prsmin
+                if plvl[i, lla - 1] <= self.prsmin:
+                    plvl[i, lla - 1] = 2.0 * self.prsmin
 
-                plyr[i, lyb] = 0.5 * plvl[i, lla]
-                tlyr[i, lyb] = tlyr[i, lya]
-                prslk1[i, lyb] = (plyr[i, lyb] * 0.00001) ** con_rocp  # plyr in Pa
-                rhly[i, lyb] = rhly[i, lya]
-                qstl[i, lyb] = qstl[i, lya]
+                plyr[i, lyb - 1] = 0.5 * plvl[i, lla - 1]
+                tlyr[i, lyb - 1] = tlyr[i, lya - 1]
+                prslk1[i, lyb - 1] = (
+                    plyr[i, lyb - 1] * 0.00001
+                ) ** con_rocp  # plyr in Pa
+                rhly[i, lyb - 1] = rhly[i, lya - 1]
+                qstl[i, lyb - 1] = qstl[i, lya - 1]
 
             #  ---  note: may need to take care the top layer amount
-            tracer1[:, lyb, :] = tracer1[:, lya, :]
+            tracer1[:, lyb - 1, :] = tracer1[:, lya - 1, :]
 
         #  - Get layer ozone mass mixing ratio (if use ozone climatology data,
         #    call getozn()).
@@ -447,7 +453,7 @@ class RadiationDriver:
         if Model.ntoz > 0:  # interactive ozone generation
             for k in range(LMK):
                 for i in range(IM):
-                    olyr[i, k] = max(self.QMIN, tracer1[i, k, Model.ntoz])
+                    olyr[i, k] = max(self.QMIN, tracer1[i, k, Model.ntoz - 1])
         else:  # climatological ozone
             print("Climatological ozone not implemented")
 
@@ -491,10 +497,10 @@ class RadiationDriver:
                 tem1d[i] = self.QME6
                 tem2da[i, 0] = np.log(plyr[i, 0])
                 tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0]))
-                tem2db[i, LMP] = np.log(plvl[i, LMP])
-                tsfa[i] = tlyr[i, LMK]  # sfc layer air temp
+                tem2db[i, LMP - 1] = np.log(plvl[i, LMP - 1])
+                tsfa[i] = tlyr[i, LMK - 1]  # sfc layer air temp
                 tlvl[i, 0] = tlyr[i, 0]
-                tlvl[i, LMP] = tskn[i]
+                tlvl[i, LMP - 1] = tskn[i]
 
             for k in range(LM):
                 k1 = k + kd
@@ -508,9 +514,9 @@ class RadiationDriver:
 
             if self.lextop:
                 for i in range(IM):
-                    qlyr[i, lyb] = qlyr[i, lya]
-                    tvly[i, lyb] = tvly[i, lya]
-                    delp[i, lyb] = plvl[i, lla] - plvl[i, llb]
+                    qlyr[i, lyb - 1] = qlyr[i, lya - 1]
+                    tvly[i, lyb - 1] = tvly[i, lya - 1]
+                    delp[i, lyb - 1] = plvl[i, lla - 1] - plvl[i, llb - 1]
 
             for k in range(1, LMK):
                 for i in range(IM):
@@ -530,10 +536,10 @@ class RadiationDriver:
                 tem1d[i] = self.QME6
                 tem2da[i, 0] = np.log(plyr[i, 0])
                 tem2db[i, 0] = np.log(plvl[i, 0])
-                tem2db[i, LMP] = np.log(max(self.prsmin, plvl[i, LMP]))
+                tem2db[i, LMP - 1] = np.log(max(self.prsmin, plvl[i, LMP - 1]))
                 tsfa[i] = tlyr[i, 0]  # sfc layer air temp
                 tlvl[i, 0] = tskn[i]
-                tlvl[i, LMP] = tlyr[i, LMK]
+                tlvl[i, LMP - 1] = tlyr[i, LMK - 1]
 
             for k in range(LM - 1, -1, -1):
                 for i in range(IM):
@@ -546,9 +552,9 @@ class RadiationDriver:
 
             if self.lextop:
                 for i in range(IM):
-                    qlyr[i, lyb] = qlyr[i, lya]
-                    tvly[i, lyb] = tvly[i, lya]
-                    delp[i, lyb] = plvl[i, lla] - plvl[i, llb]
+                    qlyr[i, lyb - 1] = qlyr[i, lya - 1]
+                    tvly[i, lyb - 1] = tvly[i, lya - 1]
+                    delp[i, lyb - 1] = plvl[i, lla - 1] - plvl[i, llb - 1]
 
             for k in range(LMK - 1):
                 for i in range(IM):
@@ -606,27 +612,27 @@ class RadiationDriver:
         if Model.ncnd == 1:  # Zhao_Carr_Sundqvist
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water/ice
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water/ice
         elif Model.ncnd == 2:  # MG
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water
-                    ccnd[i, k, 1] = tracer1[i, k, ntiw]  # ice water
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
         elif Model.ncnd == 4:  # MG2
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water
-                    ccnd[i, k, 1] = tracer1[i, k, ntiw]  # ice water
-                    ccnd[i, k, 2] = tracer1[i, k, ntrw]  # rain water
-                    ccnd[i, k, 3] = tracer1[i, k, ntsw]  # snow water
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, k, 2] = tracer1[i, k, ntrw - 1]  # rain water
+                    ccnd[i, k, 3] = tracer1[i, k, ntsw - 1]  # snow water
         elif Model.ncnd == 5:  # GFDL MP, Thompson, MG3
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw]  # liquid water
-                    ccnd[i, k, 1] = tracer1[i, k, ntiw]  # ice water
-                    ccnd[i, k, 2] = tracer1[i, k, ntrw]  # rain water
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, k, 2] = tracer1[i, k, ntrw - 1]  # rain water
                     ccnd[i, k, 3] = (
-                        tracer1[i, k, ntsw] + tracer1[i, k, ntgl]
+                        tracer1[i, k, ntsw - 1] + tracer1[i, k, ntgl - 1]
                     )  # snow + grapuel
 
         for n in range(ncndl):
@@ -639,11 +645,11 @@ class RadiationDriver:
             if not Model.lgfdlmprad:
 
                 # rsun the  summation methods and order make the difference in calculation
-                ccnd[:, :, 0] = tracer1[:, :LMK, ntcw]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntrw]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntiw]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntsw]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntgl]
+                ccnd[:, :, 0] = tracer1[:, :LMK, ntcw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntrw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntiw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntsw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntgl - 1]
 
             for k in range(LMK):
                 for i in range(IM):
@@ -655,7 +661,7 @@ class RadiationDriver:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        cldcov[i, k1] = Tbd.phy_f3d[i, k, Model.indcld]
+                        cldcov[i, k1] = Tbd.phy_f3d[i, k, Model.indcld - 1]
                         effrl[i, k1] = Tbd.phy_f3d[i, k, 1]
                         effri[i, k1] = Tbd.phy_f3d[i, k, 2]
                         effrr[i, k1] = Tbd.phy_f3d[i, k, 3]
@@ -664,9 +670,9 @@ class RadiationDriver:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        cldcov[i, k1] = Tbd.phy_f3d[i, k, Model.indcld]
+                        cldcov[i, k1] = Tbd.phy_f3d[i, k, Model.indcld - 1]
         elif Model.imp_physics == 11:  # GFDL MP
-            cldcov[:IM, 1 + kd : LM + kd] = tracer1[:IM, :LM, Model.ntclamt]
+            cldcov[:IM, kd : LM + kd] = tracer1[:IM, :LM, Model.ntclamt - 1]
             if Model.effr_in:
                 for k in range(LM):
                     k1 = k + kd
@@ -696,7 +702,7 @@ class RadiationDriver:
                 k1 = k + kd
                 for i in range(IM):
                     deltaq[i, k1] = 0.0
-                    cnvw[i, k1] = Tbd.phy_f3d[i, k, Model.num_p3d + 1]
+                    cnvw[i, k1] = Tbd.phy_f3d[i, k, Model.num_p3d]
                     cnvc[i, k1] = 0.0
         else:  # all the rest
             for k in range(LMK):
@@ -707,42 +713,41 @@ class RadiationDriver:
 
         if self.lextop:
             for i in range(IM):
-                cldcov[i, lyb] = cldcov[i, lya]
-                deltaq[i, lyb] = deltaq[i, lya]
-                cnvw[i, lyb] = cnvw[i, lya]
-                cnvc[i, lyb] = cnvc[i, lya]
+                cldcov[i, lyb - 1] = cldcov[i, lya - 1]
+                deltaq[i, lyb - 1] = deltaq[i, lya - 1]
+                cnvw[i, lyb - 1] = cnvw[i, lya - 1]
+                cnvc[i, lyb - 1] = cnvc[i, lya - 1]
 
             if Model.effr_in:
                 for i in range(IM):
-                    effrl[i, lyb] = effrl[i, lya]
-                    effri[i, lyb] = effri[i, lya]
-                    effrr[i, lyb] = effrr[i, lya]
-                    effrs[i, lyb] = effrs[i, lya]
+                    effrl[i, lyb - 1] = effrl[i, lya - 1]
+                    effri[i, lyb - 1] = effri[i, lya - 1]
+                    effrr[i, lyb - 1] = effrr[i, lya - 1]
+                    effrs[i, lyb - 1] = effrs[i, lya - 1]
 
         if Model.imp_physics == 99:
             ccnd[:IM, :LMK, 0] = ccnd[:IM, :LMK, 0] + cnvw[:IM, :LMK]
 
-        clouds, cldsa, mtopa, mbota, de_lgth = self.cld.progclduni(
+        clouds, cldsa, mtopa, mbota, de_lgth = self.cld.progcld4(
             plyr,
             plvl,
             tlyr,
             tvly,
-            ccnd,
-            ncndl,
+            qlyr,
+            qstl,
+            rhly,
+            ccnd[:IM, :LMK, 0],
+            cnvw,
+            cnvc,
             Grid.xlat,
             Grid.xlon,
             Sfcprop.slmsk,
+            cldcov,
             dz,
             delp,
             IM,
             LMK,
             LMP,
-            cldcov,
-            effrl,
-            effri,
-            effrr,
-            effrs,
-            Model.effr_in,
         )
 
         #  --- ...  start radiation calculations
@@ -875,7 +880,7 @@ class RadiationDriver:
                 # --- repopulate the points above levr i.e. LM
                 if LM < LEVS:
                     for k in range(LM, LEVS):
-                        Radtend.htrsw[:IM, k] = Radtend.htrsw[:IM, LM]
+                        Radtend.htrsw[:IM, k] = Radtend.htrsw[:IM, LM - 1]
 
                 if Model.swhtr:
                     for k in range(LM):
@@ -885,7 +890,7 @@ class RadiationDriver:
                     # --- repopulate the points above levr i.e. LM
                     if LM < LEVS:
                         for k in range(LM, LEVS):
-                            Radtend.swhc[:IM, k] = Radtend.swhc[:IM, LM]
+                            Radtend.swhc[:IM, k] = Radtend.swhc[:IM, LM - 1]
 
                 #  --- surface down and up spectral component fluxes
                 #  - Save two spectral bands' surface downward and upward fluxes for
@@ -905,10 +910,6 @@ class RadiationDriver:
             else:
 
                 Radtend.htrsw[:, :] = 0.0
-
-                Radtend.sfcfsw = sfcfsw_type(0.0, 0.0, 0.0, 0.0)
-                Diag.topfsw = topfsw_type(0.0, 0.0, 0.0)
-                scmpsw = cmpfsw_type(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
                 for i in range(IM):
                     Coupling.nirbmdi[i] = 0.0
@@ -1007,7 +1008,7 @@ class RadiationDriver:
             # --- repopulate the points above levr
             if LM < LEVS:
                 for k in range(LM, LEVS):
-                    Radtend.htrlw[IM, k] = Radtend.htrlw[:IM, LM]
+                    Radtend.htrlw[IM, k] = Radtend.htrlw[:IM, LM - 1]
 
             if Model.lwhtr:
                 for k in range(LM):
@@ -1017,7 +1018,7 @@ class RadiationDriver:
                 # --- repopulate the points above levr
                 if LM < LEVS:
                     for k in range(LM, LEVS):
-                        Radtend.lwhc[:IM, k] = Radtend.lwhc[:IM, LM]
+                        Radtend.lwhc[:IM, k] = Radtend.lwhc[:IM, LM - 1]
 
             # --- radiation fluxes for other physics processes
             Coupling.sfcdlw[:] = Radtend.sfcflw[:].dnfxc
@@ -1150,13 +1151,15 @@ class RadiationDriver:
                         ibtc = mbota[i, j] - kd
                         Diag.fluxr[i, 6 - j] = Diag.fluxr[i, 6 - j] + tem0d
                         Diag.fluxr[i, 9 - j] = (
-                            Diag.fluxr[i, 9 - j] + tem0d * Statein.prsi[i, itop + kt]
+                            Diag.fluxr[i, 9 - j]
+                            + tem0d * Statein.prsi[i, itop + kt - 1]
                         )
                         Diag.fluxr[i, 12 - j] = (
-                            Diag.fluxr[i, 12 - j] + tem0d * Statein.prsi[i, ibtc + kb]
+                            Diag.fluxr[i, 12 - j]
+                            + tem0d * Statein.prsi[i, ibtc + kb - 1]
                         )
                         Diag.fluxr[i, 15 - j] = (
-                            Diag.fluxr[i, 15 - j] + tem0d * Statein.tgrs[i, itop]
+                            Diag.fluxr[i, 15 - j] + tem0d * Statein.tgrs[i, itop - 1]
                         )
 
                         # Anning adds optical depth and emissivity output
