@@ -9,7 +9,7 @@ if IS_DOCKER:
     sys.path.insert(0, "/work/radiation/python")
 else:
     sys.path.insert(
-        0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python/radlw"
+        0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw, nrates
 from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
@@ -21,8 +21,14 @@ gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
 )
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
+    LOOKUP_DIR = "/work/radiation/python/lookupdata"
+    FORTRANDATA_DIR = "/work/radiation/fortran/data"
+    SERIALIZED_DIR = "/work/radiation/fortran/radlw/dump"
 else:
     SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
+    LOOKUP_DIR = "../../python/lookupdata"
+    FORTRANDATA_DIR = "../../fortran/data"
+    SERIALIZED_DIR = "../../fortran/radlw/dump"
 
 backend = "gtc:gt:cpu_ifirst"
 

@@ -290,9 +290,8 @@ class RadLWClass:
         gt4py storages. Also creates the necessary local variables as gt4py storages
         """
 
-        ddir2 = "../../fortran/radlw/dump"
         self.serializer2 = ser.Serializer(
-            ser.OpenModeKind.Read, ddir2, "Serialized_rank" + str(tile)
+            ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank" + str(tile)
         )
 
         invars = {
@@ -561,7 +560,7 @@ class RadLWClass:
         radlw_datatb.F
         """
 
-        ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_cldprlw_data.nc"))
 
         cldprop_types = {
             "absliq1": {"ctype": (DTYPE_FLT, (58, nbands)), "data": ds["absliq1"].data},
@@ -579,7 +578,7 @@ class RadLWClass:
                 info["data"], backend, shape_nlp1, info["ctype"]
             )
 
-        ds = xr.open_dataset("../lookupdata/totplnk.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "totplnk.nc"))
         totplnk = ds["totplnk"].data
 
         totplnk = np.tile(totplnk[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
@@ -588,7 +587,7 @@ class RadLWClass:
         )
 
         refvars = ["pref", "preflog", "tref", "chi_mls"]
-        ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        ds2 = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
 
         for var in refvars:
             tmp = ds2[var].data
@@ -643,7 +642,9 @@ class RadLWClass:
         - Second pad k axis with one zero
         - Third switch order of k and data axes
         """
-        ds = xr.open_dataset("../lookupdata/rand2d_tile" + str(tile) + "_lw.nc")
+        ds = xr.open_dataset(
+            os.path.join(LOOKUP_DIR, "rand2d_tile" + str(tile) + "_lw.nc")
+        )
         rand2d = ds["rand2d"][:, :].data
         cdfunc = np.zeros((npts, ngptlw, nlay))
         for n in range(npts):
@@ -754,7 +755,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_firstloop
             )
             valdict_firstloop = read_intermediate_data(
-                "../../fortran/radlw/dump", tile, 0, "firstloop", outvars_firstloop
+                SERIALIZED_DIR, tile, 0, "firstloop", outvars_firstloop
             )
 
             print("Testing firstloop...")
@@ -820,7 +821,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_cldprop
             )
             valdict_cldprop = read_intermediate_data(
-                "../../fortran/radlw/dump", tile, 0, "cldprop", outvars_cldprop
+                SERIALIZED_DIR, tile, 0, "cldprop", outvars_cldprop
             )
 
             print("Testing cldprop...")
@@ -909,7 +910,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_setcoef
             )
             valdict_setcoef = read_intermediate_data(
-                "../../fortran/radlw/dump", tile, 0, "setcoef", outvars_setcoef
+                SERIALIZED_DIR, tile, 0, "setcoef", outvars_setcoef
             )
 
             print("Testing setcoef...")
@@ -1850,7 +1851,7 @@ class RadLWClass:
             }
 
             valdict_taumol = read_intermediate_data(
-                "../../fortran/radlw/dump", tile, 0, "taumol", outvars_t
+                SERIALIZED_DIR, tile, 0, "taumol", outvars_t
             )
 
             outdict_taumol = convert_gt4py_output_for_validation(
@@ -1949,7 +1950,7 @@ class RadLWClass:
             )
 
             valdict_rtrnmc = read_intermediate_data(
-                "../../fortran/radlw/dump", tile, 0, "rtrnmc", outvars_rtrnmc
+                SERIALIZED_DIR, tile, 0, "rtrnmc", outvars_rtrnmc
             )
 
             print("Testing rtrnmc...")
@@ -1965,7 +1966,9 @@ class RadLWClass:
         valdict = dict()
         outdict_np = dict()
 
-        valdict = read_data("../../fortran/data/LW", tile, 0, False, self.outvars)
+        valdict = read_data(
+            os.path.join(FORTRANDATA_DIR, "LW"), tile, 0, False, self.outvars
+        )
         outdict_np = convert_gt4py_output_for_validation(
             self.outdict_gt4py, self.outvars
         )
