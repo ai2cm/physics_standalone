@@ -5,7 +5,7 @@ import numpy as np
 import gt4py.gtscript as gtscript
 from gt4py.gtscript import FORWARD, PARALLEL, Field, computation, interval, stencil, exp
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
 from radlw_param import a0, a1, a2, nbands, eps
 from util import (
@@ -17,8 +17,6 @@ from util import (
 )
 from config import *
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 amdw = con_amd / con_amw
@@ -30,8 +28,9 @@ rebuild = False
 validate = False
 backend = "gtc:gt:cpu_ifirst"
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
+serializer = ser.Serializer(
+    ser.OpenModeKind.Read, os.path.join(FORTRANDATA_DIR, "LW"), "Generator_rank0"
+)
 
 savepoints = serializer.savepoint_list()
 
@@ -77,7 +76,6 @@ for var in invars:
     elif var in ["plyr", "tlyr", "qlyr", "olyr", "dz", "delp"]:
         tmp2 = np.insert(tmp, 0, 0, axis=1)
         indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
-        print(f"{var} = {indict[var].shape}")
     elif var in ["plvl", "tlvl"]:
         indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
     else:
@@ -434,8 +432,7 @@ valvars = [
 ]
 
 # Load serialized data to validate against
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
 
 outdict = dict()
@@ -454,6 +451,8 @@ for var in valvars:
     else:
         outdict[var] = locdict_gt4py[var][:, :, 1:].view(np.ndarray).squeeze()
 
-    valdict[var] = serializer.read(var, serializer.savepoint["lw_firstloop_out_000000"])
+    valdict[var] = serializer.read(
+        var, serializer.savepoint["lwrad-firstloop-output-000000"]
+    )
 
 compare_data(outdict, valdict)

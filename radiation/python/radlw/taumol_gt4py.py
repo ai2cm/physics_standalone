@@ -16,7 +16,7 @@ from gt4py.gtscript import (
     mod,
 )
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 from radlw.radlw_param import (
@@ -58,8 +58,6 @@ from radlw.radlw_param import (
     oneminus,
 )
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 rebuild = False
@@ -117,8 +115,7 @@ fltvars = [
     "scaleminorn2",
 ]
 
-ddir = "../../fortran/radlw/dump"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank0")
 
 savepoints = serializer.savepoint_list()
 
@@ -290,7 +287,7 @@ def loadlookupdata(name):
     This is a workaround for now, in the future this could change to a dictionary
     or some kind of map object when gt4py gets support for lookup tables
     """
-    ds = xr.open_dataset("../lookupdata/radlw_" + name + "_data.nc")
+    ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_" + name + "_data.nc"))
 
     lookupdict = dict()
     lookupdict_gt4py = dict()
@@ -314,7 +311,7 @@ def loadlookupdata(name):
             lookupdict[var], backend, shape_nlp1, (DTYPE_FLT, ds[var].shape)
         )
 
-    ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+    ds2 = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
     tmp = np.tile(ds2["chi_mls"].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
 
     lookupdict_gt4py["chi_mls"] = create_storage_from_array(

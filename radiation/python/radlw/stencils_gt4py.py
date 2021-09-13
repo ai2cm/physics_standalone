@@ -11,7 +11,6 @@ from gt4py.gtscript import (
 )
 import sys
 
-# sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 sys.path.insert(0, "..")
 from phys_const import con_amw, con_amd, con_g, con_avgd, con_amo3
 from radlw.radlw_param import (
