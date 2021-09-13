@@ -88,7 +88,7 @@ ENV WORKDIR ${WORKDIR}
 RUN mkdir ${WORKDIR}
 RUN chown -R ${USER}:${USER} ${WORKDIR}
 
-COPY --chown=${USER}:${USER} radiation /work/
+COPY --chown=${USER}:${USER} radiation /work/radiation/
 
 WORKDIR ${WORKDIR}
 USER ${USER}
