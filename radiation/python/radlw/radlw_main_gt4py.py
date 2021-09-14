@@ -138,6 +138,20 @@ class RadLWClass:
     )
 
     def __init__(self, me, iovrlw, isubclw):
+        """Initialize the LW scheme
+
+        Args:
+            me (int): Current rank, used as print flag
+            iovrlw (int): control flag for cloud overlapping method.
+                =0: random
+                =1: maximum/random
+                =2: maximum
+                =3: decorr
+            isubclw (int): sub-column cloud approximation control flag
+                =0: no sub-col cld treatment, use grid-mean cld quantities
+                =1: mcica sub-col, prescribed seeds to get random numbers
+                =2: mcica sub-col, providing array icseed for random numbers
+        """
         self.lhlwb = False
         self.lhlw0 = False
         self.lflxprf = False
@@ -284,14 +298,14 @@ class RadLWClass:
         }
         return outdict
 
-    def create_input_data(self, tile):
+    def create_input_data(self, rank):
         """
         Load input data from serialized Fortran model output and transform into
         gt4py storages. Also creates the necessary local variables as gt4py storages
         """
 
         self.serializer2 = ser.Serializer(
-            ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank" + str(tile)
+            ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank" + str(rank)
         )
 
         invars = {
@@ -316,7 +330,9 @@ class RadLWClass:
             "lprnt": {"shape": (), "type": DTYPE_BOOL},
         }
 
-        indict = read_data("../../fortran/data/LW", tile, 0, True, invars)
+        indict = read_data(
+            os.path.join(FORTRANDATA_DIR, "LW"), "lwrad", rank, 0, True, invars
+        )
         indict_gt4py = numpy_dict_to_gt4py_dict(indict, invars)
 
         outvars = {
@@ -629,7 +645,7 @@ class RadLWClass:
 
         self.lookupdict_gt4py = lookupdict_gt4py
 
-    def _load_random_numbers(self, tile):
+    def _load_random_numbers(self, rank):
         """
         Read in 2-D array of random numbers used in mcica_subcol, this will change
         in the future once there is a solution for the RNG in python/gt4py
@@ -643,7 +659,7 @@ class RadLWClass:
         - Third switch order of k and data axes
         """
         ds = xr.open_dataset(
-            os.path.join(LOOKUP_DIR, "rand2d_tile" + str(tile) + "_lw.nc")
+            os.path.join(LOOKUP_DIR, "rand2d_tile" + str(rank) + "_lw.nc")
         )
         rand2d = ds["rand2d"][:, :].data
         cdfunc = np.zeros((npts, ngptlw, nlay))
@@ -657,16 +673,15 @@ class RadLWClass:
             cdfunc, backend, shape_nlp1, type_ngptlw
         )
 
-    def lwrad(self, tile, do_subtest=False):
-        """
-        Run the main longwave radiation scheme
+    def lwrad(self, rank, do_subtest=False):
+        """Run the main longwave radiation scheme
 
         Requires create_input_data to have been run before calling
         Currently uses serialized random number arrays in cldprop
 
-        Inputs:
-        - tile: integer denoting current tile
-        - do_subtest: flag to test individual stencil outputs
+        Args:
+            rank (int): current rank
+            do_subtest (bool, optional): flag to test individual stencil outputs. Defaults to False.
         """
 
         start0 = time.time()
@@ -755,7 +770,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_firstloop
             )
             valdict_firstloop = read_intermediate_data(
-                SERIALIZED_DIR, tile, 0, "firstloop", outvars_firstloop
+                SERIALIZED_DIR, "lwrad", rank, 0, "firstloop", outvars_firstloop
             )
 
             print("Testing firstloop...")
@@ -765,7 +780,7 @@ class RadLWClass:
             print("Firstloop validates!")
             print(" ")
 
-        self._load_random_numbers(tile)
+        self._load_random_numbers(rank)
 
         cldprop(
             self.locdict_gt4py["cldfrc"],
@@ -821,7 +836,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_cldprop
             )
             valdict_cldprop = read_intermediate_data(
-                SERIALIZED_DIR, tile, 0, "cldprop", outvars_cldprop
+                SERIALIZED_DIR, "lwrad", rank, 0, "cldprop", outvars_cldprop
             )
 
             print("Testing cldprop...")
@@ -910,7 +925,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_setcoef
             )
             valdict_setcoef = read_intermediate_data(
-                SERIALIZED_DIR, tile, 0, "setcoef", outvars_setcoef
+                SERIALIZED_DIR, "lwrad", rank, 0, "setcoef", outvars_setcoef
             )
 
             print("Testing setcoef...")
@@ -1851,7 +1866,7 @@ class RadLWClass:
             }
 
             valdict_taumol = read_intermediate_data(
-                SERIALIZED_DIR, tile, 0, "taumol", outvars_t
+                SERIALIZED_DIR, "lwrad", rank, 0, "taumol", outvars_t
             )
 
             outdict_taumol = convert_gt4py_output_for_validation(
@@ -1950,7 +1965,7 @@ class RadLWClass:
             )
 
             valdict_rtrnmc = read_intermediate_data(
-                SERIALIZED_DIR, tile, 0, "rtrnmc", outvars_rtrnmc
+                SERIALIZED_DIR, "lwrad", rank, 0, "rtrnmc", outvars_rtrnmc
             )
 
             print("Testing rtrnmc...")
@@ -1967,7 +1982,7 @@ class RadLWClass:
         outdict_np = dict()
 
         valdict = read_data(
-            os.path.join(FORTRANDATA_DIR, "LW"), tile, 0, False, self.outvars
+            os.path.join(FORTRANDATA_DIR, "LW"), "lwrad", rank, 0, False, self.outvars
         )
         outdict_np = convert_gt4py_output_for_validation(
             self.outdict_gt4py, self.outvars

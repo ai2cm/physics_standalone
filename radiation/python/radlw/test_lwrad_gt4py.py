@@ -8,8 +8,7 @@ me = 0
 iovrlw = 1
 isubclw = 2
 
-rlw = RadLWClass(me, iovrlw, isubclw)
-
-for tile in range(6):
-    rlw.create_input_data(tile)
-    rlw.lwrad(tile, do_subtest=True)
+for rank in range(6):
+    rlw = RadLWClass(rank, iovrlw, isubclw)
+    rlw.create_input_data(rank)
+    rlw.lwrad(rank, do_subtest=True)

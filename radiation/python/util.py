@@ -8,7 +8,7 @@ import serialbox as ser
 
 
 # Read serialized data at a specific tile and savepoint
-def read_data(path, tile, ser_count, is_in, vars):
+def read_data(path, scheme, tile, ser_count, is_in, vars):
 
     mode_str = "in" if is_in else "out"
 
@@ -24,18 +24,18 @@ def read_data(path, tile, ser_count, is_in, vars):
         serializer = ser.Serializer(
             ser.OpenModeKind.Read, path, "Generator_rank" + str(tile)
         )
-        savepoint = ser.Savepoint(f"lwrad-{mode_str}-{ser_count:0>6d}")
+        savepoint = ser.Savepoint(f"{scheme}-{mode_str}-{ser_count:0>6d}")
 
     return data_dict_from_var_list(vars, serializer, savepoint)
 
 
 # Read serialized data at a specific tile and savepoint
-def read_intermediate_data(path, tile, ser_count, routine, vars):
+def read_intermediate_data(path, scheme, tile, ser_count, routine, vars):
 
     serializer = ser.Serializer(
         ser.OpenModeKind.Read, path, "Serialized_rank" + str(tile)
     )
-    savepoint = ser.Savepoint(f"lwrad-{routine}-output-{ser_count:0>6d}")
+    savepoint = ser.Savepoint(f"{scheme}-{routine}-output-{ser_count:0>6d}")
 
     return data_dict_from_var_list(vars, serializer, savepoint)
 
