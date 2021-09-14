@@ -4,9 +4,13 @@ import os
 import gt4py
 
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
+IS_TEST = (os.getenv("IS_TEST") == "True") if ("IS_TEST" in os.environ) else False
 
 if IS_DOCKER:
-    sys.path.insert(0, "/work/radiation/python")
+    if IS_TEST:
+        sys.path.insert(0, "/deployed/radiation/python")
+    else:
+        sys.path.insert(0, "/work/radiation/python")
 else:
     sys.path.insert(
         0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python"
@@ -20,10 +24,16 @@ gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
     ["-fno-strict-aliasing"]
 )
 if IS_DOCKER:
-    SERIALBOX_DIR = "/usr/local/serialbox"
-    LOOKUP_DIR = "/work/radiation/python/lookupdata"
-    FORTRANDATA_DIR = "/work/radiation/fortran/data"
-    SERIALIZED_DIR = "/work/radiation/fortran/radlw/dump"
+    if IS_TEST:
+        SERIALBOX_DIR = "/usr/local/serialbox"
+        LOOKUP_DIR = "/deployed/radiation/python/lookupdata"
+        FORTRANDATA_DIR = "/deployed/radiation/fortran/data"
+        SERIALIZED_DIR = "/deployed/radiation/fortran/radlw/dump"
+    else:
+        SERIALBOX_DIR = "/usr/local/serialbox"
+        LOOKUP_DIR = "/work/radiation/python/lookupdata"
+        FORTRANDATA_DIR = "/work/radiation/fortran/data"
+        SERIALIZED_DIR = "/work/radiation/fortran/radlw/dump"
 else:
     SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
     LOOKUP_DIR = "../../python/lookupdata"

@@ -70,6 +70,7 @@ else
 
     # submit SLURM job
     export IS_DOCKER=True
+    export IS_TEST=True
     export BACKEND=${backend}
 
     docker run \
