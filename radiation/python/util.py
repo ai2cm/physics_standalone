@@ -9,6 +9,19 @@ import serialbox as ser
 
 # Read serialized data at a specific tile and savepoint
 def read_data(path, scheme, tile, ser_count, is_in, vars):
+    """Read serialized data from fv3gfs-fortran output
+
+    Args:
+        path (str): path to serialized data
+        scheme (str): Name of scheme. Either "lwrad" or "swrad"
+        tile (int): current rank
+        ser_count (int): current timestep
+        is_in (bool): flag denoting whether to read input or output
+        vars (dict): dictionary of variable names, shapes and types
+
+    Returns:
+        dict: dictionary of variable names and numpy arrays
+    """
 
     mode_str = "in" if is_in else "out"
 
@@ -31,6 +44,19 @@ def read_data(path, scheme, tile, ser_count, is_in, vars):
 
 # Read serialized data at a specific tile and savepoint
 def read_intermediate_data(path, scheme, tile, ser_count, routine, vars):
+    """Read serialized output from fortran radiation standalone
+
+    Args:
+        path (str): path to serialized data
+        scheme (str): name of scheme. Either "lwrad" or "swrad"
+        tile (int): current rank
+        ser_count (int): current timestep
+        routine (str): name of routine to get output from
+        vars (dict): dictionary of variable names, shapes and types
+
+    Returns:
+        dict: dictionary of variable names and numpy arrays
+    """
 
     serializer = ser.Serializer(
         ser.OpenModeKind.Read, path, "Serialized_rank" + str(tile)
@@ -42,6 +68,16 @@ def read_intermediate_data(path, scheme, tile, ser_count, routine, vars):
 
 # Read given variables from a specific savepoint in the given serializer
 def data_dict_from_var_list(vars, serializer, savepoint):
+    """Get dictionary of variable names and numpy arrays
+
+    Args:
+        vars (dict): dictionary of variable names, shapes and types
+        serializer (serializer): serialbox Serializer object to read from
+        savepoint (str): name of savepoint to read from
+
+    Returns:
+        dict: dictionary of variable names and numpy arrays
+    """
 
     data_dict = {}
 
@@ -56,6 +92,11 @@ def data_dict_from_var_list(vars, serializer, savepoint):
 # Convert single element arrays (searr) to scalar values of the correct
 # type
 def searr_to_scalar(data_dict):
+    """convert size-1 numpy arrays to scalars
+
+    Args:
+        data_dict (dict): dictionary of variable names and numpy arrays
+    """
 
     for var in data_dict:
 
@@ -67,6 +108,15 @@ def searr_to_scalar(data_dict):
 # Transform a dictionary of numpy arrays into a dictionary of gt4py
 # storages of shape (iie-iis+1, jje-jjs+1, kke-kks+1)
 def numpy_dict_to_gt4py_dict(np_dict, vars):
+    """convert dictionary of numpy arrays from serialized data to GT4Py storages
+
+    Args:
+        np_dict (dict): dictionary of variables names and numpy arrays
+        vars (dict): dictionary of variable names, shapes and types
+
+    Returns:
+        dict: dictionary of variable names and storages
+    """
 
     gt4py_dict = {}
 
@@ -109,6 +159,14 @@ def numpy_dict_to_gt4py_dict(np_dict, vars):
 
 
 def create_gt4py_dict_zeros(indict):
+    """create a dictionary of GT4Py storages initialized to zeros
+
+    Args:
+        indict (dict): dictionary of variable names, shapes and types
+
+    Returns:
+        dict: dictionart of variable names and storages
+    """
     gt4py_dict = {}
 
     for var in indict.keys():
@@ -121,6 +179,14 @@ def create_gt4py_dict_zeros(indict):
 
 # Cast a dictionary of gt4py storages into dictionary of numpy arrays
 def view_gt4py_storage(gt4py_dict):
+    """convert dictionary of storages to numpy arrays
+
+    Args:
+        gt4py_dict (dict): dictionary of variable names and storages
+
+    Returns:
+        dict: dictionary of variable names and numpy arrays
+    """
 
     np_dict = {}
 
@@ -134,6 +200,15 @@ def view_gt4py_storage(gt4py_dict):
 
 
 def convert_gt4py_output_for_validation(datadict, infodict):
+    """reshape stencil output to compare to fortran output
+
+    Args:
+        datadict (dict): dictionary of variable names and numpy arrays
+        infodict (dict): dictionary of variable names and shapes from fortran
+
+    Returns:
+        dict: dictionary of variable names and numpy arrays
+    """
     npdict = view_gt4py_storage(datadict)
 
     outdict = dict()
@@ -168,6 +243,14 @@ def convert_gt4py_output_for_validation(datadict, infodict):
 
 
 def compare_data(data, ref_data, explicit=True, blocking=True):
+    """test whether stencil output matches fortran output
+
+    Args:
+        data (dict): dictionary of variable names and stencil output
+        ref_data (dict): dictionary of variable names and fortran output
+        explicit (bool, optional): Flag to print result. Defaults to True.
+        blocking (bool, optional): Flag to make failure block progress. Defaults to True.
+    """
 
     wrong = []
     flag = True
@@ -196,6 +279,18 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
 def create_storage_from_array(
     var, backend, shape, dtype, default_origin=default_origin
 ):
+    """Create GT4Py storage from numpy array
+
+    Args:
+        var (ndarray): array of data
+        backend (str): GT4Py backend
+        shape (tuple): shape of array
+        dtype (type): type of storage
+        default_origin (tuple, optional): origin of storage. Defaults to default_origin.
+
+    Returns:
+        Storage: gt4py storage containing data
+    """
     out = gt4py.storage.from_array(
         var, backend=backend, default_origin=default_origin, shape=shape, dtype=dtype
     )
@@ -203,6 +298,16 @@ def create_storage_from_array(
 
 
 def create_storage_zeros(backend, shape, dtype):
+    """Create GT4Py storage initialized to zeros
+
+    Args:
+        backend (str): GT4Py backend
+        shape (tuple): shape of data
+        dtype (type): type of data
+
+    Returns:
+        Storage: storage containing zeros
+    """
     out = gt4py.storage.zeros(
         backend=backend, default_origin=default_origin, shape=shape, dtype=dtype
     )
@@ -210,6 +315,16 @@ def create_storage_zeros(backend, shape, dtype):
 
 
 def create_storage_ones(backend, shape, dtype):
+    """Create GT4Py storage initialized to ones
+
+    Args:
+        backend (str): GT4Py backend
+        shape (tuple): shape of data
+        dtype (type): type of data
+
+    Returns:
+        Storage: storage containing ones
+    """
     out = gt4py.storage.ones(
         backend=backend, default_origin=default_origin, shape=shape, dtype=dtype
     )
@@ -217,10 +332,15 @@ def create_storage_ones(backend, shape, dtype):
 
 
 def loadlookupdata(name):
-    """
-    Load lookup table data for the given subroutine
+    """Load lookup table data for the given subroutine
     This is a workaround for now, in the future this could change to a dictionary
     or some kind of map object when gt4py gets support for lookup tables
+
+    Args:
+        name (str): name of fortran module that contained the data originally
+
+    Returns:
+        dict: dictionary containing storages with the data
     """
     ds = xr.open_dataset("../lookupdata/radlw_" + name + "_data.nc")
 
