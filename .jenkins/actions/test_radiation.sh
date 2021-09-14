@@ -77,6 +77,7 @@ else
         --mount type=bind,source=`pwd`/data/fv3gfs-fortran-output/LW,target=/deployed/radiation/fortran/data/LW \
         --mount type=bind,source=`pwd`/data/lookupdata,target=/deployed/radiation/python/lookupdata \
         --mount type=bind,source=`pwd`/data/standalone-output/LW,target=/deployed/radiation/fortran/radlw/dump \
+        --env IS_TEST=${IS_TEST}, IS_DOCKER=${IS_DOCKER}, BACKEND=${BACKEND} \
         physics_standalone /bin/bash -c 'cd /deployed/radiation/python/radlw && python test_lwrad_gt4py.py'
 
 fi
