@@ -7,7 +7,8 @@ sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/p
 from radsw_param import ntbmx
 from radphysparam import iswmode, iswrgas, iswrate, iswcice, iswcliq
 from phys_const import con_amd, con_amw, con_amo3, con_g, con_cp, con_avgd
-from util import compare_data
+from util import *
+from config import *
 
 
 class RadSWClass:
@@ -142,27 +143,32 @@ class RadSWClass:
         outdict = {"heatfac": self.heatfac, "exp_tbl": self.exp_tbl}
         return outdict
 
-    def create_input_data(self):
+    def create_input_data(self, rank):
         invars = {
-            "plyr",
-            "plvl",
-            "tlyr",
-            "tlvl",
-            "qlyr",
-            "olyr",
-            "gasvmr",
-            "clouds",
-            "faersw",
-            "sfcalb",
-            "dz",
-            "delp",
-            "de_lgth",
-            "coszen",
-            "solcon",
-            "nday",
-            "idxday",
-            "im",
-            "lmk",
-            "lmp",
-            "lprnt",
+            "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
+            "clouds": {"shape": (npts, nlay, 9), "type": type_9},
+            "faersw": {"shape": (npts, nlay, nbdsw, 3), "type": type_nbands3},
+            "sfcalb": {"shape": (npts, 4), "type": (DTYPE_FLT, (4,))},
+            "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
+            "coszen": {"shape": (npts,), "type": DTYPE_FLT},
+            "solcon": {"shape": (), "type": DTYPE_FLT},
+            "nday": {"shape": (), "type": DTYPE_INT},
+            "idxday": {"shape": (npts,), "type": DTYPE_INT},
+            "im": {"shape": (), "type": DTYPE_INT},
+            "lmk": {"shape": (), "type": DTYPE_INT},
+            "lmp": {"shape": (), "type": DTYPE_INT},
+            "lprnt": {"shape": (), "type": DTYPE_BOOL},
         }
+
+        indict = read_data(
+            os.path.join(FORTRANDATA_DIR, "SW"), "swrad", rank, 0, True, invars
+        )
+        indict_gt4py = numpy_dict_to_gt4py_dict(indict, invars)
