@@ -16,14 +16,15 @@ from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
+gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
+    ["-fno-strict-aliasing"]
+)
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
 else:
     SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
 
-gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
-    ["-fno-strict-aliasing"]
-)
+sys.path.append(SERIALBOX_DIR + "/python")
 
 npts = 24
 
@@ -32,6 +33,7 @@ nlp1 = 64
 
 ilwrgas = 1
 ilwcliq = 1
+isubclw = 2
 
 DTYPE_INT = np.int32
 DTYPE_FLT = np.float64

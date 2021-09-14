@@ -131,6 +131,16 @@ for var in invars:
 
         indict[var] = np.tile(tmp2[:, None], (1, 1))
 
+        laytropind = np.tile(tmp[:, None], (1, 1))
+        indict["laytropind"] = laytropind - 1
+    elif var == "idxday":
+        tmp2 = np.zeros(npts, dtype=bool)
+        for n in range(npts):
+            if tmp[n] > 1 and tmp[n] < 25:
+                tmp2[tmp[n] - 1] = True
+
+        indict[var] = np.tile(tmp2[:, None], (1, 1))
+
 indict_gt4py = dict()
 
 for var in invars:
@@ -149,6 +159,10 @@ for var in invars:
     elif var == "id0" or var == "id1":
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_nlp1, type_nbandssw_int
+        )
+    elif var == "idxday":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, DTYPE_BOOL
         )
     elif var == "idxday":
         indict_gt4py[var] = create_storage_from_array(
@@ -192,6 +206,28 @@ ngtmp = np.tile(np.array(ng)[None, None, :], (npts, 1, 1))
 ngs = np.tile(np.array(ngs)[None, None, :], (npts, 1, 1))
 locdict_gt4py["layind"] = create_storage_from_array(
     layind, backend, shape_nlp1, DTYPE_INT
+)
+locdict_gt4py["nspa"] = create_storage_from_array(
+    nspa, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["nspb"] = create_storage_from_array(
+    nspb, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ng"] = create_storage_from_array(
+    ngtmp, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ngs"] = create_storage_from_array(
+    ngs, backend, shape_2D, type_nbandssw_int
+)
+
+layind = np.arange(nlay, dtype=np.int32)
+layind = np.tile(layind[None, None, :], (npts, 1, 1))
+nspa = np.tile(np.array(nspa)[None, None, :], (npts, 1, 1))
+nspb = np.tile(np.array(nspb)[None, None, :], (npts, 1, 1))
+ngtmp = np.tile(np.array(ng)[None, None, :], (npts, 1, 1))
+ngs = np.tile(np.array(ngs)[None, None, :], (npts, 1, 1))
+locdict_gt4py["layind"] = create_storage_from_array(
+    layind, backend, shape_nlay, DTYPE_INT
 )
 locdict_gt4py["nspa"] = create_storage_from_array(
     nspa, backend, shape_2D, type_nbandssw_int
@@ -530,7 +566,7 @@ def taumolsetup(
                 if jp < layreffr[0, 0, 0][8] and jp[0, 0, 1] >= layreffr[0, 0, 0][8]:
                     colm1 = colamt[0, 0, 1][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 1][ix2[0, 0, 0][8]]
-                if layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
+                elif layind == laytropind and sfluxzen[0, 0][ngs[0, 0][8]] == 0.0:
                     colm1 = colamt[0, 0, 0][ix1[0, 0, 0][8]]
                     colm2 = colamt[0, 0, 0][ix2[0, 0, 0][8]]
 

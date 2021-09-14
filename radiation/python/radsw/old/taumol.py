@@ -256,11 +256,6 @@ def taumol(
                 colm1 = colamt[ks, ix1[b] - 1]
                 colm2 = colamt[ks, ix2[b] - 1]
 
-                if jb == 27:
-                    print(f"ks = {ks}")
-                    print(f"laytrop = {laytrop}")
-                    print(f"colm1 = {colm1}")
-                    print(f"colm2 = {colm2}")
                 speccomb = colm1 + strrat[b] * colm2
                 specmult = specwt[b] * min(oneminus, colm1 / speccomb)
                 js = 1 + int(specmult) - 1
