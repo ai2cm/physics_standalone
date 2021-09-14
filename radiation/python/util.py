@@ -331,24 +331,24 @@ def create_storage_ones(backend, shape, dtype):
     return out
 
 
-def loadlookupdata(name):
+def loadlookupdata(name, scheme):
     """Load lookup table data for the given subroutine
     This is a workaround for now, in the future this could change to a dictionary
     or some kind of map object when gt4py gets support for lookup tables
 
     Args:
         name (str): name of fortran module that contained the data originally
+        scheme (str): name of radiation scheme, "radlw" or "radsw"
 
     Returns:
         dict: dictionary containing storages with the data
     """
-    ds = xr.open_dataset("../lookupdata/radlw_" + name + "_data.nc")
+    ds = xr.open_dataset(os.path.join(LOOKUP_DIR, scheme + "_" + name + "_data.nc"))
 
     lookupdict = dict()
     lookupdict_gt4py = dict()
 
     for var in ds.data_vars.keys():
-        # print(f"{var} = {ds.data_vars[var].shape}")
         if len(ds.data_vars[var].shape) == 1:
             lookupdict[var] = np.tile(
                 ds[var].data[None, None, None, :], (npts, 1, nlp1, 1)
