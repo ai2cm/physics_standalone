@@ -2702,7 +2702,6 @@ def taumol29(
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    verbose=True,
     externals={
         "ngptsw": ngptsw,
         "bpade": bpade,
@@ -2805,7 +2804,7 @@ def spcvrtm_clearsky(
     ib: FIELD_INT,
     ibd: FIELD_INT,
     NGB: Field[type_ngptsw],
-    idxsfc: Field[(DTYPE_FLT, (14,))],
+    idxsfc: Field[(DTYPE_INT, (14,))],
     itind: FIELD_INT,
     fxupc: Field[type_nbdsw],
     fxdnc: Field[type_nbdsw],
@@ -3310,7 +3309,6 @@ ibd0 = nuvb - nblow
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    verbose=True,
     externals={
         "ngptsw": ngptsw,
         "bpade": bpade,
@@ -3414,7 +3412,7 @@ def spcvrtm_allsky(
     ib: FIELD_INT,
     ibd: FIELD_INT,
     NGB: Field[type_ngptsw],
-    idxsfc: Field[(DTYPE_FLT, (14,))],
+    idxsfc: Field[(DTYPE_INT, (14,))],
     itind: FIELD_INT,
     fxupc: Field[type_nbdsw],
     fxdnc: Field[type_nbdsw],
@@ -4018,7 +4016,6 @@ def finalloop(
     dnfx0_s: FIELD_2D,
     hswc: FIELD_FLT,
     hsw0: FIELD_FLT,
-    hswb: Field[type_nbdsw],
     uvbf0: FIELD_2D,
     uvbfc: FIELD_2D,
     nirbm: FIELD_2D,
@@ -4100,8 +4097,3 @@ def finalloop(
                 # --- ...  optional clear sky heating rates
                 if lhsw0:
                     hsw0 = (fnetc - fnetc[0, 0, -1]) * rfdelp
-
-                # --- ...  optional spectral band heating rates
-                if lhswb:
-                    for mb3 in range(nbdsw):
-                        hswb[0, 0, 0][mb3] = (fnetb[0, 0, 1] - fnet) * rfdelp

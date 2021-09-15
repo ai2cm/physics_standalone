@@ -30,7 +30,7 @@ def read_data(path, scheme, tile, ser_count, is_in, vars):
         serializer = ser.Serializer(
             ser.OpenModeKind.Read, path, "Generator_rank" + str(tile)
         )
-        savepoint = ser.Savepoint(f"lwrad-{mode_str}-{ser_count:0>6d}")
+        savepoint = ser.Savepoint(f"{scheme}-{mode_str}-{ser_count:0>6d}")
 
     else:
 
@@ -102,12 +102,12 @@ def searr_to_scalar(data_dict):
 
         if data_dict[var].size == 1:
 
-            data_dict[var] = DTYPE_INT(data_dict[var][0])
+            data_dict[var] = data_dict[var][0]
 
 
 # Transform a dictionary of numpy arrays into a dictionary of gt4py
 # storages of shape (iie-iis+1, jje-jjs+1, kke-kks+1)
-def numpy_dict_to_gt4py_dict(np_dict, vars):
+def numpy_dict_to_gt4py_dict(np_dict, vars, rank1_flag=False):
     """convert dictionary of numpy arrays from serialized data to GT4Py storages
 
     Args:
@@ -128,12 +128,25 @@ def numpy_dict_to_gt4py_dict(np_dict, vars):
 
         if len(shape) == 1:
             tmp = np.tile(data[:, None], (1, 1))
+            if var == "idxday":
+                tmp2 = np.zeros(npts, dtype=bool)
+                for n in range(npts):
+                    if rank1_flag:
+                        if tmp[n] > 1 and tmp[n] < 25:
+                            tmp2[tmp[n] - 1] = True
+                    else:
+                        if tmp[n] > 0 and tmp[n] < 25:
+                            tmp2[tmp[n] - 1] = True
+
+                tmp = np.tile(tmp2[:, None], (1, 1))
         elif len(shape) == 2:
             if shape[1] == nlay:
                 data = np.insert(data, 0, 0, axis=1)
                 tmp = np.tile(data[:, None, :], (1, 1, 1))
             elif shape[1] == nlp1:
                 tmp = np.tile(data[:, None, :], (1, 1, 1))
+            elif shape[1] == 4:
+                tmp = np.tile(data[:, None, None, :], (1, 1, nlp1, 1))
         elif len(shape) == 3:
             data = np.insert(data, 0, 0, axis=1)
             tmp = np.tile(data[:, None, :, :], (1, 1, 1, 1))
@@ -224,6 +237,8 @@ def convert_gt4py_output_for_validation(datadict, infodict):
                     outdict[var] = data[:, 1:, ...]
                 elif data.shape[1] == target_shape[1] - 1:
                     outdict[var] = np.append(data, np.zeros((npts, 1)), axis=1)
+                elif target_shape[1] not in [nlay, nlp1]:
+                    outdict[var] = data[:, 0, :].squeeze()
                 elif data.shape[1] == target_shape[2]:
                     outdict[var] = np.transpose(data, (0, 2, 1))
                     if outdict[var].shape[1] == target_shape[1] + 1:
@@ -362,9 +377,12 @@ def loadlookupdata(name, scheme):
                 ds[var].data[None, None, None, :, :, :], (npts, 1, nlp1, 1, 1, 1)
             )
 
-        lookupdict_gt4py[var] = create_storage_from_array(
-            lookupdict[var], backend, shape_nlp1, (DTYPE_FLT, ds[var].shape)
-        )
+        if len(ds.data_vars[var].shape) >= 1:
+            lookupdict_gt4py[var] = create_storage_from_array(
+                lookupdict[var], backend, shape_nlp1, (ds[var].dtype, ds[var].shape)
+            )
+        else:
+            lookupdict_gt4py[var] = float(ds[var].data)
 
     ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
     tmp = np.tile(ds2["chi_mls"].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
