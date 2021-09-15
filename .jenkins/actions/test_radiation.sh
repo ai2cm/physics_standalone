@@ -68,18 +68,25 @@ else
     # build the Docker image
     source ./build.sh
 
-    # submit SLURM job
+    # Create names of data and run directories from scheme name
+    p1=$(echo ${scheme} | cut -c1-2)
+    p2=$(echo ${scheme} | cut -c3-5)
+
+    rundir=${p2}${p1}
+    datadir=$(echo $p1 | tr 'a-z' 'A-Z')
+
+    # run Docker container
     export IS_DOCKER=True
     export IS_TEST=True
     export BACKEND=${backend}
 
     docker run \
-        --mount type=bind,source=`pwd`/data/fv3gfs-fortran-output/LW,target=/deployed/radiation/fortran/data/LW \
+        --mount type=bind,source=`pwd`/data/fv3gfs-fortran-output/${scheme},target=/deployed/radiation/fortran/data/${datadir} \
         --mount type=bind,source=`pwd`/data/lookupdata,target=/deployed/radiation/python/lookupdata \
-        --mount type=bind,source=`pwd`/data/standalone-output/LW,target=/deployed/radiation/fortran/radlw/dump \
+        --mount type=bind,source=`pwd`/data/standalone-output/${scheme},target=/deployed/radiation/fortran/${rundir}/dump \
         --env IS_TEST=${IS_TEST} \
         --env IS_DOCKER=${IS_DOCKER} \
         --env BACKEND=${BACKEND} \
-        physics_standalone /bin/bash -c 'cd /deployed/radiation/python/radlw && python test_${scheme}_gt4py.py'
+        physics_standalone /bin/bash -c 'cd /deployed/radiation/python/${rundir} && python test_${scheme}_gt4py.py'
 
 fi
