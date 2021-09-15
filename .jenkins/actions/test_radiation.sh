@@ -87,6 +87,6 @@ else
         --env IS_TEST=${IS_TEST} \
         --env IS_DOCKER=${IS_DOCKER} \
         --env BACKEND=${BACKEND} \
-        physics_standalone /bin/bash -c 'cd /deployed/radiation/python/${rundir} && python test_${scheme}_gt4py.py'
+        physics_standalone /bin/bash /deployed/radiation/run_test.sh
 
 fi
