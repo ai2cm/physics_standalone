@@ -87,6 +87,6 @@ else
         --env IS_TEST=${IS_TEST} \
         --env IS_DOCKER=${IS_DOCKER} \
         --env BACKEND=${BACKEND} \
-        physics_standalone /bin/bash /deployed/radiation/run_test.sh
+        physics_standalone /bin/bash /deployed/radiation/run_test.sh ${rundir} ${scheme}
 
 fi
