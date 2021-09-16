@@ -566,6 +566,7 @@ class RadSWClass:
 
     def swrad(self, rank, do_subtest=False):
         start = time.time()
+        print("Running firstloop")
         firstloop(
             self.indict_gt4py["plyr"],
             self.indict_gt4py["plvl"],
@@ -657,6 +658,7 @@ class RadSWClass:
 
         self._load_random_numbers(rank)
 
+        print("Running cldprop")
         cldprop(
             self.locdict_gt4py["cfrac"],
             self.locdict_gt4py["cliqp"],
@@ -764,6 +766,7 @@ class RadSWClass:
 
             compare_data(outdict_cldprop, valdict_cldprop)
 
+        print("Running setcoef")
         setcoef(
             self.locdict_gt4py["pavel"],
             self.locdict_gt4py["tavel"],
@@ -837,6 +840,7 @@ class RadSWClass:
             laytropind[:, None] - 1, backend, shape_2D, DTYPE_INT
         )
 
+        print("Running taumolsetup")
         taumolsetup(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["jp"],
@@ -872,6 +876,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol16")
         taumol16(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -913,6 +918,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol17")
         taumol17(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -954,6 +960,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol18")
         taumol18(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -995,6 +1002,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol19")
         taumol19(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1036,6 +1044,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol20")
         taumol20(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1073,6 +1082,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol21")
         taumol21(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1114,6 +1124,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol22")
         taumol22(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1155,6 +1166,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol23")
         taumol23(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1191,6 +1203,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol24")
         taumol24(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1236,6 +1249,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("RUnning taumol25")
         taumol25(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1261,6 +1275,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol26")
         taumol26(
             self.locdict_gt4py["colmol"],
             self.lookupdict26["rayl"],
@@ -1271,6 +1286,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol27")
         taumol27(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1295,6 +1311,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol28")
         taumol28(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1325,6 +1342,7 @@ class RadSWClass:
             validate_args=validate,
         )
 
+        print("Running taumol29")
         taumol29(
             self.locdict_gt4py["colamt"],
             self.locdict_gt4py["colmol"],
@@ -1379,6 +1397,7 @@ class RadSWClass:
 
             compare_data(outdict_taumol, valdict_taumol)
 
+        print("Running spcvrtm_clearsky")
         spcvrtm_clearsky(
             self.locdict_gt4py["ssolar"],
             self.locdict_gt4py["cosz1"],
@@ -1386,17 +1405,11 @@ class RadSWClass:
             self.locdict_gt4py["albbm"],
             self.locdict_gt4py["albdf"],
             self.locdict_gt4py["sfluxzen"],
-            self.locdict_gt4py["cldfmc"],
-            self.locdict_gt4py["zcf1"],
-            self.locdict_gt4py["zcf0"],
             self.locdict_gt4py["taug"],
             self.locdict_gt4py["taur"],
             self.locdict_gt4py["tauae"],
             self.locdict_gt4py["ssaae"],
             self.locdict_gt4py["asyae"],
-            self.locdict_gt4py["taucw"],
-            self.locdict_gt4py["ssacw"],
-            self.locdict_gt4py["asycw"],
             self.exp_tbl,
             self.locdict_gt4py["ztaus"],
             self.locdict_gt4py["zssas"],
@@ -1470,28 +1483,16 @@ class RadSWClass:
             self.NGB,
             self.idxsfc,
             self.locdict_gt4py["itind"],
-            self.locdict_gt4py["fxupc"],
-            self.locdict_gt4py["fxdnc"],
             self.locdict_gt4py["fxup0"],
             self.locdict_gt4py["fxdn0"],
-            self.locdict_gt4py["ftoauc"],
-            self.locdict_gt4py["ftoau0"],
-            self.locdict_gt4py["ftoadc"],
-            self.locdict_gt4py["fsfcuc"],
-            self.locdict_gt4py["fsfcu0"],
-            self.locdict_gt4py["fsfcdc"],
-            self.locdict_gt4py["fsfcd0"],
-            self.locdict_gt4py["sfbmc"],
-            self.locdict_gt4py["sfdfc"],
             self.locdict_gt4py["sfbm0"],
             self.locdict_gt4py["sfdf0"],
-            self.locdict_gt4py["suvbfc"],
-            self.locdict_gt4py["suvbf0"],
             domain=shape_nlp1,
             origin=default_origin,
             validate_args=validate,
         )
 
+        print("Running spcvrtm_allsky")
         spcvrtm_allsky(
             self.locdict_gt4py["ssolar"],
             self.locdict_gt4py["cosz1"],
@@ -1635,6 +1636,7 @@ class RadSWClass:
 
             compare_data(outdict_spcvrtm, valdict_spcvrtm)
 
+        print("Running finalloop")
         finalloop(
             self.indict_gt4py["idxday"],
             self.indict_gt4py["delp"],

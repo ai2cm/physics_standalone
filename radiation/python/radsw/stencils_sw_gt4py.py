@@ -66,7 +66,6 @@ from radsw.radsw_param import (
 
 rebuild = False
 validate = True
-backend = "gtc:gt:cpu_ifirst"
 
 # Eventually these will be provided by rad_initialize
 isubcsw = 2
@@ -2722,17 +2721,11 @@ def spcvrtm_clearsky(
     albbm: Field[(DTYPE_FLT, (2,))],
     albdf: Field[(DTYPE_FLT, (2,))],
     sfluxzen: Field[gtscript.IJ, type_ngptsw],
-    cldfmc: Field[type_ngptsw],
-    cf1: FIELD_2D,
-    cf0: FIELD_2D,
     taug: Field[type_ngptsw],
     taur: Field[type_ngptsw],
     tauae: Field[type_nbdsw],
     ssaae: Field[type_nbdsw],
     asyae: Field[type_nbdsw],
-    taucw: Field[type_nbdsw],
-    ssacw: Field[type_nbdsw],
-    asycw: Field[type_nbdsw],
     exp_tbl: Field[type_ntbmx],
     ztaus: Field[type_ngptsw],
     zssas: Field[type_ngptsw],
@@ -2806,23 +2799,10 @@ def spcvrtm_clearsky(
     NGB: Field[type_ngptsw],
     idxsfc: Field[(DTYPE_INT, (14,))],
     itind: FIELD_INT,
-    fxupc: Field[type_nbdsw],
-    fxdnc: Field[type_nbdsw],
     fxup0: Field[type_nbdsw],
     fxdn0: Field[type_nbdsw],
-    ftoauc: FIELD_2D,
-    ftoau0: FIELD_2D,
-    ftoadc: FIELD_2D,
-    fsfcuc: FIELD_2D,
-    fsfcu0: FIELD_2D,
-    fsfcdc: FIELD_2D,
-    fsfcd0: FIELD_2D,
-    sfbmc: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
-    sfdfc: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
     sfbm0: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
     sfdf0: Field[gtscript.IJ, (DTYPE_FLT, (2,))],
-    suvbfc: FIELD_2D,
-    suvbf0: FIELD_2D,
 ):
     from __externals__ import (
         ngptsw,

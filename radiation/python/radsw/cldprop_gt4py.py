@@ -83,7 +83,6 @@ locvars = [
 
 rebuild = False
 validate = True
-backend = "gtc:gt:cpu_ifirst"
 
 indict = dict()
 for var in invars:
@@ -124,7 +123,7 @@ for var in invars:
 
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
-ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
+ds = xr.open_dataset("../lookupdata/rand2d_tile1_sw.nc")
 rand2d = ds["rand2d"].data
 cdfunc = np.zeros((npts, nlay, ngptsw))
 idxday = serializer2.read("idxday", serializer2.savepoint["swrad-in-000000"])
@@ -662,6 +661,7 @@ def cldprop(
             else:
                 lcloudy[0, 0, 0][n2] = 0
 
+    with computation(PARALLEL), interval(1, None):
         for n3 in range(ngptsw):
             if lcloudy[0, 0, 0][n3] == 1:
                 cldfmc[0, 0, 0][n3] = 1.0
@@ -766,4 +766,20 @@ for var in outvars:
     )
     outdict_np[var] = outdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
 
-compare_data(outdict_np, valdict)
+# compare_data(outdict_np, valdict)
+
+#print(f"Python = {outdict_np['cldfmc'].max()}")
+#print(f"Python = {outdict_np['cldfmc'][8, 9, :]}")
+#print(" ")
+#print(f"Fortran = {valdict['cldfmc'][8, 9, :]}")
+#print(" ")
+print(f"Difference = {outdict_np['cldfmc'][8, 9, :]-valdict['cldfmc'][8, 9, :]}")
+print(" ")
+
+#for n in range(nlay):
+#    t1 = outdict_np['cldfmc'][8, n, :].squeeze()
+#    t2 = valdict['cldfmc'][8, n, :].squeeze()
+#
+#    if not np.allclose(t1, t2):
+#        print(f"Bad n = {n}")
+    

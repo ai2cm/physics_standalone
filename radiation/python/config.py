@@ -41,7 +41,7 @@ else:
     LOOKUP_DIR = "../../python/lookupdata"
     FORTRANDATA_DIR = "../../fortran/data"
     LW_SERIALIZED_DIR = "../../fortran/radlw/dump"
-    SW_SERIALIZED_DIR = "../../fortran/radlw/dump"
+    SW_SERIALIZED_DIR = "../../fortran/radsw/dump"
 
 backend = "gtc:gt:gpu"
 

@@ -30,4 +30,4 @@ for rank in range(6):
     rsw = RadSWClass(rank, iovrsw, isubcsw, icldflg)
     if nday > 0:
         rsw.create_input_data(rank)
-        rsw.swrad(rank, do_subtest=True)
+        rsw.swrad(rank, do_subtest=False)
