@@ -423,16 +423,16 @@ class GasClass:
 
         for k in range(LMAX):
             for i in range(IMAX):
-                gasdat[i, k, 0] = co2vmr_def
-                gasdat[i, k, 1] = n2ovmr_def
-                gasdat[i, k, 2] = ch4vmr_def
-                gasdat[i, k, 3] = o2vmr_def
-                gasdat[i, k, 4] = covmr_def
-                gasdat[i, k, 5] = f11vmr_def
-                gasdat[i, k, 6] = f12vmr_def
-                gasdat[i, k, 7] = f22vmr_def
-                gasdat[i, k, 8] = cl4vmr_def
-                gasdat[i, k, 9] = f113vmr_def
+                gasdat[i, k, 0] = self.co2vmr_def
+                gasdat[i, k, 1] = self.n2ovmr_def
+                gasdat[i, k, 2] = self.ch4vmr_def
+                gasdat[i, k, 3] = self.o2vmr_def
+                gasdat[i, k, 4] = self.covmr_def
+                gasdat[i, k, 5] = self.f11vmr_def
+                gasdat[i, k, 6] = self.f12vmr_def
+                gasdat[i, k, 7] = self.f22vmr_def
+                gasdat[i, k, 8] = self.cl4vmr_def
+                gasdat[i, k, 9] = self.f113vmr_def
 
         #  --- ...  co2 section
 
@@ -458,17 +458,10 @@ class GasClass:
                 ilon = min(self.IMXCO2, int(xlon1 * tmp + 1))
                 ilat = min(self.JMXCO2, int(xlat1 * tmp + 1))
 
-                if self.ivflip == 0:  # index from toa to sfc
-                    for k in range(LMAX):
-                        if plvl[i, k] >= self.prsco2:
-                            gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav]
-                        else:
-                            gasdat[i, k, 0] = self.co2_glb + self.gco2cyc(self.kmonsav)
-                else:  # index from sfc to toa
-                    for k in range(LMAX):
-                        if plvl[i, k + 1] >= self.prsco2:
-                            gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav]
-                        else:
-                            gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav]
+                for k in range(LMAX):
+                    if plvl[i, k + 1] >= self.prsco2:
+                        gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav]
+                    else:
+                        gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav]
 
         return gasdat

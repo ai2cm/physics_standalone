@@ -51,8 +51,8 @@ def fpvs(t):
         tbpvs[jx] = fpvsx(t)
 
     xj = min(max(c1xpvs + c2xpvs * t, 1.0), nxpvs)
-    jx = min(xj, nxpvs - 1.0)
-    fpvs = tbpvs(jx) + (xj - jx) * (tbpvs(jx + 1) - tbpvs(jx))
+    jx = min(xj, nxpvs - 1) - 1
+    fpvs = tbpvs[jx] + (xj - jx) * (tbpvs[jx + 1] - tbpvs[jx])
 
     return fpvs
 

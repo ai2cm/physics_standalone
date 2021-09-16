@@ -109,7 +109,7 @@ program test
 !  ---  outputs:
       real (kind=kind_phys) :: slag, sdec, cdec, solcon
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
+      !$ser init directory='./dump' prefix='Init' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
       !$ser mode read
       !$ser savepoint "lwrad-in-000000"
       !$ser data im=im levr=levr 
@@ -143,6 +143,17 @@ program test
       ntoz,        iovr_sw,      iovr_lw, isubc_sw,  &
       isubc_lw,    icliq_sw,     crick_proof, ccnorm,&
       imp_physics, norad_precip, idate,   iflip,  me)
+
+      !$ser mode read
+      !$ser savepoint "rad-update"
+      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
+      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
+      
+
+      write(*,*) 'Running update'
+
+      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
+                      me,   slag, sdec,  cdec, solcon)
 
 !$ser cleanup
 
@@ -202,26 +213,9 @@ program test
 
       end do
 
-!      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
-!      !$ser mode read
-!      !$ser savepoint "rad-update"
-!      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
-!      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
-!      
-!
-!      write(*,*) 'Running update'
-!
-!      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
-!                      me,   slag, sdec,  cdec, solcon)
-!        
-!      !$ser cleanup
-
       call cdstop()
 
       write(*,*) 'FINISHED!'
-
-      !write(*,*) 'htlwc = ', htlwc
-      !write(*,*) 'htlwc_ref = ', htlwc_ref
 
 contains
 

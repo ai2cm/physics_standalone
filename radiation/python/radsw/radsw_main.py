@@ -4,12 +4,12 @@ import os
 import sys
 
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
-from radsw_param import (
+from radsw.radsw_param import (
     ntbmx,
     nbdsw,
     ngptsw,
     maxgas,
-    nbands,
+    nbandssw,
     nbhgh,
     nblow,
     NGB,
@@ -745,16 +745,16 @@ class RadSWClass:
         cldfrc = np.zeros(nlay)
 
         #  ---  locals:
-        tauliq = np.zeros(nbands)
-        tauice = np.zeros(nbands)
-        ssaliq = np.zeros(nbands)
-        ssaice = np.zeros(nbands)
-        ssaran = np.zeros(nbands)
-        ssasnw = np.zeros(nbands)
-        asyliq = np.zeros(nbands)
-        asyice = np.zeros(nbands)
-        asyran = np.zeros(nbands)
-        asysnw = np.zeros(nbands)
+        tauliq = np.zeros(nbandssw)
+        tauice = np.zeros(nbandssw)
+        ssaliq = np.zeros(nbandssw)
+        ssaice = np.zeros(nbandssw)
+        ssaran = np.zeros(nbandssw)
+        ssasnw = np.zeros(nbandssw)
+        asyliq = np.zeros(nbandssw)
+        asyice = np.zeros(nbandssw)
+        asyran = np.zeros(nbandssw)
+        asysnw = np.zeros(nbandssw)
         cldf = np.zeros(nlay)
 
         lcloudy = np.zeros((nlay, ngptsw), dtype=bool)
@@ -796,7 +796,7 @@ class RadSWClass:
                     else:
                         tausnw = 0.0
 
-                    for ib in range(nbands):
+                    for ib in range(nbandssw):
                         ssaran[ib] = tauran * (1.0 - b0r[ib])
                         ssasnw[ib] = tausnw * (1.0 - (b0s[ib] + b1s[ib] * dgesnw))
                         asyran[ib] = ssaran[ib] * c0r[ib]
@@ -810,7 +810,7 @@ class RadSWClass:
                     #  --- ...  calculation of absorption coefficients due to water clouds.
 
                     if cldliq <= 0.0:
-                        for ib in range(nbands):
+                        for ib in range(nbandssw):
                             tauliq[ib] = 0.0
                             ssaliq[ib] = 0.0
                             asyliq[ib] = 0.0
@@ -820,7 +820,7 @@ class RadSWClass:
                         fint = factor - float(index + 1)
 
                         if iswcliq == 1:
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoliq = max(
                                     0.0,
                                     extliq1[index, ib]
@@ -851,7 +851,7 @@ class RadSWClass:
                                 ssaliq[ib] = tauliq[ib] * ssacoliq
                                 asyliq[ib] = ssaliq[ib] * asycoliq
                         elif iswcliq == 2:  # use updated coeffs
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoliq = max(
                                     0.0,
                                     extliq2[index, ib]
@@ -885,7 +885,7 @@ class RadSWClass:
                     #  --- ...  calculation of absorption coefficients due to ice clouds.
 
                     if cldice <= 0.0:
-                        for ib in range(nbands):
+                        for ib in range(nbandssw):
                             tauice[ib] = 0.0
                             ssaice[ib] = 0.0
                             asyice[ib] = 0.0
@@ -897,7 +897,7 @@ class RadSWClass:
                         if iswcice == 1:
                             refice = min(130.0, max(13.0, refice))
 
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 ia = (
                                     self.idxebc[ib] - 1
                                 )  # eb_&_c band index for ice cloud coeff
@@ -922,7 +922,7 @@ class RadSWClass:
                             index = max(1, min(42, int(factor))) - 1
                             fint = factor - float(index + 1)
 
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoice = max(
                                     0.0,
                                     extice2[index, ib]
@@ -961,7 +961,7 @@ class RadSWClass:
                             index = max(1, min(45, int(factor))) - 1
                             fint = factor - float(index + 1)
 
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoice = max(
                                     0.0,
                                     extice3[index, ib]
