@@ -13,7 +13,7 @@ if IS_DOCKER:
         sys.path.insert(0, "/work/radiation/python")
 else:
     sys.path.insert(
-        0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python"
+        0, "/home/andrewp/physics_standalone/radiation/python"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw, nrates
 from radsw.radsw_param import nbandssw, ngptsw, nbhgh, nblow, nbdsw, ntbmx
@@ -43,7 +43,7 @@ else:
     LW_SERIALIZED_DIR = "../../fortran/radlw/dump"
     SW_SERIALIZED_DIR = "../../fortran/radlw/dump"
 
-backend = "gtc:gt:cpu_ifirst"
+backend = "gtc:gt:gpu"
 
 sys.path.append(SERIALBOX_DIR + "/python")
 

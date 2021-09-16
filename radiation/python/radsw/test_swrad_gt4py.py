@@ -6,7 +6,7 @@ IS_TEST = (os.getenv("IS_TEST") == "True") if ("IS_TEST" in os.environ) else Fal
 if IS_TEST:
     sys.path.insert(0, "/deployed/radiation/python")
 else:
-    sys.path.insert(0, "/work/radiation/python")
+    sys.path.insert(0, "/home/andrewp/physics_standalone/radiation/python")
 
 from radsw.radsw_main_gt4py import RadSWClass
 from radphysparam import icldflg
