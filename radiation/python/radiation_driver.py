@@ -141,7 +141,7 @@ class RadiationDriver:
         #  --- ...  astronomy initialization routine
         self.sol = AstronomyClass(me, isolar)
         #  --- ...  aerosols initialization routine
-        self.aer = AerosolClass(NLAY, me, iaerflg)
+        self.aer = AerosolClass(NLAY, me, iaerflg, ivflip)
         #  --- ...  co2 and other gases initialization routine
         self.gas = GasClass(me, ioznflg, ico2flg, ictmflg)
         #  --- ...  surface initialization routine
@@ -569,7 +569,7 @@ class RadiationDriver:
                 for i in range(IM):
                     qlyr[i, k] = max(tem1d[i], Statein["qgrs"][i, k, 0])
                     tem1d[i] = min(self.QME5, qlyr[i, k])
-                    tvly[i, k] = Statein.tgrs[i, k] * (
+                    tvly[i, k] = Statein["tgrs"][i, k] * (
                         1.0 + con_fvirt * qlyr[i, k]
                     )  # virtual T (K)
                     delp[i, k] = plvl[i, k] - plvl[i, k + 1]

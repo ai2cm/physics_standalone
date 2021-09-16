@@ -49,6 +49,7 @@ class GasClass:
         #  --- ...  co2 data section
 
         self.co2_glb = self.co2vmr_def
+        self.gco2cyc = np.zeros(12)
 
         if self.ico2flg == 0:
             if me == 0:
@@ -65,6 +66,7 @@ class GasClass:
                 elif self.ico2flg == 2:
                     if me == 0:
                         print("Using observed co2 monthly 2-d data")
+                        self.co2vmr_sav = np.zeros((self.IMXCO2, self.JMXCO2, 12))
 
                 else:
                     print(
@@ -455,8 +457,8 @@ class GasClass:
 
                 xlat1 = self.hfpi - xlat[i]  # if xlat in pi/2 -> -pi/2 range
 
-                ilon = min(self.IMXCO2, int(xlon1 * tmp + 1))
-                ilat = min(self.JMXCO2, int(xlat1 * tmp + 1))
+                ilon = min(self.IMXCO2, int(xlon1 * tmp + 1)) - 1
+                ilat = min(self.JMXCO2, int(xlat1 * tmp + 1)) - 1
 
                 for k in range(LMAX):
                     if plvl[i, k + 1] >= self.prsco2:

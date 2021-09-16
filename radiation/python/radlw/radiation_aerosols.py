@@ -353,7 +353,7 @@ class AerosolClass:
 
     wvn550 = 1.0e4 / 0.55
 
-    def __init__(self, NLAY, me, iaerflg):
+    def __init__(self, NLAY, me, iaerflg, ivflip):
         self.NSWBND = nbdsw
         self.NLWBND = NBDLW
         self.NSWLWBD = nbdsw * NBDLW
@@ -362,6 +362,7 @@ class AerosolClass:
         self.lavoflg = True
         self.lmap_new = True
         self.NLAY = NLAY
+        self.ivflip = ivflip
 
         self.kyrstr = 1
         self.kyrend = 1
@@ -378,6 +379,9 @@ class AerosolClass:
         self.kprfg = np.zeros((self.IMXAE, self.JMXAE))
 
         self.iaerflg = iaerflg
+        self.iaermdl = self.iaerflg / 1000
+        if self.iaermdl < 0 or self.iaermdl > 2 and self.iaermdl != 5:
+            print("Error -- IAER flag is incorrect, Abort")
 
         self.laswflg = self.iaerflg % 10 > 0  # control flag for sw tropospheric aerosol
         self.lalwflg = (
@@ -1660,16 +1664,16 @@ class AerosolClass:
                         self.ivolae[self.kmonsav, 0, i1]
                         + self.ivolae[self.kmonsav, 1, i1]
                     )
-                elif alat(i) > 1.0:
+                elif alat[i] > 1.0:
                     volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav, 1, i1]
                 elif alat[i] > -1.0:
                     volcae[i] = 5.0e-5 * (
                         self.ivolae[self.kmonsav, 1, i1]
                         + self.ivolae[self.kmonsav, 2, i1]
                     )
-                elif alat(i) > -44.0:
+                elif alat[i] > -44.0:
                     volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav, 2, i1]
-                elif alat(i) > -46.0:
+                elif alat[i] > -46.0:
                     volcae[i] = 5.0e-5 * (
                         self.ivolae[self.kmonsav, 2, i1]
                         + self.ivolae[self.kmonsav, 3, i1]

@@ -24,24 +24,24 @@
 #! are given a default value but could be changed at the model's
 #! execution-time (usually through an input of name-list file or through
 #! run scripts).
-#========================================!
+# ========================================!
 
-#==================================================================================
+# ==================================================================================
 #  Section - 1 -
 #     control flags are pre-set as run-time non-adjuztable parameters.
-#==================================================================================#
+# ==================================================================================#
 # ............................................. !
 # Control flags for SW radiation
 # ............................................. !
 
 # SW heating rate unit control flag: =1:k/day; =2:k/second.
 iswrate = 2
-                                       
+
 # SW minor gases effect control flag (CH4 and O2): =0:no; =1:yes.
 #   =0: minor gases' effects are not included in calculations
 #   =1: minor gases' effects are included in calculations
 iswrgas = 1
- 
+
 # SW optical property for liquid clouds
 #   =0:input cld opt depth, ignoring iswcice setting
 #   =1:cloud optical property scheme based on Hu and Stamnes(1993)
@@ -53,9 +53,9 @@ iswcliq = 1
 #   =2:optical property scheme based on Streamer v3.0
 #   =3:optical property scheme based on Fu's method (1996)
 iswcice = 3
-        
+
 # SW control flag for scattering process approximation
-#   =1:two-stream delta-eddington    (Joseph et al. 1976 
+#   =1:two-stream delta-eddington    (Joseph et al. 1976
 #   =2:two-stream PIFM               (Zdunkowski et al. 1980
 #   =3:discrete ordinates (Liou, 1973
 iswmode = 2
@@ -92,11 +92,11 @@ ilwcice = 3
 #   variable names diff in Opr CFS
 lalw1bd = False
 
-#==================================================================================
+# ==================================================================================
 #  Section - 2 -
 #     values of control flags might be re-set in initialization subroutines
 #       (may be adjusted at run time based on namelist input or run condition)
-#==================================================================================
+# ==================================================================================
 
 # ............................................. !
 #   -2.1- For module radiation_astronomy
@@ -110,10 +110,10 @@ lalw1bd = False
 #   =3:CMIP5 TIM-scale TSI table (yearly) w 11-yr cycle approx
 #   =4:CMIP5 TIM-scale TSI table (monthly) w 11-yr cycle approx
 #   see ISOL in run scripts: Opr GFS=2; Opr CFS=1
-isolar  = 0
+isolar = 0
 
 # external solar constant data table,solarconstant_noaa_a0.txt
-solar_file = 'solarconstant_noaa_an.nc'
+solar_file = "forcing/solarconstant_noaa_an.nc"
 
 # ............................................. !
 #   -2.2- For module radiation_aerosols
@@ -137,10 +137,10 @@ iaermdl = 0
 iaerflg = 0
 
 # external aerosols data file: aerosol.dat
-aeros_file = 'aerosol.nc'
+aeros_file = "forcing/aerosol.nc"
 
 # ............................................. !
-#   -2.3- For module radiation_gases 
+#   -2.3- For module radiation_gases
 # ............................................. !
 
 # co2 data source control flag
@@ -150,7 +150,7 @@ aeros_file = 'aerosol.nc'
 #   Opr GFS/CFS=2; see ICO2 in run scripts
 ico2flg = 0
 
-# controls external data at initial time and data usage during 
+# controls external data at initial time and data usage during
 # forecast time
 #   =-2:as in 0,but superimpose with seasonal climatology cycle
 #   =-1:use user data,no extrapolation in overtime
@@ -171,10 +171,10 @@ ioznflg = 1
 # external co2 global annual mean data tb: co2historicaldata_glob.txt
 # external co2 user defined data table: co2userdata.txt
 # external co2 clim monthly cycle data tb: co2monthlycyc.txt
-co2dat_file = 'co2historicaldata_2004.nc'
-co2gbl_file = 'co2historicaldata_glob.txt'
-co2usr_file = 'co2userdata.txt'
-co2cyc_file = 'co2monthlycyc.txt'
+co2dat_file = "forcing/co2historicaldata_2004.nc"
+co2gbl_file = "forcing/co2historicaldata_glob.txt"
+co2usr_file = "forcing/co2userdata.txt"
+co2cyc_file = "forcing/co2monthlycyc.txt"
 
 # ............................................. !
 #   -2.4- For module radiation_clouds
@@ -191,7 +191,7 @@ icldflg = 1
 #   =2:use maximum cloud overlapping method
 #   =3:use decorrelation length overlapping method
 #   Opr GFS/CFS=1; see IOVR_SW in run scripts
-iovrsw  = 1
+iovrsw = 1
 
 # cloud overlapping control flag for LW
 #   =0:use random cloud overlapping method
@@ -199,7 +199,7 @@ iovrsw  = 1
 #   =2:use maximum cloud overlapping method
 #   =3:use decorrelation length overlapping method
 #   Opr GFS/CFS=1; see IOVR_LW in run scripts
-iovrlw  = 1
+iovrlw = 1
 
 # sub-column cloud approx flag in SW radiation
 #   =0:no McICA approximation in SW radiation
@@ -216,9 +216,9 @@ isubcsw = 0
 isubclw = 0
 
 # eliminating CRICK control flag
-lcrick  = False
+lcrick = False
 # in-cld condensate control flag
-lcnorm  = False
+lcnorm = False
 # precip effect on radiation flag (Ferrier microphysics)
 lnoprec = False
 # shallow convetion flag
@@ -240,15 +240,15 @@ ialbflg = 0
 iemsflg = 0
 
 # external sfc emissivity data table: sfc_emissivity_idx.txt
-semis_file = 'semisdata.nc'
+semis_file = "forcing/semisdata.nc"
 
 # ............................................. !
 #   -2.6- general purpose
 # ............................................. !
 
 # vertical profile indexing flag
-ivflip  = 1
+ivflip = 1
 
 # initial permutaion seed for mcica radiation
-ipsd0   = 0
+ipsd0 = 0
 ipsdlim = 1
