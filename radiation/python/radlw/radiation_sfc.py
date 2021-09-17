@@ -6,6 +6,7 @@ import xarray as xr
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from radphysparam import semis_file
 from phys_const import con_tice, con_ttp, con_t0c, con_pi
+from config import *
 
 
 class SurfaceClass:
@@ -20,6 +21,7 @@ class SurfaceClass:
 
         self.ialbflg = ialb
         self.iemsflg = iems
+        self.semis_file = os.path.join(FORCING_DIR, semis_file)
 
         if me == 0:
             print(self.VTAGSFC)  # print out version tag
@@ -53,7 +55,7 @@ class SurfaceClass:
             if "idxems" not in vars():
                 idxems = np.zeros((self.IMXEMS, self.JMXEMS))
 
-                file_exist = os.path.isfile(semis_file)
+                file_exist = os.path.isfile(self.semis_file)
 
                 if not file_exist:
                     if me == 0:
@@ -63,7 +65,7 @@ class SurfaceClass:
 
                     iemslw = 0
                 else:
-                    ds = xr.open_dataset(semis_file)
+                    ds = xr.open_dataset(self.semis_file)
 
                     cline = ds["cline"].data
                     idxems = ds["idxems"].data

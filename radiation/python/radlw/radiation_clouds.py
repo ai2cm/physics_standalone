@@ -1039,8 +1039,6 @@ class CloudClass:
         IX,
         NLAY,
         NLP1,
-        iovrsw,
-        iovrlw,
     ):
         # =================   subprogram documentation block   ================ !
         #                                                                       !

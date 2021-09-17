@@ -214,7 +214,7 @@ class AstronomyClass:
                 if self.isolflg == 4:
                     self.solc0 = self.smon_sav[imon]
             else:  # need to read in new data
-                iyr_sav = iyear
+                self.iyr_sav = iyear
                 #  --- ...  check to see if the solar constant data file existed
                 file_exist = os.path.isfile(self.solar_fname)
                 if not file_exist:
@@ -252,11 +252,11 @@ class AstronomyClass:
                     #  --- ...  locate the right record for the year of data
                     if self.isolflg < 4:  # use annual mean data tables
                         solc1 = ds["solc1"].sel(year=iyr).data
-                        solc0 = smean + solc1
+                        self.solc0 = smean + solc1
                         if me == 0:
                             print(
                                 "CHECK: Solar constant data used for year",
-                                f"{iyr}, {solc1}, {solc0}",
+                                f"{iyr}, {solc1}, {self.solc0}",
                             )
                     elif self.isolflg == 4:  # use monthly mean data tables
                         i = iyr2
@@ -266,7 +266,7 @@ class AstronomyClass:
                             if i == iyr and iyr == jyr:
                                 for nn in range(12):
                                     self.smon_sav[nn] = smean + smon[nn]
-                                solc0 = smean + smon[imon]
+                                self.solc0 = smean + smon[imon]
                                 if me == 0:
                                     print("CHECK: Solar constant data used for year")
                                     print(f"{iyr} and month {imon}")
@@ -274,7 +274,7 @@ class AstronomyClass:
                                 else:
                                     i -= 1
         else:
-            solc0 = con_solr
+            self.solc0 = con_solr
 
         #  --- ...  calculate forecast julian day and fraction of julian day
         jd1 = self.iw3jdn(iyear, imon, iday)
@@ -299,7 +299,7 @@ class AstronomyClass:
         r1, dlt, alp, sollag, sindec, cosdec = self.solar(jd, fjd)
 
         #  --- ...  calculate sun-earth distance adjustment factor appropriate to date
-        solcon = solc0 / (r1 * r1)
+        solcon = self.solc0 / (r1 * r1)
 
         slag = sollag
         sdec = sindec

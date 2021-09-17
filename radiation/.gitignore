@@ -10,4 +10,5 @@
 python/radlw/taugb10
 python/forcing
 fortran/progcld4
+fortran/setaer
 

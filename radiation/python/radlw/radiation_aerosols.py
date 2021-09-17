@@ -378,6 +378,8 @@ class AerosolClass:
         self.idxcg = np.zeros((self.NXC, self.IMXAE, self.JMXAE))
         self.kprfg = np.zeros((self.IMXAE, self.JMXAE))
 
+        self.aeros_file = os.path.join(FORCING_DIR, aeros_file)
+
         self.iaerflg = iaerflg
         self.iaermdl = self.iaerflg / 1000
         if self.iaermdl < 0 or self.iaermdl > 2 and self.iaermdl != 5:
@@ -762,7 +764,7 @@ class AerosolClass:
         #                                                                      !
         #  ==================================================================  !
 
-        file_exist = os.path.isfile(aeros_file)
+        file_exist = os.path.isfile(self.aeros_file)
 
         if file_exist:
             print(f"Using file {aeros_file}")
@@ -783,7 +785,7 @@ class AerosolClass:
         extstra = np.zeros((self.NSWLWBD))
 
         #  --- ...  aloocate and input aerosol optical data
-        ds = xr.open_dataset(aeros_file)
+        ds = xr.open_dataset(self.aeros_file)
 
         iendwv = ds["iendwv"].data
         haer = ds["haer"].data
@@ -1339,7 +1341,7 @@ class AerosolClass:
         #
         #  --- ...  reading climatological aerosols data
 
-        file_exist = os.path.isfile(aeros_file)
+        file_exist = os.path.isfile(self.aeros_file)
 
         if file_exist:
             if self.me == 0:
@@ -1348,7 +1350,7 @@ class AerosolClass:
             print(f'Requested aerosol data file "{aeros_file}" not found!')
             print("*** Stopped in subroutine trop_update !!")
 
-        ds = xr.open_dataset(aeros_file)
+        ds = xr.open_dataset(self.aeros_file)
         self.kprfg = ds["kprfg"].data
         self.idxcg = ds["idxcg"].data
         self.cmixg = ds["cmixg"].data
@@ -1658,28 +1660,28 @@ class AerosolClass:
 
             for i in range(IMAX):
                 if alat[i] > 46.0:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav, 0, i1]
+                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 0, i1]
                 elif alat[i] > 44.0:
                     volcae[i] = 5.0e-5 * (
-                        self.ivolae[self.kmonsav, 0, i1]
-                        + self.ivolae[self.kmonsav, 1, i1]
+                        self.ivolae[self.kmonsav - 1, 0, i1]
+                        + self.ivolae[self.kmonsav - 1, 1, i1]
                     )
                 elif alat[i] > 1.0:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav, 1, i1]
+                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 1, i1]
                 elif alat[i] > -1.0:
                     volcae[i] = 5.0e-5 * (
-                        self.ivolae[self.kmonsav, 1, i1]
-                        + self.ivolae[self.kmonsav, 2, i1]
+                        self.ivolae[self.kmonsav - 1, 1, i1]
+                        + self.ivolae[self.kmonsav - 1, 2, i1]
                     )
                 elif alat[i] > -44.0:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav, 2, i1]
+                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 2, i1]
                 elif alat[i] > -46.0:
                     volcae[i] = 5.0e-5 * (
-                        self.ivolae[self.kmonsav, 2, i1]
-                        + self.ivolae[self.kmonsav, 3, i1]
+                        self.ivolae[self.kmonsav - 1, 2, i1]
+                        + self.ivolae[self.kmonsav - 1, 3, i1]
                     )
                 else:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav, 3, i1]
+                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 3, i1]
 
             if self.ivflip == 0:  # input data from toa to sfc
 
@@ -1828,9 +1830,9 @@ class AerosolClass:
                         ) ** tmp2
 
                         for i in range(IMAX):
-                            kh = kcuth[i]
-                            kl = kcutl[i]
-                            for k in range(kl - 1, kh):
+                            kh = kcuth[i] - 1
+                            kl = kcutl[i] - 1
+                            for k in range(kl, kh + 1):
                                 tmp2 = tmp1 * ((prsi[i, k] - prsi[i, k + 1]) * rdelp[i])
                                 aerosw[i, k, m, 0] = (
                                     aerosw[i, k, m, 0] + tmp2 * volcae[i]
@@ -1850,9 +1852,9 @@ class AerosolClass:
 
                         tmp1 = (0.55 / 11.0) ** 1.2
                         for i in range(IMAX):
-                            kh = kcuth[i]
-                            kl = kcutl[i]
-                            for k in range(kl - 1, kh):
+                            kh = kcuth[i] - 1
+                            kl = kcutl[i] - 1
+                            for k in range(kl, kh + 1):
                                 tmp2 = (
                                     tmp1
                                     * ((prsi[i, k] - prsi[i, k + 1]) * rdelp[i])
@@ -1869,15 +1871,16 @@ class AerosolClass:
                             ) ** 1.2
 
                             for i in range(IMAX):
-                                kh = kcuth[i]
-                                kl = kcutl[i]
-                                for k in range(kl - 1, kh):
+                                kh = kcuth[i] - 1
+                                kl = kcutl[i] - 1
+                                for k in range(kl, kh + 1):
                                     tmp2 = tmp1 * (
                                         (prsi[i, k] - prsi[i, k + 1]) * rdelp[i]
                                     )
                                     aerolw[i, k, m, 0] = (
                                         aerolw[i, k, m, 0] + tmp2 * volcae[i]
                                     )
+        return aerosw, aerolw, aerodp
 
     def aer_property(
         self,
@@ -2061,14 +2064,16 @@ class AerosolClass:
             # -# Determin the type of aerosol profile (kp) and scale hight for
             #    domain 1 (h1) to be used at this grid point.
 
-            kp = self.kprfg[kpi, kpj]  # nearest typical aeros profile as default
+            kp = self.kprfg[
+                kpi - 1, kpj - 1
+            ]  # nearest typical aeros profile as default
             kpa = max(
-                self.kprfg[i1, j1],
-                self.kprfg[i1, j2],
-                self.kprfg[i2, j1],
-                self.kprfg[i2, j2],
+                self.kprfg[i1 - 1, j1 - 1],
+                self.kprfg[i1 - 1, j2 - 1],
+                self.kprfg[i2 - 1, j1 - 1],
+                self.kprfg[i2 - 1, j2 - 1],
             )
-            h1 = self.haer[0, kp]
+            h1 = self.haer[0, kp - 1]
             self.denn[1] = 0.0
             ii = 1
 
@@ -2151,14 +2156,17 @@ class AerosolClass:
 
                     ii = 0
                     for k in range(NLAY):
-                        if prsi[i, k + 1] * rps < self.sigref[ii, kp]:
+                        if prsi[i, k + 1] * rps < self.sigref[ii, kp - 1]:
                             ii += 1
-                            if ii == 2 and self.prsref[1, kp] == self.prsref[2, kp]:
+                            if (
+                                ii == 1
+                                and self.prsref[1, kp - 1] == self.prsref[2, kp - 1]
+                            ):
                                 ii = 3
                         self.idmaer[k] = ii + 1
 
-                        if ii > 1:
-                            tmp1 = self.haer[ii, kp]
+                        if ii > 0:
+                            tmp1 = self.haer[ii, kp - 1]
                         else:
                             tmp1 = h1
 
@@ -2182,7 +2190,7 @@ class AerosolClass:
 
                     ii = 0
                     for k in range(NLAY - 1, -1, -1):
-                        if prsi[i, k] * rps < self.sigref[ii, kp]:
+                        if prsi[i, k] * rps < self.sigref[ii, kp - 1]:
                             ii += 1
                             if ii == 1 and self.prsref[1, kp] == self.prsref[2, kp]:
                                 ii = 2
@@ -2190,7 +2198,7 @@ class AerosolClass:
                         self.idmaer[k] = ii + 1
 
                         if ii > 0:
-                            tmp1 = self.haer[ii, kp]
+                            tmp1 = self.haer[ii, kp - 1]
                         else:
                             tmp1 = h1
 
@@ -2281,14 +2289,14 @@ class AerosolClass:
 
             # --- linear interp coeffs for rh-dep species
 
-            ih2 = 0
-            while self.rh1[kk] > self.rhlev[ih2]:
+            ih2 = 1
+            while self.rh1[kk] > self.rhlev[ih2 - 1]:
                 ih2 += 1
                 if ih2 > self.NRHLEV:
                     break
 
-            ih1 = max(1, ih2) - 1
-            ih2 = min(self.NRHLEV, ih2 + 1) - 1
+            ih1 = max(1, ih2 - 1) - 1
+            ih2 = min(self.NRHLEV, ih2) - 1
 
             drh0 = self.rhlev[ih2] - self.rhlev[ih1]
             drh1 = self.rh1[kk] - self.rhlev[ih1]
@@ -2326,8 +2334,8 @@ class AerosolClass:
                         self.asyae[kk, ib] = 0.3
 
                 # --- compute aod from individual species' contribution (optional)
-                idx = self.idxspc[10]  # for sulfate
-                spcodp[idx] = spcodp[idx] + self.tauae[kk, self.nv_aod]
+                idx = self.idxspc[9] - 1  # for sulfate
+                spcodp[idx] = spcodp[idx] + self.tauae[kk, self.nv_aod - 1]
 
             elif idom == 3:
                 # --- 3rd domain - free tropospheric layers
@@ -2402,7 +2410,7 @@ class AerosolClass:
                         cm = self.cmix[icmp]
                         if cm > 0.0:
 
-                            if ic <= self.NCM1:  # component withour rh dep
+                            if ic <= self.NCM1 - 1:  # component withour rh dep
                                 tt0 = cm * self.extrhi[ic, ib]
                                 ext1 = ext1 + tt0
                                 sca1 = sca1 + cm * self.scarhi[ic, ib]

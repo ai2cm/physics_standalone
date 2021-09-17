@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, "..")
 from radphysparam import co2cyc_file, co2gbl_file, co2dat_file
 from phys_const import con_pi
+from config import *
 
 
 class GasClass:
@@ -39,6 +40,10 @@ class GasClass:
         self.ioznflg = iozn
         self.ico2flg = ico2
         self.ictmflg = ictm
+
+        self.co2cyc_file = os.path.join(FORCING_DIR, co2cyc_file)
+        self.co2gbl_file = os.path.join(FORCING_DIR, co2gbl_file)
+        self.co2dat_file = os.path.join(FORCING_DIR, co2dat_file)
 
         if self.ioznflg > 0:
             if self.me == 0:
@@ -75,7 +80,7 @@ class GasClass:
                     )
 
             if self.ictmflg == -2:
-                file_exist = os.path.isfile(co2cyc_file)
+                file_exist = os.path.isfile(self.co2cyc_file)
                 if not file_exist:
                     if me == 0:
                         print(
@@ -84,7 +89,7 @@ class GasClass:
                         )
                 else:
                     co2cyc_sav = np.zeros((self.IMXCO2, self.JMXCO2, 12))
-                    ds = xr.open_dataset(co2cyc_file)
+                    ds = xr.open_dataset(self.co2cyc_file)
                     #  --- ...  read in co2 2-d seasonal cycle data
                     cline = ds["cline"].data
                     co2g1 = ds["co2g1"].data
@@ -244,7 +249,7 @@ class GasClass:
 
             #  --- ... check to see if requested co2 data file existed
 
-            file_exist = os.path.isfile(co2gbl_file)
+            file_exist = os.path.isfile(self.co2gbl_file)
 
             if not file_exist:
                 print(
@@ -252,7 +257,7 @@ class GasClass:
                     " - Stopped in subroutine gas_update!!",
                 )
             else:
-                ds = xr.open_dataset(co2gbl_file)
+                ds = xr.open_dataset(self.co2gbl_file)
                 iyr1 = ds["iyr1"]
                 iyr2 = ds["iyr2"]
                 cline = ds["cline"]
@@ -289,6 +294,7 @@ class GasClass:
 
             cfile1 = co2dat_file
             cfile1 = co2dat_file[:18] + str(idyr) + co2dat_file[22:]
+            cfile1 = os.path.join(FORCING_DIR, cfile1)
 
             #  --- ... check to see if requested co2 data file existed
 
@@ -309,6 +315,7 @@ class GasClass:
                     while iyr >= self.MINYEAR:
                         iyr -= 1
                         cfile1 = co2dat_file[:18] + str(iyr) + co2dat_file[22:]
+                        cfile1 = os.path.join(FORCING_DIR, cfile1)
 
                         file_exist = os.path.isfile(cfile1)
                         if me == 0:

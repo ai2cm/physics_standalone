@@ -222,6 +222,7 @@ class RadiationDriver:
         # --- ...  time stamp at fcst time
 
         iyear = jdate[0]
+        print(f"iyear = {iyear}")
         imon = jdate[1]
         iday = jdate[2]
         ihour = jdate[4]
@@ -350,10 +351,25 @@ class RadiationDriver:
         tem2da = np.zeros((IM, Model["levr"] + self.LTP))
 
         tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
+        ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
 
         cldtausw = np.zeros((IM, Model["levr"] + self.LTP))
 
         scmpsw = dict()
+
+        Diag["topfsw"]["upfxc"] = np.zeros(IM)
+        Diag["topfsw"]["dnfxc"] = np.zeros(IM)
+        Diag["topfsw"]["upfx0"] = np.zeros(IM)
+        Radtend["sfcfsw"]["upfxc"] = np.zeros(IM)
+        Radtend["sfcfsw"]["dnfxc"] = np.zeros(IM)
+        Radtend["sfcfsw"]["upfx0"] = np.zeros(IM)
+        Radtend["sfcfsw"]["dnfx0"] = np.zeros(IM)
+
+        Radtend["htrlw"] = np.zeros((IM, Model["levs"]))
+
+        lhlwb = False
+        lhlw0 = True
+        lflxprf = False
 
         #  --- ...  set local /level/layer indexes corresponding to in/out variables
 
@@ -632,7 +648,6 @@ class RadiationDriver:
 
         #  --- ...  obtain cloud information for radiation calculations
 
-        ccnd = 0.0
         if Model["ncnd"] == 1:  # Zhao_Carr_Sundqvist
             for k in range(LMK):
                 for i in range(IM):
@@ -814,7 +829,7 @@ class RadiationDriver:
                 Radtend["coszen"],
                 tsfg,
                 tsfa,
-                Sfcprop["hprime"][:, 0],
+                Sfcprop["hprime"],
                 Sfcprop["alvsf"],
                 Sfcprop["alnsf"],
                 Sfcprop["alvwf"],
@@ -829,7 +844,7 @@ class RadiationDriver:
             )
 
             # Approximate mean surface albedo from vis- and nir-  diffuse values.
-            Radtend["sfalb"][:] = max(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
+            Radtend["sfalb"][:] = np.maximum(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
 
             if nday > 0:
 
@@ -995,7 +1010,7 @@ class RadiationDriver:
                 Sfcprop["zorl"],
                 tsfg,
                 tsfa,
-                Sfcprop["hprime"][:, 0],
+                Sfcprop["hprime"],
                 IM,
             )
 
@@ -1032,7 +1047,10 @@ class RadiationDriver:
                     IM,
                     LMK,
                     LMP,
-                    Model.lprnt,
+                    Model["lprnt"],
+                    lhlwb,
+                    lhlw0,
+                    lflxprf,
                 )
             else:
                 (
@@ -1063,7 +1081,10 @@ class RadiationDriver:
                     IM,
                     LMK,
                     LMP,
-                    Model.lprnt,
+                    Model["lprnt"],
+                    lhlwb,
+                    lhlw0,
+                    lflxprf,
                 )
 
             # Save calculation results
@@ -1145,11 +1166,11 @@ class RadiationDriver:
                     )  # clear sky top lw up
                     Diag["fluxr"][i, 29] = (
                         Diag["fluxr"][i, 29]
-                        + Model["fhlwr"] * Radtend["sfcflw"]["dnfx0"]
+                        + Model["fhlwr"] * Radtend["sfcflw"]["dnfx0"][i]
                     )  # clear sky sfc lw dn
                     Diag["fluxr"][i, 32] = (
                         Diag["fluxr"][i, 32]
-                        + Model["fhlwr"] * Radtend["sfcflw"]["upfx0"]
+                        + Model["fhlwr"] * Radtend["sfcflw"]["upfx0"][i]
                     )  # clear sky sfc lw up
 
             #  ---  save sw toa and sfc fluxes with proper diurnal sw wgt. coszen=mean cosz over daylight
@@ -1224,8 +1245,8 @@ class RadiationDriver:
                 for j in range(3):
                     for i in range(IM):
                         tem0d = raddt * cldsa[i, j]
-                        itop = mtopa[i, j] - kd
-                        ibtc = mbota[i, j] - kd
+                        itop = int(mtopa[i, j] - kd)
+                        ibtc = int(mbota[i, j] - kd)
                         Diag["fluxr"][i, 6 - j] = Diag["fluxr"][i, 6 - j] + tem0d
                         Diag["fluxr"][i, 9 - j] = (
                             Diag["fluxr"][i, 9 - j]

@@ -1,6 +1,7 @@
 import numpy as np
 
 from config import *
+from util import compare_data
 import serialbox as ser
 from radiation_driver import RadiationDriver
 
@@ -51,6 +52,7 @@ model_vars = [
     "solcon",
     "lprnt",
     "lwhtr",
+    "lssav",
 ]
 
 Model = dict()
@@ -191,6 +193,8 @@ if ictmflg == 0 or ictmflg == -2:
 else:
     iaerflg = iaer % 1000
 
+print(f"iaerflg = {iaerflg}")
+
 iaermdl = iaer / 1000  # control flag for aerosol scheme selection
 if iaermdl < 0 or iaermdl > 2 and iaermdl != 5:
     print("Error -- IAER flag is incorrect, Abort")
@@ -233,6 +237,84 @@ driver.radinit(
     iswcliq,
 )
 
+invars = ["idat", "jdat", "fhswr", "dtf", "lsswr", "slag", "sdec", "cdec", "solcon"]
+updatedict = dict()
+
+for var in invars:
+    updatedict[var] = serializer.read(var, serializer.savepoint["rad-update"])
+
+driver.radupdate(
+    updatedict["idat"],
+    updatedict["jdat"],
+    updatedict["fhswr"],
+    updatedict["dtf"],
+    updatedict["lsswr"],
+    Model["me"],
+    updatedict["slag"],
+    updatedict["sdec"],
+    updatedict["cdec"],
+    updatedict["solcon"],
+)
+
 Radtendout, Diagout = driver.GFS_radiation_driver(
     Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag
 )
+
+radtend_vars_out = [
+    "upfxc_s_lw",
+    "upfx0_s_lw",
+    "dnfxc_s_lw",
+    "dnfx0_s_lw",
+    "upfxc_s_sw",
+    "upfx0_s_sw",
+    "dnfxc_s_sw",
+    "dnfx0_s_sw",
+    "sfalb",
+    "htrsw",
+    "swhc",
+    "semis",
+    "tsflw",
+    "htrlw",
+    "lwhc",
+]
+
+diag_vars_out = [
+    "fluxr",
+    "upfxc_t_sw",
+    "dnfxc_t_sw",
+    "upfx0_t_sw",
+    "upfxc_t_lw",
+    "upfx0_t_lw",
+]
+
+valdict = dict()
+outdict = dict()
+
+for var in radtend_vars_out:
+    valdict[var] = serializer.read(var, serializer.savepoint["driver-out-000000"])
+    if var[:2] in ["up", "dn"]:
+        if var.split("_")[1] == "s":
+            if var.split("_")[-1] == "lw":
+                outdict[var] = Radtendout["sfcflw"][var.split("_")[0]]
+            else:
+                outdict[var] = Radtendout["sfcfsw"][var.split("_")[0]]
+    else:
+        outdict[var] = Radtendout[var]
+
+for var in diag_vars_out:
+    valdict[var] = serializer.read(var, serializer.savepoint["driver-out-000000"])
+
+    if var[:2] in ["up", "dn"]:
+        if var[:2] in ["up", "dn"]:
+            if var.split("_")[-1] == "lw":
+                outdict[var] = Diagout["topflw"][var.split("_")[0]]
+            else:
+                outdict[var] = Diagout["topfsw"][var.split("_")[0]]
+    else:
+        outdict[var] = Diagout[var]
+
+# compare_data(valdict, outdict)
+
+print(f"Python = {outdict['upfxc_s_lw']}")
+print(" ")
+print(f"Fortran = {valdict['upfxc_s_lw']}")
