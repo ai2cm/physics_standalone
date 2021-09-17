@@ -181,11 +181,13 @@ program test
 !$ser data semis=semis tsfg=tsfg dz=dz delp=delp de_lgth=de_lgth
 !$ser data im=im lmk=lmk lmp=lmp lprnt=lprnt
 
+          call tic(time1, time2)  
           call lwrad(ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
                      clouds, icsdlw, faerlw, semis,   &
                      tsfg, dz, delp, de_lgth,                     &
                      im, lmk, lmp, lprnt,                   &
                      htlwc, topflw, sfcflw, cldtaulw, htlw0)        !  ---  outputs
+          call toc(time1, time2)
 
 !$ser mode write           
 !$ser savepoint "lwrad-check-"//trim(ser_count_str)
@@ -302,7 +304,7 @@ contains
         implicit none
         real(8) :: t1, t2
         call cpu_time(t2)
-        write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
+        write(*,'(a,f7.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
       end subroutine toc
 
 end program test
