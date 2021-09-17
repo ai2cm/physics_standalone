@@ -1774,7 +1774,7 @@ if do_test:
     print(" ")
     print("taumol validates!")
     print(" ")
-
+"""
 rtrnmc(
     locdict_gt4py["semiss"],
     locdict_gt4py["secdiff"],
@@ -1895,3 +1895,4 @@ compare_data(valdict, outdict_np)
 print(" ")
 print("lwrad validates!")
 print(" ")
+"""

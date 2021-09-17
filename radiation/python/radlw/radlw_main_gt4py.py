@@ -1879,7 +1879,9 @@ class RadLWClass:
             print(" ")
             print("taumol validates!")
             print(" ")
-
+        end0 = time.time()
+        print(f"Elapsed time = {end0 - start0}")
+"""
         rtrnmc(
             self.locdict_gt4py["semiss"],
             self.locdict_gt4py["secdiff"],
@@ -1994,3 +1996,4 @@ class RadLWClass:
         print(" ")
         print("lwrad validates!")
         print(" ")
+"""

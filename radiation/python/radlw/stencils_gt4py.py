@@ -68,7 +68,6 @@ from config import *
 
 rebuild = False
 validate = True
-backend = "gtc:gt:cpu_ifirst"
 
 amdw = con_amd / con_amw
 amdo3 = con_amd / con_amo3
@@ -4499,88 +4498,88 @@ flxfac = wtdiff * fluxfac
 lhlw0 = True
 
 
-@stencil(
-    backend,
-    rebuild=rebuild,
-    externals={
-        "rec_6": rec_6,
-        "bpade": bpade,
-        "tblint": tblint,
-        "eps": eps,
-        "flxfac": flxfac,
-        "heatfac": heatfac,
-        "lhlw0": lhlw0,
-    },
-)
-def rtrnmc(
-    semiss: Field[gtscript.IJ, type_nbands],
-    secdif: Field[gtscript.IJ, type_nbands],
-    delp: FIELD_FLT,
-    taucld: Field[type_nbands],
-    fracs: Field[type_ngptlw],
-    tautot: Field[type_ngptlw],
-    cldfmc: Field[type_ngptlw],
-    pklay: Field[type_nbands],
-    pklev: Field[type_nbands],
-    exp_tbl: Field[type_ntbmx],
-    tau_tbl: Field[type_ntbmx],
-    tfn_tbl: Field[type_ntbmx],
-    NGB: Field[gtscript.IJ, (np.int32, (140,))],
-    totuflux: FIELD_FLT,
-    totdflux: FIELD_FLT,
-    totuclfl: FIELD_FLT,
-    totdclfl: FIELD_FLT,
-    upfxc_t: FIELD_2D,
-    upfx0_t: FIELD_2D,
-    upfxc_s: FIELD_2D,
-    upfx0_s: FIELD_2D,
-    dnfxc_s: FIELD_2D,
-    dnfx0_s: FIELD_2D,
-    hlwc: FIELD_FLT,
-    hlw0: FIELD_FLT,
-    clrurad: Field[type_nbands],
-    clrdrad: Field[type_nbands],
-    toturad: Field[type_nbands],
-    totdrad: Field[type_nbands],
-    gassrcu: Field[type_ngptlw],
-    totsrcu: Field[type_ngptlw],
-    trngas: Field[type_ngptlw],
-    efclrfr: Field[type_ngptlw],
-    rfdelp: FIELD_FLT,
-    fnet: FIELD_FLT,
-    fnetc: FIELD_FLT,
-    totsrcd: Field[type_ngptlw],
-    gassrcd: Field[type_ngptlw],
-    tblind: Field[type_ngptlw],
-    odepth: Field[type_ngptlw],
-    odtot: Field[type_ngptlw],
-    odcld: Field[type_ngptlw],
-    atrtot: Field[type_ngptlw],
-    atrgas: Field[type_ngptlw],
-    reflct: Field[type_ngptlw],
-    totfac: Field[type_ngptlw],
-    gasfac: Field[type_ngptlw],
-    plfrac: Field[type_ngptlw],
-    blay: Field[type_ngptlw],
-    bbdgas: Field[type_ngptlw],
-    bbdtot: Field[type_ngptlw],
-    bbugas: Field[type_ngptlw],
-    bbutot: Field[type_ngptlw],
-    dplnku: Field[type_ngptlw],
-    dplnkd: Field[type_ngptlw],
-    radtotu: Field[type_ngptlw],
-    radclru: Field[type_ngptlw],
-    radtotd: Field[type_ngptlw],
-    radclrd: Field[type_ngptlw],
-    rad0: Field[type_ngptlw],
-    clfm: Field[type_ngptlw],
-    trng: Field[type_ngptlw],
-    gasu: Field[type_ngptlw],
-    itgas: Field[(np.int32, (ngptlw,))],
-    ittot: Field[(np.int32, (ngptlw,))],
-    ib: FIELD_2DINT,
-):
-    from __externals__ import rec_6, bpade, tblint, eps, flxfac, heatfac, lhlw0
+#@stencil(
+#    backend,
+#    rebuild=rebuild,
+#    externals={
+#        "rec_6": rec_6,
+#        "bpade": bpade,
+#        "tblint": tblint,
+#        "eps": eps,
+#        "flxfac": flxfac,
+#        "heatfac": heatfac,
+#        "lhlw0": lhlw0,
+#    },
+#)
+#def rtrnmc(
+#    semiss: Field[gtscript.IJ, type_nbands],
+#    secdif: Field[gtscript.IJ, type_nbands],
+#    delp: FIELD_FLT,
+#    taucld: Field[type_nbands],
+#    fracs: Field[type_ngptlw],
+#    tautot: Field[type_ngptlw],
+#    cldfmc: Field[type_ngptlw],
+#    pklay: Field[type_nbands],
+#    pklev: Field[type_nbands],
+#    exp_tbl: Field[type_ntbmx],
+#    tau_tbl: Field[type_ntbmx],
+#    tfn_tbl: Field[type_ntbmx],
+#    NGB: Field[gtscript.IJ, (np.int32, (140,))],
+#    totuflux: FIELD_FLT,
+#    totdflux: FIELD_FLT,
+#    totuclfl: FIELD_FLT,
+#    totdclfl: FIELD_FLT,
+#    upfxc_t: FIELD_2D,
+#    upfx0_t: FIELD_2D,
+#    upfxc_s: FIELD_2D,
+#    upfx0_s: FIELD_2D,
+#    dnfxc_s: FIELD_2D,
+#    dnfx0_s: FIELD_2D,
+#    hlwc: FIELD_FLT,
+#    hlw0: FIELD_FLT,
+#    clrurad: Field[type_nbands],
+#    clrdrad: Field[type_nbands],
+#    toturad: Field[type_nbands],
+#    totdrad: Field[type_nbands],
+#    gassrcu: Field[type_ngptlw],
+#    totsrcu: Field[type_ngptlw],
+#    trngas: Field[type_ngptlw],
+#    efclrfr: Field[type_ngptlw],
+#    rfdelp: FIELD_FLT,
+#    fnet: FIELD_FLT,
+#    fnetc: FIELD_FLT,
+#    totsrcd: Field[type_ngptlw],
+#    gassrcd: Field[type_ngptlw],
+#    tblind: Field[type_ngptlw],
+#    odepth: Field[type_ngptlw],
+#    odtot: Field[type_ngptlw],
+#    odcld: Field[type_ngptlw],
+#    atrtot: Field[type_ngptlw],
+#    atrgas: Field[type_ngptlw],
+#    reflct: Field[type_ngptlw],
+#    totfac: Field[type_ngptlw],
+#    gasfac: Field[type_ngptlw],
+#    plfrac: Field[type_ngptlw],
+#    blay: Field[type_ngptlw],
+#    bbdgas: Field[type_ngptlw],
+#    bbdtot: Field[type_ngptlw],
+#    bbugas: Field[type_ngptlw],
+#    bbutot: Field[type_ngptlw],
+#    dplnku: Field[type_ngptlw],
+#    dplnkd: Field[type_ngptlw],
+#    radtotu: Field[type_ngptlw],
+#    radclru: Field[type_ngptlw],
+#    radtotd: Field[type_ngptlw],
+#    radclrd: Field[type_ngptlw],
+#    rad0: Field[type_ngptlw],
+#    clfm: Field[type_ngptlw],
+#    trng: Field[type_ngptlw],
+#    gasu: Field[type_ngptlw],
+#    itgas: Field[(np.int32, (ngptlw,))],
+#    ittot: Field[(np.int32, (ngptlw,))],
+#    ib: FIELD_2DINT,
+#):
+#    from __externals__ import rec_6, bpade, tblint, eps, flxfac, heatfac, lhlw0
 
     # Downward radiative transfer loop.
     # - Clear sky, gases contribution
@@ -4588,7 +4587,7 @@ def rtrnmc(
     # - Cloudy layer
     # - Total sky radiance
     # - Clear sky radiance
-    with computation(FORWARD), interval(-2, -1):
+"""    with computation(FORWARD), interval(-2, -1):
         for ig0 in range(ngptlw):
             ib = NGB[0, 0][ig0] - 1
 
@@ -4950,3 +4949,4 @@ def rtrnmc(
         hlwc = (fnet[0, 0, -1] - fnet) * rfdelp
         if lhlw0:
             hlw0 = (fnetc[0, 0, -1] - fnetc) * rfdelp
+"""
