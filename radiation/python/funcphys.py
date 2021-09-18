@@ -47,12 +47,12 @@ def fpvs(t):
 
     for jx in range(nxpvs):
         x = xmin + jx * xinc
-        t = x
-        tbpvs[jx] = fpvsx(t)
+        tt = x
+        tbpvs[jx] = fpvsx(tt)
 
     xj = min(max(c1xpvs + c2xpvs * t, 1.0), nxpvs)
-    jx = min(xj, nxpvs - 1) - 1
-    fpvs = tbpvs[jx] + (xj - jx) * (tbpvs[jx + 1] - tbpvs[jx])
+    jx = int(min(xj, nxpvs - 1))
+    fpvs = tbpvs[jx - 1] + (xj - jx) * (tbpvs[jx] - tbpvs[jx - 1])
 
     return fpvs
 

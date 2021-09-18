@@ -7,7 +7,7 @@ sys.path.insert(0, "..")
 from radlw.radlw_param import NBDLW, wvnlw1, wvnlw2
 from radsw.radsw_param import nbdsw, wvnum1, wvnum2, NSWSTR
 from phys_const import con_pi, con_plnk, con_c, con_boltz, con_t0c, con_rd, con_g
-from radphysparam import aeros_file, iaermdl, lalw1bd
+from radphysparam import aeros_file, lalw1bd
 
 from config import *
 
@@ -348,6 +348,8 @@ class AerosolClass:
 
     rhlev = [0.0, 0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99]
 
+    idxspc = [1, 2, 1, 1, 1, 1, 3, 5, 5, 4]
+
     KAERBND = 61
     KRHLEV = 36
 
@@ -381,7 +383,7 @@ class AerosolClass:
         self.aeros_file = os.path.join(FORCING_DIR, aeros_file)
 
         self.iaerflg = iaerflg
-        self.iaermdl = self.iaerflg / 1000
+        self.iaermdl = int(self.iaerflg / 1000)
         if self.iaermdl < 0 or self.iaermdl > 2 and self.iaermdl != 5:
             print("Error -- IAER flag is incorrect, Abort")
 
@@ -428,7 +430,7 @@ class AerosolClass:
         # note: for result consistency, the defalt opac-clim aeros setting still use
         #       old spectral band mapping. use iaermdl=5 to use new mapping method
 
-        if iaermdl == 0:  # opac-climatology scheme
+        if self.iaermdl == 0:  # opac-climatology scheme
             self.lmap_new = False
 
             self.wvn_sw1[1 : nbdsw - 1] = self.wvn_sw1[1 : nbdsw - 1] + 1
@@ -445,7 +447,7 @@ class AerosolClass:
 
             # -# Call clim_aerinit() to invoke tropospheric aerosol initialization.
 
-            if iaermdl == 0 or iaermdl == 5:  # opac-climatology scheme
+            if self.iaermdl == 0 or self.iaermdl == 5:  # opac-climatology scheme
 
                 self.clim_aerinit()
 
@@ -453,7 +455,7 @@ class AerosolClass:
                 if me == 0:
                     print(
                         "!!! ERROR in aerosol model scheme selection",
-                        f" iaermdl = {iaermdl}",
+                        f" iaermdl = {self.iaermdl}",
                     )
 
         # -# Call set_volcaer() to invoke stratospheric volcanic aerosol
@@ -517,13 +519,13 @@ class AerosolClass:
 
         print(self.VTAGAER)  # print out version tag
 
-        if iaermdl == 0 or iaermdl == 5:
+        if self.iaermdl == 0 or self.iaermdl == 5:
             print(
                 "- Using OPAC-seasonal climatology for tropospheric", " aerosol effect"
             )
-        elif iaermdl == 1:
+        elif self.iaermdl == 1:
             print("- Using GOCART-climatology for tropospheric", " aerosol effect")
-        elif iaermdl == 2:
+        elif self.iaermdl == 2:
             print(
                 " - Using GOCART-prognostic aerosols for tropospheric",
                 " aerosol effect",
@@ -531,7 +533,7 @@ class AerosolClass:
         else:
             print(
                 "!!! ERROR in selection of aerosol model scheme",
-                f" IAER_MDL = {iaermdl}",
+                f" IAER_MDL = {self.iaermdl}",
             )
 
         print(
@@ -803,7 +805,7 @@ class AerosolClass:
         # -# Convert pressure reference level (in mb) to sigma reference level
         #    assume an 1000mb reference surface pressure.
 
-        sigref = 0.001 * prsref
+        self.sigref = 0.001 * prsref
 
         # -# Compute solar flux weights and interval indices for mapping
         #    spectral bands between SW radiation and aerosol data.
@@ -819,11 +821,11 @@ class AerosolClass:
             ibe = 1
             wvs = self.wvn_sw1[0]
             wve = self.wvn_sw1[0]
-            nv_aod = 1
+            self.nv_aod = 1
             for ib in range(1, self.NSWBND):
                 mb = ib + NSWSTR - 1
                 if self.wvn_sw2[mb] >= self.wvn550 and self.wvn550 >= self.wvn_sw1[mb]:
-                    nv_aod = ib  # sw band number covering 550nm wavelenth
+                    self.nv_aod = ib + 1  # sw band number covering 550nm wavelenth
 
                 if self.wvn_sw1[mb] < wvs:
                     wvs = self.wvn_sw1[mb]
@@ -1626,10 +1628,6 @@ class AerosolClass:
                     IMAX,
                     NLAY,
                     NLP1,
-                    IMAX,
-                    NLAY,
-                    NLP1,
-                    self.NSPC1,
                 )
 
             elif self.iaermdl == 1:  # use gocart aerosol scheme
@@ -2133,7 +2131,7 @@ class AerosolClass:
                 ii = self.idxcg[m, i2 - 1, j1 - 1] - 1
                 if ii > -1:
                     self.cmix[ii] = self.cmix[ii] + w21 * self.cmixg[m, i2 - 1, j1 - 1]
-                ii = self.idxcg[m, i2 - 1, j2 - 1]
+                ii = self.idxcg[m, i2 - 1, j2 - 1] - 1
                 if ii > -1:
                     self.cmix[ii] = self.cmix[ii] + w22 * self.cmixg[m, i2 - 1, j2 - 1]
 
@@ -2144,107 +2142,107 @@ class AerosolClass:
                 self.rh1[k] = rhlay[i, k]
                 self.dz1[k] = dz[i, k]
 
-                if self.ivflip == 1:  # input from sfc to toa
+            if self.ivflip == 1:  # input from sfc to toa
 
-                    if prsi[i, 0] > 100.0:
-                        rps = 1.0 / prsi[i, 0]
+                if prsi[i, 0] > 100.0:
+                    rps = 1.0 / prsi[i, 0]
+                else:
+                    print(
+                        f"!!! (1) Error in subr radiation_aerosols:",
+                        f" unrealistic surface pressure = {i},{prsi[i, 0]}",
+                    )
+
+                ii = 0
+                for k in range(NLAY):
+                    if prsi[i, k + 1] * rps < self.sigref[ii, kp - 1]:
+                        ii += 1
+                        if ii == 1 and self.prsref[1, kp - 1] == self.prsref[2, kp - 1]:
+                            ii = 2
+
+                    self.idmaer[k] = ii + 1
+
+                    if ii > 0:
+                        tmp1 = self.haer[ii, kp - 1]
                     else:
-                        print(
-                            f"!!! (1) Error in subr radiation_aerosols:",
-                            f" unrealistic surface pressure = {i},{prsi[i, 0]}",
-                        )
+                        tmp1 = h1
 
-                    ii = 0
+                    if tmp1 > 0.0:
+                        tmp2 = 1.0 / tmp1
+                        self.delz[k] = tmp1 * (
+                            np.exp(-hz[i, k] * tmp2) - np.exp(-hz[i, k + 1] * tmp2)
+                        )
+                    else:
+                        self.delz[k] = self.dz1[k]
+
+            else:  # input from toa to sfc
+
+                if prsi[i, NLP1 - 1] > 100.0:
+                    rps = 1.0 / prsi[i, NLP1 - 1]
+                else:
+                    print(
+                        f"!!! (2) Error in subr radiation_aerosols:",
+                        f"unrealistic surface pressure = {i}, {prsi[i, NLP1-1]}",
+                    )
+
+                ii = 0
+                for k in range(NLAY - 1, -1, -1):
+                    if prsi[i, k] * rps < self.sigref[ii, kp - 1]:
+                        ii += 1
+                        if ii == 1 and self.prsref[1, kp - 1] == self.prsref[2, kp - 1]:
+                            ii = 2
+
+                    self.idmaer[k] = ii + 1
+
+                    if ii > 0:
+                        tmp1 = self.haer[ii, kp - 1]
+                    else:
+                        tmp1 = h1
+
+                    if tmp1 > 0.0:
+                        tmp2 = 1.0 / tmp1
+                        self.delz[k] = tmp1 * (
+                            np.exp(-hz[i, k + 1] * tmp2) - np.exp(-hz[i, k] * tmp2)
+                        )
+                    else:
+                        self.delz[k] = self.dz1[k]
+
+            # -# Call radclimaer() to calculate SW/LW aerosol optical properties
+            #    for the corresponding frequency bands.
+
+            self.radclimaer()
+
+            if laersw:
+                for m in range(nbdsw):
                     for k in range(NLAY):
-                        if prsi[i, k + 1] * rps < self.sigref[ii, kp - 1]:
-                            ii += 1
-                            if (
-                                ii == 1
-                                and self.prsref[1, kp - 1] == self.prsref[2, kp - 1]
-                            ):
-                                ii = 3
-                        self.idmaer[k] = ii + 1
+                        aerosw[i, k, m, 0] = self.tauae[k, m]
+                        aerosw[i, k, m, 1] = self.ssaae[k, m]
+                        aerosw[i, k, m, 2] = self.asyae[k, m]
 
-                        if ii > 0:
-                            tmp1 = self.haer[ii, kp - 1]
-                        else:
-                            tmp1 = h1
+                #  ---  total aod (optional)
+                for k in range(NLAY):
+                    aerodp[i, 0] = aerodp[i, 0] + self.tauae[k, self.nv_aod - 1]
 
-                        if tmp1 > 0.0:
-                            tmp2 = 1.0 / tmp1
-                            self.delz[k] = tmp1 * (
-                                np.exp(-hz[i, k] * tmp2) - np.exp(-hz[i, k + 1] * tmp2)
-                            )
-                        else:
-                            self.delz[k] = self.dz1[k]
+                #  ---  for diagnostic output (optional)
+                for m in range(self.NSPC):
+                    aerodp[i, m + 1] = self.spcodp[m]
 
-                else:  # input from toa to sfc
-
-                    if prsi[i, NLP1 - 1] > 100.0:
-                        rps = 1.0 / prsi[i, NLP1 - 1]
-                    else:
-                        print(
-                            f"!!! (2) Error in subr radiation_aerosols:",
-                            f"unrealistic surface pressure = {i}, {prsi[i, NLP1-1]}",
-                        )
-
-                    ii = 0
-                    for k in range(NLAY - 1, -1, -1):
-                        if prsi[i, k] * rps < self.sigref[ii, kp - 1]:
-                            ii += 1
-                            if ii == 1 and self.prsref[1, kp] == self.prsref[2, kp]:
-                                ii = 2
-
-                        self.idmaer[k] = ii + 1
-
-                        if ii > 0:
-                            tmp1 = self.haer[ii, kp - 1]
-                        else:
-                            tmp1 = h1
-
-                        if tmp1 > 0.0:
-                            tmp2 = 1.0 / tmp1
-                            self.delz[k] = tmp1 * (
-                                np.exp(-hz[i, k + 1] * tmp2) - np.exp(-hz[i, k] * tmp2)
-                            )
-                        else:
-                            self.delz[k] = self.dz1[k]
-
-                # -# Call radclimaer() to calculate SW/LW aerosol optical properties
-                #    for the corresponding frequency bands.
-
-                self.radclimaer()
-
-                if laersw:
-                    for m in range(nbdsw):
+            if laerlw:
+                if self.NLWBND == 1:
+                    m1 = self.NSWBND + 1
+                    for m in range(NBDLW):
                         for k in range(NLAY):
-                            aerosw[i, k, m, 0] = self.tauae[k, m]
-                            aerosw[i, k, m, 1] = self.ssaae[k, m]
-                            aerosw[i, k, m, 2] = self.asyae[k, m]
+                            aerolw[i, k, m, 0] = self.tauae[k, m1]
+                            aerolw[i, k, m, 1] = self.ssaae[k, m1]
+                            aerolw[i, k, m, 2] = self.asyae[k, m1]
+                else:
+                    for m in range(NBDLW):
+                        m1 = self.NSWBND + m
+                        for k in range(NLAY):
+                            aerolw[i, k, m, 0] = self.tauae[k, m1]
+                            aerolw[i, k, m, 1] = self.ssaae[k, m1]
+                            aerolw[i, k, m, 2] = self.asyae[k, m1]
 
-                    #  ---  total aod (optional)
-                    for k in range(NLAY):
-                        aerodp[i, 0] = aerodp[i, 0] + self.tauae[k, self.nv_aod - 1]
-
-                    #  ---  for diagnostic output (optional)
-                    for m in range(self.NSPC):
-                        aerodp[i, m + 1] = self.spcodp[m]
-
-                if laerlw:
-                    if self.NLWBND == 1:
-                        m1 = self.NSWBND + 1
-                        for m in range(NBDLW):
-                            for k in range(NLAY):
-                                aerolw[i, k, m, 0] = self.tauae[k, m1]
-                                aerolw[i, k, m, 1] = self.ssaae[k, m1]
-                                aerolw[i, k, m, 2] = self.asyae[k, m1]
-                    else:
-                        for m in range(NBDLW):
-                            m1 = self.NSWBND + m
-                            for k in range(NLAY):
-                                aerolw[i, k, m, 0] = self.tauae[k, m1]
-                                aerolw[i, k, m, 1] = self.ssaae[k, m1]
-                                aerolw[i, k, m, 2] = self.asyae[k, m1]
+        return aerosw, aerolw, aerodp
 
     # This subroutine computes aerosols optical properties in NSWLWBD
     # bands. there are seven different vertical profile structures. in the
@@ -2281,7 +2279,7 @@ class AerosolClass:
         crt1 = 30.0
         crt2 = 0.03333
 
-        spcodp = 0.0
+        self.spcodp = np.zeros(self.NSPC)
 
         # ===> ... loop over vertical layers from top to surface
 
@@ -2314,7 +2312,7 @@ class AerosolClass:
 
                 for ib in range(self.NSWLWBD):
                     self.tauae[kk, ib] = 0.0
-                    if ib <= self.NSWBND:
+                    if ib <= self.NSWBND - 1:
                         self.ssaae[kk, ib] = 0.99
                         self.asyae[kk, ib] = 0.696
                     else:
@@ -2326,7 +2324,7 @@ class AerosolClass:
 
                 for ib in range(self.NSWLWBD):
                     self.tauae[kk, ib] = self.extstra[ib] * self.delz[kk]
-                    if ib <= self.NSWBND:
+                    if ib <= self.NSWBND - 1:
                         self.ssaae[kk, ib] = 0.99
                         self.asyae[kk, ib] = 0.696
                     else:
@@ -2335,7 +2333,7 @@ class AerosolClass:
 
                 # --- compute aod from individual species' contribution (optional)
                 idx = self.idxspc[9] - 1  # for sulfate
-                spcodp[idx] = spcodp[idx] + self.tauae[kk, self.nv_aod - 1]
+                self.spcodp[idx] = self.spcodp[idx] + self.tauae[kk, self.nv_aod - 1]
 
             elif idom == 3:
                 # --- 3rd domain - free tropospheric layers
@@ -2384,14 +2382,14 @@ class AerosolClass:
 
                     # --- compute aod from individual species' contribution (optional)
                     if ib == self.nv_aod - 1:
-                        spcodp[0] = (
-                            spcodp[0] + 0.17e-3 * ex01 * 730.0 * self.delz[kk]
+                        self.spcodp[0] = (
+                            self.spcodp[0] + 0.17e-3 * ex01 * 730.0 * self.delz[kk]
                         )  # dust (inso)   #1
-                        spcodp[1] = (
-                            spcodp[1] + 0.4 * ex02 * 730.0 * self.delz[kk]
+                        self.spcodp[1] = (
+                            self.spcodp[1] + 0.4 * ex02 * 730.0 * self.delz[kk]
                         )  # black carbon  #2
-                        spcodp[2] = (
-                            spcodp[2] + 0.59983 * ex03 * 730.0 * self.delz[kk]
+                        self.spcodp[2] = (
+                            self.spcodp[2] + 0.59983 * ex03 * 730.0 * self.delz[kk]
                         )  # water soluble #7
 
             elif idom == 1:
@@ -2405,7 +2403,7 @@ class AerosolClass:
 
                     for icmp in range(self.NCM):
                         ic = icmp
-                        idx = self.idxspc[icmp]
+                        idx = self.idxspc[icmp] - 1
 
                         cm = self.cmix[icmp]
                         if cm > 0.0:
@@ -2450,8 +2448,9 @@ class AerosolClass:
 
                             # --- compute aod from individual species' contribution (optional)
                             if ib == self.nv_aod - 1:
-                                spcodp[idx] = (
-                                    spcodp[idx] + tt0 * self.denn[0] * self.delz[kk]
+                                self.spcodp[idx] = (
+                                    self.spcodp[idx]
+                                    + tt0 * self.denn[0] * self.delz[kk]
                                 )  # idx for dif species
 
                     self.tauae[kk, ib] = ext1 * self.denn[0] * self.delz[kk]
@@ -2469,7 +2468,9 @@ class AerosolClass:
                     self.asyae[kk, ib] = self.asyrhi[5, ib]
 
                 # --- compute aod from individual species' contribution (optional)
-                spcodp[0] = spcodp[0] + self.tauae[kk, self.nv_aod - 1]  # dust
+                self.spcodp[0] = (
+                    self.spcodp[0] + self.tauae[kk, self.nv_aod - 1]
+                )  # dust
 
             else:
                 # --- domain index out off range, assume no aerosol

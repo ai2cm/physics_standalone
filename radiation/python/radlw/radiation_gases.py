@@ -346,9 +346,9 @@ class GasClass:
             else:
                 rate = 0.0
 
-            co2_glb = (co2g1 + rate) * 1.0e-6
+            self.co2_glb = (co2g1 + rate) * 1.0e-6
             if me == 0:
-                print(f"Global annual mean CO2 data for year {iyear} = {co2_glb}")
+                print(f"Global annual mean CO2 data for year {iyear} = {self.co2_glb}")
 
             if self.ictmflg == -2:  # need to calc ic time annual mean first
                 print("Not implemented")
@@ -450,7 +450,7 @@ class GasClass:
 
             for k in range(LMAX):
                 for i in range(IMAX):
-                    gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav]
+                    gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav - 1]
 
         elif self.ico2flg == 2:
             #  ---  use obs co2 monthly data with 2-d variation at lower atmos
@@ -469,8 +469,8 @@ class GasClass:
 
                 for k in range(LMAX):
                     if plvl[i, k + 1] >= self.prsco2:
-                        gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav]
+                        gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav - 1]
                     else:
-                        gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav]
+                        gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav - 1]
 
         return gasdat

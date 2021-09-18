@@ -313,8 +313,4 @@ for var in diag_vars_out:
     else:
         outdict[var] = Diagout[var]
 
-# compare_data(valdict, outdict)
-
-print(f"Python = {outdict['upfxc_s_lw']}")
-print(" ")
-print(f"Fortran = {valdict['upfxc_s_lw']}")
+compare_data(valdict, outdict)
