@@ -6,11 +6,11 @@ import serialbox as ser
 from radiation_driver import RadiationDriver
 
 serializer = ser.Serializer(
-    ser.OpenModeKind.Read, "/work/radiation/fortran/data/LW", "Generator_rank0"
+    ser.OpenModeKind.Read, "/work/radiation/fortran/data/LW", "Generator_rank1"
 )
 
 serializer2 = ser.Serializer(
-    ser.OpenModeKind.Read, "/work/radiation/fortran/data/SW", "Generator_rank0"
+    ser.OpenModeKind.Read, "/work/radiation/fortran/data/SW", "Generator_rank1"
 )
 
 model_vars = [
