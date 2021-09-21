@@ -1088,7 +1088,6 @@
 !$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-setcoef-input-"//trim(ser_count_str)
   !$ser data pavel=pavel tavel=tavel tz=tz stemp=stemp h2ovmr=h2ovmr 
   !$ser data colamt=colamt coldry=coldry colbrd=colbrd nlay=nlay nlp1=nlp1
@@ -1113,7 +1112,6 @@
 !$ser verbatim if (iplon == npts) then
   !$ser mode write
   !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-  !$ser verbatim write(*,*) 'iplon = ', iplon
   !$ser savepoint "lwrad-setcoef-output-"//trim(ser_count_str)
   !$ser data laytrop=laytrop pklay=pklay pklev=pklev jp=jp jt=jt jt1=jt1
   !$ser data rfrate=rfrate fac00=fac00 fac01=fac01 fac10=fac10 fac11=fac11
@@ -1550,6 +1548,11 @@
      &               - ( exp_tbl(i) / (f_one - exp_tbl(i)) ) )
         endif
       enddo
+
+!$ser mode write
+!$ser savepoint "lw_rlwinit_out"
+!$ser data semiss0=semiss0 fluxfac=fluxfac heatfac=heatfac exp_tbl=exp_tbl
+!$ser data tau_tbl=tau_tbl tfn_tbl=tfn_tbl
 
 !...................................
       end subroutine rlwinit
@@ -4030,7 +4033,6 @@
       !$ser verbatim if (iplon==1) then
         !$ser mode write
         !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-        !$ser verbatim write(*,*) 'iplon = ', iplon
         !$ser savepoint "lw_taumol_out"//trim(ser_count_str)
         !$ser data tautotout=tautot fracsout=fracs
       !$ser verbatim endif

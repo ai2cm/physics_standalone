@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 sys.path.insert(0, "..")
 from radphysparam import icldflg
@@ -163,7 +164,7 @@ def rad_initialize(indict):
 
     iaermdl = iaer / 1000  # control flag for aerosol scheme selection
     if iaermdl < 0 or iaermdl > 2 and iaermdl != 5:
-        print("Error -- IAER flag is incorrect, Abort")
+        raise ValueError("Error -- IAER flag is incorrect, Abort")
 
     iswcliq = icliq_sw  # optical property for liquid clouds for sw
     iovrsw = iovr_sw  # cloud overlapping control flag for sw
@@ -411,7 +412,7 @@ def radinit(
                 f"permutation seeds for LW random number generator",
             )
         else:
-            print(f"- ERROR!!! ISUBCLW={isubclw}, is not a valid option")
+            raise ValueError(f"- ERROR!!! ISUBCLW={isubclw}, is not a valid option")
 
         if isubcsw == 0:
             print(
@@ -429,17 +430,19 @@ def radinit(
                 "permutation seeds for SW random number generator",
             )
         else:
-            print(f"- ERROR!!! ISUBCSW={isubcsw}, is not a valid option")
+            raise ValueError(f"- ERROR!!! ISUBCSW={isubcsw}, is not a valid option")
 
         if isubcsw != isubclw:
-            print("- *** Notice *** ISUBCSW /= ISUBCLW !!!", f"{isubcsw}, {isubclw}")
+            warnings.warn(
+                "- *** Notice *** ISUBCSW /= ISUBCLW !!!", f"{isubcsw}, {isubclw}"
+            )
 
     # -# Initialization
     #  --- ...  astronomy initialization routine
     sol = AstronomyClass(me, isolar)
     sol_dict = sol.return_initdata()
     print(" ")
-    aer = AerosolClass(NLAY, me, iaerflg)
+    aer = AerosolClass(NLAY, me, iaerflg, ivflip)
     aer_dict = aer.return_initdata()  #  --- ...  aerosols initialization routine
     print(" ")
     gas = GasClass(me, ioznflg, ico2flg, ictmflg)

@@ -39,7 +39,7 @@ class SurfaceClass:
             if me == 0:
                 print("- Using MODIS based land surface albedo for sw")
         else:
-            print(f"!! ERROR in Albedo Scheme Setting, IALB={self.ialbflg}")
+            raise ValueError(f"!! ERROR in Albedo Scheme Setting, IALB={self.ialbflg}")
 
         # - Initialization of surface emissivity section
         # physparam::iemsflg
@@ -63,7 +63,7 @@ class SurfaceClass:
                         print(f'Requested data file "{semis_file}" not found!')
                         print("Change to fixed surface emissivity = 1.0 !")
 
-                    iemslw = 0
+                    self.iemslw = 0
                 else:
                     ds = xr.open_dataset(self.semis_file)
 
@@ -75,7 +75,9 @@ class SurfaceClass:
                         print(f"Opened data file: {semis_file}")
                         print(cline)
             else:
-                print(f"!! ERROR in Emissivity Scheme Setting, IEMS={self.iemsflg}")
+                raise ValueError(
+                    f"!! ERROR in Emissivity Scheme Setting, IEMS={self.iemsflg}"
+                )
 
         self.cline = cline
         self.idxems = idxems

@@ -4,6 +4,7 @@ import xarray as xr
 import os
 import sys
 import time
+import warnings
 
 sys.path.insert(0, "..")
 from radsw_param import ntbmx, NGB, nbandssw, ngs
@@ -60,7 +61,7 @@ class RadSWClass:
         # ===> ... begin here
         #
         if self.iovrsw < 0 or self.iovrsw > 3:
-            print(
+            raise ValueError(
                 "*** Error in specification of cloud overlap flag",
                 f" IOVRSW={self.iovrsw} in RSWINIT !!",
             )
@@ -96,7 +97,7 @@ class RadSWClass:
                     "   with provided input array of permutation seeds",
                 )
             else:
-                print(
+                raise ValueError(
                     "  *** Error in specification of sub-column cloud ",
                     f" control flag isubcsw = {self.isubcsw} !!",
                 )
@@ -104,18 +105,20 @@ class RadSWClass:
         #  --- ...  check cloud flags for consistency
 
         if (icldflg == 0 and iswcliq != 0) or (icldflg == 1 and iswcliq == 0):
-            print(
+            raise ValueError(
                 "*** Model cloud scheme inconsistent with SW",
                 " radiation cloud radiative property setup !!",
             )
 
         if self.isubcsw == 0 and self.iovrsw > 2:
             if me == 0:
-                print(
+                warnings.warn(
                     f"*** IOVRSW={self.iovrsw} is not available for",
                     " ISUBCSW=0 setting!!",
                 )
-                print("The program will use maximum/random overlap", " instead.")
+                warnings.warn(
+                    "The program will use maximum/random overlap", " instead."
+                )
             self.iovrsw = 1
 
         #  --- ...  setup constant factors for heating rate

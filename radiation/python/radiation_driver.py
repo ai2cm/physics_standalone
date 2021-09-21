@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 from config import *
 from radphysparam import *
@@ -112,7 +113,7 @@ class RadiationDriver:
                     f"permutation seeds for LW random number generator",
                 )
             else:
-                print(f"- ERROR!!! ISUBCLW={isubclw}, is not a valid option")
+                raise ValueError(f"- ERROR!!! ISUBCLW={isubclw}, is not a valid option")
 
             if isubcsw == 0:
                 print(
@@ -130,10 +131,10 @@ class RadiationDriver:
                     "permutation seeds for SW random number generator",
                 )
             else:
-                print(f"- ERROR!!! ISUBCSW={isubcsw}, is not a valid option")
+                raise ValueError(f"- ERROR!!! ISUBCSW={isubcsw}, is not a valid option")
 
             if isubcsw != isubclw:
-                print(
+                warnings.warn(
                     "- *** Notice *** ISUBCSW /= ISUBCLW !!!", f"{isubcsw}, {isubclw}"
                 )
 

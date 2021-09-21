@@ -1,9 +1,9 @@
-from python.config import LOOKUP_DIR
 import numpy as np
 import xarray as xr
 import sys
 import os
 import time
+import warnings
 
 sys.path.insert(0, "..")
 from radphysparam import (
@@ -156,17 +156,18 @@ class RadLWClass:
         expeps = 1e-20
 
         if self.iovrlw < 0 or self.iovrlw > 3:
-            print(
+            raise ValueError(
                 f"  *** Error in specification of cloud overlap flag",
                 f" IOVRLW={self.iovrlw}, in RLWINIT !!",
             )
-        elif iovrlw >= 2 and isubclw == 0:
+        elif self.iovrlw >= 2 and self.isubclw == 0:
             if me == 0:
-                print(
+                warnings.warn(
                     f"  *** IOVRLW={self.iovrlw} is not available for",
                     " ISUBCLW=0 setting!!",
                 )
-                print("      The program uses maximum/random overlap instead.")
+                warnings.warn("      The program uses maximum/random overlap instead.")
+            self.iovrlw = 1
 
         if me == 0:
             print(f"- Using AER Longwave Radiation, Version: {self.VTAGLW}")
@@ -194,7 +195,7 @@ class RadLWClass:
                     "   with provided input array of permutation seeds",
                 )
             else:
-                print(
+                raise ValueError(
                     f"  *** Error in specification of sub-column cloud ",
                     f" control flag isubclw = {self.isubclw}!!",
                 )
@@ -202,7 +203,7 @@ class RadLWClass:
         #  --- ...  check cloud flags for consistency
 
         if (icldflg == 0 and ilwcliq != 0) or (icldflg == 1 and ilwcliq == 0):
-            print(
+            raise ValueError(
                 "*** Model cloud scheme inconsistent with LW",
                 "radiation cloud radiative property setup !!",
             )

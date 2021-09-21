@@ -50,7 +50,7 @@ class CloudClass:
                 elif imp_physics == 10:
                     print("   --- MG cloud microphysics")
                 else:
-                    print(
+                    raise ValueError(
                         "!!! ERROR in cloud microphysc specification!!!",
                         f"imp_physics (NP3D) = {imp_physics}",
                     )

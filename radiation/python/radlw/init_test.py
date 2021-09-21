@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+
+sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 import numpy as np
 import os
 import xarray as xr
@@ -10,77 +11,101 @@ from radlw_param import ntbl
 # On MacOS, remember to set the environment variable DYLD_LIBRARY_PATH to contain
 # the path to the SerialBox /lib directory
 
-os.environ["DYLD_LIBRARY_PATH"]="/Users/AndrewP/Documents/code/serialbox2/install/lib"
+os.environ["DYLD_LIBRARY_PATH"] = "/Users/AndrewP/Documents/code/serialbox2/install/lib"
 
 SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data'
-ddir2 = '/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump'
+ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
+ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
-serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Init_rank0")
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 
+print(savepoints2)
+
 # print(savepoints2[6])
 
-invars = ['si', 'levr', 'ictm', 'isol', 'ico2', 'iaer', 'ialb', 'iems', 'ntcw',
-          'num_p2d', 'num_p3d', 'npdf3d', 'ntoz', 'iovr_sw', 'iovr_lw',
-          'isubc_sw', 'isubc_lw', 'icliq_sw', 'crick_proof', 'ccnorm',
-          'imp_physics', 'norad_precip', 'idate', 'iflip', 'me']
+invars = [
+    "si",
+    "levr",
+    "ictm",
+    "isol",
+    "ico2",
+    "iaer",
+    "ialb",
+    "iems",
+    "ntcw",
+    "num_p2d",
+    "num_p3d",
+    "npdf3d",
+    "ntoz",
+    "iovr_sw",
+    "iovr_lw",
+    "isubc_sw",
+    "isubc_lw",
+    "icliq_sw",
+    "crick_proof",
+    "ccnorm",
+    "imp_physics",
+    "norad_precip",
+    "idate",
+    "iflip",
+    "me",
+]
 
 indict = dict()
 
 for var in invars:
-    if var != 'levr' and var != 'me':
+    if var != "levr" and var != "me":
         indict[var] = serializer.read(var, savepoints[0])
-    elif var == 'levr':
+    elif var == "levr":
         indict[var] = serializer.read(var, savepoints[2])
 
-indict['me'] = 0
-indict['exp_tbl'] = np.zeros((ntbl+1))
-indict['tau_tbl'] = np.zeros((ntbl+1))
-indict['tfn_tbl'] = np.zeros((ntbl+1))
+indict["me"] = 0
+indict["exp_tbl"] = np.zeros((ntbl + 1))
+indict["tau_tbl"] = np.zeros((ntbl + 1))
+indict["tfn_tbl"] = np.zeros((ntbl + 1))
 
-(aer_dict,
- sol_dict,
- gas_dict,
- sfc_dict,
- cld_dict,
- rlw_dict,
- rsw_dict,
- ipsd0) = rad_initialize(indict)
+(
+    aer_dict,
+    sol_dict,
+    gas_dict,
+    sfc_dict,
+    cld_dict,
+    rlw_dict,
+    rsw_dict,
+    ipsd0,
+) = rad_initialize(indict)
 
-aervars = ['extrhi',
-           'scarhi',
-           'ssarhi',
-           'asyrhi',
-           'extstra',
-           'extrhd',
-           'scarhd',
-           'ssarhd',
-           'asyrhd',
-           'prsref',
-           'haer',
-           'eirfwv',
-           'solfwv']
+aervars = [
+    "extrhi",
+    "scarhi",
+    "ssarhi",
+    "asyrhi",
+    "extstra",
+    "extrhd",
+    "scarhd",
+    "ssarhd",
+    "asyrhd",
+    "prsref",
+    "haer",
+    "eirfwv",
+    "solfwv",
+]
 
-sfcvars = ['idxems']
+sfcvars = ["idxems"]
 
-solvars = ['solar_fname']
+solvars = ["solar_fname"]
 
-cldvars = ['llyr']
+cldvars = ["llyr"]
 
-lwvars = ['semiss0',
-          'fluxfac',
-          'heatfac',
-          'exp_tbl',
-          'tau_tbl',
-          'tfn_tbl']
+lwvars = ["semiss0", "fluxfac", "heatfac", "exp_tbl", "tau_tbl", "tfn_tbl"]
 
-swvars = ['heatfac', 'exp_tbl']
+swvars = ["heatfac", "exp_tbl"]
 
 aerdict_out = dict()
 soldict_out = dict()
@@ -88,6 +113,7 @@ sfcdict_out = dict()
 clddict_out = dict()
 lwdict_out = dict()
 swdict_out = dict()
+
 
 def compare_data(data, ref_data, explicit=True, blocking=True):
 
@@ -97,7 +123,7 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
     for var in data:
 
         # Fix indexing for fortran vs python
-        if var != 'cline':
+        if var != "cline":
             if not np.allclose(
                 data[var], ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
             ):
@@ -116,41 +142,36 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
         if not flag:
             print(f"Output data does not match reference data for field {wrong}!")
 
+
 for var in solvars:
     print(var)
-    soldict_out[var] = serializer2.read(var, savepoints2[0])
+    soldict_out[var] = serializer2.read(var, serializer2.savepoint["lw_sol_init_out"])
     test = [chr(i) for i in soldict_out[var]]
     tmp = ""
     test = tmp.join(test)
     soldict_out[var] = test.strip()
 
 for var in aervars:
-    aerdict_out[var] = serializer2.read(var, savepoints2[2])
+    aerdict_out[var] = serializer2.read(var, serializer2.savepoint["lw_aer_init_out"])
 
 for var in sfcvars:
-    sfcdict_out[var] = serializer2.read(var, savepoints2[3])
-
+    sfcdict_out[var] = serializer2.read(var, serializer2.savepoint["sfc_init_data"])
 
 
 for var in cldvars:
-    clddict_out[var] = serializer2.read(var, savepoints2[4])
+    clddict_out[var] = serializer2.read(var, serializer2.savepoint["lw_cld_init_out"])
 
 for var in lwvars:
-    lwdict_out[var] = serializer2.read(var, savepoints2[5])
+    lwdict_out[var] = serializer2.read(var, serializer2.savepoint["lw_rlwinit_out"])
 
 for var in swvars:
-    swdict_out[var] = serializer2.read(var, savepoints2[6])
+    swdict_out[var] = serializer2.read(var, serializer2.savepoint["lw_rswinit_out"])
 
 
 # Sol init only outputs a string, which we can't validate
 compare_data(aer_dict, aerdict_out)
-compare_data(sfc_dict, sfcdict_out) # Good
+compare_data(sfc_dict, sfcdict_out)  # Good
 # Gas init doesn't output anything
-compare_data(cld_dict, clddict_out) # Good
-compare_data(rsw_dict, swdict_out) # Good
-compare_data(rlw_dict, lwdict_out) # Good
-
-
-
-
-
+compare_data(cld_dict, clddict_out)  # Good
+compare_data(rsw_dict, swdict_out)  # Good
+compare_data(rlw_dict, lwdict_out)  # Good
