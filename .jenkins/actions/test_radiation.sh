@@ -48,22 +48,29 @@ if [ "${backend}" == "numpy" ] && [ "${parameterization}" == "buildenv" ] ; then
     deactivate
 
 else
+    if [ -d data]; then
+        mkdir data
+    fi
 
-    # copy the necessary serialized data and extract it
-    mkdir data
-    gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output data/.
-    gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/lookupdata data/.
-    gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/standalone-output data/.
+    if [ -z "$(ls -A data)" ]; then
+        # copy the necessary serialized data and extract it
+        
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output data/.
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/lookupdata data/.
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/standalone-output data/.
 
-    export HOME=`pwd`
+        export HOME=`pwd`
 
-    cd data/fv3gfs-fortran-output/${scheme}
-    tar -xzvf data.tar.gz
-    cd $HOME/data/lookupdata
-    tar -xzvf lookup.tar.gz
-    cd $HOME/data/standalone-output/${scheme}
-    tar -xzvf data.tar.gz
-    cd $HOME
+        cd data/fv3gfs-fortran-output/${scheme}
+        tar -xzvf data.tar.gz
+        cd $HOME/data/lookupdata
+        tar -xzvf lookup.tar.gz
+        cd $HOME/data/standalone-output/${scheme}
+        tar -xzvf data.tar.gz
+        cd $HOME
+    else
+        echo "Data already downloaded, skipping"
+    fi
 
     # build the Docker image
     source ./build.sh
