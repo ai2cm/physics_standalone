@@ -17,7 +17,6 @@ import serialbox as ser
 
 rebuild = False
 validate = True
-backend = "gtc:gt:cpu_ifirst"
 
 # Flag to say whether or not to do intermediate tests
 do_test = False

@@ -305,7 +305,7 @@ class RadLWClass:
         """
 
         self.serializer2 = ser.Serializer(
-            ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank" + str(rank)
+            ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Serialized_rank" + str(rank)
         )
 
         invars = {
@@ -624,22 +624,22 @@ class RadLWClass:
         lookupdict_gt4py["delwave"] = delwave
 
         print("Loading lookup table data . . .")
-        self.lookupdict_gt4py1 = loadlookupdata("kgb01")
-        self.lookupdict_gt4py2 = loadlookupdata("kgb02")
-        self.lookupdict_gt4py3 = loadlookupdata("kgb03")
-        self.lookupdict_gt4py4 = loadlookupdata("kgb04")
-        self.lookupdict_gt4py5 = loadlookupdata("kgb05")
-        self.lookupdict_gt4py6 = loadlookupdata("kgb06")
-        self.lookupdict_gt4py7 = loadlookupdata("kgb07")
-        self.lookupdict_gt4py8 = loadlookupdata("kgb08")
-        self.lookupdict_gt4py9 = loadlookupdata("kgb09")
-        self.lookupdict_gt4py10 = loadlookupdata("kgb10")
-        self.lookupdict_gt4py11 = loadlookupdata("kgb11")
-        self.lookupdict_gt4py12 = loadlookupdata("kgb12")
-        self.lookupdict_gt4py13 = loadlookupdata("kgb13")
-        self.lookupdict_gt4py14 = loadlookupdata("kgb14")
-        self.lookupdict_gt4py15 = loadlookupdata("kgb15")
-        self.lookupdict_gt4py16 = loadlookupdata("kgb16")
+        self.lookupdict_gt4py1 = loadlookupdata("kgb01", "radlw")
+        self.lookupdict_gt4py2 = loadlookupdata("kgb02", "radlw")
+        self.lookupdict_gt4py3 = loadlookupdata("kgb03", "radlw")
+        self.lookupdict_gt4py4 = loadlookupdata("kgb04", "radlw")
+        self.lookupdict_gt4py5 = loadlookupdata("kgb05", "radlw")
+        self.lookupdict_gt4py6 = loadlookupdata("kgb06", "radlw")
+        self.lookupdict_gt4py7 = loadlookupdata("kgb07", "radlw")
+        self.lookupdict_gt4py8 = loadlookupdata("kgb08", "radlw")
+        self.lookupdict_gt4py9 = loadlookupdata("kgb09", "radlw")
+        self.lookupdict_gt4py10 = loadlookupdata("kgb10", "radlw")
+        self.lookupdict_gt4py11 = loadlookupdata("kgb11", "radlw")
+        self.lookupdict_gt4py12 = loadlookupdata("kgb12", "radlw")
+        self.lookupdict_gt4py13 = loadlookupdata("kgb13", "radlw")
+        self.lookupdict_gt4py14 = loadlookupdata("kgb14", "radlw")
+        self.lookupdict_gt4py15 = loadlookupdata("kgb15", "radlw")
+        self.lookupdict_gt4py16 = loadlookupdata("kgb16", "radlw")
         print("Done")
         print(" ")
 
@@ -770,7 +770,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_firstloop
             )
             valdict_firstloop = read_intermediate_data(
-                SERIALIZED_DIR, "lwrad", rank, 0, "firstloop", outvars_firstloop
+                LW_SERIALIZED_DIR, "lwrad", rank, 0, "firstloop", outvars_firstloop
             )
 
             print("Testing firstloop...")
@@ -836,7 +836,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_cldprop
             )
             valdict_cldprop = read_intermediate_data(
-                SERIALIZED_DIR, "lwrad", rank, 0, "cldprop", outvars_cldprop
+                LW_SERIALIZED_DIR, "lwrad", rank, 0, "cldprop", outvars_cldprop
             )
 
             print("Testing cldprop...")
@@ -925,7 +925,7 @@ class RadLWClass:
                 self.locdict_gt4py, outvars_setcoef
             )
             valdict_setcoef = read_intermediate_data(
-                SERIALIZED_DIR, "lwrad", rank, 0, "setcoef", outvars_setcoef
+                LW_SERIALIZED_DIR, "lwrad", rank, 0, "setcoef", outvars_setcoef
             )
 
             print("Testing setcoef...")
@@ -1866,7 +1866,7 @@ class RadLWClass:
             }
 
             valdict_taumol = read_intermediate_data(
-                SERIALIZED_DIR, "lwrad", rank, 0, "taumol", outvars_t
+                LW_SERIALIZED_DIR, "lwrad", rank, 0, "taumol", outvars_t
             )
 
             outdict_taumol = convert_gt4py_output_for_validation(
@@ -1965,7 +1965,7 @@ class RadLWClass:
             )
 
             valdict_rtrnmc = read_intermediate_data(
-                SERIALIZED_DIR, "lwrad", rank, 0, "rtrnmc", outvars_rtrnmc
+                LW_SERIALIZED_DIR, "lwrad", rank, 0, "rtrnmc", outvars_rtrnmc
             )
 
             print("Testing rtrnmc...")

@@ -25,6 +25,7 @@ from radsw.radsw_param import (
     oneminus,
     s0,
     nbandssw,
+    nblow,
     stpfac,
     bpade,
     flimit,

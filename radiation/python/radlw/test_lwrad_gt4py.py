@@ -1,7 +1,12 @@
 import numpy as np
 import sys
+import os
 
-sys.path.insert(0, "/deployed/radiation/python")
+IS_TEST = (os.getenv("IS_TEST") == "True") if ("IS_TEST" in os.environ) else False
+if IS_TEST:
+    sys.path.insert(0, "/deployed/radiation/python")
+else:
+    sys.path.insert(0, "/work/radiation/python")
 from radlw.radlw_main_gt4py import RadLWClass
 
 me = 0
