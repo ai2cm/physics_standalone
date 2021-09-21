@@ -110,14 +110,26 @@ for var in invars:
         tmp = serializer.read(var, serializer.savepoint["swrad-taumol-input-000000"])
 
     if var == "colamt" or var == "id0" or var == "id1":
-        indict[var] = np.tile(tmp[:, None, :, :], (1, 1, 1, 1))
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
+        indict[var] = np.tile(tmp2[:, None, :, :], (1, 1, 1, 1))
     elif var != "laytrop" and var != "idxday":
-        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
+        indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
     elif var == "laytrop":
         laytrop = np.zeros((npts, 1, nlay), dtype=bool)
         for n in range(npts):
             laytrop[n, :, : tmp[n]] = True
-        indict[var] = laytrop
+        indict[var] = np.insert(laytrop, 0, False, axis=2)
+
+        laytropind = np.tile(tmp[:, None], (1, 1))
+        indict["laytropind"] = laytropind - 1
+    elif var == "idxday":
+        tmp2 = np.zeros(npts, dtype=bool)
+        for n in range(npts):
+            if tmp[n] > 1 and tmp[n] < 25:
+                tmp2[tmp[n] - 1] = True
+
+        indict[var] = np.tile(tmp2[:, None], (1, 1))
 
         laytropind = np.tile(tmp[:, None], (1, 1))
         indict["laytropind"] = laytropind - 1
@@ -134,19 +146,23 @@ indict_gt4py = dict()
 for var in invars:
     if var == "colamt":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, type_maxgas
+            indict[var], backend, shape_nlp1, type_maxgas
         )
     elif var == "laytrop":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, DTYPE_BOOL
+            indict[var], backend, shape_nlp1, DTYPE_BOOL
         )
     elif var in ["indfor", "indself", "jp", "jt", "jt1"]:
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, DTYPE_INT
+            indict[var], backend, shape_nlp1, DTYPE_INT
         )
     elif var == "id0" or var == "id1":
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, type_nbandssw_int
+            indict[var], backend, shape_nlp1, type_nbandssw_int
+        )
+    elif var == "idxday":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, DTYPE_BOOL
         )
     elif var == "idxday":
         indict_gt4py[var] = create_storage_from_array(
@@ -154,7 +170,7 @@ for var in invars:
         )
     else:
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, DTYPE_FLT
+            indict[var], backend, shape_nlp1, DTYPE_FLT
         )
 
 indict_gt4py["laytropind"] = create_storage_from_array(
@@ -167,19 +183,42 @@ for var in outvars:
     if var == "sfluxzen":
         outdict_gt4py[var] = create_storage_zeros(backend, shape_2D, type_ngptsw)
     else:
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_ngptsw)
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw)
 
 locdict_gt4py = dict()
 
 for var in locvars:
     if var in ["id0", "id1"]:
         locdict_gt4py[var] = create_storage_zeros(
-            backend, shape_nlay, type_nbandssw_int
+            backend, shape_nlp1, type_nbandssw_int
         )
     elif var in ["colm1", "colm2"]:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
     else:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
+
+layind = np.arange(nlay, dtype=np.int32)
+layind = np.insert(layind, 0, 0)
+layind = np.tile(layind[None, None, :], (npts, 1, 1))
+nspa = np.tile(np.array(nspa)[None, None, :], (npts, 1, 1))
+nspb = np.tile(np.array(nspb)[None, None, :], (npts, 1, 1))
+ngtmp = np.tile(np.array(ng)[None, None, :], (npts, 1, 1))
+ngs = np.tile(np.array(ngs)[None, None, :], (npts, 1, 1))
+locdict_gt4py["layind"] = create_storage_from_array(
+    layind, backend, shape_nlp1, DTYPE_INT
+)
+locdict_gt4py["nspa"] = create_storage_from_array(
+    nspa, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["nspb"] = create_storage_from_array(
+    nspb, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ng"] = create_storage_from_array(
+    ngtmp, backend, shape_2D, type_nbandssw_int
+)
+locdict_gt4py["ngs"] = create_storage_from_array(
+    ngs, backend, shape_2D, type_nbandssw_int
+)
 
 layind = np.arange(nlay, dtype=np.int32)
 layind = np.tile(layind[None, None, :], (npts, 1, 1))
@@ -219,22 +258,22 @@ def loadlookupdata(name):
         # print(f"{var} = {ds.data_vars[var].shape}")
         if len(ds.data_vars[var].shape) == 1:
             lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :], (npts, 1, nlay, 1)
+                ds[var].data[None, None, None, :], (npts, 1, nlp1, 1)
             )
         elif len(ds.data_vars[var].shape) == 2:
             lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :, :], (npts, 1, nlay, 1, 1)
+                ds[var].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1)
             )
         elif len(ds.data_vars[var].shape) == 3:
             lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :, :, :], (npts, 1, nlay, 1, 1, 1)
+                ds[var].data[None, None, None, :, :, :], (npts, 1, nlp1, 1, 1, 1)
             )
         else:
             lookupdict[var] = float(ds[var].data)
 
         if len(ds.data_vars[var].shape) >= 1:
             lookupdict_gt4py[var] = create_storage_from_array(
-                lookupdict[var], backend, shape_nlay, (ds[var].dtype, ds[var].shape)
+                lookupdict[var], backend, shape_nlp1, (ds[var].dtype, ds[var].shape)
             )
         else:
             lookupdict_gt4py[var] = lookupdict[var]
@@ -304,6 +343,8 @@ def taumolsetup(
     id1: Field[type_nbandssw_int],
     js: FIELD_INT,
     jsa: FIELD_INT,
+    colm1: FIELD_FLT,
+    colm2: FIELD_FLT,
     sfluxref01: Field[(DTYPE_FLT, (16, 1, 7))],
     sfluxref02: Field[(DTYPE_FLT, (16, 5, 2))],
     sfluxref03: Field[(DTYPE_FLT, (16, 9, 5))],
@@ -334,7 +375,7 @@ def taumolsetup(
         oneminus,
     )
 
-    with computation(FORWARD), interval(...):
+    with computation(FORWARD), interval(1, None):
         if idxday:
             for jb in range(nbandssw):
                 if laytrop:
@@ -374,11 +415,7 @@ def taumolsetup(
                     scalekur * sfluxref01[0, 0, 0][j7, 0, ibx[0, 0, 0][11]]
                 )
 
-    with computation(FORWARD), interval(0, -1):
-
-        colm1 = 0.0
-        colm2 = 0.0
-
+    with computation(FORWARD), interval(1, -1):
         if idxday:
             if not laytrop:
                 # case default
@@ -597,7 +634,7 @@ def taumol16(
 
     from __externals__ import rayl, oneminus, NG16, NS16
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         tauray = colmol * rayl
 
@@ -723,7 +760,7 @@ def taumol17(
 
     from __externals__ import rayl, oneminus, NG17, NS17
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         tauray = colmol * rayl
 
@@ -877,7 +914,7 @@ def taumol18(
 
     from __externals__ import rayl, oneminus, NG18, NS18
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         tauray = colmol * rayl
 
@@ -1002,7 +1039,7 @@ def taumol19(
 
     from __externals__ import rayl, oneminus, NG19, NS19
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -1126,7 +1163,7 @@ def taumol20(
 
     from __externals__ import rayl, NG20, NS20
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -1250,7 +1287,7 @@ def taumol21(
 
     from __externals__ import rayl, oneminus, NG21, NS21
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -1408,7 +1445,7 @@ def taumol22(
 
     from __externals__ import rayl, oneminus, NG22, NS22
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  the following factor is the ratio of total o2 band intensity (lines
         #           and mate continuum) to o2 band intensity (line only). it is needed
@@ -1552,7 +1589,7 @@ def taumol23(
 
     from __externals__ import givfac, NG23, NS23
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -1652,7 +1689,7 @@ def taumol24(
 
     from __externals__ import oneminus, NG24, NS24
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -1776,7 +1813,7 @@ def taumol25(
 
     from __externals__ import NG25, NS25
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
         #           vapor self-continuum is interpolated (in temperature) separately.
@@ -1823,7 +1860,7 @@ def taumol26(
 
     from __externals__ import NG26, NS26
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
         #           vapor self-continuum is interpolated (in temperature) separately.
@@ -1864,7 +1901,7 @@ def taumol27(
 
     from __externals__ import NG27, NS27
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -1939,7 +1976,7 @@ def taumol28(
 
     from __externals__ import NG28, NS28, rayl, oneminus
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
         #           vapor self-continuum is interpolated (in temperature) separately.
@@ -2069,7 +2106,7 @@ def taumol29(
 
     from __externals__ import NG29, NS29, rayl
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
         #           temperature, and appropriate species.  below laytrop, the water
@@ -2152,6 +2189,8 @@ taumolsetup(
     locdict_gt4py["id1"],
     locdict_gt4py["js"],
     locdict_gt4py["jsa"],
+    locdict_gt4py["colm1"],
+    locdict_gt4py["colm2"],
     lookupdict_ref["sfluxref01"],
     lookupdict_ref["sfluxref02"],
     lookupdict_ref["sfluxref03"],
@@ -2161,7 +2200,7 @@ taumolsetup(
     lookupdict_ref["ibx"],
     lookupdict_ref["strrat"],
     lookupdict_ref["specwt"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2201,7 +2240,7 @@ taumol16(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2241,7 +2280,7 @@ taumol17(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2281,7 +2320,7 @@ taumol18(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2321,7 +2360,7 @@ taumol19(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2357,7 +2396,7 @@ taumol20(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2397,7 +2436,7 @@ taumol21(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2437,7 +2476,7 @@ taumol22(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2472,7 +2511,7 @@ taumol23(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2517,7 +2556,7 @@ taumol24(
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
     locdict_gt4py["js"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2542,7 +2581,7 @@ taumol25(
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
     locdict_gt4py["ind12"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2552,7 +2591,7 @@ taumol26(
     lookupdict26["rayl"],
     outdict_gt4py["taug"],
     outdict_gt4py["taur"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2576,7 +2615,7 @@ taumol27(
     locdict_gt4py["ind02"],
     locdict_gt4py["ind11"],
     locdict_gt4py["ind12"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2605,7 +2644,7 @@ taumol28(
     locdict_gt4py["ind13"],
     locdict_gt4py["ind14"],
     locdict_gt4py["js"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2642,7 +2681,7 @@ taumol29(
     locdict_gt4py["indsp"],
     locdict_gt4py["indf"],
     locdict_gt4py["indfp"],
-    domain=shape_nlay,
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -2653,7 +2692,10 @@ outdict_np = dict()
 valdict_np = dict()
 
 for var in outvars:
-    outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
+    if var == "sfluxzen":
+        outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
+    else:
+        outdict_np[var] = outdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
 
     valdict_np[var] = serializer.read(
         var, serializer.savepoint["swrad-taumol-output-000000"]

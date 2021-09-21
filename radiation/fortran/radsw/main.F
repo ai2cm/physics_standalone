@@ -136,6 +136,7 @@ program test
         !$ser data ntoz=ntoz iovr_sw=iovr_sw iovr_lw=iovr_lw isubc_sw=isubc_sw
         !$ser data isubc_lw=isubc_lw icliq_sw=icliq_sw crick_proof=crick_proof
         !$ser data ccnorm=ccnorm norad_precip=norad_precip idate=idate iflip=iflip
+
       ! Initialization
 
       write(*,*) 'isubc_lw = ',isubc_lw
@@ -147,15 +148,17 @@ program test
                           isubc_lw,    icliq_sw,     crick_proof, ccnorm,&
                           imp_physics, norad_precip, idate,   iflip,  me)
 
+      !$ser cleanup
+
       ser_count_max = 6
-      num_tiles = 0
+      num_tiles = 6
 
       call cdstart(num_tiles * ser_count_max * 2)
       write(*,*) "Running swrad . . ."
 
-      do tile = 1, 1
+      do tile = 0, num_tiles - 1
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=tile
+      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/SW' prefix_ref='Generator' mpi_rank=tile
 
       do ser_count = 0, ser_count_max-1
   
@@ -173,11 +176,15 @@ program test
 !$ser data coszen=coszen solcon=solcon nday=nday idxday=idxday
 !$ser data im=im lmk=lmk lmp=lmp lprnt=lprnt
 
-          call swrad(ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
-                     clouds, icsdsw, faersw, sfcalb,   &
-                     dz, delp, de_lgth, coszen, solcon, nday, idxday,        &
-                     im, lmk, lmp, lprnt,                   &
-                     htswc, topfsw, sfcfsw, cldtausw, HSW0=htsw0, FDNCMP=scmpsw)        !  ---  outputs
+          write(*,*) 'nday = ',nday
+
+          if (nday > 0) then
+
+              call swrad(ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
+                         clouds, icsdsw, faersw, sfcalb,   &
+                         dz, delp, de_lgth, coszen, solcon, nday, idxday,        &
+                         im, lmk, lmp, lprnt,                   &
+                         htswc, topfsw, sfcfsw, cldtausw, HSW0=htsw0, FDNCMP=scmpsw)        !  ---  outputs
 
 !$ser mode read
 !$ser savepoint "swrad-out-"//trim(ser_count_str)
@@ -189,27 +196,31 @@ program test
 !$ser data visbm=visbm_ref visdf=visdf_ref 
 !$ser data cldtausw=cldtausw_ref
 
-      call check_r_2d(htswc, htswc_ref, "htswc")
-      call check_r_1d(topfsw%upfxc, upfxc_t_ref, "upfxc_t")
-      call check_r_1d(topfsw%upfx0, upfx0_t_ref, "upfx0_t")
-      call check_r_1d(topfsw%dnfxc, dnfxc_t_ref, "dnfxc_t")
-      call check_r_1d(sfcfsw%upfxc, upfxc_s_ref, "upfxc_s")
-      call check_r_1d(sfcfsw%upfx0, upfx0_s_ref, "upfx0_s")
-      call check_r_1d(sfcfsw%dnfxc, dnfxc_s_ref, "dnfxc_s")
-      call check_r_1d(sfcfsw%dnfx0, dnfx0_s_ref, "dnfx0_s")
-      call check_r_1d(scmpsw%uvbfc, uvbfc_ref, "uvbfc")
-      call check_r_1d(scmpsw%uvbf0, uvbf0_ref, "uvbf0")
-      call check_r_1d(scmpsw%nirbm, nirbm_ref, "nirbm")
-      call check_r_1d(scmpsw%nirdf, nirdf_ref, "nirdf")
-      call check_r_1d(scmpsw%visbm, visbm_ref, "visbm")
-      call check_r_1d(scmpsw%visdf, visdf_ref, "visdf")
-      call check_r_2d(cldtausw, cldtausw_ref, "cldtausw")
+              call check_r_2d(htswc, htswc_ref, "htswc")
+              call check_r_1d(topfsw%upfxc, upfxc_t_ref, "upfxc_t")
+              call check_r_1d(topfsw%upfx0, upfx0_t_ref, "upfx0_t")
+              call check_r_1d(topfsw%dnfxc, dnfxc_t_ref, "dnfxc_t")
+              call check_r_1d(sfcfsw%upfxc, upfxc_s_ref, "upfxc_s")
+              call check_r_1d(sfcfsw%upfx0, upfx0_s_ref, "upfx0_s")
+              call check_r_1d(sfcfsw%dnfxc, dnfxc_s_ref, "dnfxc_s")
+              call check_r_1d(sfcfsw%dnfx0, dnfx0_s_ref, "dnfx0_s")
+              call check_r_1d(scmpsw%uvbfc, uvbfc_ref, "uvbfc")
+              call check_r_1d(scmpsw%uvbf0, uvbf0_ref, "uvbf0")
+              call check_r_1d(scmpsw%nirbm, nirbm_ref, "nirbm")
+              call check_r_1d(scmpsw%nirdf, nirdf_ref, "nirdf")
+              call check_r_1d(scmpsw%visbm, visbm_ref, "visbm")
+              call check_r_1d(scmpsw%visdf, visdf_ref, "visdf")
+              call check_r_2d(cldtausw, cldtausw_ref, "cldtausw")
+
+          endif
+
       end do
+
+      !$ser cleanup
       
-
       end do
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data' prefix_ref='Generator' mpi_rank=0
+      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/SW' prefix_ref='Generator' mpi_rank=0
       !$ser mode read
       !$ser savepoint "rad-update"
       !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
