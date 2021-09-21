@@ -12,18 +12,14 @@ from gt4py.gtscript import (
     K,
 )
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from radlw_param import nbands, nrates, delwave, nplnk
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
 
 rebuild = False
@@ -149,7 +145,7 @@ for var in locvars:
         locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
 lookupdict_gt4py = dict()
-ds = xr.open_dataset("../lookupdata/totplnk.nc")
+ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "totplnk.nc"))
 totplnk = ds["totplnk"].data
 
 totplnk = np.tile(totplnk[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
@@ -158,7 +154,7 @@ lookupdict_gt4py["totplnk"] = create_storage_from_array(
 )
 
 refvars = ["pref", "preflog", "tref", "chi_mls"]
-ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+ds2 = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
 
 for var in refvars:
     tmp = ds2[var].data

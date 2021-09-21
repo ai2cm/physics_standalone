@@ -16,7 +16,7 @@ else:
         0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw, nrates
-from radsw.radsw_param import nbandssw, ngptsw, nbhgh, nblow, nbdsw, ntbmx
+from radsw.radsw_param import ngptsw, nbandssw, nbdsw, ntbmx
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
@@ -73,8 +73,8 @@ shape_nlp2 = (npts, 1, nlp1 + 1)
 default_origin = (0, 0, 0)
 
 type_nbands = (DTYPE_FLT, (nbands,))
-type_nbandssw_int = (DTYPE_INT, (nbhgh - nblow + 1,))
-type_nbandssw_flt = (DTYPE_FLT, (nbhgh - nblow + 1,))
+type_nbandssw_int = (DTYPE_INT, (nbandssw,))
+type_nbandssw_flt = (DTYPE_FLT, (nbandssw,))
 type_nbandssw3 = (DTYPE_FLT, (nbandssw, 3))
 type_ngptlw = (DTYPE_FLT, (ngptlw,))
 type_ngptsw = (DTYPE_FLT, (ngptsw,))
