@@ -65,7 +65,7 @@ else
     export HOME=`pwd`
 
     tmp=(`find ./ -maxdepth 1 -name "./data/fv3gfs-fortran-output/${scheme}/*.dat"`)
-    if [ ${#tmp[@]} -gt 0 ]; then
+    if [ ${#tmp[@]} -eq 0 ]; then
         cd data/fv3gfs-fortran-output/${scheme}
         tar -xzvf data.tar.gz
     else
@@ -73,7 +73,7 @@ else
     fi
 
     tmp=(`find ./ -maxdepth 1 -name "./data/lookupdata/*.nc"`)
-    if [ ${#tmp[@]} -gt 0 ]; then
+    if [ ${#tmp[@]} -eq 0 ]; then
         cd $HOME/data/lookupdata
         tar -xzvf lookup.tar.gz
     else
@@ -81,7 +81,7 @@ else
     fi
 
     tmp=(`find ./ -maxdepth 1 -name "./data/standalone-output/${scheme}/*.nc"`)
-    if [ ${#tmp[@]} -gt 0 ]; then
+    if [ ${#tmp[@]} -eq 0 ]; then
         cd $HOME/data/standalone-output/${scheme}
         tar -xzvf data.tar.gz
     else
