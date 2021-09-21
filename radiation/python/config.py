@@ -5,6 +5,7 @@ import gt4py
 
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else True
 IS_TEST = (os.getenv("IS_TEST") == "True") if ("IS_TEST" in os.environ) else False
+backend = (os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "gtc:gt:cpu_ifirst"
 
 if IS_DOCKER:
     if IS_TEST:
