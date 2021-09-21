@@ -3,7 +3,7 @@ import os
 import numpy as np
 import xarray as xr
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from radphysparam import semis_file
 from phys_const import con_tice, con_ttp, con_t0c, con_pi
 from config import *

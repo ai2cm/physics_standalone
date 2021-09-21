@@ -17,7 +17,7 @@ from gt4py.gtscript import (
     __externals__,
 )
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from phys_const import con_amw, con_amd, con_amo3
 from radlw_param import ngptlw, nbands, abssnow0, absrain, ipat, cldmin
 from radphysparam import ilwcice, ilwcliq
@@ -30,14 +30,9 @@ from util import (
 )
 from config import *
 
-os.environ["DYLD_LIBRARY_PATH"] = "/Users/AndrewP/Documents/code/serialbox2/install/lib"
-
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
 
 rebuild = False
@@ -94,7 +89,7 @@ for var in invars:
 
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
 # in the future once there is a solution for the RNG in python/gt4py
-ds = xr.open_dataset("../lookupdata/rand2d.nc")
+ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "rand2d.nc"))
 rand2d = ds["rand2d"][0, :].data
 cdfunc = np.reshape(rand2d, (ngptlw, nlay), order="C")
 cdfunc = np.insert(cdfunc, 0, 0, axis=1)
@@ -167,7 +162,7 @@ for var in locvars:
 
 
 # Read in lookup table data for cldprop calculations
-ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
+ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_cldprlw_data.nc"))
 
 absliq1 = ds["absliq1"].data
 absice0 = ds["absice0"].data

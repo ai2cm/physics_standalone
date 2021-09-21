@@ -15,13 +15,11 @@ from gt4py.gtscript import (
     exp,
 )
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from config import *
 from util import create_storage_from_array, create_storage_zeros, compare_data
 from radlw_param import ngb, bpade, ntbl, eps, wtdiff, fluxfac, heatfac
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
 rebuild = False
@@ -53,8 +51,7 @@ invars = [
 ]
 
 
-ddir = "../../fortran/radlw/dump"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank0")
 
 savepoints = serializer.savepoint_list()
 

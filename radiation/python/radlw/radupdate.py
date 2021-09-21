@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from phys_const import con_solr
 
 from radiation_astronomy import AstronomyClass

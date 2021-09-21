@@ -3,7 +3,7 @@ import xarray as xr
 import os
 import sys
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
 from config import *

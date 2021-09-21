@@ -91,8 +91,11 @@ for var in invars:
         tmp = serializer2.read(var, serializer2.savepoint["swrad-in-000000"])
     else:
         tmp = serializer.read(var, serializer.savepoint["swrad-cldprop-input-000000"])
-    if var == "zcf1" or var == "delgth":
-        indict[var] = np.tile(tmp[:, None, None], (1, 1, nlay))
+
+    if var == "zcf1":
+        indict[var] = np.tile(tmp[:, None], (1, 1))
+    elif var == "delgth":
+        indict[var] = np.tile(tmp[:, None, None], (1, 1, nlp1))
     elif var == "idxday":
         tmp2 = np.zeros(npts, dtype=bool)
         for n in range(npts):
@@ -101,7 +104,8 @@ for var in invars:
 
         indict[var] = np.tile(tmp2[:, None], (1, 1))
     else:
-        indict[var] = np.tile(tmp[:, None, :], (1, 1, 1))
+        tmp2 = np.insert(tmp, 0, 0, axis=1)
+        indict[var] = np.tile(tmp2[:, None, :], (1, 1, 1))
 
 indict_gt4py = dict()
 for var in invars:
@@ -109,9 +113,13 @@ for var in invars:
         indict_gt4py[var] = create_storage_from_array(
             indict[var], backend, shape_2D, DTYPE_BOOL
         )
+    elif var == "zcf1":
+        indict_gt4py[var] = create_storage_from_array(
+            indict[var], backend, shape_2D, DTYPE_FLT
+        )
     else:
         indict_gt4py[var] = create_storage_from_array(
-            indict[var], backend, shape_nlay, DTYPE_FLT
+            indict[var], backend, shape_nlp1, DTYPE_FLT
         )
 
 # Read in 2-D array of random numbers used in mcica_subcol, this will change
@@ -125,19 +133,20 @@ for n in range(npts):
     if myind > 1 and myind < 25:
         cdfunc[myind - 1, :, :] = np.reshape(rand2d[n, :], (nlay, ngptsw), order="F")
 indict["cdfunc"] = np.tile(cdfunc[:, None, :, :], (1, 1, 1, 1))
+indict["cdfunc"] = np.insert(indict["cdfunc"], 0, 0, axis=2)
 
 indict_gt4py["cdfunc"] = create_storage_from_array(
-    indict["cdfunc"], backend, shape_nlay, type_ngptsw
+    indict["cdfunc"], backend, shape_nlp1, type_ngptsw
 )
 
 outdict_gt4py = dict()
 for var in outvars:
     if var == "cldfrc":
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
     elif var == "cldfmc":
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_ngptsw)
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw)
     else:
-        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_nbdsw)
+        outdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_nbdsw)
 
 locdict_gt4py = dict()
 for var in locvars:
@@ -154,18 +163,18 @@ for var in locvars:
         "asysnw",
     ]:
         locdict_gt4py[var] = create_storage_zeros(
-            backend, shape_nlay, type_nbandssw_flt
+            backend, shape_nlp1, type_nbandssw_flt
         )
     elif var == "lcloudy":
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, type_ngptsw_bool)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, type_ngptsw_bool)
     elif var in ["index", "ia", "jb"]:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_INT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_INT)
     else:
-        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlay, DTYPE_FLT)
+        locdict_gt4py[var] = create_storage_zeros(backend, shape_nlp1, DTYPE_FLT)
 
-idxebc = np.tile(np.array(idxebc)[None, None, None, :], (npts, 1, nlay, 1))
+idxebc = np.tile(np.array(idxebc)[None, None, None, :], (npts, 1, nlp1, 1))
 locdict_gt4py["idxebc"] = create_storage_from_array(
-    idxebc, backend, shape_nlay, type_nbandssw_int
+    idxebc, backend, shape_nlp1, type_nbandssw_int
 )
 
 
@@ -184,20 +193,20 @@ def loadlookupdata(name):
         # print(f"{var} = {ds.data_vars[var].shape}")
         if len(ds.data_vars[var].shape) == 1:
             lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :], (npts, 1, nlay, 1)
+                ds[var].data[None, None, None, :], (npts, 1, nlp1, 1)
             )
         elif len(ds.data_vars[var].shape) == 2:
             lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :, :], (npts, 1, nlay, 1, 1)
+                ds[var].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1)
             )
         elif len(ds.data_vars[var].shape) == 3:
             lookupdict[var] = np.tile(
-                ds[var].data[None, None, None, :, :, :], (npts, 1, nlay, 1, 1, 1)
+                ds[var].data[None, None, None, :, :, :], (npts, 1, nlp1, 1, 1, 1)
             )
 
         if len(ds.data_vars[var].shape) >= 1:
             lookupdict_gt4py[var] = create_storage_from_array(
-                lookupdict[var], backend, shape_nlay, (DTYPE_FLT, ds[var].shape)
+                lookupdict[var], backend, shape_nlp1, (DTYPE_FLT, ds[var].shape)
             )
         else:
             lookupdict_gt4py[var] = float(ds[var].data)
@@ -209,25 +218,19 @@ lookupdict = loadlookupdata("cldprtb")
 
 isubcsw = 2
 
-special_externals = {
-    "a0r": lookupdict["a0r"],
-    "a1r": lookupdict["a1r"],
-    "a0s": lookupdict["a0s"],
-    "a1s": lookupdict["a1s"],
-    "ftiny": ftiny,
-    "iswcliq": iswcliq,
-    "iswcice": iswcice,
-    "isubcsw": isubcsw,
-    "nbands": nbandssw,
-    "nblow": nblow,
-    "ngptsw": ngptsw,
-}
-
 
 @stencil(
     backend=backend,
     rebuild=rebuild,
-    externals=special_externals,
+    externals={
+        "ftiny": ftiny,
+        "iswcliq": iswcliq,
+        "iswcice": iswcice,
+        "isubcsw": isubcsw,
+        "nbands": nbandssw,
+        "nblow": nblow,
+        "ngptsw": ngptsw,
+    },
 )
 def cldprop(
     cfrac: FIELD_FLT,
@@ -239,7 +242,7 @@ def cldprop(
     cdat2: FIELD_FLT,
     cdat3: FIELD_FLT,
     cdat4: FIELD_FLT,
-    zcf1: FIELD_FLT,
+    zcf1: FIELD_2D,
     dz: FIELD_FLT,
     delgth: FIELD_FLT,
     idxday: FIELD_2DBOOL,
@@ -308,12 +311,12 @@ def cldprop(
     c0s: Field[(DTYPE_FLT, (nbands,))],
     b0r: Field[(DTYPE_FLT, (nbands,))],
     c0r: Field[(DTYPE_FLT, (nbands,))],
+    a0r: float,
+    a1r: float,
+    a0s: float,
+    a1s: float,
 ):
     from __externals__ import (
-        a0r,
-        a1r,
-        a0s,
-        a1s,
         ftiny,
         iswcliq,
         iswcice,
@@ -323,7 +326,7 @@ def cldprop(
         ngptsw,
     )
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
         for nb in range(nbdsw):
             if idxday and zcf1 > 0:
                 ssacw[0, 0, 0][nb] = 1.0
@@ -641,7 +644,7 @@ def cldprop(
     # Here I've read in the generated random numbers until we figure out
     # what to do with them. This will definitely need to change in future.
     # Only the iovrlw = 1 option is ported from Fortran
-    with computation(PARALLEL), interval(1, None):
+    with computation(PARALLEL), interval(2, None):
         tem1 = 1.0 - cldf[0, 0, -1]
 
         for n in range(ngptsw):
@@ -650,7 +653,7 @@ def cldprop(
             else:
                 cdfunc[0, 0, 0][n] = cdfunc[0, 0, 0][n] * tem1
 
-    with computation(PARALLEL), interval(...):
+    with computation(PARALLEL), interval(1, None):
         tem1 = 1.0 - cldf[0, 0, 0]
 
         for n2 in range(ngptsw):
@@ -745,7 +748,11 @@ cldprop(
     lookupdict["c0s"],
     lookupdict["b0r"],
     lookupdict["c0r"],
-    domain=shape_nlay,
+    lookupdict["a0r"],
+    lookupdict["a1r"],
+    lookupdict["a0s"],
+    lookupdict["a1s"],
+    domain=shape_nlp1,
     origin=default_origin,
     validate_args=validate,
 )
@@ -757,6 +764,6 @@ for var in outvars:
     valdict[var] = serializer.read(
         var, serializer.savepoint["swrad-cldprop-output-000000"]
     )
-    outdict_np[var] = outdict_gt4py[var].view(np.ndarray).squeeze()
+    outdict_np[var] = outdict_gt4py[var][:, :, 1:, ...].view(np.ndarray).squeeze()
 
 compare_data(outdict_np, valdict)

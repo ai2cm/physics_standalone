@@ -991,7 +991,7 @@
 
 !$ser mode write
 !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-!$ser savepoint "lw_firstloop_out_"//trim(ser_count_str)
+!$ser savepoint "lwrad-firstloop-output-"//trim(ser_count_str)
 !$ser data pavel=pavel tavel=tavel delp=delp colbrd=colbrd cldfrc=cldfrc
 !$ser data temcol=temcol tem0=tem0 taucld=taucld semiss0=semiss0 tz=tz dz=dz
 !$ser data semiss=semiss coldry=coldry colamt=colamt tauaer=tauaer
