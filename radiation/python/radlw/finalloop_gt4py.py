@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 from gt4py.gtscript import stencil, computation, interval, PARALLEL, FORWARD
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from util import (
     view_gt4py_storage,
     compare_data,
@@ -17,12 +17,9 @@ from util import (
 )
 from config import *
 
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Serialized_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank0")
 savepoints = serializer.savepoint_list()
 
 rebuild = False
