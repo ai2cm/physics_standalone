@@ -24,14 +24,13 @@ gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
     ["-fno-strict-aliasing"]
 )
 if IS_DOCKER:
+    SERIALBOX_DIR = "/usr/local/serialbox"
     if IS_TEST:
-        SERIALBOX_DIR = "/usr/local/serialbox"
         LOOKUP_DIR = "/deployed/radiation/python/lookupdata"
         FORTRANDATA_DIR = "/deployed/radiation/fortran/data"
         LW_SERIALIZED_DIR = "/deployed/radiation/fortran/radlw/dump"
         SW_SERIALIZED_DIR = "/deployed/radiation/fortran/radsw/dump"
     else:
-        SERIALBOX_DIR = "/usr/local/serialbox"
         LOOKUP_DIR = "/work/radiation/python/lookupdata"
         FORTRANDATA_DIR = "/work/radiation/fortran/data"
         LW_SERIALIZED_DIR = "/work/radiation/fortran/radlw/dump"
