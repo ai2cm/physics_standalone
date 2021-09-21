@@ -18,7 +18,7 @@ ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radl
 
 serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
 serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
-serializer3 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Update_rank0")
+serializer3 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Init_rank0")
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 savepoints3 = serializer3.savepoint_list()
@@ -57,19 +57,19 @@ print(savepoints3)
 soldict_val = dict()
 for var in solvars:
     soldict_val[var] = serializer3.read(
-        var, serializer3.savepoint["lw_sol_update_out000006"]
+        var, serializer3.savepoint["lw_sol_update_out000000"]
     )
 
 aerdict_val = dict()
 for var in aervars:
     aerdict_val[var] = serializer3.read(
-        var, serializer3.savepoint["lw_aer_update_out000006"]
+        var, serializer3.savepoint["lw_aer_update_out000000"]
     )
 
 gasdict_val = dict()
 for var in gasvars:
     gasdict_val[var] = serializer3.read(
-        var, serializer3.savepoint["lw_gas_update_out000006"]
+        var, serializer3.savepoint["lw_gas_update_out000000"]
     )
 
 print(f"isolar = {indict['isol']}")

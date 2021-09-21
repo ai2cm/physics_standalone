@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 import os
 import sys
+import warnings
 
 sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
@@ -60,8 +61,8 @@ class AstronomyClass:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -80,8 +81,8 @@ class AstronomyClass:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -100,8 +101,8 @@ class AstronomyClass:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -120,8 +121,8 @@ class AstronomyClass:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -129,11 +130,11 @@ class AstronomyClass:
             self.isolflg = 10
 
             if me == 0:
-                print(
+                warnings.warn(
                     "- !!! ERROR in selection of solar constant data",
                     f" source, ISOL = {isolar}",
                 )
-                print(
+                warnings.warn(
                     f"Using the default solar constant value = {self.solc0}",
                     f" reset control flag isolflg={self.isolflg}",
                 )
@@ -217,7 +218,9 @@ class AstronomyClass:
                 #  --- ...  check to see if the solar constant data file existed
                 file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
                 if not file_exist:
-                    print(" !!! ERROR! Can not find solar constant file!!!")
+                    raise FileNotFoundError(
+                        " !!! ERROR! Can not find solar constant file!!!"
+                    )
                 else:
                     iyr = iyear
                     ds = xr.open_dataset(os.path.join(FORCING_DIR, self.solar_fname))
@@ -237,17 +240,21 @@ class AstronomyClass:
                         while iyr < iyr1:
                             iyr += icy
                         if me == 0:
-                            print(f"*** Year {iyear} out of table range!")
-                            print(f"{iyr1}, {iyr2}")
-                            print(f"Using the closest-cycle year ('{iyr}')")
+                            warnings.warn(
+                                f"*** Year {iyear} out of table range!",
+                                f"{iyr1}, {iyr2}",
+                                f"Using the closest-cycle year ('{iyr}')",
+                            )
                     elif iyr > iyr2:
                         icy = iyr2 - icy2 + 1  # range of the latest cycle in data table
                         while iyr > iyr2:
                             iyr -= icy
                         if me == 0:
-                            print(f"*** Year {iyear} out of table range!")
-                            print(f"{iyr1}, {iyr2}")
-                            print(f"Using the closest-cycle year ('{iyr}')")
+                            warnings.warn(
+                                f"*** Year {iyear} out of table range!",
+                                f"{iyr1}, {iyr2}",
+                                f"Using the closest-cycle year ('{iyr}')",
+                            )
                     #  --- ...  locate the right record for the year of data
                     if self.isolflg < 4:  # use annual mean data tables
                         solc1 = ds["solc1"].sel(year=iyr).data

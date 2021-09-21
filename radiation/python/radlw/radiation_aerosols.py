@@ -1,3 +1,4 @@
+from multiprocessing import Value
 import numpy as np
 import xarray as xr
 import os
@@ -385,7 +386,7 @@ class AerosolClass:
         self.iaerflg = iaerflg
         self.iaermdl = int(self.iaerflg / 1000)
         if self.iaermdl < 0 or self.iaermdl > 2 and self.iaermdl != 5:
-            print("Error -- IAER flag is incorrect, Abort")
+            raise ValueError("Error -- IAER flag is incorrect, Abort")
 
         self.laswflg = self.iaerflg % 10 > 0  # control flag for sw tropospheric aerosol
         self.lalwflg = (
@@ -452,11 +453,10 @@ class AerosolClass:
                 self.clim_aerinit()
 
             else:
-                if me == 0:
-                    print(
-                        "!!! ERROR in aerosol model scheme selection",
-                        f" iaermdl = {self.iaermdl}",
-                    )
+                raise ValueError(
+                    "!!! ERROR in aerosol model scheme selection",
+                    f" iaermdl = {self.iaermdl}",
+                )
 
         # -# Call set_volcaer() to invoke stratospheric volcanic aerosol
         # initialization.
@@ -525,13 +525,15 @@ class AerosolClass:
             )
         elif self.iaermdl == 1:
             print("- Using GOCART-climatology for tropospheric", " aerosol effect")
+            raise NotImplementedError("GOCART climatology not yet implemented")
         elif self.iaermdl == 2:
             print(
                 " - Using GOCART-prognostic aerosols for tropospheric",
                 " aerosol effect",
             )
+            raise NotImplementedError("GOCART climatology not yet implemented")
         else:
-            print(
+            raise ValueError(
                 "!!! ERROR in selection of aerosol model scheme",
                 f" IAER_MDL = {self.iaermdl}",
             )
@@ -771,8 +773,10 @@ class AerosolClass:
         if file_exist:
             print(f"Using file {aeros_file}")
         else:
-            print(f'Requested aerosol data file "{aeros_file}" not found!')
-            print("*** Stopped in subroutine aero_init !!")
+            raise FileNotFoundError(
+                f'Requested aerosol data file "{aeros_file}" not found!',
+                "*** Stopped in subroutine aero_init !!",
+            )
 
         extrhi = np.zeros((self.NCM1, self.NSWLWBD))
         scarhi = np.zeros((self.NCM1, self.NSWLWBD))
@@ -1280,8 +1284,11 @@ class AerosolClass:
         self.me = me
 
         if self.imon < 1 or self.imon > 12:
-            print("***** ERROR in specifying requested month !!! ", f"imon = {imon}")
-            print("***** STOPPED in subroutinte aer_update !!!")
+            raise ValueError(
+                "***** ERROR in specifying requested month !!! ",
+                f"imon = {imon}",
+                "***** STOPPED in subroutinte aer_update !!!",
+            )
 
         # -# Call trop_update() to update monthly tropospheric aerosol data.
         if self.lalwflg or self.laswflg:
@@ -1338,8 +1345,10 @@ class AerosolClass:
             if self.me == 0:
                 print(f"Opened aerosol data file: {aeros_file}")
         else:
-            print(f'Requested aerosol data file "{aeros_file}" not found!')
-            print("*** Stopped in subroutine trop_update !!")
+            raise FileNotFoundError(
+                f'Requested aerosol data file "{aeros_file}" not found!',
+                "*** Stopped in subroutine trop_update !!",
+            )
 
         ds = xr.open_dataset(self.aeros_file)
         self.kprfg = ds["kprfg"].data
@@ -1404,7 +1413,7 @@ class AerosolClass:
                 self.ivolae = np.ones((12, 4, 10))  # set as lowest value
                 if self.me == 0:
                     print(
-                        "Request volcanic date out of range,",
+                        "Requested volcanic date out of range,",
                         " optical depth set to lowest value",
                     )
             else:
@@ -1419,8 +1428,10 @@ class AerosolClass:
 
                     self.ivolae = ds["ivolae"]
                 else:
-                    print(f'Requested volcanic data file "{volcano_file}" not found!')
-                    print("*** Stopped in subroutine VOLC_AERINIT !!")
+                    raise FileNotFoundError(
+                        f'Requested volcanic data file "{volcano_file}" not found!',
+                        "*** Stopped in subroutine VOLC_AERINIT !!",
+                    )
 
         #  ---  check print
         if self.me == 0:
@@ -1620,7 +1631,7 @@ class AerosolClass:
 
             elif self.iaermdl == 1:  # use gocart aerosol scheme
 
-                print("GOCART Aerosol scheme not implemented")
+                raise NotImplementedError("GOCART Aerosol scheme not implemented")
 
         # -# Compute stratosphere volcanic forcing:
         #    - select data in 4 lat bands, interpolation at the boundaries
@@ -1993,9 +2004,10 @@ class AerosolClass:
                 if dtmp > dltg:
                     i3 += 1
                     if i3 > self.IMXAE:
-                        print(f"ERROR! In setclimaer alon>360. ipt = {i}")
-                        print(f"dltg,alon,tlon,dlon = {dltg},{alon[i]},{tmp1},{dtmp}")
-                        break
+                        raise ValueError(
+                            f"ERROR! In setclimaer alon>360. ipt = {i}",
+                            f"dltg,alon,tlon,dlon = {dltg},{alon[i]},{tmp1},{dtmp}",
+                        )
                 elif dtmp >= 0.0:
                     i1 = i3
                     i2 = np.mod(i3, self.IMXAE) + 1
@@ -2008,11 +2020,10 @@ class AerosolClass:
                 else:
                     i3 -= 1
                     if i3 < 1:
-                        print(f"ERROR! In setclimaer alon< 0. ipt = {i}")
-                        print(
-                            f"dltg, alon, tlon, dlon = {dltg}, {alon[i]}, {tmp1},{dtmp}"
+                        raise ValueError(
+                            f"ERROR! In setclimaer alon< 0. ipt = {i}",
+                            f"dltg, alon, tlon, dlon = {dltg}, {alon[i]}, {tmp1},{dtmp}",
                         )
-                        break
 
             #  ---  map grid in latitude direction, lat from 90n to 90s in 5 deg resolution
             j3 = j1
@@ -2023,11 +2034,10 @@ class AerosolClass:
                 if dtmp > dltg:
                     j3 += 1
                     if j3 >= self.JMXAE:
-                        print(f"ERROR! In setclimaer alat<-90. ipt = {i}")
-                        print(
-                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i]}, {tmp2}, {dtmp}"
+                        raise ValueError(
+                            f"ERROR! In setclimaer alat<-90. ipt = {i}",
+                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i]}, {tmp2}, {dtmp}",
                         )
-                        break
                 elif dtmp >= 0.0:
                     j1 = j3
                     j2 = j3 + 1
@@ -2041,11 +2051,10 @@ class AerosolClass:
                 else:
                     j3 -= 1
                     if j3 < 1:
-                        print(f"ERROR! In setclimaer alat>90. ipt ={i}")
-                        print(
-                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i]}, {tmp2}, {dtmp}"
+                        raise ValueError(
+                            f"ERROR! In setclimaer alat>90. ipt ={i}",
+                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i]}, {tmp2}, {dtmp}",
                         )
-                        break
 
             # -# Determin the type of aerosol profile (kp) and scale hight for
             #    domain 1 (h1) to be used at this grid point.
@@ -2135,7 +2144,7 @@ class AerosolClass:
                 if prsi[i, 0] > 100.0:
                     rps = 1.0 / prsi[i, 0]
                 else:
-                    print(
+                    raise ValueError(
                         f"!!! (1) Error in subr radiation_aerosols:",
                         f" unrealistic surface pressure = {i},{prsi[i, 0]}",
                     )
@@ -2167,7 +2176,7 @@ class AerosolClass:
                 if prsi[i, NLP1 - 1] > 100.0:
                     rps = 1.0 / prsi[i, NLP1 - 1]
                 else:
-                    print(
+                    raise ValueError(
                         f"!!! (2) Error in subr radiation_aerosols:",
                         f"unrealistic surface pressure = {i}, {prsi[i, NLP1-1]}",
                     )

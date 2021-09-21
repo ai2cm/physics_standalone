@@ -74,7 +74,7 @@ class GasClass:
                         self.co2vmr_sav = np.zeros((self.IMXCO2, self.JMXCO2, 12))
 
                 else:
-                    print(
+                    raise ValueError(
                         f" ICO2={self.ico2flg}, is not a valid selection",
                         " - Stoped in subroutine gas_init!!!",
                     )
@@ -82,11 +82,10 @@ class GasClass:
             if self.ictmflg == -2:
                 file_exist = os.path.isfile(self.co2cyc_file)
                 if not file_exist:
-                    if me == 0:
-                        print(
-                            "Can not find seasonal cycle CO2 data: ",
-                            f"{co2cyc_file} - Stopped in subroutine gas_init !!",
-                        )
+                    raise FileNotFoundError(
+                        "Can not find seasonal cycle CO2 data: ",
+                        f"{co2cyc_file} - Stopped in subroutine gas_init !!",
+                    )
                 else:
                     co2cyc_sav = np.zeros((self.IMXCO2, self.JMXCO2, 12))
                     ds = xr.open_dataset(self.co2cyc_file)
@@ -252,7 +251,7 @@ class GasClass:
             file_exist = os.path.isfile(self.co2gbl_file)
 
             if not file_exist:
-                print(
+                raise FileNotFoundError(
                     f'Requested co2 data file "{co2gbl_file}" not found',
                     " - Stopped in subroutine gas_update!!",
                 )
@@ -301,16 +300,16 @@ class GasClass:
             file_exist = os.path.isfile(cfile1)
             if not file_exist:
                 if self.ictmflg > 10:  # specified year of data not found
-                    if me == 0:
-                        print(f"Specified co2 data for year {idyr} not found !!")
-                        print("Need to change namelist ICTM !!")
-                        print("   *** Stopped in subroutine gas_update !!")
+                    raise FileNotFoundError(
+                        f"Specified co2 data for year {idyr} not found !!",
+                        "Need to change namelist ICTM !!",
+                        "   *** Stopped in subroutine gas_update !!",
+                    )
                 else:  # looking for latest available data
-                    if me == 0:
-                        print(
-                            f"Requested co2 data for year {idyr}",
-                            " not found, check for other available data set",
-                        )
+                    print(
+                        f"Requested co2 data for year {idyr}",
+                        " not found, check for other available data set",
+                    )
 
                     while iyr >= self.MINYEAR:
                         iyr -= 1
@@ -325,9 +324,10 @@ class GasClass:
                             break
 
                     if not file_exist:
-                        if me == 0:
-                            print("   Can not find co2 data source file")
-                            print("   *** Stopped in subroutine gas_update !!")
+                        raise FileNotFoundError(
+                            "   Can not find co2 data source file",
+                            "   *** Stopped in subroutine gas_update !!",
+                        )
 
             #  --- ...  read in co2 2-d data for the requested month
             ds = xr.open_dataset(cfile1)
@@ -351,7 +351,7 @@ class GasClass:
                 print(f"Global annual mean CO2 data for year {iyear} = {self.co2_glb}")
 
             if self.ictmflg == -2:  # need to calc ic time annual mean first
-                print("Not implemented")
+                raise NotImplementedError(f"ictmflg = {self.ictmflg} Not implemented!")
             else:  # no need to calc ic time annual mean first
                 if self.ico2flg == 2:
                     co2dat = ds["co2dat"].data
