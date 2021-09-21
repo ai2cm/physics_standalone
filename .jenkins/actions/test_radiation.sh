@@ -72,7 +72,7 @@ else
         echo "Serialized fortran data already extracted, skipping"
     fi
 
-    count=`ls -1 data/lookupdata/${scheme}/*.nc 2>/dev/null | wc -l`
+    count=`ls -1 data/lookupdata/*.nc 2>/dev/null | wc -l`
     if [ $count == 0 ]; then
         cd $HOME/data/lookupdata
         tar -xzvf lookup.tar.gz
