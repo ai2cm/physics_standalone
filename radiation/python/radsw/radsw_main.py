@@ -1,12 +1,10 @@
-from logging import warn
-from python.config import LOOKUP_DIR
 import numpy as np
 import xarray as xr
 import os
 import sys
 import warnings
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from radsw.radsw_param import (
     ntbmx,
     nbdsw,

@@ -25,10 +25,6 @@ serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Init_rank0")
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 
-print(savepoints2)
-
-# print(savepoints2[6])
-
 invars = [
     "si",
     "levr",
