@@ -20,13 +20,15 @@ tile = 0
 
 import serialbox as ser
 
-ddir = "../../fortran/data/LW"
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank" + str(tile))
+serializer = ser.Serializer(
+    ser.OpenModeKind.Read,
+    os.path.join(FORTRANDATA_DIR, "LW"),
+    "Generator_rank" + str(tile),
+)
 savepoints = serializer.savepoint_list()
 
-ddir2 = "../../fortran/radlw/dump"
 serializer2 = ser.Serializer(
-    ser.OpenModeKind.Read, ddir2, "Serialized_rank" + str(tile)
+    ser.OpenModeKind.Read, SERIALIZED_DIR, "Serialized_rank" + str(tile)
 )
 savepoints2 = serializer2.savepoint_list()
 
@@ -452,7 +454,7 @@ locdict_gt4py["A1"] = create_storage_from_array(a1, backend, shape_nlp1, type_nb
 locdict_gt4py["A2"] = create_storage_from_array(a2, backend, shape_nlp1, type_nbands)
 
 # Read in lookup table data for cldprop calculations
-ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
+ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_cldprlw_data.nc"))
 
 cldprop_types = {
     "absliq1": {"ctype": (DTYPE_FLT, (58, nbands)), "data": ds["absliq1"].data},
@@ -480,7 +482,7 @@ for name, info in cldprop_types.items():
 # First reshape to (npts, ngptlw, nlay)
 # Second pad k axis with one zero
 # Third switch order of k and data axes
-ds = xr.open_dataset("../lookupdata/rand2d_tile" + str(tile) + "_lw.nc")
+ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "rand2d_tile" + str(tile) + "_lw.nc"))
 rand2d = ds["rand2d"][:, :].data
 cdfunc = np.zeros((npts, ngptlw, nlay))
 for n in range(npts):
@@ -494,7 +496,7 @@ locdict_gt4py["cdfunc"] = create_storage_from_array(
 )
 
 lookupdict_gt4py = dict()
-ds = xr.open_dataset("../lookupdata/totplnk.nc")
+ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "totplnk.nc"))
 totplnk = ds["totplnk"].data
 
 totplnk = np.tile(totplnk[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
@@ -503,7 +505,7 @@ lookupdict_gt4py["totplnk"] = create_storage_from_array(
 )
 
 refvars = ["pref", "preflog", "tref", "chi_mls"]
-ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+ds2 = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
 
 for var in refvars:
     tmp = ds2[var].data
