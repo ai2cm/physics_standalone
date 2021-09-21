@@ -58,22 +58,46 @@ else
         gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output data/.
         gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/lookupdata data/.
         gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/standalone-output data/.
-
-        export HOME=`pwd`
-
-        cd data/fv3gfs-fortran-output/${scheme}
-        tar -xzvf data.tar.gz
-        cd $HOME/data/lookupdata
-        tar -xzvf lookup.tar.gz
-        cd $HOME/data/standalone-output/${scheme}
-        tar -xzvf data.tar.gz
-        cd $HOME
     else
         echo "Data already downloaded, skipping"
     fi
 
+    export HOME=`pwd`
+
+    count=`ls -1 data/fv3gfs-fortran-output/${scheme}/*.dat 2>/dev/null | wc -l`
+    if [ $count != 0 ]; then
+        cd data/fv3gfs-fortran-output/${scheme}
+        tar -xzvf data.tar.gz
+    else
+        echo "Serialized fortran data already extracted, skipping"
+    fi
+
+    count=`ls -1 data/lookupdata/${scheme}/*.nc 2>/dev/null | wc -l`
+    if [ $count != 0 ]; then
+        cd $HOME/data/lookupdata
+        tar -xzvf lookup.tar.gz
+    else
+        echo "Lookup table data already extracted, skipping"
+    fi
+
+    count=`ls -1 data/standalone-output/${scheme}/*.nc 2>/dev/null | wc -l`
+    if [ $count != 0 ]; then
+        cd $HOME/data/standalone-output/${scheme}
+        tar -xzvf data.tar.gz
+    else
+        echo "Serialized standalone data already extracted, skipping"
+    fi
+
+    cd $HOME
+    
+
     # build the Docker image
-    source ./build.sh
+    if [ -z "$DOCKER_ISBUILT" ]; then
+        source ./build.sh
+        export DOCKER_ISBUILT=True
+    else
+        echo "Docker image already built, skipping"
+    fi
 
     # Create names of data and run directories from scheme name
     p1=$(echo ${scheme} | cut -c1-2)
