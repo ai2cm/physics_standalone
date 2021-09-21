@@ -82,7 +82,7 @@ else
     rundir=${p2}${p1}
     datadir=$(echo $p1 | tr 'a-z' 'A-Z')
 
-    # submit SLURM job
+    # run Docker container
     export IS_DOCKER=True
     export IS_TEST=True
     export BACKEND=${backend}
@@ -94,6 +94,6 @@ else
         --env IS_TEST=${IS_TEST} \
         --env IS_DOCKER=${IS_DOCKER} \
         --env BACKEND=${BACKEND} \
-        physics_standalone /bin/bash -c 'cd /deployed/radiation/python/radlw && python test_lwrad_gt4py.py'
+        physics_standalone /bin/bash /deployed/radiation/run_test.sh ${rundir} ${scheme}
 
 fi

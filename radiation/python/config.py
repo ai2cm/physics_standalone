@@ -16,7 +16,7 @@ else:
         0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw, nrates
-from radsw.radsw_param import ngptsw, nbhgh, nblow, nbdsw, ntbmx
+from radsw.radsw_param import ngptsw, nbandssw, nbdsw, ntbmx
 from gt4py import gtscript
 from gt4py.gtscript import Field
 
@@ -24,21 +24,23 @@ gt4py.config.build_settings["extra_compile_args"]["cxx"].extend(
     ["-fno-strict-aliasing"]
 )
 if IS_DOCKER:
+    SERIALBOX_DIR = "/usr/local/serialbox"
     if IS_TEST:
-        SERIALBOX_DIR = "/usr/local/serialbox"
         LOOKUP_DIR = "/deployed/radiation/python/lookupdata"
         FORTRANDATA_DIR = "/deployed/radiation/fortran/data"
-        SERIALIZED_DIR = "/deployed/radiation/fortran/radlw/dump"
+        LW_SERIALIZED_DIR = "/deployed/radiation/fortran/radlw/dump"
+        SW_SERIALIZED_DIR = "/deployed/radiation/fortran/radsw/dump"
     else:
-        SERIALBOX_DIR = "/usr/local/serialbox"
         LOOKUP_DIR = "/work/radiation/python/lookupdata"
         FORTRANDATA_DIR = "/work/radiation/fortran/data"
-        SERIALIZED_DIR = "/work/radiation/fortran/radlw/dump"
+        LW_SERIALIZED_DIR = "/work/radiation/fortran/radlw/dump"
+        SW_SERIALIZED_DIR = "/work/radiation/fortran/radsw/dump"
 else:
     SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
     LOOKUP_DIR = "../../python/lookupdata"
     FORTRANDATA_DIR = "../../fortran/data"
-    SERIALIZED_DIR = "../../fortran/radlw/dump"
+    LW_SERIALIZED_DIR = "../../fortran/radlw/dump"
+    SW_SERIALIZED_DIR = "../../fortran/radlw/dump"
 
 backend = "gtc:gt:cpu_ifirst"
 
@@ -71,8 +73,9 @@ shape_nlp2 = (npts, 1, nlp1 + 1)
 default_origin = (0, 0, 0)
 
 type_nbands = (DTYPE_FLT, (nbands,))
-type_nbandssw_int = (DTYPE_INT, (nbhgh - nblow + 1,))
-type_nbandssw_flt = (DTYPE_FLT, (nbhgh - nblow + 1,))
+type_nbandssw_int = (DTYPE_INT, (nbandssw,))
+type_nbandssw_flt = (DTYPE_FLT, (nbandssw,))
+type_nbandssw3 = (DTYPE_FLT, (nbandssw, 3))
 type_ngptlw = (DTYPE_FLT, (ngptlw,))
 type_ngptsw = (DTYPE_FLT, (ngptsw,))
 type_ngptsw_bool = (DTYPE_BOOL, (ngptsw,))
