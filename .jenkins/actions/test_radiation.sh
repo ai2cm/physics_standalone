@@ -48,11 +48,11 @@ if [ "${backend}" == "numpy" ] && [ "${parameterization}" == "buildenv" ] ; then
     deactivate
 
 else
-    if [ -d "data" ]; then
+    if [ -d "./data" ]; then
         mkdir data
     fi
 
-    if [ -z "$(ls -A data)" ]; then
+    if [ -z "$(ls -A ./data)" ]; then
         # copy the necessary serialized data and extract it
         
         gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output data/.
