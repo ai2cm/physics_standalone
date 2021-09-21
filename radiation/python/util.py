@@ -238,7 +238,7 @@ def convert_gt4py_output_for_validation(datadict, infodict):
                     outdict[var] = data[:, 1:, ...]
                 elif data.shape[1] == target_shape[1] - 1:
                     outdict[var] = np.append(data, np.zeros((npts, 1)), axis=1)
-                elif len(target_shape) == 2 and target_shape[1] not in [nlay, nlp1]:
+                elif target_shape[1] not in [nlay, nlp1] and len(target_shape) == 2:
                     outdict[var] = data[:, 0, :].squeeze()
                 elif data.shape[1] in [nlay, nlp1] and target_shape[2] in [nlay, nlp1]:
                     outdict[var] = np.transpose(data, (0, 2, 1))
