@@ -4,6 +4,7 @@
 *.o
 *.mod
 *.dat
+*.nc
 *.json
 *.sdfg
 *.x
