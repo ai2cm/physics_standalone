@@ -48,7 +48,7 @@ if [ "${backend}" == "numpy" ] && [ "${parameterization}" == "buildenv" ] ; then
     deactivate
 
 else
-    if [ -d data]; then
+    if [ -d data ]; then
         mkdir data
     fi
 
