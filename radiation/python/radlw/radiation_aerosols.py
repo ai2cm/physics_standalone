@@ -784,7 +784,7 @@ class AerosolClass:
         ssarhd = np.zeros((self.NRHLEV, self.NCM2, self.NSWLWBD))
         asyrhd = np.zeros((self.NRHLEV, self.NCM2, self.NSWLWBD))
 
-        extstra = np.zeros((self.NSWLWBD))
+        self.extstra = np.zeros((self.NSWLWBD))
 
         #  --- ...  aloocate and input aerosol optical data
         ds = xr.open_dataset(self.aeros_file)
@@ -810,12 +810,12 @@ class AerosolClass:
         # -# Compute solar flux weights and interval indices for mapping
         #    spectral bands between SW radiation and aerosol data.
 
-        nv1 = np.zeros(self.NSWBND, dtype=np.int32)
-        nv2 = np.zeros(self.NSWBND, dtype=np.int32)
+        self.nv1 = np.zeros(self.NSWBND, dtype=np.int32)
+        self.nv2 = np.zeros(self.NSWBND, dtype=np.int32)
 
         if self.laswflg:
-            solbnd = np.zeros(self.NSWBND)
-            solwaer = np.zeros((self.NSWBND, self.NAERBND))
+            self.solbnd = np.zeros(self.NSWBND)
+            self.solwaer = np.zeros((self.NSWBND, self.NAERBND))
 
             ibs = 1
             ibe = 1
@@ -856,43 +856,43 @@ class AerosolClass:
                         fac = 0.0
                     else:
                         fac = -0.5
-                    solbnd[ib] = sumsol
+                    self.solbnd[ib] = sumsol
                 else:
                     sumsol = 0.0
 
-                nv1[ib] = ii
+                self.nv1[ib] = ii
 
                 for iw in range(iw1 - 1, iw2):
-                    solbnd[ib] = solbnd[ib] + self.solfwv[iw]
+                    self.solbnd[ib] += self.solfwv[iw]
                     sumsol = sumsol + self.solfwv[iw]
 
                     if iw == iendwv[ii] - 1:
-                        solwaer[ib, ii] = sumsol
+                        self.solwaer[ib, ii] = sumsol
 
                         if ii < self.NAERBND - 1:
                             sumsol = 0.0
                             ii += 1
 
                 if iw2 != iendwv[ii] - 1:
-                    solwaer[ib, ii] = sumsol
+                    self.solwaer[ib, ii] = sumsol
 
                 if self.lmap_new:
                     tmp = fac * self.solfwv[iw2 - 1]
-                    solwaer[ib, ii] = solwaer[ib, ii] + tmp
-                    solbnd[ib] = solbnd[ib] + tmp
+                    self.solwaer[ib, ii] = self.solwaer[ib, ii] + tmp
+                    self.solbnd[ib] += tmp
 
-                nv2[ib] = ii
+                self.nv2[ib] = ii
 
         # -# Compute LW flux weights and interval indices for mapping
         #    spectral bands between lw radiation and aerosol data.
 
-        nr1 = np.zeros(self.NLWBND, dtype=np.int32)
-        nr2 = np.zeros(self.NLWBND, dtype=np.int32)
+        self.nr1 = np.zeros(self.NLWBND, dtype=np.int32)
+        self.nr2 = np.zeros(self.NLWBND, dtype=np.int32)
         NLWSTR = 1
 
         if self.lalwflg:
-            eirbnd = np.zeros(self.NLWBND)
-            eirwaer = np.zeros((self.NLWBND, self.NAERBND))
+            self.eirbnd = np.zeros(self.NLWBND)
+            self.eirwaer = np.zeros((self.NLWBND, self.NAERBND))
 
             ibs = 1
             ibe = 1
@@ -934,44 +934,38 @@ class AerosolClass:
                     else:
                         fac = -0.5
 
-                    eirbnd[ib] = sumir
+                    self.eirbnd[ib] = sumir
                 else:
                     sumir = 0.0
 
-                nr1[ib] = ii
+                self.nr1[ib] = ii
 
                 for iw in range(iw1 - 1, iw2):
-                    eirbnd[ib] = eirbnd[ib] + self.eirfwv[iw]
+                    self.eirbnd[ib] += self.eirfwv[iw]
                     sumir = sumir + self.eirfwv[iw]
 
                     if iw == iendwv[ii] - 1:
-                        eirwaer[ib, ii] = sumir
+                        self.eirwaer[ib, ii] = sumir
 
                         if ii < self.NAERBND - 1:
                             sumir = 0.0
                             ii += 1
 
                 if iw2 != iendwv[ii] - 1:
-                    eirwaer[ib, ii] = sumir
+                    self.eirwaer[ib, ii] = sumir
 
                 if self.lmap_new:
                     tmp = fac * self.eirfwv[iw2 - 1]
-                    eirwaer[ib, ii] = eirwaer[ib, ii] + tmp
-                    eirbnd[ib] = eirbnd[ib] + tmp
+                    self.eirwaer[ib, ii] = self.eirwaer[ib, ii] + tmp
+                    self.eirbnd[ib] += tmp
 
-                nr2[ib] = ii
+                self.nr2[ib] = ii
 
         # -# Call optavg() to compute spectral band mean properties for each
         # species.
 
         self.prsref = prsref
         self.haer = haer
-        self.solbnd = solbnd
-        self.solwaer = solwaer
-        self.nv1 = nv1
-        self.nv2 = nv2
-        self.nr1 = nr1
-        self.nr2 = nr2
         self.rhidext0 = rhidext0
         self.rhidsca0 = rhidsca0
         self.rhidssa0 = rhidssa0
@@ -989,9 +983,6 @@ class AerosolClass:
         self.scarhd = scarhd
         self.ssarhd = ssarhd
         self.asyrhd = asyrhd
-        self.extstra = extstra
-        self.eirbnd = eirbnd
-        self.eirwaer = eirwaer
 
         self.optavg()
 
@@ -1036,8 +1027,6 @@ class AerosolClass:
         #  ==================================================================  !    #
 
         #  --- ...  loop for each sw radiation spectral band
-
-        print(f"laswflg = {self.laswflg}, lalwflg = {self.lalwflg}")
 
         if self.laswflg:
 
@@ -1610,7 +1599,6 @@ class AerosolClass:
             #      aerosol species (merged from fcst and clim fields).
 
             if self.iaermdl == 0 or self.iaermdl == 5:  # use opac aerosol climatology
-
                 aerosw, aerolw, aerodp = self.aer_property(
                     prsi,
                     prsl,

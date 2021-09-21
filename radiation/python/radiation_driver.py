@@ -222,7 +222,6 @@ class RadiationDriver:
         # --- ...  time stamp at fcst time
 
         iyear = jdate[0]
-        print(f"iyear = {iyear}")
         imon = jdate[1]
         iday = jdate[2]
         ihour = jdate[4]
@@ -258,19 +257,14 @@ class RadiationDriver:
 
             self.iyear0 = iyear
 
-            print(f"lsol_chg = {lsol_chg}")
-
             slag, sdec, cdec, solcon = self.sol.sol_update(
-                jdate, kyear, deltsw, deltim, lsol_chg, me
+                jdate, kyear, deltsw, deltim, lsol_chg, 0
             )
 
         # Call module_radiation_aerosols::aer_update(), monthly update, no
         # time interpolation
         if lmon_chg:
-
-            NLAY = 63
-
-            self.aer.aer_update(iyear, imon, me)
+            self.aer.aer_update(iyear, imon, 0)
 
         # -# Call co2 and other gases update routine:
         # module_radiation_gases::gas_update()
@@ -280,7 +274,7 @@ class RadiationDriver:
         else:
             lco2_chg = False
 
-        self.gas.gas_update(kyear, kmon, kday, khour, self.loz1st, lco2_chg, me)
+        self.gas.gas_update(kyear, kmon, kday, khour, self.loz1st, lco2_chg, 0)
 
         if self.loz1st:
             self.loz1st = False
@@ -370,6 +364,10 @@ class RadiationDriver:
         lhlwb = False
         lhlw0 = True
         lflxprf = False
+
+        # File names for serialized random numbers in mcica_subcol
+        sw_rand_file = os.path.join(LOOKUP_DIR, "rand2d_tile" + str(me) + "_sw.nc")
+        lw_rand_file = os.path.join(LOOKUP_DIR, "rand2d_tile" + str(me) + "_lw.nc")
 
         #  --- ...  set local /level/layer indexes corresponding to in/out variables
 
@@ -500,7 +498,7 @@ class RadiationDriver:
         #  - Call coszmn(), to compute cosine of zenith angle (only when SW is called)
 
         if Model["lsswr"]:
-            coszen, coszdg = self.sol.coszmn(
+            Radtend["coszen"], Radtend["coszdg"] = self.sol.coszmn(
                 Grid["xlon"], Grid["sinlat"], Grid["coslat"], Model["solhr"], IM, me
             )
 
@@ -615,7 +613,7 @@ class RadiationDriver:
         for i in range(IM):
             if Radtend["coszen"][i] >= 0.0001:
                 nday += 1
-                idxday[nday - 1] = i
+                idxday[nday - 1] = i + 1
 
         #  - Call module_radiation_aerosols::setaer(),to setup aerosols
         # property profile for radiation.
@@ -814,6 +812,9 @@ class RadiationDriver:
             clouds[:, :, 7] = 0.0  # layer snow water path
             cldsa[:, :] = 0.0  # fraction of clouds for low, mid, hi, tot, bl
 
+        swraddict = {}
+        swraddict["nday"] = nday
+
         # Start SW radiation calculations
         if Model["lsswr"]:
 
@@ -845,6 +846,11 @@ class RadiationDriver:
 
             # Approximate mean surface albedo from vis- and nir-  diffuse values.
             Radtend["sfalb"][:] = np.maximum(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
+
+            lhswb = False
+            lhsw0 = True
+            lflxprf = False
+            lfdncmp = True
 
             if nday > 0:
 
@@ -892,6 +898,11 @@ class RadiationDriver:
                         LMK,
                         LMP,
                         Model["lprnt"],
+                        lhswb,
+                        lhsw0,
+                        lflxprf,
+                        lfdncmp,
+                        sw_rand_file,
                     )
                 else:
                     (
@@ -933,7 +944,32 @@ class RadiationDriver:
                         LMK,
                         LMP,
                         Model["lprnt"],
+                        lhswb,
+                        lhsw0,
+                        lflxprf,
+                        lfdncmp,
+                        sw_rand_file,
                     )
+
+                swraddict["plyr"] = plyr
+                swraddict["plvl"] = plvl
+                swraddict["tlyr"] = tlyr
+                swraddict["tlvl"] = tlvl
+                swraddict["qlyr"] = qlyr
+                swraddict["olyr"] = olyr
+                swraddict["gasvmr"] = gasvmr
+                swraddict["clouds"] = clouds
+                swraddict["icsdsw"] = Tbd["icsdsw"]
+                swraddict["faersw"] = faersw
+                swraddict["sfcalb"] = sfcalb
+                swraddict["dz"] = dz
+                swraddict["delp"] = delp
+                swraddict["coszen"] = Radtend["coszen"]
+                swraddict["solcon"] = Model["solcon"]
+                swraddict["im"] = IM
+                swraddict["lmk"] = LMK
+                swraddict["lmp"] = LMP
+                swraddict["lprnt"] = Model["lprnt"]
 
                 for k in range(LM):
                     k1 = k + kd
@@ -1051,6 +1087,7 @@ class RadiationDriver:
                     lhlwb,
                     lhlw0,
                     lflxprf,
+                    lw_rand_file,
                 )
             else:
                 (
@@ -1085,7 +1122,28 @@ class RadiationDriver:
                     lhlwb,
                     lhlw0,
                     lflxprf,
+                    lw_rand_file,
                 )
+
+            lwraddict = {}
+            lwraddict["plyr"] = plyr
+            lwraddict["plvl"] = plvl
+            lwraddict["tlyr"] = tlyr
+            lwraddict["tlvl"] = tlvl
+            lwraddict["qlyr"] = qlyr
+            lwraddict["olyr"] = olyr
+            lwraddict["gasvmr"] = gasvmr
+            lwraddict["clouds"] = clouds
+            lwraddict["icsdlw"] = Tbd["icsdlw"]
+            lwraddict["faerlw"] = faerlw
+            lwraddict["semis"] = Radtend["semis"]
+            lwraddict["tsfg"] = tsfg
+            lwraddict["dz"] = dz
+            lwraddict["delp"] = delp
+            lwraddict["im"] = IM
+            lwraddict["lmk"] = LMK
+            lwraddict["lmp"] = LMP
+            lwraddict["lprnt"] = Model["lprnt"]
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps
@@ -1222,13 +1280,13 @@ class RadiationDriver:
                         #  --- sw clear-sky fluxes
                         #      -------------------
                         Diag["fluxr"][i, 28] = (
-                            Diag["fluxr"][i, 28] + Diag.topfsw["upfx0"][i] * tem0d
+                            Diag["fluxr"][i, 28] + Diag["topfsw"]["upfx0"][i] * tem0d
                         )  # clear sky top sw up
                         Diag["fluxr"][i, 30] = (
-                            Diag["fluxr"][i, 30] + Radtend.sfcfsw["upfx0"][i] * tem0d
+                            Diag["fluxr"][i, 30] + Radtend["sfcfsw"]["upfx0"][i] * tem0d
                         )  # clear sky sfc sw up
                         Diag["fluxr"][i, 31] = (
-                            Diag["fluxr"][i, 31] + Radtend.sfcfsw["dnfx0"][i] * tem0d
+                            Diag["fluxr"][i, 31] + Radtend["sfcfsw"]["dnfx0"][i] * tem0d
                         )  # clear sky sfc sw dn
 
             #  ---  save total and boundary layer clouds
@@ -1275,4 +1333,4 @@ class RadiationDriver:
                             1.0 - np.exp(-tem2)
                         )
 
-        return Radtend, Diag
+        return Radtend, Diag, swraddict, lwraddict

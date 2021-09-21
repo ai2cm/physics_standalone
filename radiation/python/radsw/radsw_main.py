@@ -1,3 +1,4 @@
+from python.config import LOOKUP_DIR
 import numpy as np
 import xarray as xr
 import os
@@ -212,12 +213,14 @@ class RadSWClass:
         lhsw0,
         lflxprf,
         lfdncmp,
+        sw_rand_file,
     ):
 
         self.lhswb = lhswb
         self.lhsw0 = lhsw0
         self.lflxprf = lflxprf
         self.lfdncmp = lfdncmp
+        self.rand_file = sw_rand_file
 
         # outputs
         hswc = np.zeros((npts, nlay))
@@ -708,7 +711,7 @@ class RadSWClass:
         delgth,
         ipt,
     ):
-        ds = xr.open_dataset("../lookupdata/radsw_cldprtb_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_cldprtb_data.nc"))
         extliq1 = ds["extliq1"].data
         extliq2 = ds["extliq2"].data
         ssaliq1 = ds["ssaliq1"].data
@@ -1032,7 +1035,7 @@ class RadSWClass:
 
     def mcica_subcol(self, cldf, nlay, ipseed, dz, de_lgth, ipt):
 
-        ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
+        ds = xr.open_dataset(self.rand_file)
         rand2d = ds["rand2d"][ipt, :].data
 
         #  ---  outputs:
@@ -1130,7 +1133,7 @@ class RadSWClass:
         forfac = np.zeros(nlay)
         forfrac = np.zeros(nlay)
 
-        ds = xr.open_dataset("../lookupdata/radsw_ref_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_ref_data.nc"))
         preflog = ds["preflog"].data
         tref = ds["tref"].data
 
@@ -2074,7 +2077,7 @@ class RadSWClass:
         #  *******************************************************************  !
         #  ======================  end of description block  =================  !
 
-        ds = xr.open_dataset("../lookupdata/radsw_sflux_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_sflux_data.nc"))
         self.strrat = ds["strrat"].data
         specwt = ds["specwt"].data
         layreffr = ds["layreffr"].data
@@ -2517,7 +2520,7 @@ class RadSWClass:
         taur,
     ):
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb16_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb16_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -2634,7 +2637,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb17_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb17_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -2781,7 +2784,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb18_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb18_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -2900,7 +2903,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb19_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb19_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3019,7 +3022,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb20_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb20_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3133,7 +3136,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb21_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb21_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3280,7 +3283,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb22_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb22_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3420,7 +3423,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb23_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb23_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3506,7 +3509,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb24_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb24_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3638,7 +3641,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb25_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb25_data.nc"))
         absa = ds["absa"].data
         abso3a = ds["abso3a"].data
         abso3b = ds["abso3b"].data
@@ -3709,7 +3712,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb26_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb26_data.nc"))
         rayl = ds["rayl"].data
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
@@ -3756,7 +3759,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb27_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb27_data.nc"))
         absa = ds["absa"].data
         absb = ds["absb"].data
         rayl = ds["rayl"].data
@@ -3832,7 +3835,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb28_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb28_data.nc"))
         absa = ds["absa"].data
         absb = ds["absb"].data
         rayl = ds["rayl"].data
@@ -3956,7 +3959,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb29_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb29_data.nc"))
         forref = ds["forref"].data
         absa = ds["absa"].data
         absb = ds["absb"].data

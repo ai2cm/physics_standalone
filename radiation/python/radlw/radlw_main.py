@@ -290,12 +290,14 @@ class RadLWClass:
         lhlwb,
         lhlw0,
         lflxprf,
+        lw_rand_file,
         verbose=False,
     ):
 
         self.lhlw0 = lhlw0
         self.lhlwb = lhlwb
         self.lflxprf = lflxprf
+        self.rand_file = lw_rand_file
 
         cldfrc = np.zeros(nlp1 + 1)
 
@@ -6838,7 +6840,7 @@ class RadLWClass:
             print("Not Implemented!!")
 
         elif self.iovrlw == 1:  # max-ran overlap
-            ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "rand2d.nc"))
+            ds = xr.open_dataset(self.rand_file)
             rand2d = ds["rand2d"][iplon, :].data
 
             k1 = 0

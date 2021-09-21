@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
+from config import *
 
 
 class AstronomyClass:
@@ -54,7 +55,7 @@ class AstronomyClass:
                     " with cycle approximation (old values)!",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
@@ -74,7 +75,7 @@ class AstronomyClass:
                     " with cycle approximation (new values)!",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
@@ -94,7 +95,7 @@ class AstronomyClass:
                     " with cycle approximation",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
@@ -114,7 +115,7 @@ class AstronomyClass:
                     " with cycle approximation",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
@@ -207,8 +208,6 @@ class AstronomyClass:
         imin = jdate[5]
         isec = jdate[6]
 
-        print(self.solar_fname)
-
         if lsol_chg:  # get solar constant from data table
             if self.iyr_sav == iyear:  # same year, no new reading necessary
                 if self.isolflg == 4:
@@ -216,12 +215,12 @@ class AstronomyClass:
             else:  # need to read in new data
                 self.iyr_sav = iyear
                 #  --- ...  check to see if the solar constant data file existed
-                file_exist = os.path.isfile(self.solar_fname)
+                file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
                 if not file_exist:
                     print(" !!! ERROR! Can not find solar constant file!!!")
                 else:
                     iyr = iyear
-                    ds = xr.open_dataset(self.solar_fname)
+                    ds = xr.open_dataset(os.path.join(FORCING_DIR, self.solar_fname))
                     iyr1 = ds["yr_start"].data
                     iyr2 = ds["yr_end"].data
                     icy1 = ds["yr_cyc1"].data
@@ -315,20 +314,21 @@ class AstronomyClass:
         nswr = max(1, np.round(deltsw / deltim))  # number of mdl t-step per sw call
         dtswh = deltsw / f3600  # time length in hours
 
-        nstp = max(6, nswr)
-        anginc = pid12 * dtswh / float(nstp)
+        self.nstp = max(6, nswr)
+        self.anginc = pid12 * dtswh / float(self.nstp)
 
         if me == 0:
             print(
                 "for cosz calculations: nswr,deltim,deltsw,dtswh =",
                 f"{nswr[0]}, {deltim[0]}, {deltsw[0]}, {dtswh[0]}, anginc, nstp =",
-                f"{anginc[0]}, {nstp}",
+                f"{self.anginc[0]}, {self.nstp}",
             )
 
         self.slag = slag
         self.sdec = sdec
         self.cdec = cdec
         self.solcon = solcon
+        self.sollag = sollag
 
         return slag, sdec, cdec, solcon
 
@@ -663,14 +663,14 @@ class AstronomyClass:
         rstp = 1.0 / float(self.nstp)
 
         for it in range(self.nstp):
-            cns = solang + (it - 0.5) * self.anginc + self.sollag
+            cns = solang + (it + 0.5) * self.anginc + self.sollag
             for i in range(IM):
-                coszn = self.sindec * sinlat[i] + self.cosdec * coslat[i] * np.cos(
+                coszn = self.sdec * sinlat[i] + self.cdec * coslat[i] * np.cos(
                     cns + xlon[i]
                 )
                 coszen[i] = coszen[i] + max(0.0, coszn)
                 if coszn > self.czlimt:
-                    istsun[i] = istsun[i] + 1
+                    istsun[i] += 1
 
         #  --- ...  compute time averages
 
