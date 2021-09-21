@@ -20,7 +20,7 @@ validate = True
 backend = "gtc:gt:cpu_ifirst"
 
 # Flag to say whether or not to do intermediate tests
-do_test = False
+do_subtests = False
 
 ddir = "../../fortran/data/SW"
 ddir2 = "../../fortran/radsw/dump"
@@ -643,13 +643,10 @@ firstloop(
     locdict_gt4py["ssolar"],
     locdict_gt4py["albbm"],
     locdict_gt4py["albdf"],
-    locdict_gt4py["tem1"],
-    locdict_gt4py["tem2"],
     locdict_gt4py["pavel"],
     locdict_gt4py["tavel"],
     locdict_gt4py["h2ovmr"],
     locdict_gt4py["o3vmr"],
-    locdict_gt4py["tem0"],
     locdict_gt4py["coldry"],
     locdict_gt4py["temcol"],
     locdict_gt4py["colamt"],
@@ -1626,7 +1623,7 @@ for var in outvars:
 
 compare_data(outdict_final, valdict_final)
 
-if do_test:
+if do_subtests:
     # Run tests for output of first loop
     valdict_firstloop = dict()
     outdict_firstloop = dict()

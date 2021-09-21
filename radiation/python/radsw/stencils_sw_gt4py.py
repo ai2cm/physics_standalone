@@ -117,13 +117,10 @@ def firstloop(
     ssolar: FIELD_2D,
     albbm: Field[(DTYPE_FLT, (2,))],
     albdf: Field[(DTYPE_FLT, (2,))],
-    tem1: FIELD_FLT,
-    tem2: FIELD_FLT,
     pavel: FIELD_FLT,
     tavel: FIELD_FLT,
     h2ovmr: FIELD_FLT,
     o3vmr: FIELD_FLT,
-    tem0: FIELD_FLT,
     coldry: FIELD_FLT,
     temcol: FIELD_FLT,
     colamt: Field[type_maxgas],
@@ -159,94 +156,95 @@ def firstloop(
         oneminus,
     )
 
-    with computation(FORWARD), interval(0, 1):
+    with computation(FORWARD):
+        with interval(0, 1):
 
-        s0fac = solcon / s0
+            s0fac = solcon / s0
 
-        if idxday:
-            cosz1 = cosz
-            sntz1 = 1.0 / cosz
-            ssolar = s0fac * cosz
+            if idxday:
+                cosz1 = cosz
+                sntz1 = 1.0 / cosz
+                ssolar = s0fac * cosz
 
-            # Prepare surface albedo: bm,df - dir,dif; 1,2 - nir,uvv.
-            albbm[0, 0, 0][0] = sfcalb[0, 0, 0][0]
-            albdf[0, 0, 0][0] = sfcalb[0, 0, 0][1]
-            albbm[0, 0, 0][1] = sfcalb[0, 0, 0][2]
-            albdf[0, 0, 0][1] = sfcalb[0, 0, 0][3]
+                # Prepare surface albedo: bm,df - dir,dif; 1,2 - nir,uvv.
+                albbm[0, 0, 0][0] = sfcalb[0, 0, 0][0]
+                albdf[0, 0, 0][0] = sfcalb[0, 0, 0][1]
+                albbm[0, 0, 0][1] = sfcalb[0, 0, 0][2]
+                albdf[0, 0, 0][1] = sfcalb[0, 0, 0][3]
 
-            zcf0 = 1.0
-            zcf1 = 1.0
+                zcf0 = 1.0
+                zcf1 = 1.0
 
-    with computation(FORWARD), interval(1, None):
-        if idxday:
-            tem1 = 100.0 * con_g
-            tem2 = 1.0e-20 * 1.0e3 * con_avgd
+        with interval(1, None):
+            if idxday:
+                tem1 = 100.0 * con_g
+                tem2 = 1.0e-20 * 1.0e3 * con_avgd
 
-            pavel = plyr
-            tavel = tlyr
+                pavel = plyr
+                tavel = tlyr
 
-            h2ovmr = max(0.0, qlyr * amdw / (1.0 - qlyr))  # input specific humidity
-            o3vmr = max(0.0, olyr * amdo3)  # input mass mixing ratio
+                h2ovmr = max(0.0, qlyr * amdw / (1.0 - qlyr))  # input specific humidity
+                o3vmr = max(0.0, olyr * amdo3)  # input mass mixing ratio
 
-            tem0 = (1.0 - h2ovmr) * con_amd + h2ovmr * con_amw
-            coldry = tem2 * delpin / (tem1 * tem0 * (1.0 + h2ovmr))
-            temcol = 1.0e-12 * coldry
+                tem0 = (1.0 - h2ovmr) * con_amd + h2ovmr * con_amw
+                coldry = tem2 * delpin / (tem1 * tem0 * (1.0 + h2ovmr))
+                temcol = 1.0e-12 * coldry
 
-            colamt[0, 0, 0][0] = max(0.0, coldry * h2ovmr)  # h2o
-            colamt[0, 0, 0][1] = max(temcol, coldry * gasvmr[0, 0, 0][0])  # co2
-            colamt[0, 0, 0][2] = max(0.0, coldry * o3vmr)  # o3
-            colmol = coldry + colamt[0, 0, 0][0]
+                colamt[0, 0, 0][0] = max(0.0, coldry * h2ovmr)  # h2o
+                colamt[0, 0, 0][1] = max(temcol, coldry * gasvmr[0, 0, 0][0])  # co2
+                colamt[0, 0, 0][2] = max(0.0, coldry * o3vmr)  # o3
+                colmol = coldry + colamt[0, 0, 0][0]
 
-            #  --- ...  set up gas column amount, convert from volume mixing ratio
-            #           to molec/cm2 based on coldry (scaled to 1.0e-20)
+                #  --- ...  set up gas column amount, convert from volume mixing ratio
+                #           to molec/cm2 based on coldry (scaled to 1.0e-20)
 
-            if iswrgas > 0:
-                colamt[0, 0, 0][3] = max(temcol, coldry * gasvmr[0, 0, 0][1])  # n2o
-                colamt[0, 0, 0][4] = max(temcol, coldry * gasvmr[0, 0, 0][2])  # ch4
-                colamt[0, 0, 0][5] = max(temcol, coldry * gasvmr[0, 0, 0][3])  # o2
-            else:
-                colamt[0, 0, 0][3] = temcol  # n2o
-                colamt[0, 0, 0][4] = temcol  # ch4
-                colamt[0, 0, 0][5] = temcol
+                if iswrgas > 0:
+                    colamt[0, 0, 0][3] = max(temcol, coldry * gasvmr[0, 0, 0][1])  # n2o
+                    colamt[0, 0, 0][4] = max(temcol, coldry * gasvmr[0, 0, 0][2])  # ch4
+                    colamt[0, 0, 0][5] = max(temcol, coldry * gasvmr[0, 0, 0][3])  # o2
+                else:
+                    colamt[0, 0, 0][3] = temcol  # n2o
+                    colamt[0, 0, 0][4] = temcol  # ch4
+                    colamt[0, 0, 0][5] = temcol
 
-            #  --- ...  set aerosol optical properties
-            for ib in range(nbdsw):
-                tauae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 0]
-                ssaae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 1]
-                asyae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 2]
+                #  --- ...  set aerosol optical properties
+                for ib in range(nbdsw):
+                    tauae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 0]
+                    ssaae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 1]
+                    asyae[0, 0, 0][ib] = aerosols[0, 0, 0][ib, 2]
 
-            if iswcliq > 0:  # use prognostic cloud method
-                cfrac = clouds[0, 0, 0][0]  # cloud fraction
-                cliqp = clouds[0, 0, 0][1]  # cloud liq path
-                reliq = clouds[0, 0, 0][2]  # liq partical effctive radius
-                cicep = clouds[0, 0, 0][3]  # cloud ice path
-                reice = clouds[0, 0, 0][4]  # ice partical effctive radius
-                cdat1 = clouds[0, 0, 0][5]  # cloud rain drop path
-                cdat2 = clouds[0, 0, 0][6]  # rain partical effctive radius
-                cdat3 = clouds[0, 0, 0][7]  # cloud snow path
-                cdat4 = clouds[0, 0, 0][8]  # snow partical effctive radius
-            else:  # use diagnostic cloud method
-                cfrac = clouds[0, 0, 0][0]  # cloud fraction
-                cdat1 = clouds[0, 0, 0][1]  # cloud optical depth
-                cdat2 = clouds[0, 0, 0][2]  # cloud single scattering albedo
-                cdat3 = clouds[0, 0, 0][3]  # cloud asymmetry factor
+                if iswcliq > 0:  # use prognostic cloud method
+                    cfrac = clouds[0, 0, 0][0]  # cloud fraction
+                    cliqp = clouds[0, 0, 0][1]  # cloud liq path
+                    reliq = clouds[0, 0, 0][2]  # liq partical effctive radius
+                    cicep = clouds[0, 0, 0][3]  # cloud ice path
+                    reice = clouds[0, 0, 0][4]  # ice partical effctive radius
+                    cdat1 = clouds[0, 0, 0][5]  # cloud rain drop path
+                    cdat2 = clouds[0, 0, 0][6]  # rain partical effctive radius
+                    cdat3 = clouds[0, 0, 0][7]  # cloud snow path
+                    cdat4 = clouds[0, 0, 0][8]  # snow partical effctive radius
+                else:  # use diagnostic cloud method
+                    cfrac = clouds[0, 0, 0][0]  # cloud fraction
+                    cdat1 = clouds[0, 0, 0][1]  # cloud optical depth
+                    cdat2 = clouds[0, 0, 0][2]  # cloud single scattering albedo
+                    cdat3 = clouds[0, 0, 0][3]  # cloud asymmetry factor
 
-            # -# Compute fractions of clear sky view:
-            #    - random overlapping
-            #    - max/ran overlapping
-            #    - maximum overlapping
+                # -# Compute fractions of clear sky view:
+                #    - random overlapping
+                #    - max/ran overlapping
+                #    - maximum overlapping
 
-            if iovrsw == 0:
-                zcf0 = zcf0 * (1.0 - cfrac)
-            elif iovrsw == 1:
-                if cfrac > ftiny:  # cloudy layer
-                    zcf1 = min(zcf1, 1.0 - cfrac)
-                elif zcf1 < 1.0:  # clear layer
-                    zcf0 = zcf0 * zcf1
-                    zcf1 = 1.0
+                if iovrsw == 0:
+                    zcf0 = zcf0 * (1.0 - cfrac)
+                elif iovrsw == 1:
+                    if cfrac > ftiny:  # cloudy layer
+                        zcf1 = min(zcf1, 1.0 - cfrac)
+                    elif zcf1 < 1.0:  # clear layer
+                        zcf0 = zcf0 * zcf1
+                        zcf1 = 1.0
 
-            elif iovrsw >= 2:
-                zcf0 = min(zcf0, 1.0 - cfrac)  # used only as clear/cloudy indicator
+                elif iovrsw >= 2:
+                    zcf0 = min(zcf0, 1.0 - cfrac)  # used only as clear/cloudy indicator
 
     with computation(FORWARD), interval(0, 1):
         if idxday:
@@ -687,7 +685,7 @@ def cldprop(
     # Here I've read in the generated random numbers until we figure out
     # what to do with them. This will definitely need to change in future.
     # Only the iovrlw = 1 option is ported from Fortran
-    with computation(PARALLEL), interval(2, None):
+    with computation(FORWARD), interval(2, None):
         tem1 = 1.0 - cldf[0, 0, -1]
 
         for n in range(ngptsw):
