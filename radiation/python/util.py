@@ -227,7 +227,6 @@ def convert_gt4py_output_for_validation(datadict, infodict):
     outdict = dict()
 
     for var in infodict.keys():
-        print(f"{var} = {npdict[var].shape}")
 
         if var != "laytrop":
             data = npdict[var]
