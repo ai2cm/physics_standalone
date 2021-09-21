@@ -64,7 +64,7 @@ else
 
     export HOME=`pwd`
 
-    count=`ls -1 data/fv3gfs-fortran-output/${scheme}/*.dat 2>/dev/null | wc -l`
+    count=`ls -1 ./data/fv3gfs-fortran-output/${scheme}/*.dat 2>/dev/null | wc -l`
     if [ $count == 0 ]; then
         cd data/fv3gfs-fortran-output/${scheme}
         tar -xzvf data.tar.gz
@@ -72,7 +72,7 @@ else
         echo "Serialized fortran data already extracted, skipping"
     fi
 
-    count=`ls -1 data/lookupdata/*.nc 2>/dev/null | wc -l`
+    count=`ls -1 ./data/lookupdata/*.nc 2>/dev/null | wc -l`
     if [ $count == 0 ]; then
         cd $HOME/data/lookupdata
         tar -xzvf lookup.tar.gz
@@ -80,7 +80,7 @@ else
         echo "Lookup table data already extracted, skipping"
     fi
 
-    count=`ls -1 data/standalone-output/${scheme}/*.nc 2>/dev/null | wc -l`
+    count=`ls -1 ./data/standalone-output/${scheme}/*.nc 2>/dev/null | wc -l`
     if [ $count == 0 ]; then
         cd $HOME/data/standalone-output/${scheme}
         tar -xzvf data.tar.gz
