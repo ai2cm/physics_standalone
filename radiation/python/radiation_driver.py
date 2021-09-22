@@ -72,6 +72,7 @@ class RadiationDriver:
         lcnorm,
         lnoprec,
         iswcliq,
+        do_test=False,
     ):
         self.itsfc = iemsflg / 10  # sfc air/ground temp control
         self.loz1st = ioznflg == 0  # first-time clim ozone data read flag
@@ -155,6 +156,17 @@ class RadiationDriver:
         self.rlw = RadLWClass(me, iovrlw, isubclw)
         #  --- ...  sw radiation initialization routine
         self.rsw = RadSWClass(me, iovrsw, isubcsw, iswcliq)
+
+        if do_test:
+            sol_dict = self.sol.return_initdata()
+            aer_dict = self.aer.return_initdata()
+            gas_dict = self.gas.return_initdata()
+            sfc_dict = self.sfc.return_initdata()
+            cld_dict = self.cld.return_initdata()
+            rlw_dict = self.rlw.return_initdata()
+            rsw_dict = self.rsw.return_initdata()
+
+            return aer_dict, sol_dict, gas_dict, sfc_dict, cld_dict, rlw_dict, rsw_dict
 
     def radupdate(
         self, idate, jdate, deltsw, deltim, lsswr, me, slag, sdec, cdec, solcon

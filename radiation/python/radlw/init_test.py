@@ -1,27 +1,20 @@
 import sys
-
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
-import numpy as np
 import os
-import xarray as xr
+
+sys.path.insert(0, "..")
+
+import numpy as np
 
 from rad_initialize import rad_initialize
 from radlw_param import ntbl
+from config import *
 
-# On MacOS, remember to set the environment variable DYLD_LIBRARY_PATH to contain
-# the path to the SerialBox /lib directory
-
-os.environ["DYLD_LIBRARY_PATH"] = "/Users/AndrewP/Documents/code/serialbox2/install/lib"
-
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
-ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
-serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Init_rank0")
+serializer = ser.Serializer(
+    ser.OpenModeKind.Read, os.path.join(FORTRANDATA_DIR, "LW"), "Generator_rank0"
+)
+serializer2 = ser.Serializer(ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Init_rank0")
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 
@@ -166,8 +159,8 @@ for var in swvars:
 
 # Sol init only outputs a string, which we can't validate
 compare_data(aer_dict, aerdict_out)
-compare_data(sfc_dict, sfcdict_out)  # Good
+compare_data(sfc_dict, sfcdict_out)
 # Gas init doesn't output anything
-compare_data(cld_dict, clddict_out)  # Good
-compare_data(rsw_dict, swdict_out)  # Good
-compare_data(rlw_dict, lwdict_out)  # Good
+compare_data(cld_dict, clddict_out)
+compare_data(rsw_dict, swdict_out)
+compare_data(rlw_dict, lwdict_out)
