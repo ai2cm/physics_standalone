@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ ! -z "$IS_DOCKER" ] ; then
-    echo "Not in docker, please build and enter the Docker image before running this script"
+    echo "This script cannot be run in the Docker image"
 else
 
     export HOME=`pwd`

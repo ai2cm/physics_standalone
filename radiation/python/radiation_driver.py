@@ -6,11 +6,11 @@ from radphysparam import *
 from phys_const import con_eps, con_epsm1, con_rocp, con_fvirt, con_rog, con_epsq
 from funcphys import fpvs
 
-from radlw.radiation_astronomy import AstronomyClass
-from radlw.radiation_aerosols import AerosolClass
-from radlw.radiation_clouds import CloudClass
-from radlw.radiation_gases import GasClass
-from radlw.radiation_sfc import SurfaceClass
+from radiation_astronomy import AstronomyClass
+from radiation_aerosols import AerosolClass
+from radiation_clouds import CloudClass
+from radiation_gases import GasClass
+from radiation_sfc import SurfaceClass
 from radlw.radlw_main import RadLWClass
 from radsw.radsw_main import RadSWClass
 
@@ -834,9 +834,6 @@ class RadiationDriver:
             clouds[:, :, 7] = 0.0  # layer snow water path
             cldsa[:, :] = 0.0  # fraction of clouds for low, mid, hi, tot, bl
 
-        swraddict = {}
-        swraddict["nday"] = nday
-
         # Start SW radiation calculations
         if Model["lsswr"]:
 
@@ -972,26 +969,6 @@ class RadiationDriver:
                         lfdncmp,
                         sw_rand_file,
                     )
-
-                swraddict["plyr"] = plyr
-                swraddict["plvl"] = plvl
-                swraddict["tlyr"] = tlyr
-                swraddict["tlvl"] = tlvl
-                swraddict["qlyr"] = qlyr
-                swraddict["olyr"] = olyr
-                swraddict["gasvmr"] = gasvmr
-                swraddict["clouds"] = clouds
-                swraddict["icsdsw"] = Tbd["icsdsw"]
-                swraddict["faersw"] = faersw
-                swraddict["sfcalb"] = sfcalb
-                swraddict["dz"] = dz
-                swraddict["delp"] = delp
-                swraddict["coszen"] = Radtend["coszen"]
-                swraddict["solcon"] = Model["solcon"]
-                swraddict["im"] = IM
-                swraddict["lmk"] = LMK
-                swraddict["lmp"] = LMP
-                swraddict["lprnt"] = Model["lprnt"]
 
                 for k in range(LM):
                     k1 = k + kd
@@ -1146,26 +1123,6 @@ class RadiationDriver:
                     lflxprf,
                     lw_rand_file,
                 )
-
-            lwraddict = {}
-            lwraddict["plyr"] = plyr
-            lwraddict["plvl"] = plvl
-            lwraddict["tlyr"] = tlyr
-            lwraddict["tlvl"] = tlvl
-            lwraddict["qlyr"] = qlyr
-            lwraddict["olyr"] = olyr
-            lwraddict["gasvmr"] = gasvmr
-            lwraddict["clouds"] = clouds
-            lwraddict["icsdlw"] = Tbd["icsdlw"]
-            lwraddict["faerlw"] = faerlw
-            lwraddict["semis"] = Radtend["semis"]
-            lwraddict["tsfg"] = tsfg
-            lwraddict["dz"] = dz
-            lwraddict["delp"] = delp
-            lwraddict["im"] = IM
-            lwraddict["lmk"] = LMK
-            lwraddict["lmp"] = LMP
-            lwraddict["lprnt"] = Model["lprnt"]
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps
@@ -1355,4 +1312,4 @@ class RadiationDriver:
                             1.0 - np.exp(-tem2)
                         )
 
-        return Radtend, Diag, swraddict, lwraddict
+        return Radtend, Diag

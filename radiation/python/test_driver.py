@@ -260,7 +260,7 @@ for rank in range(6):
     Radtend = getscalars(Radtend)
     Diag = getscalars(Diag)
 
-    Radtendout, Diagout, swraddict, lwraddict = driver.GFS_radiation_driver(
+    Radtendout, Diagout = driver.GFS_radiation_driver(
         Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag
     )
 
@@ -317,64 +317,5 @@ for rank in range(6):
                     outdict[var] = Diagout["topfsw"][var.split("_")[0]]
         else:
             outdict[var] = Diagout[var]
-
-    swvars = [
-        "plyr",
-        "plvl",
-        "tlyr",
-        "tlvl",
-        "qlyr",
-        "olyr",
-        "gasvmr",
-        "clouds",
-        "icsdsw",
-        "faersw",
-        "sfcalb",
-        "dz",
-        "delp",
-        "coszen",
-        "solcon",
-        "nday",
-        "im",
-        "lmk",
-        "lmp",
-        "lprnt",
-    ]
-
-    swvaldict = {}
-
-    for var in swvars:
-        swvaldict[var] = serializer2.read(var, serializer2.savepoint["swrad-in-000000"])
-
-    if swraddict["nday"] > 0:
-        compare_data(swraddict, swvaldict)
-
-    lwvars = [
-        "plyr",
-        "plvl",
-        "tlyr",
-        "tlvl",
-        "qlyr",
-        "olyr",
-        "gasvmr",
-        "clouds",
-        "icsdlw",
-        "faerlw",
-        "semis",
-        "tsfg",
-        "dz",
-        "delp",
-        "im",
-        "lmk",
-        "lmp",
-        "lprnt",
-    ]
-
-    lwvaldict = {}
-
-    for var in lwvars:
-        lwvaldict[var] = serializer.read(var, serializer.savepoint["lwrad-in-000000"])
-
-    compare_data(lwraddict, lwvaldict)
 
     compare_data(valdict, outdict)
