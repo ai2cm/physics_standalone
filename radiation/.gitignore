@@ -5,6 +5,7 @@
 *.mod
 *.dat
 *.nc
+*.txt
 *.json
 *.sdfg
 *.x
