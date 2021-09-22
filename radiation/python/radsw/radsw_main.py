@@ -51,6 +51,7 @@ from radsw.radsw_param import (
 from radphysparam import iswmode, iswrgas, iswrate, iswcice, iswcliq
 from phys_const import con_amd, con_amw, con_amo3, con_g, con_cp, con_avgd
 from util import compare_data
+from config import *
 
 
 class RadSWClass:

@@ -83,11 +83,6 @@ slag, sdec, cdec, solcon = driver.radupdate(
     updatedict["fhswr"],
     updatedict["dtf"],
     updatedict["lsswr"],
-    me,
-    updatedict["slag"],
-    updatedict["sdec"],
-    updatedict["cdec"],
-    updatedict["solcon"],
 )
 
 for rank in range(6):
