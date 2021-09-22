@@ -1,17 +1,19 @@
 import numpy as np
 import os
 import sys
-sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+
+sys.path.insert(0, "..")
 from phys_const import con_ttp, con_pi, con_g, con_rd, con_t0c, con_thgni
 from radphysparam import lcrick, lcnorm, lnoprec
 
-class CloudClass():
-    VTAGCLD = 'NCEP-Radiation_clouds    v5.1  Nov 2012 '
-    gfac = 1.0e5/con_g
-    gord = con_g/con_rd
+
+class CloudClass:
+    VTAGCLD = "NCEP-Radiation_clouds    v5.1  Nov 2012 "
+    gfac = 1.0e5 / con_g
+    gord = con_g / con_rd
     NF_CLDS = 9
     NK_CLDS = 3
-    ptopc = [1050., 650., 400., 0.0,  1050., 750., 500., 0.0]
+    ptopc = [1050.0, 650.0, 400.0, 0.0, 1050.0, 750.0, 500.0, 0.0]
     climit = 0.001
     climit2 = 0.05
     ovcst = 1.0 - 1.0e-8
@@ -22,45 +24,46 @@ class CloudClass():
     cldssa_def = 0.99
     cldasy_def = 0.84
 
-    def __init__(self, si, NLAY, imp_physics, me, ivflip, icldflg,
-                 iovrsw, iovrlw):
+    def __init__(self, si, NLAY, imp_physics, me, ivflip, icldflg, iovrsw, iovrlw):
 
         self.iovr = max(iovrsw, iovrlw)
         if me == 0:
-            print(self.VTAGCLD)      # print out version tag
+            print(self.VTAGCLD)  # print out version tag
 
         if icldflg == 0:
-            print(' - Diagnostic Cloud Method has been discontinued')
+            print(" - Diagnostic Cloud Method has been discontinued")
         else:
             if me == 0:
-                print('- Using Prognostic Cloud Method')
+                print("- Using Prognostic Cloud Method")
                 if imp_physics == 99:
-                    print('   --- Zhao/Carr/Sundqvist microphysics')
+                    print("   --- Zhao/Carr/Sundqvist microphysics")
                 elif imp_physics == 98:
-                    print('   --- zhao/carr/sundqvist + pdf cloud')
+                    print("   --- zhao/carr/sundqvist + pdf cloud")
                 elif imp_physics == 11:
-                    print('   --- GFDL Lin cloud microphysics')
+                    print("   --- GFDL Lin cloud microphysics")
                 elif imp_physics == 8:
-                    print('   --- Thompson cloud microphysics')
+                    print("   --- Thompson cloud microphysics")
                 elif imp_physics == 6:
-                    print('   --- WSM6 cloud microphysics')
+                    print("   --- WSM6 cloud microphysics")
                 elif imp_physics == 10:
-                    print('   --- MG cloud microphysics')
+                    print("   --- MG cloud microphysics")
                 else:
-                    print('!!! ERROR in cloud microphysc specification!!!',
-                          f'imp_physics (NP3D) = {imp_physics}')
-        # Compute the top of BL cld (llyr), which is the topmost non 
+                    print(
+                        "!!! ERROR in cloud microphysc specification!!!",
+                        f"imp_physics (NP3D) = {imp_physics}",
+                    )
+        # Compute the top of BL cld (llyr), which is the topmost non
         # cld(low) layer for stratiform (at or above lowest 0.1 of the
         # atmosphere).
 
-        if ivflip == 0:    # data from toa to sfc
-            for k in range(NLAY-1, 0, -1):
+        if ivflip == 0:  # data from toa to sfc
+            for k in range(NLAY - 1, 0, -1):
                 kl = k
                 if si[k] < 0.9e0:
                     break
 
             llyr = kl + 1
-        else:                      # data from sfc to top
+        else:  # data from sfc to top
             for k in range(1, NLAY):
                 kl = k
                 if si[k] < 0.9e0:
@@ -71,16 +74,41 @@ class CloudClass():
         self.llyr = llyr
 
     def return_initdata(self):
-        outdict = {'llyr': self.llyr}
+        outdict = {"llyr": self.llyr}
         return outdict
-        
 
-
-    def progcld1(self, plyr, plvl, tlyr, tvly, qlyr, qstl, rhly, clw,
-                 xlat, xlon, slmsk, dz, delp, IX, NLAY, NLP1,
-                 uni_cld, lmfshal, lmfdeep2, cldcov,
-                 effrl, effri, effrr, effrs, effr_in,
-                 iovrsw, iovrlw, ivflip, llyr):
+    def progcld1(
+        self,
+        plyr,
+        plvl,
+        tlyr,
+        tvly,
+        qlyr,
+        qstl,
+        rhly,
+        clw,
+        xlat,
+        xlon,
+        slmsk,
+        dz,
+        delp,
+        IX,
+        NLAY,
+        NLP1,
+        uni_cld,
+        lmfshal,
+        lmfdeep2,
+        cldcov,
+        effrl,
+        effri,
+        effrr,
+        effrs,
+        effr_in,
+        iovrsw,
+        iovrlw,
+        ivflip,
+        llyr,
+    ):
 
         # =================   subprogram documentation block   ================ !
         #                                                                       !
@@ -174,7 +202,7 @@ class CloudClass():
         tem2d = np.zeros((IX, NLAY))
         clwf = np.zeros((IX, NLAY))
 
-        ptop1 = np.zeros((IX, self.NK_CLDS+1))
+        ptop1 = np.zeros((IX, self.NK_CLDS + 1))
         rxlat = np.zeros(IX)
 
         clouds = np.zeros((IX, NLAY, self.NF_CLDS))
@@ -185,39 +213,41 @@ class CloudClass():
                 for i in range(IX):
                     cldtot[i, k] = 0.0
                     cldcnv[i, k] = 0.0
-                    cwp   [i, k] = 0.0
-                    cip   [i, k] = 0.0
-                    crp   [i, k] = 0.0
-                    csp   [i, k] = 0.0
-                    rew   [i, k] = effrl [i, k]
-                    rei   [i, k] = effri [i, k]
-                    rer   [i, k] = effrr [i, k]
-                    res   [i, k] = effrs [i, k]
-                    tem2d [i, k] = min(1.0, max(0.0, (con_ttp-tlyr[i, k])*0.05))
-                    clwf[i, k]   = 0.0
+                    cwp[i, k] = 0.0
+                    cip[i, k] = 0.0
+                    crp[i, k] = 0.0
+                    csp[i, k] = 0.0
+                    rew[i, k] = effrl[i, k]
+                    rei[i, k] = effri[i, k]
+                    rer[i, k] = effrr[i, k]
+                    res[i, k] = effrs[i, k]
+                    tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr[i, k]) * 0.05))
+                    clwf[i, k] = 0.0
         else:
             for k in range(NLAY):
                 for i in range(IX):
                     cldtot[i, k] = 0.0
                     cldcnv[i, k] = 0.0
-                    cwp   [i, k] = 0.0
-                    cip   [i, k] = 0.0
-                    crp   [i, k] = 0.0
-                    csp   [i, k] = 0.0
-                    rew   [i, k] = self.reliq_def            # default liq  radius to 10   micron
-                    rei   [i, k] = self.reice_def            # default ice  radius to 50   micron
-                    rer   [i, k] = self.rrain_def            # default rain radius to 1000 micron
-                    res   [i, k] = self.rsnow_def            # default snow radius to 250  micron
-                    tem2d [i, k] = min(1.0, max(0.0, (con_ttp-tlyr[i, k])*0.05))
-                    clwf[i, k]   = 0.0
+                    cwp[i, k] = 0.0
+                    cip[i, k] = 0.0
+                    crp[i, k] = 0.0
+                    csp[i, k] = 0.0
+                    rew[i, k] = self.reliq_def  # default liq  radius to 10   micron
+                    rei[i, k] = self.reice_def  # default ice  radius to 50   micron
+                    rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
+                    res[i, k] = self.rsnow_def  # default snow radius to 250  micron
+                    tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr[i, k]) * 0.05))
+                    clwf[i, k] = 0.0
 
         if lcrick:
             for i in range(IX):
-                clwf[i, 0]    = 0.75*clw[i, 0]    + 0.25*clw[i, 1]
-                clwf[i, NLAY] = 0.75*clw[i, NLAY] + 0.25*clw[i, NLAY-2]
-            for k in range(1, NLAY-1):
+                clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
+                clwf[i, NLAY] = 0.75 * clw[i, NLAY] + 0.25 * clw[i, NLAY - 2]
+            for k in range(1, NLAY - 1):
                 for i in range(IX):
-                    clwf[i, k] = 0.25*clw[i, k-1] + 0.5*clw[i, k] + 0.25*clw[i, k+1]
+                    clwf[i, k] = (
+                        0.25 * clw[i, k - 1] + 0.5 * clw[i, k] + 0.25 * clw[i, k + 1]
+                    )
         else:
             for k in range(NLAY):
                 for i in range(IX):
@@ -228,18 +258,18 @@ class CloudClass():
         #  ---  i=1,2 are low-lat (<45 degree) and pole regions)
 
         for i in range(IX):
-            rxlat[i] = abs(xlat[i] / con_pi)      # if xlat in pi/2 -> -pi/2 range
+            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
 
         for id in range(4):
             tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
 
             for i in range(IX):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1*max(0.0, 4.0*rxlat[i]-1.0)
+                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
 
         # Compute cloud liquid/ice condensate path in \f$ g/m^2 \f$ .
         for k in range(NLAY):
             for i in range(IX):
-                clwt     = max(0.0, clwf[i, k]) * self.gfac * delp[i, k]
+                clwt = max(0.0, clwf[i, k]) * self.gfac * delp[i, k]
                 cip[i, k] = clwt * tem2d[i, k]
                 cwp[i, k] = clwt - cip[i, k]
 
@@ -251,7 +281,7 @@ class CloudClass():
                     for k in range(NLAY):
                         rew[i, k] = 5.0 + 5.0 * tem2d[i, k]
 
-        if uni_cld:     # use unified sgs clouds generated outside
+        if uni_cld:  # use unified sgs clouds generated outside
             for k in range(NLAY):
                 for i in range(IX):
                     cldtot[i, k] = cldcov[i, k]
@@ -261,46 +291,50 @@ class CloudClass():
             if not lmfshal:
                 for k in range(NLAY):
                     for i in range(IX):
-                        clwt = 1.0e-6 * (plyr[i, k]*0.001)
+                        clwt = 1.0e-6 * (plyr[i, k] * 0.001)
                         if clwf[i, k] > clwt:
-                            onemrh= max( 1.e-10, 1.0-rhly[i, k])
-                            clwm  = clwmin / max(0.01, plyr[i, k]*0.001)
+                            onemrh = max(1.0e-10, 1.0 - rhly[i, k])
+                            clwm = clwmin / max(0.01, plyr[i, k] * 0.001)
 
-                            tem1  = min(max(np.sqrt(np.sqrt(onemrh*qstl[i, k])), 0.0001), 1.0)
-                            tem1  = 2000.0 / tem1
+                            tem1 = min(
+                                max(np.sqrt(np.sqrt(onemrh * qstl[i, k])), 0.0001), 1.0
+                            )
+                            tem1 = 2000.0 / tem1
 
-                            value = max(min(tem1*(clwf[i, k]-clwm), 50.0), 0.0)
-                            tem2  = np.sqrt(np.sqrt(rhly[i, k]))
+                            value = max(min(tem1 * (clwf[i, k] - clwm), 50.0), 0.0)
+                            tem2 = np.sqrt(np.sqrt(rhly[i, k]))
 
-                            cldtot[i, k] = max(tem2*(1.0-np.exp(-value)), 0.0)
+                            cldtot[i, k] = max(tem2 * (1.0 - np.exp(-value)), 0.0)
             else:
                 for k in range(NLAY):
                     for i in range(IX):
-                        clwt = 1.0e-6 * (plyr[i, k]*0.001)
+                        clwt = 1.0e-6 * (plyr[i, k] * 0.001)
 
-                        if clwf(i,k) > clwt:
-                            onemrh= max(1.e-10, 1.0-rhly[i, k])
-                            clwm  = clwmin / max(0.01, plyr[i, k]*0.001)
+                        if clwf(i, k) > clwt:
+                            onemrh = max(1.0e-10, 1.0 - rhly[i, k])
+                            clwm = clwmin / max(0.01, plyr[i, k] * 0.001)
 
-                            tem1  = min(max((onemrh*qstl[i, k])**0.49, 0.0001), 1.0)  #jhan
+                            tem1 = min(
+                                max((onemrh * qstl[i, k]) ** 0.49, 0.0001), 1.0
+                            )  # jhan
                             if lmfdeep2:
                                 tem1 = self.xrc3 / tem1
                             else:
                                 tem1 = 100.0 / tem1
 
-                            value = max(min(tem1*(clwf[i, k]-clwm), 50.0), 0.0)
-                            tem2  = np.sqrt(np.sqrt(rhly[i, k]))
+                            value = max(min(tem1 * (clwf[i, k] - clwm), 50.0), 0.0)
+                            tem2 = np.sqrt(np.sqrt(rhly[i, k]))
 
-                            cldtot[i, k] = max(tem2*(1.0-np.exp(-value)), 0.0)
+                            cldtot[i, k] = max(tem2 * (1.0 - np.exp(-value)), 0.0)
 
         for k in range(NLAY):
             for i in range(IX):
                 if cldtot[i, k] < self.climit:
                     cldtot[i, k] = 0.0
-                    cwp[i, k]    = 0.0
-                    cip[i, k]    = 0.0
-                    crp[i, k]    = 0.0
-                    csp[i, k]    = 0.0
+                    cwp[i, k] = 0.0
+                    cip[i, k] = 0.0
+                    crp[i, k] = 0.0
+                    csp[i, k] = 0.0
 
         if lcnorm:
             for k in range(NLAY):
@@ -312,25 +346,30 @@ class CloudClass():
                         crp[i, k] = crp[i, k] * tem1
                         csp[i, k] = csp[i, k] * tem1
 
-        # Compute effective ice cloud droplet radius following Heymsfield 
+        # Compute effective ice cloud droplet radius following Heymsfield
         #    and McFarquhar (1996) \cite heymsfield_and_mcfarquhar_1996.
 
         if not effr_in:
             for k in range(NLAY):
                 for i in range(IX):
                     tem2 = tlyr[i, k] - con_ttp
-    
+
                     if cip[i, k] > 0.0:
-                        tem3 = self.gord * cip[i, k] * plyr[i, k] / (delp[i, k]*tvly[i, k])
+                        tem3 = (
+                            self.gord
+                            * cip[i, k]
+                            * plyr[i, k]
+                            / (delp[i, k] * tvly[i, k])
+                        )
 
                         if tem2 < -50.0:
-                            rei[i, k] = (1250.0/9.917) * tem3 ** 0.109
+                            rei[i, k] = (1250.0 / 9.917) * tem3 ** 0.109
                         elif tem2 < -40.0:
-                            rei[i, k] = (1250.0/9.337) * tem3 ** 0.08
+                            rei[i, k] = (1250.0 / 9.337) * tem3 ** 0.08
                         elif tem2 < -30.0:
-                            rei[i, k] = (1250.0/9.208) * tem3 ** 0.055
+                            rei[i, k] = (1250.0 / 9.208) * tem3 ** 0.055
                         else:
-                            rei[i, k] = (1250.0/9.387) * tem3 ** 0.031
+                            rei[i, k] = (1250.0 / 9.387) * tem3 ** 0.031
 
                         rei[i, k] = max(10.0, min(rei[i, k], 150.0))
 
@@ -349,7 +388,7 @@ class CloudClass():
 
         if self.iovr == 3:
             for i in range(IX):
-                de_lgth[i] = max( 0.6, 2.78-4.6*rxlat[i])
+                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         # Call gethml() to compute low,mid,high,total, and boundary layer
         #    cloud fractions and clouds top/bottom layer indices for low, mid,
@@ -360,21 +399,40 @@ class CloudClass():
         #      overlapping method is defined by control flag 'iovr', which may
         #      be different for lw and sw radiation programs.
 
-        clds, mtop, mbot = self.gethml(plyr,
-                                       ptop1,
-                                       cldtot,
-                                       cldcnv,
-                                       dz,
-                                       de_lgth,
-                                       IX,
-                                       NLAY)
+        clds, mtop, mbot = self.gethml(
+            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY
+        )
 
         return clouds, clds, mtop, mbot, de_lgth
 
-
-    def progcld2(self, plyr, plvl, tlyr, tvly, qlyr, qstl, rhly, clw,
-                 xlat, xlon, slmsk, dz, delp, f_ice, f_rain, r_rime, flgmin,
-                 IX, NLAY, NLP1, lmfshal, lmfdeep2, ivflip, iovrsw, iovrlw):
+    def progcld2(
+        self,
+        plyr,
+        plvl,
+        tlyr,
+        tvly,
+        qlyr,
+        qstl,
+        rhly,
+        clw,
+        xlat,
+        xlon,
+        slmsk,
+        dz,
+        delp,
+        f_ice,
+        f_rain,
+        r_rime,
+        flgmin,
+        IX,
+        NLAY,
+        NLP1,
+        lmfshal,
+        lmfdeep2,
+        ivflip,
+        iovrsw,
+        iovrlw,
+    ):
         # =================   subprogram documentation block   ================ !
         #                                                                       !
         # subprogram:    progcld2    computes cloud related quantities using    !
@@ -477,7 +535,7 @@ class CloudClass():
         rsden = np.zeros((IX, NLAY))
         clwf = np.zeros((IX, NLAY))
 
-        ptop1 = np.zerso((IX, self.NK_CLDS+1))
+        ptop1 = np.zerso((IX, self.NK_CLDS + 1))
         rxlat = np.zeros(IX)
 
         clouds = np.zeros((IX, NLAY, self.NF_CLDS))
@@ -485,23 +543,25 @@ class CloudClass():
 
         for k in range(NLAY):
             for i in range(IX):
-                rew   [i, k] = self.reliq_def            # default liq radius to 10 micron
-                rei   [i, k] = self.reice_def            # default ice radius to 50 micron
-                rer   [i, k] = self.rrain_def            # default rain radius to 1000 micron
-                res   [i, k] = self.rsnow_def            # default snow radius to 250 micron
-                fcice [i, k] = max(0.0, min(1.0, f_ice[i, k]))
-                frain [i, k] = max(0.0, min(1.0, f_rain[i, k]))
-                rrime [i, k] = max(1.0, r_rime[i, k])
-                tem2d [i, k] = tlyr[i, k] - con_t0c
+                rew[i, k] = self.reliq_def  # default liq radius to 10 micron
+                rei[i, k] = self.reice_def  # default ice radius to 50 micron
+                rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
+                res[i, k] = self.rsnow_def  # default snow radius to 250 micron
+                fcice[i, k] = max(0.0, min(1.0, f_ice[i, k]))
+                frain[i, k] = max(0.0, min(1.0, f_rain[i, k]))
+                rrime[i, k] = max(1.0, r_rime[i, k])
+                tem2d[i, k] = tlyr[i, k] - con_t0c
 
         if lcrick:
             for i in range(IX):
-                clwf[i, 0]    = 0.75*clw[i, 0]    + 0.25*clw[i, 1]
-                clwf[i, NLAY] = 0.75*clw[i, NLAY] + 0.25*clw[i, NLAY-1]
+                clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
+                clwf[i, NLAY] = 0.75 * clw[i, NLAY] + 0.25 * clw[i, NLAY - 1]
 
-            for k in range(1, NLAY-1):
+            for k in range(1, NLAY - 1):
                 for i in range(IX):
-                    clwf[i, k] = 0.25*clw[i, k-1] + 0.5*clw[i, k] + 0.25*clw[i, k+1]
+                    clwf[i, k] = (
+                        0.25 * clw[i, k - 1] + 0.5 * clw[i, k] + 0.25 * clw[i, k + 1]
+                    )
         else:
             for k in range(NLAY):
                 for i in range(IX):
@@ -512,13 +572,13 @@ class CloudClass():
         #     h; i=1,2 are low-lat (<45 degree) and pole regions)
 
         for i in range(IX):
-            rxlat[i] = abs(xlat[i] / con_pi)      # if xlat in pi/2 -> -pi/2 range
+            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
 
         for id in range(4):
             tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
 
             for i in range(IX):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1*max(0.0, 4.0*rxlat[i]-1.0)
+                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
 
         # -# Seperate cloud condensate into liquid, ice, and rain types, and
         # save the liquid+ice condensate in array clw2 for later calculation
@@ -528,38 +588,27 @@ class CloudClass():
             for i in range(IX):
                 if tem2d[i, k] > -40.0:
                     qcice[i, k] = clwf[i, k] * fcice[i, k]
-                    tem1       = clwf[i, k] - qcice[i, k]
+                    tem1 = clwf[i, k] - qcice[i, k]
                     qrain[i, k] = tem1 * frain[i, k]
                     qcwat[i, k] = tem1 - qrain[i, k]
-                    clw2 [i, k] = qcwat[i, k] + qcice[i, k]
+                    clw2[i, k] = qcwat[i, k] + qcice[i, k]
                 else:
                     qcice[i, k] = clwf[i, k]
                     qrain[i, k] = 0.0
                     qcwat[i, k] = 0.0
-                    clw2 [i, k] = clwf[i, k]
+                    clw2[i, k] = clwf[i, k]
 
         # -# Call module_microphysics::rsipath2(), in Ferrier's scheme, to
         # compute layer's cloud liquid, ice, rain, and snow water condensate
-        # path and the partical effective radius for liquid droplet, rain drop, 
+        # path and the partical effective radius for liquid droplet, rain drop,
         # and snow flake.
         cwp, cip, crp, csp, rew, rer, res, rsden = rsipath2(
-            plyr,
-            plvl,
-            tlyr,
-            qlyr,
-            qcwat,
-            qcice,
-            qrain,
-            rrime,
-            IX,
-            NLAY,
-            ivflip,
-            flgmin
+            plyr, plvl, tlyr, qlyr, qcwat, qcice, qrain, rrime, IX, NLAY, ivflip, flgmin
         )
 
         for k in range(NLAY):
             for i in range(IX):
-                tem2d[i, k] = (con_g * plyr[i, k]) / (con_rd* delp[i, k])
+                tem2d[i, k] = (con_g * plyr[i, k]) / (con_rd * delp[i, k])
 
         # Calculate layer cloud fraction.
 
@@ -567,47 +616,51 @@ class CloudClass():
         if not lmfshal:
             for k in range(NLAY):
                 for i in range(IX):
-                    clwt = 2.0e-6 * (plyr[i, k]*0.001)
+                    clwt = 2.0e-6 * (plyr[i, k] * 0.001)
 
                     if clw2[i, k] > clwt:
-                        onemrh= max(1.e-10, 1.0-rhly[i, k])
-                        clwm  = clwmin / max(0.01, plyr[i, k]*0.001)
+                        onemrh = max(1.0e-10, 1.0 - rhly[i, k])
+                        clwm = clwmin / max(0.01, plyr[i, k] * 0.001)
 
-                        tem1  = min(max(np.sqrt(np.sqrt(onemrh*qstl[i, k])), 0.0001), 1.0)
-                        tem1  = 2000.0 / tem1
+                        tem1 = min(
+                            max(np.sqrt(np.sqrt(onemrh * qstl[i, k])), 0.0001), 1.0
+                        )
+                        tem1 = 2000.0 / tem1
 
-                        value = max(min(tem1*(clw2[i, k]-clwm), 50.0), 0.0)
-                        tem2  = np.sqrt(np.sqrt(rhly[i, k]))
+                        value = max(min(tem1 * (clw2[i, k] - clwm), 50.0), 0.0)
+                        tem2 = np.sqrt(np.sqrt(rhly[i, k]))
 
-                        cldtot[i, k] = max(tem2*(1.0-np.exp(-value)), 0.0)
+                        cldtot[i, k] = max(tem2 * (1.0 - np.exp(-value)), 0.0)
         else:
             for k in range(NLAY):
                 for i in range(IX):
-                    clwt = 2.0e-6 * (plyr[i, k]*0.001)
+                    clwt = 2.0e-6 * (plyr[i, k] * 0.001)
 
                     if clw2[i, k] > clwt:
-                        onemrh= max(1.e-10, 1.0-rhly[i, k])
-                        clwm  = clwmin / max(0.01, plyr[i, k]*0.001)
+                        onemrh = max(1.0e-10, 1.0 - rhly[i, k])
+                        clwm = clwmin / max(0.01, plyr[i, k] * 0.001)
 
-                        tem1  = min(max((onemrh*qstl[i, k])**0.49, 0.0001), 1.0)   #jhan
+                        tem1 = min(
+                            max((onemrh * qstl[i, k]) ** 0.49, 0.0001), 1.0
+                        )  # jhan
                         if lmfdeep2:
-                            tem1  = self.xrc3 / tem1
+                            tem1 = self.xrc3 / tem1
                         else:
-                            tem1  = 100.0 / tem1
+                            tem1 = 100.0 / tem1
 
-                        value = max(min(tem1*(clw2[i, k]-clwm), 50.0), 0.0)
-                        tem2  = np.sqrt(np.sqrt(rhly[i, k]))
+                        value = max(min(tem1 * (clw2[i, k] - clwm), 50.0), 0.0)
+                        tem2 = np.sqrt(np.sqrt(rhly[i, k]))
 
-                        cldtot[i, k] = max(tem2*(1.0-np.exp(-value)), 0.0)
+                        cldtot[i, k] = max(tem2 * (1.0 - np.exp(-value)), 0.0)
 
         for k in range(NLAY):
             for i in range(IX):
                 if cldtot[i, k] < self.climit:
                     cldtot[i, k] = 0.0
-                    cwp[i, k]    = 0.0
-                    cip[i, k]    = 0.0
-                    crp[i, k]    = 0.0
-                    csp[i, k]    = 0.0
+                    cwp[i, k] = 0.0
+                    cip[i, k] = 0.0
+                    crp[i, k] = 0.0
+                    csp[i, k] = 0.0
 
         #     When lnoprec = .true. snow/rain has no impact on radiation
         if lnoprec:
@@ -636,13 +689,13 @@ class CloudClass():
                     tem3 = tem2d[i, k] * tem2 / tvly[i, k]
 
                     if tem1 < -50.0:
-                        rei[i, k] = (1250.0/9.917) * tem3 ** 0.109
+                        rei[i, k] = (1250.0 / 9.917) * tem3 ** 0.109
                     elif tem1 < -40.0:
-                        rei[i, k] = (1250.0/9.337) * tem3 ** 0.08
+                        rei[i, k] = (1250.0 / 9.337) * tem3 ** 0.08
                     elif tem1 < -30.0:
-                        rei[i, k] = (1250.0/9.208) * tem3 ** 0.055
+                        rei[i, k] = (1250.0 / 9.208) * tem3 ** 0.055
                     else:
-                        rei[i, k] = (1250.0/9.387) * tem3 ** 0.031
+                        rei[i, k] = (1250.0 / 9.387) * tem3 ** 0.031
 
                     rei[i, k] = max(10.0, min(rei[i, k], 300.0))
 
@@ -663,7 +716,7 @@ class CloudClass():
 
         if self.iovr == 3:
             for i in range(IX):
-                de_lgth[i] = max(0.6, 2.78-4.6*rxlat[i])
+                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         # -# Call gethml(), to compute low, mid, high, total, and boundary
         # layer cloud fractions and clouds top/bottom layer indices for low,
@@ -672,21 +725,39 @@ class CloudClass():
         #      overlapping method is defined by control flag 'iovr', which may
         #      be different for lw and sw radiation programs.
 
-        clds, mtop, mbot = self.gethml(plyr,
-                                       ptop1,
-                                       cldtot,
-                                       cldcnv,
-                                       dz,
-                                       de_lgth,
-                                       IX,
-                                       NLAY)
+        clds, mtop, mbot = self.gethml(
+            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY
+        )
 
         return clouds, clds, mtop, mbot, de_lgth
 
-
-    def progcld3(self, plyr, plvl, tlyr, tvly, qlyr, qstl, rhly, clw, cnvw, cnvc,
-                 xlat, xlon, slmsk, dz, delp, ix, nlay, nlp1,
-                 deltaq, sup, kdt, me, iovrsw, iovrlw):
+    def progcld3(
+        self,
+        plyr,
+        plvl,
+        tlyr,
+        tvly,
+        qlyr,
+        qstl,
+        rhly,
+        clw,
+        cnvw,
+        cnvc,
+        xlat,
+        xlon,
+        slmsk,
+        dz,
+        delp,
+        ix,
+        nlay,
+        nlp1,
+        deltaq,
+        sup,
+        kdt,
+        me,
+        iovrsw,
+        iovrlw,
+    ):
         # =================   subprogram documentation block   ================ !
         #                                                                       !
         # subprogram:    progcld3    computes cloud related quantities using    !
@@ -776,7 +847,7 @@ class CloudClass():
         tem2d = np.zeros((ix, nlay))
         clwf = np.zeros((ix, nlay))
 
-        ptop1 = np.zerso((ix, self.NK_CLDS+1))
+        ptop1 = np.zerso((ix, self.NK_CLDS + 1))
         rxlat = np.zeros(ix)
 
         clouds = np.zeros((ix, nlay, self.NF_CLDS))
@@ -784,20 +855,22 @@ class CloudClass():
 
         for k in range(nlay):
             for i in range(ix):
-              rew   [i, k] = self.reliq_def            # default liq radius to 10 micron
-              rei   [i, k] = self.reice_def            # default ice radius to 50 micron
-              rer   [i, k] = self.rrain_def            # default rain radius to 1000 micron
-              res   [i, k] = self.rsnow_def            # default snow radius to 250 micron
-              tem2d [i, k] = min(1.0, max(0.0, (con_ttp-tlyr(i,k))*0.05))
-              clwf[i, k]   = 0.0
+                rew[i, k] = self.reliq_def  # default liq radius to 10 micron
+                rei[i, k] = self.reice_def  # default ice radius to 50 micron
+                rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
+                res[i, k] = self.rsnow_def  # default snow radius to 250 micron
+                tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr(i, k)) * 0.05))
+                clwf[i, k] = 0.0
 
         if lcrick:
             for i in range(ix):
-                clwf[i, 0]    = 0.75*clw[i, 0]    + 0.25*clw[i, 1]
-                clwf[i, nlay] = 0.75*clw[i, nlay] + 0.25*clw[i, nlay-1]
-            for k in range(1, nlay-1):
+                clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
+                clwf[i, nlay] = 0.75 * clw[i, nlay] + 0.25 * clw[i, nlay - 1]
+            for k in range(1, nlay - 1):
                 for i in range(ix):
-                    clwf[i, k] = 0.25*clw[i, k-1] + 0.5*clw[i, k] + 0.25*clw[i, k+1]
+                    clwf[i, k] = (
+                        0.25 * clw[i, k - 1] + 0.5 * clw[i, k] + 0.25 * clw[i, k + 1]
+                    )
         else:
             for k in range(nlay):
                 for i in range(ix):
@@ -806,26 +879,26 @@ class CloudClass():
         if kdt == 1:
             for k in range(nlay):
                 for i in range(ix):
-                    deltaq[i, k] = (1.-0.95)*qstl[i, k]
+                    deltaq[i, k] = (1.0 - 0.95) * qstl[i, k]
 
         # -# Find top pressure (ptopc) for each cloud domain for given latitude.
         #    ptopc(k,i): top presure of each cld domain (k=1-4 are sfc,l,m,h;
         # ---  i=1,2 are low-lat (<45 degree) and pole regions)
 
         for i in range(ix):
-            rxlat[i] = abs(xlat[i] / con_pi)      # if xlat in pi/2 -> -pi/2 range
+            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
 
         for id in range(4):
             tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
 
             for i in range(ix):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1*max(0.0, 4.0*rxlat[i]-1.0)
+                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
 
         # -# Calculate liquid/ice condensate path in \f$ g/m^2 \f$
 
         for k in range(nlay):
             for i in range(ix):
-                clwt = max(0.0, (clwf[i, k]+cnvw[i, k])) * self.gfac * delp[i, k]
+                clwt = max(0.0, (clwf[i, k] + cnvw[i, k])) * self.gfac * delp[i, k]
                 cip[i, k] = clwt * tem2d[i, k]
                 cwp[i, k] = clwt - cip[i, k]
 
@@ -845,8 +918,8 @@ class CloudClass():
                     qsc = sup * qstl[i, k]
                     rhs = sup
                 else:
-                  qsc = qstl[i, k]
-                  rhs = 1.0
+                    qsc = qstl[i, k]
+                    rhs = 1.0
 
                 if rhly[i, k] >= rhs:
                     cldtot[i, k] = 1.0
@@ -858,18 +931,18 @@ class CloudClass():
                         elif qtmp >= deltaq[i, k]:
                             cldtot[i, k] = 1.0
                         else:
-                            cldtot[i, k] = 0.5*qtmp/deltaq[i, k] + 0.5
-                            cldtot[i, k] = max(cldtot[i, k],0.0)
-                            cldtot[i, k] = min(cldtot[i, k],1.0)
+                            cldtot[i, k] = 0.5 * qtmp / deltaq[i, k] + 0.5
+                            cldtot[i, k] = max(cldtot[i, k], 0.0)
+                            cldtot[i, k] = min(cldtot[i, k], 1.0)
                     else:
-                        if qtmp > 0.:
+                        if qtmp > 0.0:
                             cldtot[i, k] = 1.0
                         else:
                             cldtot[i, k] = 0.0
 
-                cldtot[i, k] = cnvc[i, k] + (1-cnvc[i, k])*cldtot[i, k]
-                cldtot[i, k] = max(cldtot[i, k], 0.)
-                cldtot[i, k] = min(cldtot[i, k], 1.)
+                cldtot[i, k] = cnvc[i, k] + (1 - cnvc[i, k]) * cldtot[i, k]
+                cldtot[i, k] = max(cldtot[i, k], 0.0)
+                cldtot[i, k] = min(cldtot[i, k], 1.0)
 
         for k in range(nlay):
             for i in range(ix):
@@ -898,35 +971,37 @@ class CloudClass():
                 tem2 = tlyr[i, k] - con_ttp
 
                 if cip[i, k] > 0.0:
-                    tem3 = self.gord * cip[i, k] * plyr[i, k] / (delp[i, k]*tvly[i, k])
+                    tem3 = (
+                        self.gord * cip[i, k] * plyr[i, k] / (delp[i, k] * tvly[i, k])
+                    )
 
                     if tem2 < -50.0:
-                        rei[i, k] = (1250.0/9.917) * tem3 ** 0.109
+                        rei[i, k] = (1250.0 / 9.917) * tem3 ** 0.109
                     elif tem2 < -40.0:
-                        rei[i, k] = (1250.0/9.337) * tem3 ** 0.08
-                    elif tem2 < -30.0:  
-                        rei[i, k] = (1250.0/9.208) * tem3 ** 0.055
+                        rei[i, k] = (1250.0 / 9.337) * tem3 ** 0.08
+                    elif tem2 < -30.0:
+                        rei[i, k] = (1250.0 / 9.208) * tem3 ** 0.055
                     else:
-                        rei[i, k] = (1250.0/9.387) * tem3 ** 0.031
+                        rei[i, k] = (1250.0 / 9.387) * tem3 ** 0.031
 
-                    rei[i, k]   = max(10.0, min(rei[i, k], 150.0))
+                    rei[i, k] = max(10.0, min(rei[i, k], 150.0))
 
         for k in range(nlay):
             for i in range(ix):
-              clouds[i, k, 0] = cldtot[i, k]
-              clouds[i, k, 1] = cwp[i, k]
-              clouds[i, k, 2] = rew[i, k]
-              clouds[i, k, 3] = cip[i, k]
-              clouds[i, k, 4] = rei[i, k]
-              clouds[i, k, 6] = rer[i, k]
-              clouds[i, k, 8] = res[i, k]
+                clouds[i, k, 0] = cldtot[i, k]
+                clouds[i, k, 1] = cwp[i, k]
+                clouds[i, k, 2] = rew[i, k]
+                clouds[i, k, 3] = cip[i, k]
+                clouds[i, k, 4] = rei[i, k]
+                clouds[i, k, 6] = rer[i, k]
+                clouds[i, k, 8] = res[i, k]
 
         #  --- ...  estimate clouds decorrelation length in km
         #           this is only a tentative test, need to consider change later
 
         if self.iovr == 3:
             for i in range(ix):
-                de_lgth[i] = max( 0.6, 2.78-4.6*rxlat[i])
+                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         # -# Call gethml() to compute low,mid,high,total, and boundary layer
         # cloud fractions and clouds top/bottom layer indices for low, mid,
@@ -935,22 +1010,36 @@ class CloudClass():
         #      overlapping method is defined by control flag 'iovr', which may
         #      be different for lw and sw radiation programs.
 
-
-        clds, mtop, mbot = self.gethml(plyr,
-                                       ptop1,
-                                       cldtot,
-                                       cldcnv,
-                                       dz,
-                                       de_lgth,
-                                       ix,
-                                       nlay)
+        clds, mtop, mbot = self.gethml(
+            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, ix, nlay
+        )
 
         return clouds, clds, mtop, mbot, de_lgth
 
-
-    def progcld4(self, plyr,plvl,tlyr,tvly,qlyr,qstl,rhly,clw,cnvw,cnvc,
-                 xlat,xlon,slmsk,cldtot, dz, delp, IX, NLAY, NLP1,
-                 iovrsw, iovrlw):
+    def progcld4(
+        self,
+        plyr,
+        plvl,
+        tlyr,
+        tvly,
+        qlyr,
+        qstl,
+        rhly,
+        clw,
+        cnvw,
+        cnvc,
+        xlat,
+        xlon,
+        slmsk,
+        cldtot,
+        dz,
+        delp,
+        IX,
+        NLAY,
+        NLP1,
+        iovrsw,
+        iovrlw,
+    ):
         # =================   subprogram documentation block   ================ !
         #                                                                       !
         # subprogram:    progcld4    computes cloud related quantities using    !
@@ -1039,7 +1128,7 @@ class CloudClass():
         tem2d = np.zeros((IX, NLAY))
         clwf = np.zeros((IX, NLAY))
 
-        ptop1 = np.zerso((IX, self.NK_CLDS+1))
+        ptop1 = np.zerso((IX, self.NK_CLDS + 1))
         rxlat = np.zeros(IX)
 
         clouds = np.zeros((IX, NLAY, self.NF_CLDS))
@@ -1047,20 +1136,22 @@ class CloudClass():
 
         for k in range(NLAY):
             for i in range(IX):
-              rew   [i, k] = self.reliq_def            # default liq radius to 10 micron
-              rei   [i, k] = self.reice_def            # default ice radius to 50 micron
-              rer   [i, k] = self.rrain_def            # default rain radius to 1000 micron
-              res   [i, k] = self.rsnow_def            # default snow radius to 250 micron
-              tem2d [i, k] = min(1.0, max(0.0, (con_ttp-tlyr[i, k])*0.05 ))
-              clwf[i, k]   = 0.0
+                rew[i, k] = self.reliq_def  # default liq radius to 10 micron
+                rei[i, k] = self.reice_def  # default ice radius to 50 micron
+                rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
+                res[i, k] = self.rsnow_def  # default snow radius to 250 micron
+                tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr[i, k]) * 0.05))
+                clwf[i, k] = 0.0
 
         if lcrick:
             for i in range(IX):
-                clwf[i, 0]    = 0.75*clw[i, 0]    + 0.25*clw[i, 1]
-                clwf[i, NLAY] = 0.75*clw[i, NLAY] + 0.25*clw[i, NLAY-1]
-            for k in range(1, NLAY-1):
+                clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
+                clwf[i, NLAY] = 0.75 * clw[i, NLAY] + 0.25 * clw[i, NLAY - 1]
+            for k in range(1, NLAY - 1):
                 for i in range(IX):
-                    clwf[i, k] = 0.25*clw[i, k-1] + 0.5*clw[i, k] + 0.25*clw[i, k+1]
+                    clwf[i, k] = (
+                        0.25 * clw[i, k - 1] + 0.5 * clw[i, k] + 0.25 * clw[i, k + 1]
+                    )
         else:
             for k in range(NLAY):
                 for i in range(IX):
@@ -1071,19 +1162,19 @@ class CloudClass():
         #  ---  i=1,2 are low-lat (<45 degree) and pole regions)
 
         for i in range(IX):
-            rxlat[i] = abs(xlat[i] / con_pi )      # if xlat in pi/2 -> -pi/2 range
+            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
 
         for id in range(4):
             tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
 
             for i in range(IX):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1*max(0.0, 4.0*rxlat[i]-1.0)
+                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
 
         #  ---  compute liquid/ice condensate path in g/m**2
 
         for k in range(NLAY):
             for i in range(IX):
-                clwt     = max(0.0,(clwf[i, k]+cnvw[i, k])) * self.gfac * delp[i, k]
+                clwt = max(0.0, (clwf[i, k] + cnvw[i, k])) * self.gfac * delp[i, k]
                 cip[i, k] = clwt * tem2d[i, k]
                 cwp[i, k] = clwt - cip[i, k]
 
@@ -1119,18 +1210,20 @@ class CloudClass():
                 tem2 = tlyr[i, k] - con_ttp
 
                 if cip[i, k] > 0.0:
-                    tem3 = self.gord * cip[i, k] * plyr[i, k] / (delp[i, k]*tvly[i, k])
+                    tem3 = (
+                        self.gord * cip[i, k] * plyr[i, k] / (delp[i, k] * tvly[i, k])
+                    )
 
                     if tem2 < -50.0:
-                        rei[i, k] = (1250.0/9.917) * tem3 ** 0.109
+                        rei[i, k] = (1250.0 / 9.917) * tem3 ** 0.109
                     elif tem2 < -40.0:
-                        rei[i, k] = (1250.0/9.337) * tem3 ** 0.08
+                        rei[i, k] = (1250.0 / 9.337) * tem3 ** 0.08
                     elif tem2 < -30.0:
-                        rei[i, k] = (1250.0/9.208) * tem3 ** 0.055
+                        rei[i, k] = (1250.0 / 9.208) * tem3 ** 0.055
                     else:
-                        rei[i, k] = (1250.0/9.387) * tem3 ** 0.031
+                        rei[i, k] = (1250.0 / 9.387) * tem3 ** 0.031
 
-                    rei[i, k]   = max(10.0, min(rei[i, k], 150.0))
+                    rei[i, k] = max(10.0, min(rei[i, k], 150.0))
 
         for k in range(NLAY):
             for i in range(IX):
@@ -1147,7 +1240,7 @@ class CloudClass():
 
         if self.iovr == 3:
             for i in range(IX):
-                de_lgth[i] = max(0.6, 2.78-4.6*rxlat[i])
+                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         #  ---  compute low, mid, high, total, and boundary layer cloud fractions
         #       and clouds top/bottom layer indices for low, mid, and high clouds.
@@ -1155,22 +1248,45 @@ class CloudClass():
         #       overlapping method is defined by control flag 'iovr', which may
         #       be different for lw and sw radiation programs.
 
-        clds, mtop, mbot = self.gethml(plyr,
-                                       ptop1,
-                                       cldtot,
-                                       cldcnv,
-                                       dz,
-                                       de_lgth,
-                                       IX,
-                                       NLAY)
+        clds, mtop, mbot = self.gethml(
+            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY
+        )
 
-        return clouds,clds,mtop,mbot,de_lgth
+        return clouds, clds, mtop, mbot, de_lgth
 
-    def progcld5(self, plyr, plvl, tlyr, qlyr, qstl, rhly, clw,
-                 xlat, xlon, slmsk, dz, delp,             
-                 ntrac, ntcw, ntiw, ntrw, ntsw, ntgl, IX, NLAY, NLP1,                     
-                 uni_cld, lmfshal, lmfdeep2, cldcov, re_cloud, re_ice, re_snow,
-                 iovrsw, iovrlw):
+    def progcld5(
+        self,
+        plyr,
+        plvl,
+        tlyr,
+        qlyr,
+        qstl,
+        rhly,
+        clw,
+        xlat,
+        xlon,
+        slmsk,
+        dz,
+        delp,
+        ntrac,
+        ntcw,
+        ntiw,
+        ntrw,
+        ntsw,
+        ntgl,
+        IX,
+        NLAY,
+        NLP1,
+        uni_cld,
+        lmfshal,
+        lmfdeep2,
+        cldcov,
+        re_cloud,
+        re_ice,
+        re_snow,
+        iovrsw,
+        iovrlw,
+    ):
         # =================   subprogram documentation block   ================ !
         #                                                                       !
         # subprogram:    progcld5    computes cloud related quantities using    !
@@ -1261,7 +1377,7 @@ class CloudClass():
         rer = np.zeros((IX, NLAY))
         clwf = np.zeros((IX, NLAY))
 
-        ptop1 = np.zerso((IX, self.NK_CLDS+1))
+        ptop1 = np.zerso((IX, self.NK_CLDS + 1))
         rxlat = np.zeros(IX)
 
         clouds = np.zeros((IX, NLAY, self.NF_CLDS))
@@ -1269,28 +1385,27 @@ class CloudClass():
 
         for k in range(NLAY):
             for i in range(IX):
-              rew   [i, k] = re_cloud[i, k]
-              rei   [i, k] = re_ice[i, k] 
-              rer   [i, k] = self.rrain_def            # default rain radius to 1000 micron
-              res   [i, k] = re_snow[i, k] 
-
+                rew[i, k] = re_cloud[i, k]
+                rei[i, k] = re_ice[i, k]
+                rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
+                res[i, k] = re_snow[i, k]
 
         for k in range(NLAY):
             for i in range(IX):
-                clwf[i, k] = clw[i, k, ntcw] +  clw[i, k, ntiw] + clw[i, k, ntsw]
+                clwf[i, k] = clw[i, k, ntcw] + clw[i, k, ntiw] + clw[i, k, ntsw]
 
         # -# Find top pressure for each cloud domain for given latitude.
         #    ptopc(k,i): top presure of each cld domain (k=1-4 are sfc,L,m,h;
         # ---  i=1,2 are low-lat (<45 degree) and pole regions)
 
         for i in range(IX):
-            rxlat[i] = abs(xlat[i] / con_pi)      # if xlat in pi/2 -> -pi/2 range
+            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
 
         for id in range(4):
             tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
 
             for i in range(IX):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1*max(0.0, 4.0*rxlat[i]-1.0)
+                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
 
         # -# Compute cloud liquid/ice condensate path in \f$ g/m^2 \f$ .
 
@@ -1299,10 +1414,11 @@ class CloudClass():
                 cwp[i, k] = max(0.0, clw[i, k, ntcw] * self.gfac * delp[i, k])
                 cip[i, k] = max(0.0, clw[i, k, ntiw] * self.gfac * delp[i, k])
                 crp[i, k] = max(0.0, clw[i, k, ntrw] * self.gfac * delp[i, k])
-                csp[i, k] = max(0.0, (clw[i, k, ntsw]+clw[i, k, ntgl]) * \
-                    self.gfac * delp[i, k])
+                csp[i, k] = max(
+                    0.0, (clw[i, k, ntsw] + clw[i, k, ntgl]) * self.gfac * delp[i, k]
+                )
 
-        if uni_cld:     # use unified sgs clouds generated outside
+        if uni_cld:  # use unified sgs clouds generated outside
             for k in range(NLAY):
                 for i in range(IX):
                     cldtot[i, k] = cldcov[i, k]
@@ -1312,38 +1428,42 @@ class CloudClass():
             if not lmfshal:
                 for k in range(NLAY):
                     for i in range(IX):
-                        clwt = 1.0e-6 * (plyr[i, k]*0.001)
+                        clwt = 1.0e-6 * (plyr[i, k] * 0.001)
 
                         if clwf[i, k] > clwt:
-                            onemrh= max( 1.e-10, 1.0-rhly[i, k])
-                            clwm  = clwmin / max( 0.01, plyr[i, k]*0.001)
+                            onemrh = max(1.0e-10, 1.0 - rhly[i, k])
+                            clwm = clwmin / max(0.01, plyr[i, k] * 0.001)
 
-                            tem1  = min(max(np.sqrt(np.sqrt(onemrh*qstl[i, k])), 0.0001), 1.0)
-                            tem1  = 2000.0 / tem1
+                            tem1 = min(
+                                max(np.sqrt(np.sqrt(onemrh * qstl[i, k])), 0.0001), 1.0
+                            )
+                            tem1 = 2000.0 / tem1
 
-                            value = max(min(tem1*(clwf[i, k]-clwm), 50.0 ), 0.0)
-                            tem2  = np.sqrt(np.sqrt(rhly[i, k]))
+                            value = max(min(tem1 * (clwf[i, k] - clwm), 50.0), 0.0)
+                            tem2 = np.sqrt(np.sqrt(rhly[i, k]))
 
-                            cldtot[i, k] = max(tem2*(1.0-np.exp(-value)), 0.0)
+                            cldtot[i, k] = max(tem2 * (1.0 - np.exp(-value)), 0.0)
             else:
                 for k in range(NLAY):
                     for i in range(IX):
-                        clwt = 1.0e-6 * (plyr[i, k]*0.001)
+                        clwt = 1.0e-6 * (plyr[i, k] * 0.001)
 
                         if clwf[i, k] > clwt:
-                            onemrh= max(1.e-10, 1.0-rhly[i, k])
-                            clwm  = clwmin / max(0.01, plyr[i, k]*0.001)
+                            onemrh = max(1.0e-10, 1.0 - rhly[i, k])
+                            clwm = clwmin / max(0.01, plyr[i, k] * 0.001)
 
-                            tem1 = min(max((onemrh*qstl[i, k])**0.49,0.0001), 1.0)  #jhan
+                            tem1 = min(
+                                max((onemrh * qstl[i, k]) ** 0.49, 0.0001), 1.0
+                            )  # jhan
                             if lmfdeep2:
                                 tem1 = self.xrc3 / tem1
                             else:
                                 tem1 = 100.0 / tem1
 
-                            value = max(min(tem1*(clwf[i, k]-clwm), 50.0), 0.0)
-                            tem2  = np.sqrt(np.sqrt(rhly[i, k]))
+                            value = max(min(tem1 * (clwf[i, k] - clwm), 50.0), 0.0)
+                            tem2 = np.sqrt(np.sqrt(rhly[i, k]))
 
-                            cldtot[i, k] = max(tem2*(1.0-np.exp(-value)), 0.0)
+                            cldtot[i, k] = max(tem2 * (1.0 - np.exp(-value)), 0.0)
 
         for k in range(NLAY):
             for i in range(IX):
@@ -1371,7 +1491,7 @@ class CloudClass():
                 clouds[i, k, 3] = rew[i, k]
                 clouds[i, k, 4] = cip[i, k]
                 clouds[i, k, 5] = rei[i, k]
-                clouds[i, k, 6] = crp[i, k]  # added for Thompson 
+                clouds[i, k, 6] = crp[i, k]  # added for Thompson
                 clouds[i, k, 7] = rer[i, k]
                 clouds[i, k, 8] = csp[i, k]  # added for Thompson
                 clouds[i, k, 9] = res[i, k]
@@ -1381,7 +1501,7 @@ class CloudClass():
 
         if self.iovr == 3:
             for i in range(IX):
-                de_lgth[i] = max(0.6, 2.78-4.6*rxlat[i])
+                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         # -# Call gethml() to compute low,mid,high,total, and boundary layer
         #    cloud fractions and clouds top/bottom layer indices for low, mid,
@@ -1392,21 +1512,37 @@ class CloudClass():
         #      overlapping method is defined by control flag 'iovr', which may
         #      be different for lw and sw radiation programs.
 
-        clds, mtop, mbot = self.gethml(plyr,
-                                       ptop1,
-                                       cldtot,
-                                       cldcnv,
-                                       dz,
-                                       de_lgth,
-                                       IX,
-                                       NLAY)
+        clds, mtop, mbot = self.gethml(
+            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY
+        )
 
         return clouds, clds, mtop, mbot, de_lgth
 
-
-    def progclduni(self, plyr, plvl, tlyr, tvly, ccnd, ncnd,
-                   xlat, xlon, slmsk, dz, delp, IX, NLAY, NLP1, cldtot,
-                   effrl, effri, effrr, effrs ,effr_in, iovrsw, iovrlw):
+    def progclduni(
+        self,
+        plyr,
+        plvl,
+        tlyr,
+        tvly,
+        ccnd,
+        ncnd,
+        xlat,
+        xlon,
+        slmsk,
+        dz,
+        delp,
+        IX,
+        NLAY,
+        NLP1,
+        cldtot,
+        effrl,
+        effri,
+        effrr,
+        effrs,
+        effr_in,
+        iovrsw,
+        iovrlw,
+    ):
         # =================   subprogram documentation block   ================ !
         #                                                                       !
         # subprogram:    progclduni    computes cloud related quantities using    !
@@ -1497,8 +1633,8 @@ class CloudClass():
         rer = np.zeros((IX, NLAY))
 
         cndf = np.zeros((IX, NLAY, ncnd))
-        rxlat = np.zeros((IX, self.NK_CLDS+1))
-        ptop1 = np.zerso((IX, self.NK_CLDS+1))
+        rxlat = np.zeros((IX, self.NK_CLDS + 1))
+        ptop1 = np.zerso((IX, self.NK_CLDS + 1))
 
         clouds = np.zeros((IX, NLAY, self.NF_CLDS))
         de_lgth = np.zeros(IX)
@@ -1511,29 +1647,33 @@ class CloudClass():
         if lcrick:
             for n in range(ncnd):
                 for i in range(IX):
-                    cndf[i, 0, n]    = 0.75*ccnd[i, 0, n] + 0.25*ccnd[i, 1, n]
-                    cndf[i, NLAY, n] = 0.75*ccnd[i, NLAY, n] + 0.25*ccnd[i, NLAY-1, n]
-            for k in range(1, NLAY-1):
+                    cndf[i, 0, n] = 0.75 * ccnd[i, 0, n] + 0.25 * ccnd[i, 1, n]
+                    cndf[i, NLAY, n] = (
+                        0.75 * ccnd[i, NLAY, n] + 0.25 * ccnd[i, NLAY - 1, n]
+                    )
+            for k in range(1, NLAY - 1):
                 for i in range(IX):
-                    cndf[i, k, n] = 0.25 * (ccnd[i, k-1, n] + ccnd[i, k+1, n]) + \
-                        0.5 * ccnd[i, k, n]
+                    cndf[i, k, n] = (
+                        0.25 * (ccnd[i, k - 1, n] + ccnd[i, k + 1, n])
+                        + 0.5 * ccnd[i, k, n]
+                    )
 
         # -# Compute cloud liquid/ice condensate path in \f$ g/m^2 \f$ .
 
         if ncnd == 2:
             for k in range(NLAY):
                 for i in range(IX):
-                    tem1      = self.gfac * delp[i, k]
-                    cwp[i, k]  = cndf[i, k, 0] * tem1
-                    cip[i, k]  = cndf[i, k, 1] * tem1
+                    tem1 = self.gfac * delp[i, k]
+                    cwp[i, k] = cndf[i, k, 0] * tem1
+                    cip[i, k] = cndf[i, k, 1] * tem1
         elif ncnd == 4:
             for k in range(NLAY):
                 for i in range(IX):
-                    tem1      = self.gfac * delp[i, k]
-                    cwp[i, k]  = cndf[i, k, 0] * tem1
-                    cip[i, k]  = cndf[i, k, 1] * tem1
-                    crp[i, k]  = cndf[i, k, 2] * tem1
-                    csp[i, k]  = cndf[i, k, 3] * tem1
+                    tem1 = self.gfac * delp[i, k]
+                    cwp[i, k] = cndf[i, k, 0] * tem1
+                    cip[i, k] = cndf[i, k, 1] * tem1
+                    crp[i, k] = cndf[i, k, 2] * tem1
+                    csp[i, k] = cndf[i, k, 3] * tem1
 
         for k in range(NLAY):
             for i in range(IX):
@@ -1559,25 +1699,25 @@ class CloudClass():
             for k in range(NLAY):
                 for i in range(IX):
                     rew[i, k] = effrl[i, k]
-                    rei[i, k] = max(10.0, min(150.0,effri[i, k]))
+                    rei[i, k] = max(10.0, min(150.0, effri[i, k]))
                     rer[i, k] = effrr[i, k]
                     res[i, k] = effrs[i, k]
         else:
             for k in range(NLAY):
                 for i in range(IX):
-                    rew[i, k] = self.reliq_def       # default liq  radius to 10   micron
-                    rei[i, k] = self.reice_def       # default ice  radius to 50   micron
-                    rer[i, k] = self.rrain_def       # default rain radius to 1000 micron
-                    res[i, k] = self.rsnow_def       # default snow radius to 250  micron
+                    rew[i, k] = self.reliq_def  # default liq  radius to 10   micron
+                    rei[i, k] = self.reice_def  # default ice  radius to 50   micron
+                    rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
+                    res[i, k] = self.rsnow_def  # default snow radius to 250  micron
 
             # -# Compute effective liquid cloud droplet radius over land.
             for i in range(IX):
-              if round(slmsk[i]) == 1:
-                for k in range(NLAY):
-                    tem1     = min(1.0, max(0.0, (con_ttp-tlyr[i, k])*0.05))
-                    rew[i, k] = 5.0 + 5.0 * tem1
+                if round(slmsk[i]) == 1:
+                    for k in range(NLAY):
+                        tem1 = min(1.0, max(0.0, (con_ttp - tlyr[i, k]) * 0.05))
+                        rew[i, k] = 5.0 + 5.0 * tem1
 
-            # -# Compute effective ice cloud droplet radius following Heymsfield 
+            # -# Compute effective ice cloud droplet radius following Heymsfield
             #    and McFarquhar (1996) \cite heymsfield_and_mcfarquhar_1996.
 
             for k in range(NLAY):
@@ -1585,16 +1725,21 @@ class CloudClass():
                     tem2 = tlyr[i, k] - con_ttp
 
                     if cip[i, k] > 0.0:
-                        tem3 = self.gord * cip[i, k] * plyr[i, k] / (delp[i, k]*tvly[i, k])
+                        tem3 = (
+                            self.gord
+                            * cip[i, k]
+                            * plyr[i, k]
+                            / (delp[i, k] * tvly[i, k])
+                        )
 
                     if tem2 < -50.0:
-                        rei[i, k] = (1250.0/9.917) * tem3 ** 0.109
+                        rei[i, k] = (1250.0 / 9.917) * tem3 ** 0.109
                     elif tem2 < -40.0:
-                        rei[i, k] = (1250.0/9.337) * tem3 ** 0.08
+                        rei[i, k] = (1250.0 / 9.337) * tem3 ** 0.08
                     elif tem2 < -30.0:
-                        rei[i, k] = (1250.0/9.208) * tem3 ** 0.055
+                        rei[i, k] = (1250.0 / 9.208) * tem3 ** 0.055
                     else:
-                        rei[i, k] = (1250.0/9.387) * tem3 ** 0.031
+                        rei[i, k] = (1250.0 / 9.387) * tem3 ** 0.031
 
                     rei[i, k] = max(10.0, min(rei[i, k], 150.0))
 
@@ -1615,19 +1760,19 @@ class CloudClass():
         # ---  i=1,2 are low-lat (<45 degree) and pole regions)
 
         for i in range(IX):
-            rxlat[i] = abs(xlat[i] / con_pi)     # if xlat in pi/2 -> -pi/2 range
+            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
 
         for id in range(4):
             tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
             for i in range(IX):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1*max(0.0, 4.0*rxlat[i]-1.0)
+                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
 
         #  --- ...  estimate clouds decorrelation length in km
         #           this is only a tentative test, need to consider change later
 
         if self.iovr == 3:
             for i in range(IX):
-                de_lgth[i] = max(0.6, 2.78-4.6*rxlat[i])
+                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         # -# Call gethml() to compute low,mid,high,total, and boundary layer
         #    cloud fractions and clouds top/bottom layer indices for low, mid,
@@ -1638,10 +1783,11 @@ class CloudClass():
         #      overlapping method is defined by control flag 'iovr', which may
         #      be different for lw and sw radiation programs.
 
-        clds, mtop, mbot = self.gethml(plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY)
+        clds, mtop, mbot = self.gethml(
+            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY
+        )
 
-        return clouds, clds, mtop, mbot, de_lgth 
-
+        return clouds, clds, mtop, mbot, de_lgth
 
     def gethml(self, plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY):
         #  ===================================================================  !
@@ -1715,18 +1861,18 @@ class CloudClass():
         # Calculate total and BL cloud fractions (maximum-random cloud
         # overlapping is operational).
 
-        if self.ivflip == 0:                 # input data from toa to sfc
+        if self.ivflip == 0:  # input data from toa to sfc
             kstr = NLAY
             kend = 1
             kinc = -1
-        else:                           # input data from sfc to toa
+        else:  # input data from sfc to toa
             kstr = 1
             kend = NLAY
             kinc = 1
 
-        if self.iovr == 0:                   # random overlap
+        if self.iovr == 0:  # random overlap
 
-            for k in range(kstr-1, kend, kinc):
+            for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
                     if ccur >= self.climit:
@@ -1734,69 +1880,70 @@ class CloudClass():
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = 1.0 - cl1[i]          # save bl cloud
+                        clds[i, 5] = 1.0 - cl1[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = 1.0 - cl1[i]                  # save total cloud
+                clds[i, 4] = 1.0 - cl1[i]  # save total cloud
 
-        elif self.iovr == 1:                 # max/ran overlap
+        elif self.iovr == 1:  # max/ran overlap
 
-            for k in range(kstr-1, kend, kinc):
+            for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
-                    if ccur >= self.climit:            # cloudy layer
+                    if ccur >= self.climit:  # cloudy layer
                         cl2[i] = min(cl2[i], (1.0 - ccur))
-                    else:                         # clear layer
+                    else:  # clear layer
                         cl1[i] = cl1[i] * cl2[i]
                         cl2[i] = 1.0
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = 1.0 - cl1[i] * cl2[i] # save bl cloud
+                        clds[i, 5] = 1.0 - cl1[i] * cl2[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = 1.0 - cl1[i] * cl2[i]     # save total cloud
+                clds[i, 4] = 1.0 - cl1[i] * cl2[i]  # save total cloud
 
-        elif self.iovr == 2:                 # maximum overlap all levels
+        elif self.iovr == 2:  # maximum overlap all levels
 
-            for k in range(kstr-1, kend, kinc):
+            for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst,  max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
                     if ccur >= self.climit:
                         cl1[i] = max(cl1[i], ccur)
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = cl1[i]    # save bl cloud
+                        clds[i, 5] = cl1[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = cl1[i]        # save total cloud
+                clds[i, 4] = cl1[i]  # save total cloud
 
-        elif self.iovr == 3:                 # random if clear-layer divided,
-                                        # otherwise de-corrlength method
+        elif self.iovr == 3:  # random if clear-layer divided,
+            # otherwise de-corrlength method
             for i in range(IX):
-                dz1[i] = - dz[i, kstr]
+                dz1[i] = -dz[i, kstr]
 
-            for k in range(kstr-1, kend, kinc):
+            for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
-                    if ccur >= self.climit:                           # cloudy layer
-                        alfa = np.exp(-0.5*(dz1[i]+dz[i, k])/de_lgth[i])
+                    if ccur >= self.climit:  # cloudy layer
+                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, k]) / de_lgth[i])
                         dz1[i] = dz[i, k]
-                        cl2[i] = alfa * min(cl2[i], (1.0 - ccur)) + \
-                            (1.0 - alfa) * (cl2(i) * (1.0 - ccur))            # random part
-                    else:                                               # clear layer
+                        cl2[i] = alfa * min(cl2[i], (1.0 - ccur)) + (1.0 - alfa) * (
+                            cl2(i) * (1.0 - ccur)
+                        )  # random part
+                    else:  # clear layer
                         cl1[i] = cl1[i] * cl2[i]
                         cl2[i] = 1.0
                         if k != kend:
-                            dz1[i] = -dz[i, k+kinc]
+                            dz1[i] = -dz[i, k + kinc]
 
                 if k == self.llyr:
                     for i in range(IX):
-                        clds[i, 5] = 1.0 - cl1[i] * cl2[i] # save bl cloud
+                        clds[i, 5] = 1.0 - cl1[i] * cl2[i]  # save bl cloud
 
             for i in range(IX):
-                clds[i, 4] = 1.0 - cl1[i] * cl2[i]     # save total cloud
+                clds[i, 4] = 1.0 - cl1[i] * cl2[i]  # save total cloud
 
         #  ---  high, mid, low clouds, where cl1, cl2 are cloud fractions
         #       layer processed from one layer below llyr and up
@@ -1805,10 +1952,10 @@ class CloudClass():
 
         # Calculte high, mid, low cloud fractions and vertical indices of
         #    cloud tops/bases.
-        if self.ivflip == 0:                   # input data from toa to sfc
+        if self.ivflip == 0:  # input data from toa to sfc
             for i in range(IX):
-                cl1 [i] = 0.0
-                cl2 [i] = 0.0
+                cl1[i] = 0.0
+                cl2[i] = 0.0
                 kbt1[i] = NLAY
                 kbt2[i] = NLAY
                 kth1[i] = 0
@@ -1824,21 +1971,21 @@ class CloudClass():
             for k in range(NLAY, None, -1):
                 for i in range(IX):
                     id = idom[i]
-                    id1= id + 1
+                    id1 = id + 1
 
                     pcur = plyr[i, k]
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
 
                     if k > 1:
-                        pnxt = plyr[i, k-1]
-                        cnxt = min(self.ovcst, max(cldtot[i, k-1], cldcnv[i, k-1]))
+                        pnxt = plyr[i, k - 1]
+                        cnxt = min(self.ovcst, max(cldtot[i, k - 1], cldcnv[i, k - 1]))
                     else:
                         pnxt = -1.0
                         cnxt = 0.0
 
                     if pcur < ptop1[i, id1]:
                         id = id + 1
-                        id1= id1 + 1
+                        id1 = id1 + 1
                         idom[i] = id
 
                     if ccur >= self.climit:
@@ -1848,27 +1995,31 @@ class CloudClass():
                         kth2[i] = kth2[i] + 1
 
                         if self.iovr == 0:
-                            cl2[i] = cl2[i] + ccur - cl2[i]*ccur
+                            cl2[i] = cl2[i] + ccur - cl2[i] * ccur
                         else:
                             cl2[i] = max(cl2[i], ccur)
 
                         if cnxt < self.climit or pnxt < ptop1[i, id1]:
-                            kbt1[i] = round((cl1[i]*kbt1[i] + cl2[i]*kbt2[i]) / \
-                                (cl1[i] + cl2[i]))
-                            kth1[i] = round((cl1[i]*kth1[i] + cl2[i]*kth2[i]) / \
-                                (cl1[i] + cl2[i]))
-                            cl1 [i] = cl1[i] + cl2[i] - cl1[i]*cl2[i]
+                            kbt1[i] = round(
+                                (cl1[i] * kbt1[i] + cl2[i] * kbt2[i])
+                                / (cl1[i] + cl2[i])
+                            )
+                            kth1[i] = round(
+                                (cl1[i] * kth1[i] + cl2[i] * kth2[i])
+                                / (cl1[i] + cl2[i])
+                            )
+                            cl1[i] = cl1[i] + cl2[i] - cl1[i] * cl2[i]
 
                             kbt2[i] = k - 1
                             kth2[i] = 0
-                            cl2 [i] = 0.0
+                            cl2[i] = 0.0
 
                     if pnxt < ptop1[i, id1]:
                         clds[i, id] = cl1[i]
-                        mtop[i, id] = min(kbt1[i], kbt1[i]-kth1[i]+1)
+                        mtop[i, id] = min(kbt1[i], kbt1[i] - kth1[i] + 1)
                         mbot[i, id] = kbt1[i]
 
-                        cl1 [i] = 0.0
+                        cl1[i] = 0.0
                         kbt1[i] = k - 1
                         kth1[i] = 0
 
@@ -1876,11 +2027,11 @@ class CloudClass():
                             mbot[i, id1] = kbt1[i]
                             mtop[i, id1] = kbt1[i]
 
-        else:                                      # input data from sfc to toa
+        else:  # input data from sfc to toa
 
             for i in range(IX):
-                cl1 [i] = 0.0
-                cl2 [i] = 0.0
+                cl1[i] = 0.0
+                cl2[i] = 0.0
                 kbt1[i] = 1
                 kbt2[i] = 1
                 kth1[i] = 0
@@ -1902,15 +2053,15 @@ class CloudClass():
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
 
                     if k < NLAY:
-                        pnxt = plyr(i,k+1)
-                        cnxt = min(self.ovcst, max(cldtot[i, k+1], cldcnv[i, k+1]))
+                        pnxt = plyr(i, k + 1)
+                        cnxt = min(self.ovcst, max(cldtot[i, k + 1], cldcnv[i, k + 1]))
                     else:
                         pnxt = -1.0
                         cnxt = 0.0
 
                     if pcur < ptop1[i, id1]:
                         id = id + 1
-                        id1= id1 + 1
+                        id1 = id1 + 1
                         idom[i] = id
 
                     if ccur >= self.climit:
@@ -1919,28 +2070,32 @@ class CloudClass():
                         kth2[i] = kth2[i] + 1
 
                         if self.iovr == 0:
-                            cl2[i] = cl2[i] + ccur - cl2[i]*ccur
+                            cl2[i] = cl2[i] + ccur - cl2[i] * ccur
                         else:
                             cl2[i] = max(cl2[i], ccur)
 
                         if cnxt < self.climit or pnxt < ptop1[i, id1]:
-                            kbt1[i] = round((cl1[i]*kbt1[i] + cl2[i]*kbt2[i]) / \
-                                (cl1[i] + cl2[i]))
-                            kth1[i] = round((cl1[i]*kth1[i] + cl2[i]*kth2[i]) / \
-                                (cl1[i] + cl2[i]))
-                            cl1[i] = cl1[i] + cl2[i] - cl1[i]*cl2[i]
+                            kbt1[i] = round(
+                                (cl1[i] * kbt1[i] + cl2[i] * kbt2[i])
+                                / (cl1[i] + cl2[i])
+                            )
+                            kth1[i] = round(
+                                (cl1[i] * kth1[i] + cl2[i] * kth2[i])
+                                / (cl1[i] + cl2[i])
+                            )
+                            cl1[i] = cl1[i] + cl2[i] - cl1[i] * cl2[i]
 
                             kbt2[i] = k + 1
                             kth2[i] = 0
-                            cl2 [i] = 0.0
+                            cl2[i] = 0.0
 
                     if pnxt < ptop1[i, id1]:
                         clds[i, id] = cl1[i]
-                        mtop[i, id] = max(kbt1[i], kbt1[i]+kth1[i]-1)
+                        mtop[i, id] = max(kbt1[i], kbt1[i] + kth1[i] - 1)
                         mbot[i, id] = kbt1[i]
 
-                        cl1 [i] = 0.0
-                        kbt1[i] = min(k+1, NLAY)
+                        cl1[i] = 0.0
+                        kbt1[i] = min(k + 1, NLAY)
                         kth1[i] = 0
 
                         if id1 <= self.NK_CLDS:

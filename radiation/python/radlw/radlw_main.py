@@ -4,7 +4,7 @@ import xarray as xr
 import sys
 import time
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 from radphysparam import (
     ilwrgas as ilwrgas,
     icldflg as icldflg,

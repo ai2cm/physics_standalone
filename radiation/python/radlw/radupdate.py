@@ -1,11 +1,13 @@
 import sys
 import numpy as np
-sys.path.insert(0, '/Users/AndrewP/Documents/work/physics_standalone/radiation/python')
+
+sys.path.insert(0, "..")
 from phys_const import con_solr
 
 from radiation_astronomy import AstronomyClass
 from radiation_aerosols import AerosolClass
 from radiation_gases import GasClass
+
 
 def radupdate(indict):
     # =================   subprogram documentation block   ================ !
@@ -67,42 +69,42 @@ def radupdate(indict):
     #  ===================================================================  !
     #
 
-    idate = indict['idat']
-    jdate = indict['jdat']
-    deltsw = indict['fhswr']
-    deltim = indict['dtf']
-    lsswr = indict['lsswr']
-    me = indict['me']
-    ictmflg = indict['ictm']
-    isolar = indict['isol']
-    iaerflg = indict['iaer']
-    ioznflg = indict['ntoz']
-    ico2flg = indict['ico2']
-    month0 = indict['month0']
-    iyear0 = indict['iyear0']
-    monthd = indict['monthd']
-    loz1st = indict['loz1st']
+    idate = indict["idat"]
+    jdate = indict["jdat"]
+    deltsw = indict["fhswr"]
+    deltim = indict["dtf"]
+    lsswr = indict["lsswr"]
+    me = indict["me"]
+    ictmflg = indict["ictm"]
+    isolar = indict["isol"]
+    iaerflg = indict["iaer"]
+    ioznflg = indict["ntoz"]
+    ico2flg = indict["ico2"]
+    month0 = indict["month0"]
+    iyear0 = indict["iyear0"]
+    monthd = indict["monthd"]
+    loz1st = indict["loz1st"]
 
     # -# Set up time stamp at fcst time and that for green house gases
     # (currently co2 only)
     # --- ...  time stamp at fcst time
 
     iyear = jdate[0]
-    imon  = jdate[1]
-    iday  = jdate[2]
+    imon = jdate[1]
+    iday = jdate[2]
     ihour = jdate[4]
 
     #  --- ...  set up time stamp used for green house gases (** currently co2 only)
 
     if ictmflg == 0 or ictmflg == -2:  # get external data at initial condition time
         kyear = idate[0]
-        kmon  = idate[1]
-        kday  = idate[2]
+        kmon = idate[1]
+        kday = idate[2]
         khour = idate[4]
-    else:                        # get external data at fcst or specified time
+    else:  # get external data at fcst or specified time
         kyear = iyear
-        kmon  = imon
-        kday  = iday
+        kmon = imon
+        kday = iday
         khour = ihour
 
     if month0 != imon:
@@ -123,17 +125,15 @@ def radupdate(indict):
 
         iyear0 = iyear
 
-        print(f'lsol_chg = {lsol_chg}')
+        print(f"lsol_chg = {lsol_chg}")
 
         sol = AstronomyClass(me, isolar)
 
-        slag, sdec, cdec, solcon = sol.sol_update(jdate,
-                                                  kyear,
-                                                  deltsw,
-                                                  deltim,
-                                                  lsol_chg, me)
-        soldict = {'slag': slag, 'sdec': sdec, 'cdec': cdec, 'solcon': solcon}
-#
+        slag, sdec, cdec, solcon = sol.sol_update(
+            jdate, kyear, deltsw, deltim, lsol_chg, me
+        )
+        soldict = {"slag": slag, "sdec": sdec, "cdec": cdec, "solcon": solcon}
+    #
     # -# Call module_radiation_aerosols::aer_update(), monthly update, no
     # time interpolation
     if lmon_chg:
@@ -143,7 +143,7 @@ def radupdate(indict):
         aer = AerosolClass(NLAY, me, iaerflg)
         aer.aer_update(iyear, imon, me)
         aerdict = aer.return_updatedata()
-#
+    #
     # -# Call co2 and other gases update routine:
     # module_radiation_gases::gas_update()
     if monthd != kmon:
@@ -153,13 +153,7 @@ def radupdate(indict):
         lco2_chg = False
 
     gas = GasClass(me, ioznflg, ico2flg, ictmflg)
-    gas.gas_update(kyear,
-                   kmon,
-                   kday,
-                   khour,
-                   loz1st,
-                   lco2_chg,
-                   me)
+    gas.gas_update(kyear, kmon, kday, khour, loz1st, lco2_chg, me)
     gasdict = gas.return_updatedata()
 
     if loz1st:
