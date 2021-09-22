@@ -2,14 +2,15 @@ import numpy as np
 import xarray as xr
 import os
 import sys
+import warnings
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
-from radsw_param import (
+sys.path.insert(0, "..")
+from radsw.radsw_param import (
     ntbmx,
     nbdsw,
     ngptsw,
     maxgas,
-    nbands,
+    nbandssw,
     nbhgh,
     nblow,
     NGB,
@@ -50,6 +51,7 @@ from radsw_param import (
 from radphysparam import iswmode, iswrgas, iswrate, iswcice, iswcliq
 from phys_const import con_amd, con_amw, con_amo3, con_g, con_cp, con_avgd
 from util import compare_data
+from config import *
 
 
 class RadSWClass:
@@ -98,7 +100,7 @@ class RadSWClass:
         # ===> ... begin here
         #
         if self.iovrsw < 0 or self.iovrsw > 3:
-            print(
+            raise ValueError(
                 "*** Error in specification of cloud overlap flag",
                 f" IOVRSW={self.iovrsw} in RSWINIT !!",
             )
@@ -134,7 +136,7 @@ class RadSWClass:
                     "   with provided input array of permutation seeds",
                 )
             else:
-                print(
+                raise ValueError(
                     "  *** Error in specification of sub-column cloud ",
                     f" control flag isubcsw = {self.isubcsw} !!",
                 )
@@ -142,18 +144,20 @@ class RadSWClass:
         #  --- ...  check cloud flags for consistency
 
         if (icldflg == 0 and iswcliq != 0) or (icldflg == 1 and iswcliq == 0):
-            print(
+            raise ValueError(
                 "*** Model cloud scheme inconsistent with SW",
                 " radiation cloud radiative property setup !!",
             )
 
         if self.isubcsw == 0 and self.iovrsw > 2:
             if me == 0:
-                print(
+                warnings.warn(
                     f"*** IOVRSW={self.iovrsw} is not available for",
                     " ISUBCSW=0 setting!!",
                 )
-                print("The program will use maximum/random overlap", " instead.")
+                warnings.warn(
+                    "The program will use maximum/random overlap", " instead."
+                )
             self.iovrsw = 1
 
         #  --- ...  setup constant factors for heating rate
@@ -212,12 +216,14 @@ class RadSWClass:
         lhsw0,
         lflxprf,
         lfdncmp,
+        sw_rand_file,
     ):
 
         self.lhswb = lhswb
         self.lhsw0 = lhsw0
         self.lflxprf = lflxprf
         self.lfdncmp = lfdncmp
+        self.rand_file = sw_rand_file
 
         # outputs
         hswc = np.zeros((npts, nlay))
@@ -708,7 +714,7 @@ class RadSWClass:
         delgth,
         ipt,
     ):
-        ds = xr.open_dataset("../lookupdata/radsw_cldprtb_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_cldprtb_data.nc"))
         extliq1 = ds["extliq1"].data
         extliq2 = ds["extliq2"].data
         ssaliq1 = ds["ssaliq1"].data
@@ -745,16 +751,16 @@ class RadSWClass:
         cldfrc = np.zeros(nlay)
 
         #  ---  locals:
-        tauliq = np.zeros(nbands)
-        tauice = np.zeros(nbands)
-        ssaliq = np.zeros(nbands)
-        ssaice = np.zeros(nbands)
-        ssaran = np.zeros(nbands)
-        ssasnw = np.zeros(nbands)
-        asyliq = np.zeros(nbands)
-        asyice = np.zeros(nbands)
-        asyran = np.zeros(nbands)
-        asysnw = np.zeros(nbands)
+        tauliq = np.zeros(nbandssw)
+        tauice = np.zeros(nbandssw)
+        ssaliq = np.zeros(nbandssw)
+        ssaice = np.zeros(nbandssw)
+        ssaran = np.zeros(nbandssw)
+        ssasnw = np.zeros(nbandssw)
+        asyliq = np.zeros(nbandssw)
+        asyice = np.zeros(nbandssw)
+        asyran = np.zeros(nbandssw)
+        asysnw = np.zeros(nbandssw)
         cldf = np.zeros(nlay)
 
         lcloudy = np.zeros((nlay, ngptsw), dtype=bool)
@@ -796,7 +802,7 @@ class RadSWClass:
                     else:
                         tausnw = 0.0
 
-                    for ib in range(nbands):
+                    for ib in range(nbandssw):
                         ssaran[ib] = tauran * (1.0 - b0r[ib])
                         ssasnw[ib] = tausnw * (1.0 - (b0s[ib] + b1s[ib] * dgesnw))
                         asyran[ib] = ssaran[ib] * c0r[ib]
@@ -810,7 +816,7 @@ class RadSWClass:
                     #  --- ...  calculation of absorption coefficients due to water clouds.
 
                     if cldliq <= 0.0:
-                        for ib in range(nbands):
+                        for ib in range(nbandssw):
                             tauliq[ib] = 0.0
                             ssaliq[ib] = 0.0
                             asyliq[ib] = 0.0
@@ -820,7 +826,7 @@ class RadSWClass:
                         fint = factor - float(index + 1)
 
                         if iswcliq == 1:
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoliq = max(
                                     0.0,
                                     extliq1[index, ib]
@@ -851,7 +857,7 @@ class RadSWClass:
                                 ssaliq[ib] = tauliq[ib] * ssacoliq
                                 asyliq[ib] = ssaliq[ib] * asycoliq
                         elif iswcliq == 2:  # use updated coeffs
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoliq = max(
                                     0.0,
                                     extliq2[index, ib]
@@ -885,7 +891,7 @@ class RadSWClass:
                     #  --- ...  calculation of absorption coefficients due to ice clouds.
 
                     if cldice <= 0.0:
-                        for ib in range(nbands):
+                        for ib in range(nbandssw):
                             tauice[ib] = 0.0
                             ssaice[ib] = 0.0
                             asyice[ib] = 0.0
@@ -897,7 +903,7 @@ class RadSWClass:
                         if iswcice == 1:
                             refice = min(130.0, max(13.0, refice))
 
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 ia = (
                                     self.idxebc[ib] - 1
                                 )  # eb_&_c band index for ice cloud coeff
@@ -922,7 +928,7 @@ class RadSWClass:
                             index = max(1, min(42, int(factor))) - 1
                             fint = factor - float(index + 1)
 
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoice = max(
                                     0.0,
                                     extice2[index, ib]
@@ -961,7 +967,7 @@ class RadSWClass:
                             index = max(1, min(45, int(factor))) - 1
                             fint = factor - float(index + 1)
 
-                            for ib in range(nbands):
+                            for ib in range(nbandssw):
                                 extcoice = max(
                                     0.0,
                                     extice3[index, ib]
@@ -1032,7 +1038,7 @@ class RadSWClass:
 
     def mcica_subcol(self, cldf, nlay, ipseed, dz, de_lgth, ipt):
 
-        ds = xr.open_dataset("../lookupdata/rand2d_sw.nc")
+        ds = xr.open_dataset(self.rand_file)
         rand2d = ds["rand2d"][ipt, :].data
 
         #  ---  outputs:
@@ -1130,7 +1136,7 @@ class RadSWClass:
         forfac = np.zeros(nlay)
         forfrac = np.zeros(nlay)
 
-        ds = xr.open_dataset("../lookupdata/radsw_ref_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_ref_data.nc"))
         preflog = ds["preflog"].data
         tref = ds["tref"].data
 
@@ -2074,7 +2080,7 @@ class RadSWClass:
         #  *******************************************************************  !
         #  ======================  end of description block  =================  !
 
-        ds = xr.open_dataset("../lookupdata/radsw_sflux_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_sflux_data.nc"))
         self.strrat = ds["strrat"].data
         specwt = ds["specwt"].data
         layreffr = ds["layreffr"].data
@@ -2517,7 +2523,7 @@ class RadSWClass:
         taur,
     ):
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb16_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb16_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -2634,7 +2640,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb17_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb17_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -2781,7 +2787,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb18_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb18_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -2900,7 +2906,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb19_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb19_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3019,7 +3025,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb20_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb20_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3133,7 +3139,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb21_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb21_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3280,7 +3286,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb22_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb22_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3420,7 +3426,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb23_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb23_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3506,7 +3512,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb24_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb24_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3638,7 +3644,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb25_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb25_data.nc"))
         absa = ds["absa"].data
         abso3a = ds["abso3a"].data
         abso3b = ds["abso3b"].data
@@ -3709,7 +3715,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb26_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb26_data.nc"))
         rayl = ds["rayl"].data
 
         #  --- ...  compute the optical depth by interpolating in ln(pressure),
@@ -3756,7 +3762,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb27_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb27_data.nc"))
         absa = ds["absa"].data
         absb = ds["absb"].data
         rayl = ds["rayl"].data
@@ -3832,7 +3838,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb28_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb28_data.nc"))
         absa = ds["absa"].data
         absb = ds["absb"].data
         rayl = ds["rayl"].data
@@ -3956,7 +3962,7 @@ class RadSWClass:
         #  ------------------------------------------------------------------  !
         #
 
-        ds = xr.open_dataset("../lookupdata/radsw_kgb29_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radsw_kgb29_data.nc"))
         forref = ds["forref"].data
         absa = ds["absa"].data
         absb = ds["absb"].data

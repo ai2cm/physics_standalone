@@ -84,6 +84,7 @@ def radupdate(indict):
     iyear0 = indict["iyear0"]
     monthd = indict["monthd"]
     loz1st = indict["loz1st"]
+    ivflip = 1
 
     # -# Set up time stamp at fcst time and that for green house gases
     # (currently co2 only)
@@ -140,7 +141,7 @@ def radupdate(indict):
 
         NLAY = 63
 
-        aer = AerosolClass(NLAY, me, iaerflg)
+        aer = AerosolClass(NLAY, me, iaerflg, ivflip)
         aer.aer_update(iyear, imon, me)
         aerdict = aer.return_updatedata()
     #

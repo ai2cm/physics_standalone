@@ -109,7 +109,7 @@ program test
 !  ---  outputs:
       real (kind=kind_phys) :: slag, sdec, cdec, solcon
 
-      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
+      !$ser init directory='./dump' prefix='Init' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
       !$ser mode read
       !$ser savepoint "lwrad-in-000000"
       !$ser data im=im levr=levr 
@@ -144,6 +144,17 @@ program test
       isubc_lw,    icliq_sw,     crick_proof, ccnorm,&
       imp_physics, norad_precip, idate,   iflip,  me)
 
+      !$ser mode read
+      !$ser savepoint "rad-update"
+      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
+      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
+      
+
+      write(*,*) 'Running update'
+
+      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
+                      me,   slag, sdec,  cdec, solcon)
+
 !$ser cleanup
 
       ser_count_max = 6
@@ -170,11 +181,13 @@ program test
 !$ser data semis=semis tsfg=tsfg dz=dz delp=delp de_lgth=de_lgth
 !$ser data im=im lmk=lmk lmp=lmp lprnt=lprnt
 
+          call tic(time1, time2)  
           call lwrad(ser_count, plyr, plvl, tlyr, tlvl, qlyr, olyr, gasvmr,  &        !  ---  inputs
                      clouds, icsdlw, faerlw, semis,   &
                      tsfg, dz, delp, de_lgth,                     &
                      im, lmk, lmp, lprnt,                   &
                      htlwc, topflw, sfcflw, cldtaulw, htlw0)        !  ---  outputs
+          call toc(time1, time2)
 
 !$ser mode write           
 !$ser savepoint "lwrad-check-"//trim(ser_count_str)
@@ -202,26 +215,9 @@ program test
 
       end do
 
-!      !$ser init directory='./dump' prefix='Serialized' directory_ref='../data/LW' prefix_ref='Generator' mpi_rank=0
-!      !$ser mode read
-!      !$ser savepoint "rad-update"
-!      !$ser data idat=idat jdat=jdat fhswr=fhswr dtf=dtf lsswr=lsswr
-!      !$ser data slag=slag sdec=sdec cdec=cdec solcon=solcon
-!      
-!
-!      write(*,*) 'Running update'
-!
-!      call radupdate (ser_count, idat, jdat, fhswr, dtf,  lsswr, &
-!                      me,   slag, sdec,  cdec, solcon)
-!        
-!      !$ser cleanup
-
       call cdstop()
 
       write(*,*) 'FINISHED!'
-
-      !write(*,*) 'htlwc = ', htlwc
-      !write(*,*) 'htlwc_ref = ', htlwc_ref
 
 contains
 
@@ -308,7 +304,7 @@ contains
         implicit none
         real(8) :: t1, t2
         call cpu_time(t2)
-        write(*,'(a,f5.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
+        write(*,'(a,f7.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
       end subroutine toc
 
 end program test

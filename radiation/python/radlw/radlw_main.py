@@ -1,8 +1,9 @@
 import numpy as np
-from numpy.matrixlib.defmatrix import _convert_from_string
 import xarray as xr
 import sys
+import os
 import time
+import warnings
 
 sys.path.insert(0, "..")
 from radphysparam import (
@@ -12,7 +13,7 @@ from radphysparam import (
     ilwrate as ilwrate,
     ilwcice as ilwcice,
 )
-from radlw_param import (
+from radlw.radlw_param import (
     ntbl,
     nbands,
     nrates,
@@ -58,6 +59,7 @@ from radlw_param import (
     ns16,
 )
 from phys_const import con_g, con_avgd, con_cp, con_amd, con_amw, con_amo3
+from config import *
 
 np.set_printoptions(precision=15)
 
@@ -154,17 +156,18 @@ class RadLWClass:
         expeps = 1e-20
 
         if self.iovrlw < 0 or self.iovrlw > 3:
-            print(
+            raise ValueError(
                 f"  *** Error in specification of cloud overlap flag",
                 f" IOVRLW={self.iovrlw}, in RLWINIT !!",
             )
-        elif iovrlw >= 2 and isubclw == 0:
+        elif self.iovrlw >= 2 and self.isubclw == 0:
             if me == 0:
-                print(
+                warnings.warn(
                     f"  *** IOVRLW={self.iovrlw} is not available for",
                     " ISUBCLW=0 setting!!",
                 )
-                print("      The program uses maximum/random overlap instead.")
+                warnings.warn("      The program uses maximum/random overlap instead.")
+            self.iovrlw = 1
 
         if me == 0:
             print(f"- Using AER Longwave Radiation, Version: {self.VTAGLW}")
@@ -192,7 +195,7 @@ class RadLWClass:
                     "   with provided input array of permutation seeds",
                 )
             else:
-                print(
+                raise ValueError(
                     f"  *** Error in specification of sub-column cloud ",
                     f" control flag isubclw = {self.isubclw}!!",
                 )
@@ -200,7 +203,7 @@ class RadLWClass:
         #  --- ...  check cloud flags for consistency
 
         if (icldflg == 0 and ilwcliq != 0) or (icldflg == 1 and ilwcliq == 0):
-            print(
+            raise ValueError(
                 "*** Model cloud scheme inconsistent with LW",
                 "radiation cloud radiative property setup !!",
             )
@@ -264,7 +267,7 @@ class RadLWClass:
         }
         return outdict
 
-    def run(
+    def lwrad(
         self,
         plyr,
         plvl,
@@ -288,11 +291,14 @@ class RadLWClass:
         lhlwb,
         lhlw0,
         lflxprf,
+        lw_rand_file,
+        verbose=False,
     ):
 
         self.lhlw0 = lhlw0
         self.lhlwb = lhlwb
         self.lflxprf = lflxprf
+        self.rand_file = lw_rand_file
 
         cldfrc = np.zeros(nlp1 + 1)
 
@@ -372,8 +378,9 @@ class RadLWClass:
 
         hlw0 = np.zeros((npts, nlay))
 
-        print("Beginning lwrad . . .")
-        print(" ")
+        if verbose:
+            print("Beginning lwrad . . .")
+            print(" ")
 
         if self.isubclw == 1:
             for i in range(npts):
@@ -504,8 +511,9 @@ class RadLWClass:
                 if cldfrc[k + 1] > self.eps:
                     lcf1 = True
                     break
-            print(lcf1)
-            print("Running cldprop . . .")
+
+            if verbose:
+                print("Running cldprop . . .")
             if lcf1:
                 cldfmc, taucld = self.cldprop(
                     cldfrc,
@@ -524,8 +532,9 @@ class RadLWClass:
                     delgth,
                     iplon,
                 )
-                print("Done")
-                print(" ")
+                if verbose:
+                    print("Done")
+                    print(" ")
 
                 for k in range(nlay):
                     cldtau[iplon, k] = taucld[6, k]
@@ -533,7 +542,8 @@ class RadLWClass:
                 cldfmc = np.zeros((ngptlw, nlay))
                 taucld = np.zeros((nbands, nlay))
 
-            print("Running setcoef . . .")
+            if verbose:
+                print("Running setcoef . . .")
             (
                 laytrop,
                 pklay,
@@ -560,9 +570,10 @@ class RadLWClass:
                 pavel, tavel, tz, stemp, h2ovmr, colamt, coldry, colbrd, nlay, nlp1
             )
 
-            print("Done")
-            print(" ")
-            print("Running taumol . . .")
+            if verbose:
+                print("Done")
+                print(" ")
+                print("Running taumol . . .")
             fracs, tautot = self.taumol(
                 laytrop,
                 pavel,
@@ -591,9 +602,10 @@ class RadLWClass:
                 indminor,
                 nlay,
             )
-            print("Done")
-            print(" ")
-            print("Running rtrnmc . . .")
+            if verbose:
+                print("Done")
+                print(" ")
+                print("Running rtrnmc . . .")
             if self.isubclw <= 0:
                 if self.iovrlw <= 0:
                     (
@@ -664,9 +676,11 @@ class RadLWClass:
                     iplon,
                 )
                 end = time.time()
-                print(f"rtrnmc time = {end-start}")
-            print("Done")
-            print(" ")
+                if verbose:
+                    print(f"rtrnmc time = {end-start}")
+            if verbose:
+                print("Done")
+                print(" ")
 
             upfxc_t[iplon] = totuflux[nlay]
             upfx0_t[iplon] = totuclfl[nlay]
@@ -682,7 +696,8 @@ class RadLWClass:
             for k in range(nlay):
                 hlw0[iplon, k] = htrcl[k]
 
-            print("Finished!")
+            if verbose:
+                print("Finished!")
 
         return (
             hlwc,
@@ -752,8 +767,8 @@ class RadLWClass:
         #           coefficients and indices needed to compute the optical depths
         #           by interpolating data from stored reference atmospheres.
 
-        dfile = "../lookupdata/totplnk.nc"
-        pfile = "../lookupdata/radlw_ref_data.nc"
+        dfile = os.path.join(LOOKUP_DIR, "totplnk.nc")
+        pfile = os.path.join(LOOKUP_DIR, "radlw_ref_data.nc")
         totplnk = xr.open_dataset(dfile)["totplnk"].data
         preflog = xr.open_dataset(pfile)["preflog"].data
         tref = xr.open_dataset(pfile)["tref"].data
@@ -2250,7 +2265,7 @@ class RadLWClass:
         cldfmc = np.zeros((ngptlw, nlay))
         cldf = np.zeros(nlay)
 
-        ds = xr.open_dataset("../lookupdata/radlw_cldprlw_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_cldprlw_data.nc"))
         absliq1 = ds["absliq1"]
         absice0 = ds["absice0"]
         absice1 = ds["absice1"]
@@ -3093,7 +3108,7 @@ class RadLWClass:
         taug = np.zeros((ngptlw, nlay))
         fracs = np.zeros((ngptlw, nlay))
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb01_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb01_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         ka_mn2 = ds["ka_mn2"].data
@@ -3243,7 +3258,7 @@ class RadLWClass:
         #
         #  --- ...  lower atmosphere loop
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb02_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb02_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -3373,10 +3388,10 @@ class RadLWClass:
         #     lower - n2o, p = 706.272 mbar, t = 278.94 k
         #     upper - n2o, p = 95.58 mbar, t = 215.7 k
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb03_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb03_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         ka_mn2o = ds["ka_mn2o"].data
@@ -3768,10 +3783,10 @@ class RadLWClass:
         # ===> ...  begin here
         #
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb04_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb04_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -4104,10 +4119,10 @@ class RadLWClass:
         #  --- ...  calculate reference ratio to be used in calculation of Planck
         #           fraction in lower/upper atmosphere.
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb05_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb05_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -4459,10 +4474,10 @@ class RadLWClass:
         #     lower - co2, p = 706.2720 mb, t = 294.2 k
         #     upper - cfc11, cfc12
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb06_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb06_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -4580,10 +4595,10 @@ class RadLWClass:
         #  --- ...  calculate reference ratio to be used in calculation of Planck
         #           fraction in lower atmosphere.
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb07_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb07_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -4908,10 +4923,10 @@ class RadLWClass:
         #     upper - co2, p = 35.1632 mb, t = 223.28 k
         #     upper - n2o, p = 8.716e-2 mb, t = 226.03 k
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb08_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb08_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -5075,10 +5090,10 @@ class RadLWClass:
         #     lower - n2o, p = 706.272 mbar, t = 278.94 k
         #     upper - n2o, p = 95.58 mbar, t = 215.7 k
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb09_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb09_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -5384,7 +5399,7 @@ class RadLWClass:
         #     band 10:  1390-1480 cm-1 (low key - h2o; high key - h2o)         !
         #  ------------------------------------------------------------------  !
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb10_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb10_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -5500,7 +5515,7 @@ class RadLWClass:
         #     lower - o2, p = 706.2720 mbar, t = 278.94 k
         #     upper - o2, p = 4.758820 mbarm t = 250.85 k
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb11_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb11_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -5629,10 +5644,10 @@ class RadLWClass:
         #     band 12:  1800-2080 cm-1 (low - h2o,co2; high - nothing)         !
         #  ------------------------------------------------------------------  !
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb12_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb12_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -5883,10 +5898,10 @@ class RadLWClass:
         #     lower - co, p = 706 mb, t = 278.94 k
         #     upper - o3, p = 95.5835 mb, t = 215.7 k
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb13_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb13_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -6190,7 +6205,7 @@ class RadLWClass:
         #     band 14:  2250-2380 cm-1 (low - co2; high - co2)                 !
         #  ------------------------------------------------------------------  !
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb14_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb14_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -6295,10 +6310,10 @@ class RadLWClass:
         #  --- ...  minor gas mapping level :
         #     lower - nitrogen continuum, P = 1053., T = 294.
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb15_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb15_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -6562,10 +6577,10 @@ class RadLWClass:
         #     band 16:  2600-3250 cm-1 (low key- h2o,ch4; high key - ch4)      !
         #  ------------------------------------------------------------------  !
 
-        dsc = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+        dsc = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_ref_data.nc"))
         chi_mls = dsc["chi_mls"].data
 
-        ds = xr.open_dataset("../lookupdata/radlw_kgb16_data.nc")
+        ds = xr.open_dataset(os.path.join(LOOKUP_DIR, "radlw_kgb16_data.nc"))
         selfref = ds["selfref"].data
         forref = ds["forref"].data
         absa = ds["absa"].data
@@ -6826,7 +6841,7 @@ class RadLWClass:
             print("Not Implemented!!")
 
         elif self.iovrlw == 1:  # max-ran overlap
-            ds = xr.open_dataset("../lookupdata/rand2d.nc")
+            ds = xr.open_dataset(self.rand_file)
             rand2d = ds["rand2d"][iplon, :].data
 
             k1 = 0

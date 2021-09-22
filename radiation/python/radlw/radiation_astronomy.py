@@ -2,10 +2,12 @@ import numpy as np
 import xarray as xr
 import os
 import sys
+import warnings
 
 sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
+from config import *
 
 
 class AstronomyClass:
@@ -54,13 +56,13 @@ class AstronomyClass:
                     " with cycle approximation (old values)!",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -74,13 +76,13 @@ class AstronomyClass:
                     " with cycle approximation (new values)!",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -94,13 +96,13 @@ class AstronomyClass:
                     " with cycle approximation",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -114,13 +116,13 @@ class AstronomyClass:
                     " with cycle approximation",
                 )
 
-            file_exist = os.path.isfile(self.solar_fname)
+            file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
             if not file_exist:
                 self.isolflg = 10
 
                 if me == 0:
-                    print(f'Requested solar data file "{self.solar_fname}" not found!')
-                    print(
+                    warnings.warn(
+                        f'Requested solar data file "{self.solar_fname}" not found!',
                         f"Using the default solar constant value = {self.solc0}",
                         f" reset control flag isolflg={self.isolflg}",
                     )
@@ -128,11 +130,11 @@ class AstronomyClass:
             self.isolflg = 10
 
             if me == 0:
-                print(
+                warnings.warn(
                     "- !!! ERROR in selection of solar constant data",
                     f" source, ISOL = {isolar}",
                 )
-                print(
+                warnings.warn(
                     f"Using the default solar constant value = {self.solc0}",
                     f" reset control flag isolflg={self.isolflg}",
                 )
@@ -207,21 +209,21 @@ class AstronomyClass:
         imin = jdate[5]
         isec = jdate[6]
 
-        print(self.solar_fname)
-
         if lsol_chg:  # get solar constant from data table
             if self.iyr_sav == iyear:  # same year, no new reading necessary
                 if self.isolflg == 4:
                     self.solc0 = self.smon_sav[imon]
             else:  # need to read in new data
-                iyr_sav = iyear
+                self.iyr_sav = iyear
                 #  --- ...  check to see if the solar constant data file existed
-                file_exist = os.path.isfile(self.solar_fname)
+                file_exist = os.path.isfile(os.path.join(FORCING_DIR, self.solar_fname))
                 if not file_exist:
-                    print(" !!! ERROR! Can not find solar constant file!!!")
+                    raise FileNotFoundError(
+                        " !!! ERROR! Can not find solar constant file!!!"
+                    )
                 else:
                     iyr = iyear
-                    ds = xr.open_dataset(self.solar_fname)
+                    ds = xr.open_dataset(os.path.join(FORCING_DIR, self.solar_fname))
                     iyr1 = ds["yr_start"].data
                     iyr2 = ds["yr_end"].data
                     icy1 = ds["yr_cyc1"].data
@@ -238,25 +240,29 @@ class AstronomyClass:
                         while iyr < iyr1:
                             iyr += icy
                         if me == 0:
-                            print(f"*** Year {iyear} out of table range!")
-                            print(f"{iyr1}, {iyr2}")
-                            print(f"Using the closest-cycle year ('{iyr}')")
+                            warnings.warn(
+                                f"*** Year {iyear} out of table range!",
+                                f"{iyr1}, {iyr2}",
+                                f"Using the closest-cycle year ('{iyr}')",
+                            )
                     elif iyr > iyr2:
                         icy = iyr2 - icy2 + 1  # range of the latest cycle in data table
                         while iyr > iyr2:
                             iyr -= icy
                         if me == 0:
-                            print(f"*** Year {iyear} out of table range!")
-                            print(f"{iyr1}, {iyr2}")
-                            print(f"Using the closest-cycle year ('{iyr}')")
+                            warnings.warn(
+                                f"*** Year {iyear} out of table range!",
+                                f"{iyr1}, {iyr2}",
+                                f"Using the closest-cycle year ('{iyr}')",
+                            )
                     #  --- ...  locate the right record for the year of data
                     if self.isolflg < 4:  # use annual mean data tables
                         solc1 = ds["solc1"].sel(year=iyr).data
-                        solc0 = smean + solc1
+                        self.solc0 = smean + solc1
                         if me == 0:
                             print(
                                 "CHECK: Solar constant data used for year",
-                                f"{iyr}, {solc1}, {solc0}",
+                                f"{iyr}, {solc1}, {self.solc0}",
                             )
                     elif self.isolflg == 4:  # use monthly mean data tables
                         i = iyr2
@@ -266,7 +272,7 @@ class AstronomyClass:
                             if i == iyr and iyr == jyr:
                                 for nn in range(12):
                                     self.smon_sav[nn] = smean + smon[nn]
-                                solc0 = smean + smon[imon]
+                                self.solc0 = smean + smon[imon]
                                 if me == 0:
                                     print("CHECK: Solar constant data used for year")
                                     print(f"{iyr} and month {imon}")
@@ -274,7 +280,7 @@ class AstronomyClass:
                                 else:
                                     i -= 1
         else:
-            solc0 = con_solr
+            self.solc0 = con_solr
 
         #  --- ...  calculate forecast julian day and fraction of julian day
         jd1 = self.iw3jdn(iyear, imon, iday)
@@ -299,38 +305,34 @@ class AstronomyClass:
         r1, dlt, alp, sollag, sindec, cosdec = self.solar(jd, fjd)
 
         #  --- ...  calculate sun-earth distance adjustment factor appropriate to date
-        solcon = solc0 / (r1 * r1)
+        self.solcon = self.solc0 / (r1 * r1)
 
-        slag = sollag
-        sdec = sindec
-        cdec = cosdec
+        self.slag = sollag
+        self.sdec = sindec
+        self.cdec = cosdec
+        self.sollag = sollag
 
         #  --- ...  diagnostic print out
 
         if me == 0:
-            self.prtime(jd, fjd, dlt, alp, r1, solcon, sollag)
+            self.prtime(jd, fjd, dlt, alp, r1, self.solcon, sollag)
 
         #  --- ...  setting up calculation parameters used by subr coszmn
 
         nswr = max(1, np.round(deltsw / deltim))  # number of mdl t-step per sw call
         dtswh = deltsw / f3600  # time length in hours
 
-        nstp = max(6, nswr)
-        anginc = pid12 * dtswh / float(nstp)
+        self.nstp = max(6, nswr)
+        self.anginc = pid12 * dtswh / float(self.nstp)
 
         if me == 0:
             print(
                 "for cosz calculations: nswr,deltim,deltsw,dtswh =",
                 f"{nswr[0]}, {deltim[0]}, {deltsw[0]}, {dtswh[0]}, anginc, nstp =",
-                f"{anginc[0]}, {nstp}",
+                f"{self.anginc[0]}, {self.nstp}",
             )
 
-        self.slag = slag
-        self.sdec = sdec
-        self.cdec = cdec
-        self.solcon = solcon
-
-        return slag, sdec, cdec, solcon
+        return self.slag, self.sdec, self.cdec, self.solcon
 
     def prtime(self, jd, fjd, dlt, alp, r1, solc, sollag):
         #  ===================================================================  !
@@ -663,20 +665,20 @@ class AstronomyClass:
         rstp = 1.0 / float(self.nstp)
 
         for it in range(self.nstp):
-            cns = solang + (float[it] - 0.5) * self.anginc + self.sollag
+            cns = solang + (it + 0.5) * self.anginc + self.sollag
             for i in range(IM):
-                coszn = self.sindec * sinlat[i] + self.cosdec * coslat[i] * np.cos(
+                coszn = self.sdec * sinlat[i] + self.cdec * coslat[i] * np.cos(
                     cns + xlon[i]
                 )
                 coszen[i] = coszen[i] + max(0.0, coszn)
                 if coszn > self.czlimt:
-                    istsun[i] = istsun[i] + 1
+                    istsun[i] += 1
 
         #  --- ...  compute time averages
 
         for i in range(IM):
             coszdg[i] = coszen[i] * rstp
-            if istsun(i) > 0:
+            if istsun[i] > 0:
                 coszen[i] = coszen[i] / istsun[i]
 
         return coszen, coszdg
