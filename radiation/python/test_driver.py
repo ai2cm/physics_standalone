@@ -71,7 +71,7 @@ driver.radinit(
     iswcliq,
 )
 
-invars = ["idat", "jdat", "fhswr", "dtf", "lsswr", "slag", "sdec", "cdec", "solcon"]
+invars = ["idat", "jdat", "fhswr", "dtf", "lsswr"]
 updatedict = dict()
 
 for var in invars:
