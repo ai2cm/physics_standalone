@@ -13,7 +13,7 @@ else
     fi
 
     if [ -z "$(ls -A /work/radiation/fortran/data/LW)" ]; then
-        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radlw /work/radiation/fortran/data/.
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radlw /work/radiation/fortran/data/LW
         cd /work/radiation/fortran/data/LW
         tar -xzvf data.tar.gz
     else
@@ -21,7 +21,7 @@ else
     fi
 
     if [ -z "$(ls -A /work/radiation/fortran/data/SW)" ]; then
-        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radsw /work/radiation/fortran/data/.
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radsw /work/radiation/fortran/data/SW
         cd /work/radiation/fortran/data/SW
         tar -xzvf data.tar.gz
     else
