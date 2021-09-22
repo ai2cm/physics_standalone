@@ -4,7 +4,7 @@ if [ -z "$IS_DOCKER" ] ; then
     echo "Not in docker, please build and enter the Docker image before running this script"
 else
 
-    if [ ! -d "/work/radiation/fortran/data"]; then
+    if [ ! -d "/work/radiation/fortran/data" ]; then
         cd /work/radiation/fortran
         mkdir data
         cd /work/radiation
@@ -36,7 +36,7 @@ else
         echo "Data already present"
     fi
 
-    if [ ! -d "/work/radiation/fortran/radlw/dump"]; then
+    if [ ! -d "/work/radiation/fortran/radlw/dump" ]; then
         cd /work/radiation/fortran/radlw
         mkdir dump
         cd /work/radiation
@@ -44,7 +44,7 @@ else
         echo "LW standalone output directory already exists"
     fi
 
-    if [ ! -d "/work/radiation/fortran/radsw/dump"]; then
+    if [ ! -d "/work/radiation/fortran/radsw/dump" ]; then
         cd /work/radiation/fortran/radsw
         mkdir dump
         cd /work/radiation
@@ -68,7 +68,7 @@ else
         echo "SW standalone data already present"
     fi
 
-    if [ ! -d "/work/radiation/python/forcing"]; then
+    if [ ! -d "/work/radiation/python/forcing" ]; then
         cd /work/radiation/python
         mkdir forcing
         cd ../
