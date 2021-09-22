@@ -7,13 +7,16 @@ else
     if [ ! -d "/work/radiation/fortran/data" ]; then
         cd /work/radiation/fortran
         mkdir data
+        cd data
+        mkdir LW
+        mkdir SW
         cd /work/radiation
     else
         echo "Fortran output directory already exists"
     fi
 
     if [ -z "$(ls -A /work/radiation/fortran/data/LW)" ]; then
-        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radlw /work/radiation/fortran/data/LW
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radlw/* /work/radiation/fortran/data/LW/.
         cd /work/radiation/fortran/data/LW
         tar -xzvf data.tar.gz
     else
@@ -21,7 +24,7 @@ else
     fi
 
     if [ -z "$(ls -A /work/radiation/fortran/data/SW)" ]; then
-        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radsw /work/radiation/fortran/data/SW
+        gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/fv3gfs-fortran-output/radsw/* /work/radiation/fortran/data/SW/.
         cd /work/radiation/fortran/data/SW
         tar -xzvf data.tar.gz
     else
