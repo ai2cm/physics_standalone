@@ -1,58 +1,111 @@
 import sys
 
-sys.path.insert(0, "/Users/AndrewP/Documents/work/physics_standalone/radiation/python")
+sys.path.insert(0, "..")
 import os
 
-from radupdate import radupdate
-from radlw_param import ntbl
+from radiation_driver import RadiationDriver
+from radphysparam import icldflg
 from util import compare_data
 from config import *
 
-# On MacOS, remember to set the environment variable DYLD_LIBRARY_PATH to contain
-# the path to the SerialBox /lib directory
-
 import serialbox as ser
 
-ddir = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/data/LW"
-ddir2 = "/Users/AndrewP/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Generator_rank0")
-serializer2 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Serialized_rank0")
-serializer3 = ser.Serializer(ser.OpenModeKind.Read, ddir2, "Init_rank0")
+serializer = ser.Serializer(
+    ser.OpenModeKind.Read, os.path.join(FORTRANDATA_DIR, "LW"), "Generator_rank0"
+)
+serializer2 = ser.Serializer(
+    ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Serialized_rank0"
+)
+serializer3 = ser.Serializer(ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Init_rank0")
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 savepoints3 = serializer3.savepoint_list()
 
-invars = ["idat", "jdat", "fhswr", "dtf", "lsswr", "slag", "sdec", "cdec", "solcon"]
+invars = [
+    "si",
+    "levr",
+    "ictm",
+    "isol",
+    "ico2",
+    "iaer",
+    "ialb",
+    "iems",
+    "ntcw",
+    "num_p2d",
+    "num_p3d",
+    "npdf3d",
+    "ntoz",
+    "iovr_sw",
+    "iovr_lw",
+    "isubc_sw",
+    "isubc_lw",
+    "icliq_sw",
+    "crick_proof",
+    "ccnorm",
+    "imp_physics",
+    "norad_precip",
+    "idate",
+    "iflip",
+    "me",
+]
 
-flgvars = ["ictm", "isol", "ntoz", "ico2", "iaer"]
+initdict = dict()
 
-indict = dict()
-indict["me"] = 0
-indict["month0"] = 0
-indict["iyear0"] = 0
-indict["monthd"] = 0
-indict["kyrsav"] = 0
-indict["loz1st"] = True
-indict["kyrstr"] = 1
-indict["kyrend"] = 1
-indict["iyr_sav"] = 0
+for var in invars:
+    if var != "levr" and var != "me":
+        initdict[var] = serializer.read(var, serializer.savepoint["rad-initialize"])
+    elif var == "levr":
+        initdict[var] = serializer.read(var, serializer.savepoint["driver-in-000000"])
 
+initdict["me"] = 0
+initdict["icld"] = icldflg
+
+invars = ["idat", "jdat", "fhswr", "dtf", "lsswr"]
+
+indict = {}
 for var in invars:
     indict[var] = serializer.read(var, serializer.savepoint["rad-update"])
 
-for var in flgvars:
-    indict[var] = serializer.read(var, serializer.savepoint["rad-initialize"])
+driver = RadiationDriver()
+driver.radinit(
+    initdict["si"],
+    initdict["levr"][0],
+    initdict["imp_physics"][0],
+    initdict["me"],
+    initdict["iems"][0],
+    initdict["ntoz"][0],
+    initdict["ictm"][0],
+    initdict["isol"][0],
+    initdict["ico2"][0],
+    initdict["iaer"][0],
+    initdict["ialb"][0],
+    initdict["icld"],
+    initdict["iflip"][0],
+    initdict["iovr_sw"][0],
+    initdict["iovr_lw"][0],
+    initdict["isubc_sw"][0],
+    initdict["isubc_lw"][0],
+    initdict["crick_proof"][0],
+    initdict["ccnorm"][0],
+    initdict["norad_precip"][0],
+    initdict["icliq_sw"][0],
+    do_test=False,
+)
 
-print(f"ntoz = {indict['ntoz']}")
-
-soldict, aerdict, gasdict, loz1st = radupdate(indict)
+print(" ")
+print("Running update")
+soldict, aerdict, gasdict = driver.radupdate(
+    indict["idat"],
+    indict["jdat"],
+    indict["fhswr"],
+    indict["dtf"],
+    indict["lsswr"],
+    do_test=True,
+)
 
 solvars = ["slag", "sdec", "cdec", "solcon"]
 aervars = ["kprfg", "idxcg", "cmixg", "denng", "ivolae"]
 gasvars = ["co2vmr_sav", "gco2cyc"]
-
-print(savepoints3)
 
 soldict_val = dict()
 for var in solvars:
@@ -71,10 +124,6 @@ for var in gasvars:
     gasdict_val[var] = serializer3.read(
         var, serializer3.savepoint["lw_gas_update_out000000"]
     )
-
-print(f"isolar = {indict['isol']}")
-print(f"Python = {soldict['solcon']}")
-print(f"Fortran = {soldict_val['solcon']}")
 
 compare_data(soldict, soldict_val)
 compare_data(aerdict, aerdict_val)

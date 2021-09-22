@@ -77,7 +77,7 @@ updatedict = dict()
 for var in invars:
     updatedict[var] = serial.read(var, serial.savepoint["rad-update"])
 
-driver.radupdate(
+slag, sdec, cdec, solcon = driver.radupdate(
     updatedict["idat"],
     updatedict["jdat"],
     updatedict["fhswr"],

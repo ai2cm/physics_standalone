@@ -305,16 +305,17 @@ class AstronomyClass:
         r1, dlt, alp, sollag, sindec, cosdec = self.solar(jd, fjd)
 
         #  --- ...  calculate sun-earth distance adjustment factor appropriate to date
-        solcon = self.solc0 / (r1 * r1)
+        self.solcon = self.solc0 / (r1 * r1)
 
-        slag = sollag
-        sdec = sindec
-        cdec = cosdec
+        self.slag = sollag
+        self.sdec = sindec
+        self.cdec = cosdec
+        self.sollag = sollag
 
         #  --- ...  diagnostic print out
 
         if me == 0:
-            self.prtime(jd, fjd, dlt, alp, r1, solcon, sollag)
+            self.prtime(jd, fjd, dlt, alp, r1, self.solcon, sollag)
 
         #  --- ...  setting up calculation parameters used by subr coszmn
 
@@ -331,13 +332,7 @@ class AstronomyClass:
                 f"{self.anginc[0]}, {self.nstp}",
             )
 
-        self.slag = slag
-        self.sdec = sdec
-        self.cdec = cdec
-        self.solcon = solcon
-        self.sollag = sollag
-
-        return slag, sdec, cdec, solcon
+        return self.slag, self.sdec, self.cdec, self.solcon
 
     def prtime(self, jd, fjd, dlt, alp, r1, solc, sollag):
         #  ===================================================================  !

@@ -18,6 +18,8 @@ serializer2 = ser.Serializer(ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Init_ran
 savepoints = serializer.savepoint_list()
 savepoints2 = serializer2.savepoint_list()
 
+print(savepoints[2])
+
 invars = [
     "si",
     "levr",

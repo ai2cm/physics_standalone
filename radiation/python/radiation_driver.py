@@ -79,6 +79,7 @@ class RadiationDriver:
         self.month0 = 0
         self.iyear0 = 0
         self.monthd = 0
+        self.isolar = isolar
 
         if me == 0:
             print("NEW RADIATION PROGRAM STRUCTURES BECAME OPER. May 01 2007")
@@ -168,9 +169,7 @@ class RadiationDriver:
 
             return aer_dict, sol_dict, gas_dict, sfc_dict, cld_dict, rlw_dict, rsw_dict
 
-    def radupdate(
-        self, idate, jdate, deltsw, deltim, lsswr, me, slag, sdec, cdec, solcon
-    ):
+    def radupdate(self, idate, jdate, deltsw, deltim, lsswr, do_test=False):
         # =================   subprogram documentation block   ================ !
         #                                                                       !
         # subprogram:   radupdate   calls many update subroutines to check and  !
@@ -261,7 +260,7 @@ class RadiationDriver:
         # -# Call module_radiation_astronomy::sol_update(), yearly update, no
         # time interpolation.
         if lsswr:
-            if isolar == 0 or isolar == 10:
+            if self.isolar == 0 or self.isolar == 10:
                 lsol_chg = False
             elif self.iyear0 != iyear:
                 lsol_chg = True
@@ -291,6 +290,16 @@ class RadiationDriver:
 
         if self.loz1st:
             self.loz1st = False
+
+        if do_test:
+            soldict = {"slag": slag, "sdec": sdec, "cdec": cdec, "solcon": solcon}
+            aerdict = self.aer.return_updatedata()
+            gasdict = self.gas.return_updatedata()
+
+            return soldict, aerdict, gasdict
+
+        else:
+            return slag, sdec, cdec, solcon
 
     def GFS_radiation_driver(
         self,
