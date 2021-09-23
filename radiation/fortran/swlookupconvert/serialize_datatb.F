@@ -14,7 +14,7 @@ program test
 
 !$ser init directory='./saveData' prefix='radsw_cldprtb'
 !$ser mode write      
-!$ser verbatim print *, "This is a test"
+!$ser verbatim print *, "Serializing requested data"
 !$ser savepoint 'mySavepoint'
 !$ser data extliq1=extliq1 extliq2=extliq2 ssaliq1=ssaliq1 ssaliq2=ssaliq2
 !$ser data asyliq1=asyliq1 asyliq2=asyliq2 extice2=extice2 ssaice2=ssaice2

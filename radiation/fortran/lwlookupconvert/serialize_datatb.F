@@ -11,7 +11,7 @@ program test
 
 !$ser init directory='./saveData' prefix='radlw_avplnk'
 !$ser mode write      
-!$ser verbatim print *, "This is a test"
+!$ser verbatim print *, "Serializing requested data"
 !$ser savepoint 'mySavepoint'
 !$ser data totplnk=totplnk
 !$ser cleanup
