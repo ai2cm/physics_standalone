@@ -3,27 +3,51 @@ import numpy as np
 import os
 import xarray as xr
 
-# On MacOS, remember to set the environment variable DYLD_LIBRARY_PATH to contain
-# the path to the SerialBox /lib directory
+sys.path.insert(0, "..")
+from config import *
 
-os.environ["DYLD_LIBRARY_PATH"] = "/Users/andrewp/Documents/code/serialbox2/install/lib"
-
-SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/andrewp/Documents/work/physics_standalone/radiation/fortran/radsw/dump"
-ddir2 = "/Users/andrewp/Documents/work/physics_standalone/radiation/fortran/data/SW"
+ddir = "../../fortran/radsw/dump"
+ddir2 = "../../fortran/data/SW"
+
+scheme = "SW"
+smallscheme = scheme.lower()
 
 for tile in range(6):
     serializer2 = ser.Serializer(
-        ser.OpenModeKind.Read, ddir2, "Generator_rank" + str(tile)
+        ser.OpenModeKind.Read,
+        os.path.join(FORTRANDATA_DIR, scheme),
+        "Generator_rank" + str(tile),
     )
 
-    nday = serializer2.read("nday", serializer2.savepoint["swrad-in-000000"])[0]
-    print(f"nday = {nday}")
+    if scheme == "SW":
+        nday = serializer2.read(
+            "nday", serializer2.savepoint[smallscheme + "rad-in-000000"]
+        )[0]
 
-    if nday > 0:
+        if nday > 0:
+            serializer = ser.Serializer(
+                ser.OpenModeKind.Read, ddir, "Serialized_rank" + str(tile)
+            )
+            savepoints = serializer.savepoint_list()
+
+            rnlist = list()
+            for pt in savepoints:
+                if "random_number-output-000000" in pt.name:
+                    rnlist.append(pt)
+                    print(pt)
+
+            nlay = 63
+            ngptsw = 112
+            rand2d = np.zeros((24, nlay * ngptsw))
+            rand2d2 = np.zeros((24, nlay * ngptsw))
+
+            for n, sp in enumerate(rnlist):
+                tmp = serializer.read("rand2d", sp)
+                lat = int(sp.name[-2:]) - 1
+                rand2d[lat, :] = tmp
+    elif scheme == "LW":
         serializer = ser.Serializer(
             ser.OpenModeKind.Read, ddir, "Serialized_rank" + str(tile)
         )
@@ -36,9 +60,9 @@ for tile in range(6):
                 print(pt)
 
         nlay = 63
-        ngptsw = 112
-        rand2d = np.zeros((24, nlay * ngptsw))
-        rand2d2 = np.zeros((24, nlay * ngptsw))
+        ngptlw = 140
+        rand2d = np.zeros((24, nlay * ngptlw))
+        rand2d2 = np.zeros((24, nlay * ngptlw))
 
         for n, sp in enumerate(rnlist):
             tmp = serializer.read("rand2d", sp)
@@ -55,7 +79,9 @@ for tile in range(6):
         dout = (
             "/Users/andrewp/Documents/work/physics_standalone/radiation/python/lookupdata/rand2d_tile"
             + str(tile)
-            + "_sw.nc"
+            + "_"
+            + smallscheme
+            + ".nc"
         )
         print(dout)
 
