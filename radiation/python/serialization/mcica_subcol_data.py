@@ -11,7 +11,7 @@ import serialbox as ser
 ddir = "../../fortran/radsw/dump"
 ddir2 = "../../fortran/data/SW"
 
-scheme = "SW"
+scheme = "LW"
 smallscheme = scheme.lower()
 
 for tile in range(6):
@@ -28,7 +28,7 @@ for tile in range(6):
 
         if nday > 0:
             serializer = ser.Serializer(
-                ser.OpenModeKind.Read, ddir, "Serialized_rank" + str(tile)
+                ser.OpenModeKind.Read, SW_SERIALIZED_DIR, "Serialized_rank" + str(tile)
             )
             savepoints = serializer.savepoint_list()
 
@@ -41,7 +41,6 @@ for tile in range(6):
             nlay = 63
             ngptsw = 112
             rand2d = np.zeros((24, nlay * ngptsw))
-            rand2d2 = np.zeros((24, nlay * ngptsw))
 
             for n, sp in enumerate(rnlist):
                 tmp = serializer.read("rand2d", sp)
@@ -49,7 +48,7 @@ for tile in range(6):
                 rand2d[lat, :] = tmp
     elif scheme == "LW":
         serializer = ser.Serializer(
-            ser.OpenModeKind.Read, ddir, "Serialized_rank" + str(tile)
+            ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Serialized_rank" + str(tile)
         )
         savepoints = serializer.savepoint_list()
 
@@ -62,7 +61,6 @@ for tile in range(6):
         nlay = 63
         ngptlw = 140
         rand2d = np.zeros((24, nlay * ngptlw))
-        rand2d2 = np.zeros((24, nlay * ngptlw))
 
         for n, sp in enumerate(rnlist):
             tmp = serializer.read("rand2d", sp)
@@ -74,15 +72,9 @@ for tile in range(6):
 
         # print(rand2d-rand2d2)
 
-        ds = xr.Dataset({"rand2d": (("iplon", "n"), rand2d)})
+    ds = xr.Dataset({"rand2d": (("iplon", "n"), rand2d)})
 
-        dout = (
-            "/Users/andrewp/Documents/work/physics_standalone/radiation/python/lookupdata/rand2d_tile"
-            + str(tile)
-            + "_"
-            + smallscheme
-            + ".nc"
-        )
-        print(dout)
+    dout = "../lookupdata/rand2d_tile" + str(tile) + "_" + smallscheme + ".nc"
+    print(dout)
 
-        ds.to_netcdf(dout)
+    # ds.to_netcdf(dout)

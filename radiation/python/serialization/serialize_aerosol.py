@@ -3,18 +3,12 @@ import numpy as np
 import os
 import xarray as xr
 
-# On MacOS, remember to set the environment variable DYLD_LIBRARY_PATH to contain
-# the path to the SerialBox /lib directory
+sys.path.insert(0, "..")
+from config import *
 
-os.environ["DYLD_LIBRARY_PATH"] = "/Users/AndrewP/Documents/code/serialbox2/install/lib"
-
-SERIALBOX_DIR = "/Users/AndrewP/Documents/code/serialbox2/install"
-sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-ddir = "/Users/andrewp/Documents/work/physics_standalone/radiation/fortran/radlw/dump"
-
-serializer = ser.Serializer(ser.OpenModeKind.Read, ddir, "Init_rank0")
+serializer = ser.Serializer(ser.OpenModeKind.Read, LW_SERIALIZED_DIR, "Init_rank0")
 savepoints = serializer.savepoint_list()
 
 sp = serializer.savepoint["lwrad-clim_aerinit-output"]
@@ -37,8 +31,6 @@ kprfg = serializer.read("kprfg", sp2)
 idxcg = serializer.read("idxcg", sp2)
 cmixg = serializer.read("cmixg", sp2)
 denng = serializer.read("denng", sp2)
-
-print(rhdpasy0.shape)
 
 NCM1 = 6
 NSWLWBD = 30
@@ -91,8 +83,6 @@ ds = xr.Dataset(
 
 print(ds)
 
-dout = (
-    "/Users/andrewp/Documents/work/physics_standalone/radiation/python/radlw/aerosol.nc"
-)
+dout = os.path.join(FORCING_DIR, "aerosol.nc")
 
 ds.to_netcdf(dout)
