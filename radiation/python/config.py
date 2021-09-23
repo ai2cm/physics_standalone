@@ -42,7 +42,7 @@ else:
     LOOKUP_DIR = "../../python/lookupdata"
     FORTRANDATA_DIR = "../../fortran/data"
     LW_SERIALIZED_DIR = "../../fortran/radlw/dump"
-    SW_SERIALIZED_DIR = "../../fortran/radlw/dump"
+    SW_SERIALIZED_DIR = "../../fortran/radsw/dump"
     FORCING_DIR = "../../python/forcing"
 
 backend = "gtc:gt:cpu_ifirst"
