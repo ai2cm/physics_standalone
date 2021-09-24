@@ -67,7 +67,7 @@ RUN cd /serialbox && \
 
 # install gt4py
 RUN cd /
-RUN git clone -b v35 https://github.com/VulcanClimateModeling/gt4py.git
+RUN git clone -b v35 https://github.com/ai2cm/gt4py.git
 RUN pip install -e ./gt4py && \
     python -m gt4py.gt_src_manager install -m 2
 
