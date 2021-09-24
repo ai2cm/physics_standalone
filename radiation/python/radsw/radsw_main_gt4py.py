@@ -591,13 +591,10 @@ class RadSWClass:
             self.locdict_gt4py["ssolar"],
             self.locdict_gt4py["albbm"],
             self.locdict_gt4py["albdf"],
-            self.locdict_gt4py["tem1"],
-            self.locdict_gt4py["tem2"],
             self.locdict_gt4py["pavel"],
             self.locdict_gt4py["tavel"],
             self.locdict_gt4py["h2ovmr"],
             self.locdict_gt4py["o3vmr"],
-            self.locdict_gt4py["tem0"],
             self.locdict_gt4py["coldry"],
             self.locdict_gt4py["temcol"],
             self.locdict_gt4py["colamt"],
@@ -616,6 +613,9 @@ class RadSWClass:
             self.locdict_gt4py["cdat4"],
             self.locdict_gt4py["zcf0"],
             self.locdict_gt4py["zcf1"],
+            domain=shape_nlp1,
+            origin=default_origin,
+            validate_args=validate,
         )
 
         if do_subtest:
