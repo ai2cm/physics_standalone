@@ -11,6 +11,32 @@ import serialbox as ser
 scheme = "LW"
 smallscheme = scheme.lower()
 
+# Check files are there
+if not os.path.isdir(os.path.join(FORTRANDATA_DIR, scheme)):
+    raise FileNotFoundError(
+        "Serialized fortran output not found, please download from Google Cloud first"
+    )
+
+if not os.path.isdir(LW_SERIALIZED_DIR):
+    raise FileNotFoundError(
+        "Serialized LW standalone output not found, please download from Google Cloud first"
+    )
+else:
+    if len(os.listdir(LW_SERIALIZED_DIR)) == 0:
+        raise FileNotFoundError(
+            "Serialized LW standalone output not found, please download from Google Cloud first"
+        )
+
+if not os.path.isdir(SW_SERIALIZED_DIR):
+    raise FileNotFoundError(
+        "Serialized SW standalone output not found, please download from Google Cloud first"
+    )
+else:
+    if len(os.listdir(SW_SERIALIZED_DIR)) == 0:
+        raise FileNotFoundError(
+            "Serialized SW standalone output not found, please download from Google Cloud first"
+        )
+
 for tile in range(6):
     print(f"Rank = {tile}")
     serializer = ser.Serializer(

@@ -304,7 +304,7 @@ contains
         implicit none
         real(8) :: t1, t2
         call cpu_time(t2)
-        write(*,'(a,f7.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
+        write(*,'(a,f9.3,a)') "    Time Taken --> ", 1000*real(t2-t1), ' ms'
       end subroutine toc
 
 end program test
