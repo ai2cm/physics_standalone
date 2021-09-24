@@ -1954,6 +1954,9 @@ class RadLWClass:
             validate_args=validate,
         )
 
+        end0 = time.time()
+        print(f"Total time taken = {end0 - start0}")
+
         if do_subtest:
             outvars_rtrnmc = {
                 "totuflux": {"fortran_shape": (npts, nlp1), "type": DTYPE_FLT},
@@ -1976,9 +1979,6 @@ class RadLWClass:
             print(" ")
             print("rtrnmc validates!")
             print(" ")
-
-        end0 = time.time()
-        print(f"Total time taken = {end0 - start0}")
 
         valdict = dict()
         outdict_np = dict()

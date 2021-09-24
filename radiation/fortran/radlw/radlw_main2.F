@@ -1876,12 +1876,12 @@
         &       lcloudy                                                    &
         &     )
    
-   !$ser verbatim if (iplon==1) then
-     !$ser mode write
-     !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-     !$ser savepoint "lwrad-mcica_subcol-output-"//trim(ser_count_str)
-     !$ser data lcloudy=lcloudy
-   !$ser verbatim endif
+!$ser verbatim if (iplon==1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lwrad-mcica_subcol-output-"//trim(ser_count_str)
+  !$ser data lcloudy=lcloudy
+!$ser verbatim endif
    
            do k = 1, nlay
              do ig = 1, ngptlw
@@ -4030,12 +4030,12 @@
         enddo
       enddo
 
-      !$ser verbatim if (iplon==1) then
-        !$ser mode write
-        !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
-        !$ser savepoint "lw_taumol_out"//trim(ser_count_str)
-        !$ser data tautotout=tautot fracsout=fracs
-      !$ser verbatim endif
+!$ser verbatim if (iplon==1) then
+  !$ser mode write
+  !$ser verbatim write(ser_count_str, '(i6.6)') ser_count
+  !$ser savepoint "lw_taumol_out"//trim(ser_count_str)
+  !$ser data tautotout=tautot fracsout=fracs
+!$ser verbatim endif
 
 ! =================
       contains
