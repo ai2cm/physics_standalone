@@ -11,7 +11,7 @@ IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) el
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
 else:
-    SERIALBOX_DIR = "/project/s1053/install/daint/serialbox2_master/gnu_debug"
+    SERIALBOX_DIR = "/project/s1053/install/serialbox/gnu"
 
 
 # Names of the input variables
