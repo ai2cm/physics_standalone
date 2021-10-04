@@ -9,7 +9,7 @@ IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) el
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
 else:
-    SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+    SERIALBOX_DIR = "/project/s1053/install/daint/serialbox2_master/gnu_debug"
 REBUILD = False
 BACKEND_OPTS = {}  # {'verbose': True} if BACKEND.startswith('gt') else {}
 default_origin = (0, 0, 0)

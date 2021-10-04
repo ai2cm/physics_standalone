@@ -7,7 +7,7 @@ from numpy.lib.npyio import save
 np.seterr(divide="ignore", invalid="ignore")
 import noah_lsm_gt4py
 
-#SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+#SERIALBOX_DIR = "/project/s1053/install/daint/serialbox2_master/gnu_debug"
 SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
