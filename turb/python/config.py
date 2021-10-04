@@ -18,7 +18,7 @@ FIELD_BOOL = gtscript.Field[DTYPE_BOOL]
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
 else:
-    SERIALBOX_DIR = "/project/c14/install/daint/serialbox2_master/gnu_debug"
+    SERIALBOX_DIR = "/project/s1053/install/serialbox/gnu"
 
 IN_VARS = [
     "ix",
