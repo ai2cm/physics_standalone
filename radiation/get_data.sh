@@ -35,6 +35,10 @@ else
         echo "SW Fortran data already present"
     fi
 
+    cd ./python
+    mkdir lookupdata
+    cd $MYHOME
+
     if [ -z "$(ls -A ./python/lookupdata)" ]; then
         gsutil cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/lookupdata/lookup.tar.gz ./python/lookupdata/.
         cd ./python/lookupdata
