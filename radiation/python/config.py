@@ -14,7 +14,7 @@ if IS_DOCKER:
         sys.path.insert(0, "/work/radiation/python")
 else:
     sys.path.insert(
-        0, "/Users/andrewp/Documents/work/physics_standalone/radiation/python"
+        0, "/home/chris/Documents/Code/physics_standalone/radiation/python"
     )
 from radlw.radlw_param import nbands, maxgas, maxxsec, ngptlw, nrates
 from radsw.radsw_param import ngptsw, nbandssw, nbdsw, ntbmx
@@ -38,12 +38,12 @@ if IS_DOCKER:
         SW_SERIALIZED_DIR = "/work/radiation/fortran/radsw/dump"
         FORCING_DIR = "/work/radiation/python/forcing"
 else:
-    SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
-    LOOKUP_DIR = "../../python/lookupdata"
-    FORTRANDATA_DIR = "../../fortran/data"
-    LW_SERIALIZED_DIR = "../../fortran/radlw/dump"
-    SW_SERIALIZED_DIR = "../../fortran/radsw/dump"
-    FORCING_DIR = "../../python/forcing"
+    SERIALBOX_DIR = "/home/chris/Documents/Code/serialbox/install"
+    LOOKUP_DIR = "/home/chris/Documents/Code/physics_standalone/radiation/python/lookupdata"
+    FORTRANDATA_DIR = "/home/chris/Documents/Code/physics_standalone/radiation/fortran/data"
+    LW_SERIALIZED_DIR = "/home/chris/Documents/Code/physics_standalone/radiation/fortran/radlw/dump"
+    SW_SERIALIZED_DIR = "/home/chris/Documents/Code/physics_standalone/radiation/fortran/radsw/dump"
+    FORCING_DIR = "/home/chris/Documents/Code/physics_standalone/radiation/python/forcing"
 
 backend = "gtc:gt:cpu_ifirst"
 

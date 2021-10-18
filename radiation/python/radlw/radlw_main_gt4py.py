@@ -5,6 +5,7 @@ import time
 import warnings
 
 sys.path.insert(0, "..")
+sys.path.insert(0,"/home/chris/Documents/Code/physics_standalone/radiation/python/radlw")
 from radphysparam import (
     ilwrgas as ilwrgas,
     icldflg as icldflg,
@@ -335,6 +336,312 @@ class RadLWClass:
         indict = read_data(
             os.path.join(FORTRANDATA_DIR, "LW"), "lwrad", rank, 0, True, invars
         )
+        indict_gt4py = numpy_dict_to_gt4py_dict(indict, invars)
+
+        outvars = {
+            "htlwc": {
+                "shape": shape_nlp1,
+                "type": DTYPE_FLT,
+                "fortran_shape": (npts, nlay),
+            },
+            "htlw0": {
+                "shape": shape_nlp1,
+                "type": DTYPE_FLT,
+                "fortran_shape": (npts, nlay),
+            },
+            "cldtaulw": {
+                "shape": shape_nlp1,
+                "type": DTYPE_FLT,
+                "fortran_shape": (npts, nlay),
+            },
+            "upfxc_t": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "upfx0_t": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "upfxc_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "upfx0_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "dnfxc_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+            "dnfx0_s": {"shape": shape_2D, "type": DTYPE_FLT, "fortran_shape": (npts,)},
+        }
+
+        outdict_gt4py = create_gt4py_dict_zeros(outvars)
+
+        locvars = {
+            "cldfrc": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totuflux": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totdflux": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totuclfl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totdclfl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tz": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "htr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "htrb": {"shape": shape_nlp1, "type": type_nbands},
+            "htrcl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "pavel": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tavel": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "delp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "clwp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ciwp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "relw": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "reiw": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda3": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cda4": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "coldry": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "colbrd": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "h2ovmr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "o3vmr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac00": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac01": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac10": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac11": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "selffac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "selffrac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "forfac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "forfrac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "minorfrac": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "scaleminor": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "scaleminorn2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "temcol": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "dz": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "pklev": {"shape": shape_nlp1, "type": type_nbands},
+            "pklay": {"shape": shape_nlp1, "type": type_nbands},
+            "taucld": {"shape": shape_nlp1, "type": type_nbands},
+            "tauaer": {"shape": shape_nlp1, "type": type_nbands},
+            "fracs": {"shape": shape_nlp1, "type": type_ngptlw},
+            "tautot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "cldfmc": {"shape": shape_nlp1, "type": type_ngptlw},
+            "semiss": {"shape": shape_2D, "type": type_nbands},
+            "semiss0": {"shape": shape_2D, "type": type_nbands},
+            "secdiff": {"shape": shape_2D, "type": type_nbands},
+            "colamt": {"shape": shape_nlp1, "type": type_maxgas},
+            "wx": {"shape": shape_nlp1, "type": type_maxxsec},
+            "rfrate": {"shape": shape_nlp1, "type": type_nrates},
+            "tem0": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tem1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tem2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "pwvcm": {"shape": shape_2D, "type": DTYPE_FLT},
+            "summol": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "stemp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "delgth": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ipseed": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jt": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jt1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indself": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indfor": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indminor": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "tem00": {"shape": shape_2D, "type": DTYPE_FLT},
+            "tem11": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tem22": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tauliq": {"shape": shape_nlp1, "type": type_nbands},
+            "tauice": {"shape": shape_nlp1, "type": type_nbands},
+            "cldf": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "dgeice": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "factor": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fint": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tauran": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tausnw": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cldliq": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "refliq": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "cldice": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "refice": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "index": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ia": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "lcloudy": {"shape": shape_nlp1, "type": (DTYPE_INT, (ngptlw,))},
+            "lcf1": {"shape": shape_2D, "type": DTYPE_BOOL},
+            "cldsum": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tlvlfr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tlyrfr": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "plog": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "indlay": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indlev": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jp1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "tzint": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "stempint": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "tavelint": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "laytrop": {"shape": shape_nlp1, "type": DTYPE_BOOL},
+            "ib": {"shape": shape_2D, "type": DTYPE_INT},
+            "ind0": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ind0p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ind1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "ind1p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "inds": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indsp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indf": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indfp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indm": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "indmp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "js": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "js1": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2o": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2op": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jpl": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jplp": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id000": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id010": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id100": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id110": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id200": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id210": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id001": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id011": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id101": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id111": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id201": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "id211": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmo3": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmo3p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmco2": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmco2p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmco": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmcop": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "jmn2p": {"shape": shape_nlp1, "type": DTYPE_INT},
+            "taug": {"shape": shape_nlp1, "type": type_ngptlw},
+            "pp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "corradj": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "scalen2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "tauself": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "taufor": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "taun2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fpl": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "speccomb": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "speccomb1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac001": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac101": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac201": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac011": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac111": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac211": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac000": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac100": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac200": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac010": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac110": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fac210": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "specparm": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "specparm1": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "specparm_planck": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ratn2o": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "ratco2": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "clrurad": {"shape": shape_nlp1, "type": type_nbands},
+            "clrdrad": {"shape": shape_nlp1, "type": type_nbands},
+            "toturad": {"shape": shape_nlp1, "type": type_nbands},
+            "totdrad": {"shape": shape_nlp1, "type": type_nbands},
+            "gassrcu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "totsrcu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "trngas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "efclrfr": {"shape": shape_nlp1, "type": type_ngptlw},
+            "rfdelp": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fnet": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "fnetc": {"shape": shape_nlp1, "type": DTYPE_FLT},
+            "totsrcd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "gassrcd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "tblind": {"shape": shape_nlp1, "type": type_ngptlw},
+            "odepth": {"shape": shape_nlp1, "type": type_ngptlw},
+            "odtot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "odcld": {"shape": shape_nlp1, "type": type_ngptlw},
+            "atrtot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "atrgas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "reflct": {"shape": shape_nlp1, "type": type_ngptlw},
+            "totfac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "gasfac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "flxfac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "plfrac": {"shape": shape_nlp1, "type": type_ngptlw},
+            "blay": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbdgas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbdtot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbugas": {"shape": shape_nlp1, "type": type_ngptlw},
+            "bbutot": {"shape": shape_nlp1, "type": type_ngptlw},
+            "dplnku": {"shape": shape_nlp1, "type": type_ngptlw},
+            "dplnkd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radtotu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radclru": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radtotd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "radclrd": {"shape": shape_nlp1, "type": type_ngptlw},
+            "rad0": {"shape": shape_nlp1, "type": type_ngptlw},
+            "clfm": {"shape": shape_nlp1, "type": type_ngptlw},
+            "trng": {"shape": shape_nlp1, "type": type_ngptlw},
+            "gasu": {"shape": shape_nlp1, "type": type_ngptlw},
+            "itgas": {"shape": shape_nlp1, "type": (DTYPE_INT, (ngptlw,))},
+            "ittot": {"shape": shape_nlp1, "type": (DTYPE_INT, (ngptlw,))},
+        }
+
+        locdict_gt4py = create_gt4py_dict_zeros(locvars)
+
+        self.indict_gt4py = indict_gt4py
+        self.locdict_gt4py = locdict_gt4py
+        self.outdict_gt4py = outdict_gt4py
+        self.outvars = outvars
+
+    def create_input_data_rad_driver(self,
+        plyr,
+        plvl,
+        tlyr,
+        tlvl,
+        qlyr,
+        olyr,
+        gasvmr,
+        clouds,
+        icsdlw,
+        faerlw,
+        semis,
+        tsfg,
+        dz,
+        delp,
+        de_lgth,
+        im,
+        lmk,
+        lmp,
+        lprnt):
+        """
+        Create input data from data within the radiation driver and transform into
+        gt4py storages. Also creates the necessary local variables as gt4py storages
+        """
+
+        invars = {
+            "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
+            "clouds": {"shape": (npts, nlay, 9), "type": type_9},
+            "icsdlw": {"shape": (npts,), "type": DTYPE_INT},
+            "faerlw": {"shape": (npts, nlay, nbands, 3), "type": type_nbands3},
+            "semis": {"shape": (npts,), "type": DTYPE_FLT},
+            "tsfg": {"shape": (npts,), "type": DTYPE_FLT},
+            "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
+            "im": {"shape": (), "type": DTYPE_INT},
+            "lmk": {"shape": (), "type": DTYPE_INT},
+            "lmp": {"shape": (), "type": DTYPE_INT},
+            "lprnt": {"shape": (), "type": DTYPE_BOOL},
+        }
+
+        indict = {
+            'plyr'    : plyr,
+            'plvl'    : plvl,
+            'tlyr'    : tlyr,
+            'tlvl'    : tlvl,
+            'qlyr'    : qlyr,
+            'olyr'    : olyr,
+            'gasvmr'  : gasvmr,
+            'clouds'  : clouds,
+            'icsdlw'  : icsdlw,
+            'faerlw'  : faerlw,
+            'semis'   : semis,
+            'tsfg'    : tsfg,
+            'dz'      : dz,
+            'delp'    : delp,
+            'de_lgth' : de_lgth,
+            'im'      : np.int64(im),
+            'lmk'     : lmk,
+            'lmp'     : lmp,
+            'lprnt'   : lprnt
+        }
+
         indict_gt4py = numpy_dict_to_gt4py_dict(indict, invars)
 
         outvars = {
@@ -1980,19 +2287,19 @@ class RadLWClass:
             print("rtrnmc validates!")
             print(" ")
 
-        valdict = dict()
-        outdict_np = dict()
+            valdict = dict()
+            outdict_np = dict()
 
-        valdict = read_data(
-            os.path.join(FORTRANDATA_DIR, "LW"), "lwrad", rank, 0, False, self.outvars
-        )
-        outdict_np = convert_gt4py_output_for_validation(
-            self.outdict_gt4py, self.outvars
-        )
+            valdict = read_data(
+                os.path.join(FORTRANDATA_DIR, "LW"), "lwrad", rank, 0, False, self.outvars
+            )
+            outdict_np = convert_gt4py_output_for_validation(
+                self.outdict_gt4py, self.outvars
+            )
 
-        print("Testing final output...")
-        print(" ")
-        compare_data(valdict, outdict_np)
-        print(" ")
-        print("lwrad validates!")
-        print(" ")
+            print("Testing final output...")
+            print(" ")
+            compare_data(valdict, outdict_np)
+            print(" ")
+            print("lwrad validates!")
+            print(" ")

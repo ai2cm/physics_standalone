@@ -11,7 +11,7 @@ from radiation_aerosols import AerosolClass
 from radiation_clouds import CloudClass
 from radiation_gases import GasClass
 from radiation_sfc import SurfaceClass
-from radlw.radlw_main import RadLWClass
+from radlw.radlw_main_gt4py import RadLWClass
 from radsw.radsw_main import RadSWClass
 
 
@@ -311,6 +311,7 @@ class RadiationDriver:
         Tbd,
         Radtend,
         Diag,
+        Rank
     ):
 
         if not (Model["lsswr"] or Model["lslwr"]):
@@ -1049,80 +1050,54 @@ class RadiationDriver:
                 IM,
             )
 
+            # Take current radiation_driver variables that're inputs to the LW scheme
+            # and convert them into storages
+            self.rlw.create_input_data_rad_driver(
+                plyr,
+                plvl,
+                tlyr,
+                tlvl,
+                qlyr,
+                olyr,
+                gasvmr,
+                clouds,
+                Tbd["icsdlw"],
+                faerlw,
+                Radtend["semis"],
+                tsfg,
+                dz,
+                delp,
+                de_lgth,
+                IM,
+                LMK,
+                LMP,
+                Model["lprnt"],
+            )
+
             #  - Call module_radlw_main::lwrad(), to compute LW heating rates and
             #    fluxes.
 
             if Model["lwhtr"]:
-                (
-                    htlwc,
-                    Diag["topflw"]["upfxc"],
-                    Diag["topflw"]["upfx0"],
-                    Radtend["sfcflw"]["upfxc"],
-                    Radtend["sfcflw"]["upfx0"],
-                    Radtend["sfcflw"]["dnfxc"],
-                    Radtend["sfcflw"]["dnfx0"],
-                    cldtaulw,
-                    htlw0,
-                ) = self.rlw.lwrad(
-                    plyr,
-                    plvl,
-                    tlyr,
-                    tlvl,
-                    qlyr,
-                    olyr,
-                    gasvmr,
-                    clouds,
-                    Tbd["icsdlw"],
-                    faerlw,
-                    Radtend["semis"],
-                    tsfg,
-                    dz,
-                    delp,
-                    de_lgth,
-                    IM,
-                    LMK,
-                    LMP,
-                    Model["lprnt"],
-                    lhlwb,
-                    lhlw0,
-                    lflxprf,
-                    lw_rand_file,
-                )
+                self.rlw.lwrad(rank=Rank)
             else:
-                (
-                    htlwc,
-                    Diag["topflw"]["upfxc"],
-                    Diag["topflw"]["upfx0"],
-                    Radtend["sfcflw"]["upfxc"],
-                    Radtend["sfcflw"]["upfx0"],
-                    Radtend["sfcflw"]["dnfxc"],
-                    Radtend["sfcflw"]["dnfx0"],
-                    cldtaulw,
-                ) = self.rlw.lwrad(
-                    plyr,
-                    plvl,
-                    tlyr,
-                    tlvl,
-                    qlyr,
-                    olyr,
-                    gasvmr,
-                    clouds,
-                    Tbd["icsdlw"],
-                    faerlw,
-                    Radtend["semis"],
-                    tsfg,
-                    dz,
-                    delp,
-                    de_lgth,
-                    IM,
-                    LMK,
-                    LMP,
-                    Model["lprnt"],
-                    lhlwb,
-                    lhlw0,
-                    lflxprf,
-                    lw_rand_file,
-                )
+                self.rlw.lwrad(rank=Rank)
+
+            # Write the outputs from the rlw.lwrad execution back into the radiation scheme
+            htlwc = np.zeros((self.rlw.outdict_gt4py["htlwc"].shape[0],
+                              self.rlw.outdict_gt4py["htlwc"].shape[2]-1)) 
+            htlwc[:,:] = self.rlw.outdict_gt4py["htlwc"][:,0,1:]
+            htlw0 = np.zeros((self.rlw.outdict_gt4py["htlw0"].shape[0],
+                              self.rlw.outdict_gt4py["htlw0"].shape[2]-1)) 
+            htlw0[:,:] = self.rlw.outdict_gt4py["htlw0"][:,0,1:]
+            Diag["topflw"]["upfxc"] = self.rlw.outdict_gt4py["upfxc_t"][:,0]
+            Diag["topflw"]["upfx0"] = self.rlw.outdict_gt4py["upfx0_t"][:,0]
+            Radtend["sfcflw"]["upfxc"] = self.rlw.outdict_gt4py["upfxc_s"][:,0]
+            Radtend["sfcflw"]["upfx0"] = self.rlw.outdict_gt4py["upfx0_s"][:,0]
+            Radtend["sfcflw"]["dnfxc"] = self.rlw.outdict_gt4py["dnfxc_s"][:,0]
+            Radtend["sfcflw"]["dnfx0"] = self.rlw.outdict_gt4py["dnfx0_s"][:,0]
+            cldtaulw = np.zeros((self.rlw.outdict_gt4py["cldtaulw"].shape[0],
+                                 self.rlw.outdict_gt4py["cldtaulw"].shape[2]-1))
+            cldtaulw[:,:] = self.rlw.outdict_gt4py["cldtaulw"][:,0,1:]
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps

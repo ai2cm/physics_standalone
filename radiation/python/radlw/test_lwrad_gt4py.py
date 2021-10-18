@@ -7,6 +7,8 @@ if IS_TEST:
     sys.path.insert(0, "/deployed/radiation/python")
 else:
     sys.path.insert(0, "/work/radiation/python")
+
+sys.path.insert(0,"/home/chris/Documents/Code/physics_standalone/radiation/python")
 from radlw.radlw_main_gt4py import RadLWClass
 
 me = 0

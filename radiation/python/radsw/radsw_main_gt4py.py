@@ -7,6 +7,7 @@ import time
 import warnings
 
 sys.path.insert(0, "..")
+sys.path.insert(0,"/home/chris/Documents/Code/physics_standalone/radiation/python/radsw")
 from radsw_param import ntbmx, NGB, nbandssw, ngs
 from radphysparam import iswmode, iswrgas, iswrate, iswcice, iswcliq
 from phys_const import con_amd, con_amw, con_amo3, con_g, con_cp, con_avgd
@@ -492,7 +493,7 @@ class RadSWClass:
         lookupdict_gt4py = loadlookupdata("cldprtb", "radsw")
 
         # Load lookup data for setcoef
-        ds = xr.open_dataset("../lookupdata/radsw_ref_data.nc")
+        ds = xr.open_dataset("./lookupdata/radsw_ref_data.nc")
         preflog = ds["preflog"].data
         preflog = np.tile(preflog[None, None, None, :], (npts, 1, nlp1, 1))
         tref = ds["tref"].data

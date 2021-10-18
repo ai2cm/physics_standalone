@@ -384,7 +384,7 @@ def loadlookupdata(name, scheme):
         else:
             lookupdict_gt4py[var] = float(ds[var].data)
 
-    ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+    ds2 = xr.open_dataset("./lookupdata/radlw_ref_data.nc")
     tmp = np.tile(ds2["chi_mls"].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
 
     lookupdict_gt4py["chi_mls"] = create_storage_from_array(

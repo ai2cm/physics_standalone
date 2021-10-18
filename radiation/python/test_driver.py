@@ -88,7 +88,8 @@ slag, sdec, cdec, solcon = driver.radupdate(
 for rank in range(6):
     serializer = ser.Serializer(
         ser.OpenModeKind.Read,
-        os.path.join(FORTRANDATA_DIR, "LW"),
+        # os.path.join(FORTRANDATA_DIR, "LW"),
+        '/home/chris/Documents/Code/fv3gfs-fortran/rundir/data',
         "Generator_rank" + str(rank),
     )
 
@@ -261,7 +262,8 @@ for rank in range(6):
     Diag = getscalars(Diag)
 
     Radtendout, Diagout = driver.GFS_radiation_driver(
-        Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag
+        Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag,
+        rank
     )
 
     radtend_vars_out = [
