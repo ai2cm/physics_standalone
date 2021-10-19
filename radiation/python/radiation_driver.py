@@ -901,6 +901,8 @@ class RadiationDriver:
                     Model["lprnt"]
                 )
 
+                self.rsw.set_locdict_zero()
+
                 if Model["swhtr"]:
                     self.rsw.swrad(rank=Rank)
                 else:

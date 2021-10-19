@@ -529,7 +529,7 @@ class RadLWClass:
             elif len(self.locdict_gt4py[var].shape) == 3:
                 self.locdict_gt4py[var][:,:,:] = 0.0
             elif len(self.locdict_gt4py[var].shape) == 4:
-                self.locdict_gt4py[var][:,:,:] = 0.0
+                self.locdict_gt4py[var][:,:,:,:] = 0.0
 
     def return_initdata(self):
         """
