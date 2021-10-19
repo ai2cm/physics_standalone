@@ -1032,6 +1032,8 @@ class RadiationDriver:
                 Model["lprnt"],
             )
 
+            self.rlw.set_locdict_zero()
+
             #  - Call module_radlw_main::lwrad(), to compute LW heating rates and
             #    fluxes.
 
