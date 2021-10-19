@@ -12,7 +12,7 @@ from radiation_clouds import CloudClass
 from radiation_gases import GasClass
 from radiation_sfc import SurfaceClass
 from radlw.radlw_main_gt4py import RadLWClass
-from radsw.radsw_main import RadSWClass
+from radsw.radsw_main_gt4py import RadSWClass
 
 
 class RadiationDriver:
@@ -877,99 +877,57 @@ class RadiationDriver:
                 #  - Call module_radsw_main::swrad(), to compute SW heating rates and
                 #   fluxes.
 
+                self.rsw.create_input_data_rad_driver(
+                    plyr,
+                    plvl,
+                    tlyr,
+                    tlvl,
+                    qlyr,
+                    olyr,
+                    gasvmr,
+                    clouds,
+                    faersw,
+                    sfcalb,
+                    dz,
+                    delp,
+                    de_lgth,
+                    Radtend["coszen"],
+                    Model["solcon"],
+                    nday,
+                    idxday,
+                    IM,
+                    LMK,
+                    LMP,
+                    Model["lprnt"]
+                )
+
                 if Model["swhtr"]:
-                    (
-                        htswc,
-                        Diag["topfsw"]["upfxc"],
-                        Diag["topfsw"]["dnfxc"],
-                        Diag["topfsw"]["upfx0"],
-                        Radtend["sfcfsw"]["upfxc"],
-                        Radtend["sfcfsw"]["dnfxc"],
-                        Radtend["sfcfsw"]["upfx0"],
-                        Radtend["sfcfsw"]["dnfx0"],
-                        cldtausw,
-                        htsw0,
-                        scmpsw["uvbf0"],
-                        scmpsw["uvbfc"],
-                        scmpsw["nirbm"],
-                        scmpsw["nirdf"],
-                        scmpsw["visbm"],
-                        scmpsw["visdf"],
-                    ) = self.rsw.swrad(
-                        plyr,
-                        plvl,
-                        tlyr,
-                        tlvl,
-                        qlyr,
-                        olyr,
-                        gasvmr,
-                        clouds,
-                        Tbd["icsdsw"],
-                        faersw,
-                        sfcalb,
-                        dz,
-                        delp,
-                        de_lgth,
-                        Radtend["coszen"],
-                        Model["solcon"],
-                        nday,
-                        idxday,
-                        IM,
-                        LMK,
-                        LMP,
-                        Model["lprnt"],
-                        lhswb,
-                        lhsw0,
-                        lflxprf,
-                        lfdncmp,
-                        sw_rand_file,
-                    )
+                    self.rsw.swrad(rank=Rank)
                 else:
-                    (
-                        htswc,
-                        Diag["topfsw"]["upfxc"],
-                        Diag["topfsw"]["dnfxc"],
-                        Diag["topfsw"]["upfx0"],
-                        Radtend["sfcfsw"]["upfxc"],
-                        Radtend["sfcfsw"]["dnfxc"],
-                        Radtend["sfcfsw"]["upfx0"],
-                        Radtend["sfcfsw"]["dnfx0"],
-                        cldtausw,
-                        scmpsw["uvbf0"],
-                        scmpsw["uvbfc"],
-                        scmpsw["nirbm"],
-                        scmpsw["nirdf"],
-                        scmpsw["visbm"],
-                        scmpsw["visdf"],
-                    ) = self.rsw.swrad(
-                        plyr,
-                        plvl,
-                        tlyr,
-                        tlvl,
-                        qlyr,
-                        olyr,
-                        gasvmr,
-                        clouds,
-                        Tbd["icsdsw"],
-                        faersw,
-                        sfcalb,
-                        dz,
-                        delp,
-                        de_lgth,
-                        Radtend["coszen"],
-                        Model["solcon"],
-                        nday,
-                        idxday,
-                        IM,
-                        LMK,
-                        LMP,
-                        Model["lprnt"],
-                        lhswb,
-                        lhsw0,
-                        lflxprf,
-                        lfdncmp,
-                        sw_rand_file,
-                    )
+                    self.rsw.swrad(rank=Rank)
+
+                htswc = np.zeros((self.rsw.outdict_gt4py["htswc"].shape[0],
+                                  self.rsw.outdict_gt4py["htswc"].shape[2]-1)) 
+                htswc[:,:] = self.rsw.outdict_gt4py["htswc"][:,0,1:]
+                htsw0 = np.zeros((self.rsw.outdict_gt4py["htsw0"].shape[0],
+                                  self.rsw.outdict_gt4py["htsw0"].shape[2]-1)) 
+                htsw0[:,:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
+                Diag["topfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
+                Diag["topfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_t"][:,0]
+                Diag["topfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_t"][:,0]
+                Radtend["sfcfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_s"][:,0]
+                Radtend["sfcfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_s"][:,0]
+                Radtend["sfcfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_s"][:,0]
+                Radtend["sfcfsw"]["dnfx0"] = self.rsw.outdict_gt4py["dnfx0_s"][:,0]
+                scmpsw["uvbf0"] = self.rsw.outdict_gt4py["uvbf0"][:,0]
+                scmpsw["uvbfc"] = self.rsw.outdict_gt4py["uvbfc"][:,0]
+                scmpsw["nirbm"] = self.rsw.outdict_gt4py["nirbm"][:,0]
+                scmpsw["nirdf"] = self.rsw.outdict_gt4py["nirdf"][:,0]
+                scmpsw["visbm"] = self.rsw.outdict_gt4py["visbm"][:,0]
+                scmpsw["visdf"] = self.rsw.outdict_gt4py["visdf"][:,0]
+                cldtausw = np.zeros((self.rsw.outdict_gt4py["cldtausw"].shape[0],
+                                     self.rsw.outdict_gt4py["cldtausw"].shape[2]-1))
+                cldtausw[:,:] = self.rsw.outdict_gt4py["cldtausw"][:,0,1:]
 
                 for k in range(LM):
                     k1 = k + kd
