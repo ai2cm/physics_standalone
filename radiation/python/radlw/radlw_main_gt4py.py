@@ -844,20 +844,20 @@ class RadLWClass:
         """
 
         invars = {
-            "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
-            "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
-            "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
-            "clouds": {"shape": (npts, nlay, 9), "type": type_9},
+            # "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            # "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            # "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
+            # "clouds": {"shape": (npts, nlay, 9), "type": type_9},
             "icsdlw": {"shape": (npts,), "type": DTYPE_INT},
-            "faerlw": {"shape": (npts, nlay, nbands, 3), "type": type_nbands3},
+            # "faerlw": {"shape": (npts, nlay, nbands, 3), "type": type_nbands3},
             "semis": {"shape": (npts,), "type": DTYPE_FLT},
-            "tsfg": {"shape": (npts,), "type": DTYPE_FLT},
-            "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "tsfg": {"shape": (npts,), "type": DTYPE_FLT},
+            # "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
             "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
             "im": {"shape": (), "type": DTYPE_INT},
             "lmk": {"shape": (), "type": DTYPE_INT},
@@ -866,20 +866,20 @@ class RadLWClass:
         }
 
         indict = {
-            'plyr'    : plyr,
-            'plvl'    : plvl,
-            'tlyr'    : tlyr,
-            'tlvl'    : tlvl,
-            'qlyr'    : qlyr,
-            'olyr'    : olyr,
-            'gasvmr'  : gasvmr,
-            'clouds'  : clouds,
+            # 'plyr'    : plyr,
+            # 'plvl'    : plvl,
+            # 'tlyr'    : tlyr,
+            # 'tlvl'    : tlvl,
+            # 'qlyr'    : qlyr,
+            # 'olyr'    : olyr,
+            # 'gasvmr'  : gasvmr,
+            # 'clouds'  : clouds,
             'icsdlw'  : icsdlw,
-            'faerlw'  : faerlw,
+            # 'faerlw'  : faerlw,
             'semis'   : semis,
-            'tsfg'    : tsfg,
-            'dz'      : dz,
-            'delp'    : delp,
+            # 'tsfg'    : tsfg,
+            # 'dz'      : dz,
+            # 'delp'    : delp,
             'de_lgth' : de_lgth,
             'im'      : np.int64(im),
             'lmk'     : lmk,
@@ -891,6 +891,20 @@ class RadLWClass:
 
         self.indict_gt4py = indict_gt4py
 
+        # Currently adding plyr separately since this was declared as a storage 
+        # heading into this routine
+        self.indict_gt4py["plyr"] = plyr
+        self.indict_gt4py["plvl"] = plvl
+        self.indict_gt4py["tlyr"] = tlyr
+        self.indict_gt4py["tlvl"] = tlvl
+        self.indict_gt4py["qlyr"] = qlyr
+        self.indict_gt4py["olyr"] = olyr
+        self.indict_gt4py["gasvmr"] = gasvmr
+        self.indict_gt4py["clouds"] = clouds
+        self.indict_gt4py["faerlw"] = faerlw
+        self.indict_gt4py["tsfg"] = tsfg
+        self.indict_gt4py["dz"] = dz
+        self.indict_gt4py["delp"] = delp
 
     def _load_lookup_table_data(self):
         """

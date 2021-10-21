@@ -766,18 +766,18 @@ class RadSWClass:
             lprnt):
 
         invars = {
-            "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
-            "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
-            "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
-            "clouds": {"shape": (npts, nlay, 9), "type": type_9},
-            "faersw": {"shape": (npts, nlay, nbdsw, 3), "type": type_nbandssw3},
+            # "plyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "plvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            # "tlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "tlvl": {"shape": (npts, nlp1), "type": DTYPE_FLT},
+            # "qlyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
+            # "clouds": {"shape": (npts, nlay, 9), "type": type_9},
+            # "faersw": {"shape": (npts, nlay, nbdsw, 3), "type": type_nbandssw3},
             "sfcalb": {"shape": (npts, 4), "type": (DTYPE_FLT, (4,))},
-            "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
+            # "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
             "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
             "coszen": {"shape": (npts,), "type": DTYPE_FLT},
             "solcon": {"shape": (), "type": DTYPE_FLT},
@@ -790,18 +790,18 @@ class RadSWClass:
         }
 
         self._indict = {
-            "plyr"    : plyr,
-            "plvl"    : plvl,
-            "tlyr"    : tlyr,
-            "tlvl"    : tlvl,
-            "qlyr"    : qlyr,
-            "olyr"    : olyr,
-            "gasvmr"  : gasvmr,
-            "clouds"  : clouds,
-            "faersw"  : faersw,
+            # "plyr"    : plyr,
+            # "plvl"    : plvl,
+            # "tlyr"    : tlyr,
+            # "tlvl"    : tlvl,
+            # "qlyr"    : qlyr,
+            # "olyr"    : olyr,
+            # "gasvmr"  : gasvmr,
+            # "clouds"  : clouds,
+            # "faersw"  : faersw,
             "sfcalb"  : sfcalb,
-            "dz"      : dz,
-            "delp"    : delp,
+            # "dz"      : dz,
+            # "delp"    : delp,
             "de_lgth" : de_lgth,
             "coszen"  : coszen,
             "solcon"  : solcon,
@@ -821,6 +821,20 @@ class RadSWClass:
         indict_gt4py = numpy_dict_to_gt4py_dict(self._indict, invars)
 
         self.indict_gt4py = indict_gt4py
+
+        # Currently adding plyr separately since this was declared as a storage 
+        # heading into this routine
+        self.indict_gt4py["plyr"] = plyr
+        self.indict_gt4py["plvl"] = plvl
+        self.indict_gt4py["tlyr"] = tlyr
+        self.indict_gt4py["tlvl"] = tlvl
+        self.indict_gt4py["qlyr"] = qlyr
+        self.indict_gt4py["olyr"] = olyr
+        self.indict_gt4py["gasvmr"] = gasvmr
+        self.indict_gt4py["clouds"] = clouds
+        self.indict_gt4py["faersw"] = faersw
+        self.indict_gt4py["dz"] = dz
+        self.indict_gt4py["delp"] = delp
 
     def _load_lookup_table_data(self):
         """

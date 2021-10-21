@@ -1,3 +1,4 @@
+import gt4py
 import numpy as np
 import os
 import sys
@@ -5,7 +6,7 @@ import sys
 sys.path.insert(0, "..")
 from phys_const import con_ttp, con_pi, con_g, con_rd, con_t0c, con_thgni
 from radphysparam import lcrick, lcnorm, lnoprec
-
+from config import *
 
 class CloudClass:
     VTAGCLD = "NCEP-Radiation_clouds    v5.1  Nov 2012 "
@@ -1130,7 +1131,11 @@ class CloudClass:
         ptop1 = np.zeros((IX, self.NK_CLDS + 1))
         rxlat = np.zeros(IX)
 
-        clouds = np.zeros((IX, NLAY, self.NF_CLDS))
+        # clouds = np.zeros((IX, NLAY, self.NF_CLDS))
+        clouds = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IX, 1, NLAY + 1),
+                                   dtype=(DTYPE_FLT,(self.NF_CLDS,)))
         de_lgth = np.zeros(IX)
 
         for k in range(NLAY):
@@ -1139,7 +1144,7 @@ class CloudClass:
                 rei[i, k] = self.reice_def  # default ice radius to 50 micron
                 rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
                 res[i, k] = self.rsnow_def  # default snow radius to 250 micron
-                tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr[i, k]) * 0.05))
+                tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr[i, 0, k+1]) * 0.05))
                 clwf[i, k] = 0.0
 
         if lcrick:
@@ -1173,7 +1178,7 @@ class CloudClass:
 
         for k in range(NLAY):
             for i in range(IX):
-                clwt = max(0.0, (clwf[i, k] + cnvw[i, k])) * self.gfac * delp[i, k]
+                clwt = max(0.0, (clwf[i, k] + cnvw[i, k])) * self.gfac * delp[i, 0, k+1]
                 cip[i, k] = clwt * tem2d[i, k]
                 cwp[i, k] = clwt - cip[i, k]
 
@@ -1206,11 +1211,11 @@ class CloudClass:
 
         for k in range(NLAY):
             for i in range(IX):
-                tem2 = tlyr[i, k] - con_ttp
+                tem2 = tlyr[i, 0, k+1] - con_ttp
 
                 if cip[i, k] > 0.0:
                     tem3 = (
-                        self.gord * cip[i, k] * plyr[i, k] / (delp[i, k] * tvly[i, k])
+                        self.gord * cip[i, k] * plyr[i, 0, k+1] / (delp[i, 0, k+1] * tvly[i, k])
                     )
 
                     if tem2 < -50.0:
@@ -1226,13 +1231,13 @@ class CloudClass:
 
         for k in range(NLAY):
             for i in range(IX):
-                clouds[i, k, 0] = cldtot[i, k]
-                clouds[i, k, 1] = cwp[i, k]
-                clouds[i, k, 2] = rew[i, k]
-                clouds[i, k, 3] = cip[i, k]
-                clouds[i, k, 4] = rei[i, k]
-                clouds[i, k, 6] = rer[i, k]
-                clouds[i, k, 8] = res[i, k]
+                clouds[i, 0, k+1, 0] = cldtot[i, k]
+                clouds[i, 0, k+1, 1] = cwp[i, k]
+                clouds[i, 0, k+1, 2] = rew[i, k]
+                clouds[i, 0, k+1, 3] = cip[i, k]
+                clouds[i, 0, k+1, 4] = rei[i, k]
+                clouds[i, 0, k+1, 6] = rer[i, k]
+                clouds[i, 0, k+1, 8] = res[i, k]
 
         #  --- ...  estimate clouds decorrelation length in km
         #           this is only a tentative test, need to consider change later
@@ -1922,14 +1927,14 @@ class CloudClass:
         elif self.iovr == 3:  # random if clear-layer divided,
             # otherwise de-corrlength method
             for i in range(IX):
-                dz1[i] = -dz[i, kstr]
+                dz1[i] = -dz[i, 0, kstr+1]
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
                     if ccur >= self.climit:  # cloudy layer
-                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, k]) / de_lgth[i])
-                        dz1[i] = dz[i, k]
+                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, 0, k+1]) / de_lgth[i])
+                        dz1[i] = dz[i, 0, k+1]
                         cl2[i] = alfa * min(cl2[i], (1.0 - ccur)) + (1.0 - alfa) * (
                             cl2(i) * (1.0 - ccur)
                         )  # random part
@@ -1937,7 +1942,7 @@ class CloudClass:
                         cl1[i] = cl1[i] * cl2[i]
                         cl2[i] = 1.0
                         if k != kend - 1:
-                            dz1[i] = -dz[i, k + kinc]
+                            dz1[i] = -dz[i, 0, k + kinc+1]
 
                 if k == self.llyr - 1:
                     for i in range(IX):
@@ -1974,11 +1979,11 @@ class CloudClass:
                     id = idom[i] - 1
                     id1 = id + 1
 
-                    pcur = plyr[i, k]
+                    pcur = plyr[i, 0, k]
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
 
                     if k > 1:
-                        pnxt = plyr[i, k - 1]
+                        pnxt = plyr[i, 0, k - 1 + 1]
                         cnxt = min(self.ovcst, max(cldtot[i, k - 1], cldcnv[i, k - 1]))
                     else:
                         pnxt = -1.0
@@ -2050,11 +2055,11 @@ class CloudClass:
                     id = idom[i]
                     id1 = id + 1
 
-                    pcur = plyr[i, k]
+                    pcur = plyr[i, 0, k + 1]
                     ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
 
                     if k < NLAY - 1:
-                        pnxt = plyr[i, k + 1]
+                        pnxt = plyr[i, 0, k + 1 + 1]
                         cnxt = min(self.ovcst, max(cldtot[i, k + 1], cldcnv[i, k + 1]))
                     else:
                         pnxt = -1.0

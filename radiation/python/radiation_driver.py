@@ -1,3 +1,4 @@
+import gt4py
 import numpy as np
 import warnings
 
@@ -338,22 +339,55 @@ class RadiationDriver:
 
         tskn = np.zeros(IM)
         tsfa = np.zeros(IM)
-        tsfg = np.zeros(IM)
+        # tsfg = np.zeros(IM)
+        tsfg = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1),
+                                   dtype=DTYPE_FLT)
+
         tem1d = np.zeros(IM)
         alb1d = np.zeros(IM)
         idxday = np.zeros(IM, dtype=DTYPE_INT)
 
-        plvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
-        tlvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
+        # plvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
+        plvl = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
+        # tlvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
+        tlvl = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
         tem2db = np.zeros((IM, Model["levr"] + self.LTP + 1))
 
-        plyr = np.zeros((IM, Model["levr"] + self.LTP))
-        tlyr = np.zeros((IM, Model["levr"] + self.LTP))
-        olyr = np.zeros((IM, Model["levr"] + self.LTP))
-        qlyr = np.zeros((IM, Model["levr"] + self.LTP))
+        # plyr = np.zeros((IM, Model["levr"] + self.LTP))
+        plyr = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
+        # tlyr = np.zeros((IM, Model["levr"] + self.LTP))
+        tlyr = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
+        # olyr = np.zeros((IM, Model["levr"] + self.LTP))
+        olyr = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
+        # qlyr = np.zeros((IM, Model["levr"] + self.LTP))
+        qlyr = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
         rhly = np.zeros((IM, Model["levr"] + self.LTP))
         tvly = np.zeros((IM, Model["levr"] + self.LTP))
-        delp = np.zeros((IM, Model["levr"] + self.LTP))
+        # delp = np.zeros((IM, Model["levr"] + self.LTP))
+        delp = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
         qstl = np.zeros((IM, Model["levr"] + self.LTP))
         cldcov = np.zeros((IM, Model["levr"] + self.LTP))
         deltaq = np.zeros((IM, Model["levr"] + self.LTP))
@@ -363,7 +397,11 @@ class RadiationDriver:
         effri = np.zeros((IM, Model["levr"] + self.LTP))
         effrr = np.zeros((IM, Model["levr"] + self.LTP))
         effrs = np.zeros((IM, Model["levr"] + self.LTP))
-        dz = np.zeros((IM, Model["levr"] + self.LTP))
+        # dz = np.zeros((IM, Model["levr"] + self.LTP))
+        dz = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
         prslk1 = np.zeros((IM, Model["levr"] + self.LTP))
         tem2da = np.zeros((IM, Model["levr"] + self.LTP))
 
@@ -431,11 +469,11 @@ class RadiationDriver:
         if self.itsfc == 0:  # use same sfc skin-air/ground temp
             for i in range(IM):
                 tskn[i] = Sfcprop["tsfc"][i]
-                tsfg[i] = Sfcprop["tsfc"][i]
+                tsfg[i,0] = Sfcprop["tsfc"][i]
         else:  # use diff sfc skin-air/ground temp
             for i in range(IM):
                 tskn[i] = Sfcprop["tsfc"][i]
-                tsfg[i] = Sfcprop["tsfc"][i]
+                tsfg[i,0] = Sfcprop["tsfc"][i]
 
         # Prepare atmospheric profiles for radiation input.
         #
@@ -448,9 +486,9 @@ class RadiationDriver:
             k1 = k + kd
             k2 = k + lsk
             for i in range(IM):
-                plvl[i, k1 + kb] = Statein["prsi"][i, k2 + kb] * 0.01  # pa to mb (hpa)
-                plyr[i, k1] = Statein["prsl"][i, k2] * 0.01  # pa to mb (hpa)
-                tlyr[i, k1] = Statein["tgrs"][i, k2]
+                plvl[i, 0, k1 + kb] = Statein["prsi"][i, k2 + kb] * 0.01  # pa to mb (hpa)
+                plyr[i, 0, k1+1] = Statein["prsl"][i, k2] * 0.01  # pa to mb (hpa)
+                tlyr[i, 0, k1+1] = Statein["tgrs"][i, k2]
                 prslk1[i, k1] = Statein["prslk"][i, k2]
 
                 #  - Compute relative humidity.
@@ -474,33 +512,33 @@ class RadiationDriver:
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
-                plvl[i, 1 + kd] = 0.01 * Statein["prsi"][i, 0]  # pa to mb (hpa)
+                plvl[i, 0, 1 + kd] = 0.01 * Statein["prsi"][i, 0]  # pa to mb (hpa)
 
             if lsk != 0:
                 for i in range(IM):
-                    plvl[i, 1 + kd] = 0.5 * (plvl[i, 2 + kd] + plvl[i, 1 + kd])
+                    plvl[i, 0, 1 + kd] = 0.5 * (plvl[i, 0, 2 + kd] + plvl[i, 0, 1 + kd])
         else:  # input data from sfc to top
             for i in range(IM):
-                plvl[i, LP1 + kd - 1] = (
+                plvl[i, 0, LP1 + kd - 1] = (
                     0.01 * Statein["prsi"][i, LP1 + lsk - 1]
                 )  # pa to mb (hpa)
 
             if lsk != 0:
                 for i in range(IM):
-                    plvl[i, LM + kd - 1] = 0.5 * (
-                        plvl[i, LP1 + k - 1] + plvl[i, LM + kd - 1]
+                    plvl[i, 0, LM + kd - 1] = 0.5 * (
+                        plvl[i, 0, LP1 + k - 1] + plvl[i, 0, LM + kd - 1]
                     )
 
         if self.lextop:  # values for extra top layer
             for i in range(IM):
-                plvl[i, llb - 1] = self.prsmin
-                if plvl[i, lla - 1] <= self.prsmin:
-                    plvl[i, lla - 1] = 2.0 * self.prsmin
+                plvl[i, 0, llb - 1] = self.prsmin
+                if plvl[i, 0, lla - 1] <= self.prsmin:
+                    plvl[i, 0, lla - 1] = 2.0 * self.prsmin
 
-                plyr[i, lyb - 1] = 0.5 * plvl[i, lla - 1]
-                tlyr[i, lyb - 1] = tlyr[i, lya - 1]
+                plyr[i, 0, lyb - 1 + 1] = 0.5 * plvl[i, 0, lla - 1]
+                tlyr[i, 0, lyb - 1 + 1] = tlyr[i, 0, lya - 1 + 1]
                 prslk1[i, lyb - 1] = (
-                    plyr[i, lyb - 1] * 0.00001
+                    plyr[i, 0, lyb - 1 + 1] * 0.00001
                 ) ** con_rocp  # plyr in Pa
                 rhly[i, lyb - 1] = rhly[i, lya - 1]
                 qstl[i, lyb - 1] = qstl[i, lya - 1]
@@ -514,7 +552,7 @@ class RadiationDriver:
         if Model["ntoz"] > 0:  # interactive ozone generation
             for k in range(LMK):
                 for i in range(IM):
-                    olyr[i, k] = max(self.QMIN, tracer1[i, k, Model["ntoz"] - 1])
+                    olyr[i, 0, k+1] = max(self.QMIN, tracer1[i, k, Model["ntoz"] - 1])
         else:  # climatological ozone
             print("Climatological ozone not implemented")
 
@@ -550,38 +588,38 @@ class RadiationDriver:
         #  - Get temperature at layer interface, and layer moisture.
         for k in range(1, LMK):
             for i in range(IM):
-                tem2da[i, k] = np.log(plyr[i, k])
-                tem2db[i, k] = np.log(plvl[i, k])
+                tem2da[i, k] = np.log(plyr[i, 0, k+1])
+                tem2db[i, k] = np.log(plvl[i, 0, k])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
                 tem1d[i] = self.QME6
-                tem2da[i, 0] = np.log(plyr[i, 0])
-                tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0]))
-                tem2db[i, LMP - 1] = np.log(plvl[i, LMP - 1])
-                tsfa[i] = tlyr[i, LMK - 1]  # sfc layer air temp
-                tlvl[i, 0] = tlyr[i, 0]
-                tlvl[i, LMP - 1] = tskn[i]
+                tem2da[i, 0] = np.log(plyr[i, 0, 0+1])
+                tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
+                tem2db[i, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
+                tsfa[i] = tlyr[i, 0, LMK - 1 + 1]  # sfc layer air temp
+                tlvl[i, 0, 0] = tlyr[i, 0, 0+1]
+                tlvl[i, 0, LMP - 1] = tskn[i]
 
             for k in range(LM):
                 k1 = k + kd
                 for i in range(IM):
-                    qlyr[i, k1] = max(tem1d[i], Statein["qgrs"][i, k, 0])
+                    qlyr[i, 0, k1+1] = max(tem1d[i], Statein["qgrs"][i, k, 0])
                     tem1d[i] = min(self.QME5, qlyr[i, k1])
                     tvly[i, k1] = Statein.tgrs[i, k] * (
-                        1.0 + con_fvirt * qlyr[i, k1]
+                        1.0 + con_fvirt * qlyr[i, 0, k1+1]
                     )  # virtual T (K)
-                    delp[i, k1] = plvl[i, k1 + 1] - plvl[i, k1]
+                    delp[i, 0, k1+1] = plvl[i, 0, k1 + 1] - plvl[i, 0, k1]
 
             if self.lextop:
                 for i in range(IM):
-                    qlyr[i, lyb - 1] = qlyr[i, lya - 1]
+                    qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
                     tvly[i, lyb - 1] = tvly[i, lya - 1]
-                    delp[i, lyb - 1] = plvl[i, lla - 1] - plvl[i, llb - 1]
+                    delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
 
             for k in range(1, LMK):
                 for i in range(IM):
-                    tlvl[i, k] = tlyr[i, k] + (tlyr[i, k - 1] - tlyr[i, k]) * (
+                    tlvl[i, 0, k] = tlyr[i, 0, k+1] + (tlyr[i, 0, k - 1+1] - tlyr[i, 0, k+1]) * (
                         tem2db[i, k] - tem2da[i, k]
                     ) / (tem2da[i, k - 1] - tem2da[i, k])
 
@@ -590,36 +628,36 @@ class RadiationDriver:
             tem0d = 0.001 * con_rog
             for i in range(IM):
                 for k in range(LMK):
-                    dz[i, k] = tem0d * (tem2db[i, k + 1] - tem2db[i, k]) * tvly[i, k]
+                    dz[i, 0, k+1] = tem0d * (tem2db[i, k + 1] - tem2db[i, k]) * tvly[i, k]
         else:
 
             for i in range(IM):
                 tem1d[i] = self.QME6
-                tem2da[i, 0] = np.log(plyr[i, 0])
-                tem2db[i, 0] = np.log(plvl[i, 0])
-                tem2db[i, LMP - 1] = np.log(max(self.prsmin, plvl[i, LMP - 1]))
-                tsfa[i] = tlyr[i, 0]  # sfc layer air temp
-                tlvl[i, 0] = tskn[i]
-                tlvl[i, LMP - 1] = tlyr[i, LMK - 1]
+                tem2da[i, 0] = np.log(plyr[i, 0, 0+1])
+                tem2db[i, 0] = np.log(plvl[i, 0, 0])
+                tem2db[i, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
+                tsfa[i] = tlyr[i, 0, 0+1]  # sfc layer air temp
+                tlvl[i, 0, 0] = tskn[i]
+                tlvl[i, 0, LMP - 1] = tlyr[i, 0, LMK - 1+1]
 
             for k in range(LM - 1, -1, -1):
                 for i in range(IM):
-                    qlyr[i, k] = max(tem1d[i], Statein["qgrs"][i, k, 0])
-                    tem1d[i] = min(self.QME5, qlyr[i, k])
+                    qlyr[i, 0, k+1] = max(tem1d[i], Statein["qgrs"][i, k, 0])
+                    tem1d[i] = min(self.QME5, qlyr[i, 0, k+1])
                     tvly[i, k] = Statein["tgrs"][i, k] * (
-                        1.0 + con_fvirt * qlyr[i, k]
+                        1.0 + con_fvirt * qlyr[i, 0, k+1]
                     )  # virtual T (K)
-                    delp[i, k] = plvl[i, k] - plvl[i, k + 1]
+                    delp[i, 0, k+1] = plvl[i, 0, k] - plvl[i, 0, k + 1]
 
             if self.lextop:
                 for i in range(IM):
-                    qlyr[i, lyb - 1] = qlyr[i, lya - 1]
+                    qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
                     tvly[i, lyb - 1] = tvly[i, lya - 1]
-                    delp[i, lyb - 1] = plvl[i, lla - 1] - plvl[i, llb - 1]
+                    delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
 
             for k in range(LMK - 1):
                 for i in range(IM):
-                    tlvl[i, k + 1] = tlyr[i, k] + (tlyr[i, k + 1] - tlyr[i, k]) * (
+                    tlvl[i, 0, k + 1] = tlyr[i, 0, k+1] + (tlyr[i, 0, k + 1+1] - tlyr[i, 0, k+1]) * (
                         tem2db[i, k + 1] - tem2da[i, k]
                     ) / (tem2da[i, k + 1] - tem2da[i, k])
 
@@ -628,7 +666,7 @@ class RadiationDriver:
             tem0d = 0.001 * con_rog
             for i in range(IM):
                 for k in range(LMK - 1, -1, -1):
-                    dz[i, k] = tem0d * (tem2db[i, k] - tem2db[i, k + 1]) * tvly[i, k]
+                    dz[i, 0, k+1] = tem0d * (tem2db[i, k] - tem2db[i, k + 1]) * tvly[i, k]
 
         #  - Check for daytime points for SW radiation.
 
@@ -828,11 +866,11 @@ class RadiationDriver:
         # mg, sfc-perts
 
         if Model["do_only_clearsky_rad"]:
-            clouds[:, :, 0] = 0.0  # layer total cloud fraction
-            clouds[:, :, 1] = 0.0  # layer cloud liq water path
-            clouds[:, :, 3] = 0.0  # layer cloud ice water path
-            clouds[:, :, 5] = 0.0  # layer rain water path
-            clouds[:, :, 7] = 0.0  # layer snow water path
+            clouds[:, 0, :, 0] = 0.0  # layer total cloud fraction
+            clouds[:, 0, :, 1] = 0.0  # layer cloud liq water path
+            clouds[:, 0, :, 3] = 0.0  # layer cloud ice water path
+            clouds[:, 0, :, 5] = 0.0  # layer rain water path
+            clouds[:, 0, :, 7] = 0.0  # layer snow water path
             cldsa[:, :] = 0.0  # fraction of clouds for low, mid, hi, tot, bl
 
         # Start SW radiation calculations

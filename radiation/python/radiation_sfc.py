@@ -182,7 +182,7 @@ class SurfaceClass:
                 argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
                 hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
                 fsno0 = asnow / (argh + asnow) * hrgh
-                if round(slmsk[i]) == 0 and tsknf[i] > con_tice:
+                if round(slmsk[i]) == 0 and tsknf[i,0] > con_tice:
                     fsno0 = 0.0
                 fsno1 = 1.0 - fsno0
                 flnd0 = min(1.0, facsf[i] + facwf[i])
@@ -193,14 +193,14 @@ class SurfaceClass:
 
                 #    - Calculate diffused sea surface albedo
 
-                if tsknf[i] >= 271.5:
+                if tsknf[i,0] >= 271.5:
                     asevd = 0.06
                     asend = 0.06
-                elif tsknf[i] < 271.1:
+                elif tsknf[i,0] < 271.1:
                     asevd = 0.70
                     asend = 0.65
                 else:
-                    a1 = (tsknf[i] - 271.1) ** 2
+                    a1 = (tsknf[i,0] - 271.1) ** 2
                     asevd = 0.7 - 4.0 * a1
                     asend = 0.65 - 3.6875 * a1
 
@@ -239,7 +239,7 @@ class SurfaceClass:
                     rfcs = 1.4 / (1.0 + 0.8 * coszf[i])
                     rfcw = 1.1 / (1.0 + 0.2 * coszf[i])
 
-                    if tsknf[i] >= con_t0c:
+                    if tsknf[i,0] >= con_t0c:
                         asevb = max(
                             asevd,
                             0.026 / (coszf[i] ** 1.7 + 0.065)
@@ -279,7 +279,7 @@ class SurfaceClass:
 
                 fsno0 = sncovr[i]
 
-                if round(slmsk[i]) == 0 and tsknf[i] > con_tice:
+                if round(slmsk[i]) == 0 and tsknf[i,0] > con_tice:
                     fsno0 = 0.0
 
                 if round(slmsk[i]) == 2:
@@ -297,14 +297,14 @@ class SurfaceClass:
 
                 #    - Calculate diffused sea surface albedo.
 
-                if tsknf[i] >= 271.5:
+                if tsknf[i,0] >= 271.5:
                     asevd = 0.06
                     asend = 0.06
-                elif tsknf[i] < 271.1:
+                elif tsknf[i,0] < 271.1:
                     asevd = 0.70
                     asend = 0.65
                 else:
-                    a1 = (tsknf[i] - 271.1) ** 2
+                    a1 = (tsknf[i,0] - 271.1) ** 2
                     asevd = 0.7 - 4.0 * a1
                     asend = 0.65 - 3.6875 * a1
 
@@ -348,7 +348,7 @@ class SurfaceClass:
                 if coszf[i] > 0.0001:
                     rfcs = 1.775 / (1.0 + 1.55 * coszf[i])
 
-                    if tsknf[i] >= con_t0c:
+                    if tsknf[i,0] >= con_t0c:
                         asevb = max(
                             asevd,
                             0.026 / (coszf[i] ** 1.7 + 0.065)
@@ -508,7 +508,7 @@ class SurfaceClass:
                         argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
                         hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
                         fsno0 = asnow / (argh + asnow) * hrgh
-                        if round(slmsk[i]) == 0 and tsknf[i] > 271.2:
+                        if round(slmsk[i]) == 0 and tsknf[i,0] > 271.2:
                             fsno0 = 0.0
 
                         fsno1 = 1.0 - fsno0
