@@ -451,15 +451,31 @@ class RadiationDriver:
                                    default_origin=default_origin,
                                    shape=(IM, 1, Model["levr"] + self.LTP + 1),
                                    dtype=DTYPE_FLT)
-        effrr = np.zeros((IM, Model["levr"] + self.LTP))
-        effrs = np.zeros((IM, Model["levr"] + self.LTP))
+        # effrr = np.zeros((IM, Model["levr"] + self.LTP))
+        effrr = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
+        # effrs = np.zeros((IM, Model["levr"] + self.LTP))
+        effrs = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
         # dz = np.zeros((IM, Model["levr"] + self.LTP))
         dz = gt4py.storage.zeros(backend=backend, 
                                  default_origin=default_origin,
                                  shape=(IM, 1, Model["levr"] + self.LTP + 1),
                                  dtype=DTYPE_FLT)
-        prslk1 = np.zeros((IM, Model["levr"] + self.LTP))
-        tem2da = np.zeros((IM, Model["levr"] + self.LTP))
+        # prslk1 = np.zeros((IM, Model["levr"] + self.LTP))
+        prslk1 = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
+        # tem2da = np.zeros((IM, Model["levr"] + self.LTP))
+        tem2da = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
 
         tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
         ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
@@ -545,7 +561,7 @@ class RadiationDriver:
                 plvl[i, 0, k1 + kb] = Statein["prsi"][i, k2 + kb] * 0.01  # pa to mb (hpa)
                 plyr[i, 0, k1+1] = Statein["prsl"][i, k2] * 0.01  # pa to mb (hpa)
                 tlyr[i, 0, k1+1] = Statein["tgrs"][i, k2]
-                prslk1[i, k1] = Statein["prslk"][i, k2]
+                prslk1[i, 0, k1+1] = Statein["prslk"][i, k2]
 
                 #  - Compute relative humidity.
                 es = min(
@@ -593,7 +609,7 @@ class RadiationDriver:
 
                 plyr[i, 0, lyb - 1 + 1] = 0.5 * plvl[i, 0, lla - 1]
                 tlyr[i, 0, lyb - 1 + 1] = tlyr[i, 0, lya - 1 + 1]
-                prslk1[i, lyb - 1] = (
+                prslk1[i, 0, lyb - 1+1] = (
                     plyr[i, 0, lyb - 1 + 1] * 0.00001
                 ) ** con_rocp  # plyr in Pa
                 rhly[i, 0, lyb - 1+1] = rhly[i, 0, lya - 1+1]
@@ -644,13 +660,13 @@ class RadiationDriver:
         #  - Get temperature at layer interface, and layer moisture.
         for k in range(1, LMK):
             for i in range(IM):
-                tem2da[i, k] = np.log(plyr[i, 0, k+1])
+                tem2da[i, 0, k+1] = np.log(plyr[i, 0, k+1])
                 tem2db[i, k] = np.log(plvl[i, 0, k])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
                 tem1d[i, 0] = self.QME6
-                tem2da[i, 0] = np.log(plyr[i, 0, 0+1])
+                tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
                 tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
                 tem2db[i, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
                 tsfa[i, 0] = tlyr[i, 0, LMK - 1 + 1]  # sfc layer air temp
@@ -676,8 +692,8 @@ class RadiationDriver:
             for k in range(1, LMK):
                 for i in range(IM):
                     tlvl[i, 0, k] = tlyr[i, 0, k+1] + (tlyr[i, 0, k - 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, k] - tem2da[i, k]
-                    ) / (tem2da[i, k - 1] - tem2da[i, k])
+                        tem2db[i, k] - tem2da[i, 0, k+1]
+                    ) / (tem2da[i, 0, k - 1+1] - tem2da[i, 0, k+1])
 
             #  ---  ...  level height and layer thickness (km)
 
@@ -689,7 +705,7 @@ class RadiationDriver:
 
             for i in range(IM):
                 tem1d[i, 0] = self.QME6
-                tem2da[i, 0] = np.log(plyr[i, 0, 0+1])
+                tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
                 tem2db[i, 0] = np.log(plvl[i, 0, 0])
                 tem2db[i, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
                 tsfa[i, 0] = tlyr[i, 0, 0+1]  # sfc layer air temp
@@ -714,8 +730,8 @@ class RadiationDriver:
             for k in range(LMK - 1):
                 for i in range(IM):
                     tlvl[i, 0, k + 1] = tlyr[i, 0, k+1] + (tlyr[i, 0, k + 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, k + 1] - tem2da[i, k]
-                    ) / (tem2da[i, k + 1] - tem2da[i, k])
+                        tem2db[i, k + 1] - tem2da[i, 0, k+1]
+                    ) / (tem2da[i, 0, k + 1+1] - tem2da[i, 0, k+1])
 
             #  ---  ...  level height and layer thickness (km)
 
@@ -818,8 +834,8 @@ class RadiationDriver:
                         cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, k, Model["indcld"] - 1]
                         effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 1]
                         effri[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 2]
-                        effrr[i, k1] = Tbd["phy_f3d"][i, k, 3]
-                        effrs[i, k1] = Tbd["phy_f3d"][i, k, 4]
+                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 3]
+                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 4]
             else:
                 for k in range(LM):
                     k1 = k + kd
@@ -833,8 +849,8 @@ class RadiationDriver:
                     for i in range(IM):
                         effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 0]
                         effri[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 1]
-                        effrr[i, k1] = Tbd["phy_f3d"][i, k, 2]
-                        effrs[i, k1] = Tbd["phy_f3d"][i, k, 3]
+                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 2]
+                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 3]
         else:  # neither of the other two cases
             cldcov = 0.0
 
@@ -880,8 +896,8 @@ class RadiationDriver:
                 for i in range(IM):
                     effrl[i, 0, lyb - 1+1] = effrl[i, 0, lya - 1+1]
                     effri[i, 0, lyb - 1+1] = effri[i, 0, lya - 1+1]
-                    effrr[i, lyb - 1] = effrr[i, lya - 1]
-                    effrs[i, lyb - 1] = effrs[i, lya - 1]
+                    effrr[i, 0, lyb - 1+1] = effrr[i, 0, lya - 1+1]
+                    effrs[i, 0, lyb - 1+1] = effrs[i, 0, lya - 1+1]
 
         if Model["imp_physics"] == 99:
             ccnd[:IM, :LMK, 0] = ccnd[:IM, :LMK, 0] + cnvw[:IM, 0, :LMK]
