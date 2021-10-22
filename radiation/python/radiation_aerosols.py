@@ -1576,7 +1576,7 @@ class AerosolClass:
                     prsln[NLP1 - 1] = np.log(prsl[i, 0, NLAY - 1 + 1])
 
                     for k in range(NLAY - 1, -1, -1):
-                        dz[i, k] = rovg * (prsln[k] - prsln[k + 1]) * tvly[i, k]
+                        dz[i, k] = rovg * (prsln[k] - prsln[k + 1]) * tvly[i, 0, k+1]
 
                     dz[i, NLAY - 1] = 2.0 * dz[i, NLAY - 1]
 
@@ -1591,7 +1591,7 @@ class AerosolClass:
                         prsln[k] = np.log(prsi[i, 0, k])
 
                     for k in range(NLAY):
-                        dz[i, k] = rovg * (prsln[k + 1] - prsln[k]) * tvly[i, k]
+                        dz[i, k] = rovg * (prsln[k + 1] - prsln[k]) * tvly[i, 0, k+1]
 
                     dz[i, 0] = 2.0 * dz[i, 0]
 
@@ -2144,7 +2144,7 @@ class AerosolClass:
             #    also convert pressure level to sigma level to follow the terrain.
 
             for k in range(NLAY):
-                self.rh1[k] = rhlay[i, k]
+                self.rh1[k] = rhlay[i, 0, k+1]
                 self.dz1[k] = dz[i, k]
 
             if self.ivflip == 1:  # input from sfc to toa

@@ -385,7 +385,7 @@ class SurfaceClass:
                     beta = alpha * (1.0 - m) / m
                     # compute beta distribution value corresponding
                     # to the given percentile albPpert to use as new albedo
-                    albtmp = ppfbet(albPpert[i], alpha, beta, iflag)
+                    albtmp = ppfbet(albPpert[i,0], alpha, beta, iflag)
                     sfcalb[i, kk] = albtmp
 
         return sfcalb

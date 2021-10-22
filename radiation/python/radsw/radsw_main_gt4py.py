@@ -7,7 +7,7 @@ import time
 import warnings
 
 sys.path.insert(0, "..")
-sys.path.insert(0,"/home/chris/Documents/Code/physics_standalone/radiation/python/radsw")
+sys.path.insert(0,"/home/ckung/Documents/Code/physics_standalone/radiation/python/radsw")
 from radsw_param import ntbmx, NGB, nbandssw, ngs
 from radphysparam import iswmode, iswrgas, iswrate, iswcice, iswcliq
 from phys_const import con_amd, con_amw, con_amo3, con_g, con_cp, con_avgd
@@ -778,7 +778,7 @@ class RadSWClass:
             "sfcalb": {"shape": (npts, 4), "type": (DTYPE_FLT, (4,))},
             # "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
+            # "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
             "coszen": {"shape": (npts,), "type": DTYPE_FLT},
             "solcon": {"shape": (), "type": DTYPE_FLT},
             "nday": {"shape": (), "type": DTYPE_INT},
@@ -802,7 +802,7 @@ class RadSWClass:
             "sfcalb"  : sfcalb,
             # "dz"      : dz,
             # "delp"    : delp,
-            "de_lgth" : de_lgth,
+            # "de_lgth" : de_lgth,
             "coszen"  : coszen,
             "solcon"  : solcon,
             "nday"    : np.int64(nday),
@@ -835,6 +835,8 @@ class RadSWClass:
         self.indict_gt4py["faersw"] = faersw
         self.indict_gt4py["dz"] = dz
         self.indict_gt4py["delp"] = delp
+        self.indict_gt4py["de_lgth"] = de_lgth
+        # self.indict_gt4py["idxday"] = idxday
 
     def _load_lookup_table_data(self):
         """

@@ -89,7 +89,7 @@ for rank in range(6):
     serializer = ser.Serializer(
         ser.OpenModeKind.Read,
         # os.path.join(FORTRANDATA_DIR, "LW"),
-        '/home/chris/Documents/Code/fv3gfs-fortran/rundir/data',
+        '/home/ckung/Documents/Code/fv3gfs-fortran/rundir/data',
         "Generator_rank" + str(rank),
     )
 

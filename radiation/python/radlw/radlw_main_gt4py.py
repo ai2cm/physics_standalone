@@ -5,7 +5,7 @@ import time
 import warnings
 
 sys.path.insert(0, "..")
-sys.path.insert(0,"/home/chris/Documents/Code/physics_standalone/radiation/python/radlw")
+sys.path.insert(0,"/home/ckung/Documents/Code/physics_standalone/radiation/python/radlw")
 from radphysparam import (
     ilwrgas as ilwrgas,
     icldflg as icldflg,
@@ -858,7 +858,7 @@ class RadLWClass:
             # "tsfg": {"shape": (npts,), "type": DTYPE_FLT},
             # "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
-            "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
+            # "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
             "im": {"shape": (), "type": DTYPE_INT},
             "lmk": {"shape": (), "type": DTYPE_INT},
             "lmp": {"shape": (), "type": DTYPE_INT},
@@ -880,7 +880,7 @@ class RadLWClass:
             # 'tsfg'    : tsfg,
             # 'dz'      : dz,
             # 'delp'    : delp,
-            'de_lgth' : de_lgth,
+            # 'de_lgth' : de_lgth,
             'im'      : np.int64(im),
             'lmk'     : lmk,
             'lmp'     : lmp,
@@ -905,6 +905,7 @@ class RadLWClass:
         self.indict_gt4py["tsfg"] = tsfg
         self.indict_gt4py["dz"] = dz
         self.indict_gt4py["delp"] = delp
+        self.indict_gt4py["de_lgth"] = de_lgth
 
     def _load_lookup_table_data(self):
         """

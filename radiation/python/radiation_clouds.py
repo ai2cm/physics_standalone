@@ -1136,7 +1136,11 @@ class CloudClass:
                                    default_origin=default_origin,
                                    shape=(IX, 1, NLAY + 1),
                                    dtype=(DTYPE_FLT,(self.NF_CLDS,)))
-        de_lgth = np.zeros(IX)
+        # de_lgth = np.zeros(IX)
+        de_lgth = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IX, 1),
+                                   dtype=DTYPE_FLT)
 
         for k in range(NLAY):
             for i in range(IX):
@@ -1178,7 +1182,7 @@ class CloudClass:
 
         for k in range(NLAY):
             for i in range(IX):
-                clwt = max(0.0, (clwf[i, k] + cnvw[i, k])) * self.gfac * delp[i, 0, k+1]
+                clwt = max(0.0, (clwf[i, k] + cnvw[i, 0, k+1])) * self.gfac * delp[i, 0, k+1]
                 cip[i, k] = clwt * tem2d[i, k]
                 cwp[i, k] = clwt - cip[i, k]
 
@@ -1191,7 +1195,7 @@ class CloudClass:
 
         for k in range(NLAY):
             for i in range(IX):
-                if cldtot[i, k] < self.climit:
+                if cldtot[i, 0, k+1] < self.climit:
                     cwp[i, k] = 0.0
                     cip[i, k] = 0.0
                     crp[i, k] = 0.0
@@ -1200,8 +1204,8 @@ class CloudClass:
         if lcnorm:
             for k in range(NLAY):
                 for i in range(IX):
-                    if cldtot[i, k] >= self.climit:
-                        tem1 = 1.0 / max(self.climit2, cldtot[i, k])
+                    if cldtot[i, 0, k+1] >= self.climit:
+                        tem1 = 1.0 / max(self.climit2, cldtot[i, 0, k+1])
                         cwp[i, k] = cwp[i, k] * tem1
                         cip[i, k] = cip[i, k] * tem1
                         crp[i, k] = crp[i, k] * tem1
@@ -1215,7 +1219,7 @@ class CloudClass:
 
                 if cip[i, k] > 0.0:
                     tem3 = (
-                        self.gord * cip[i, k] * plyr[i, 0, k+1] / (delp[i, 0, k+1] * tvly[i, k])
+                        self.gord * cip[i, k] * plyr[i, 0, k+1] / (delp[i, 0, k+1] * tvly[i, 0, k+1])
                     )
 
                     if tem2 < -50.0:
@@ -1231,7 +1235,7 @@ class CloudClass:
 
         for k in range(NLAY):
             for i in range(IX):
-                clouds[i, 0, k+1, 0] = cldtot[i, k]
+                clouds[i, 0, k+1, 0] = cldtot[i, 0, k+1]
                 clouds[i, 0, k+1, 1] = cwp[i, k]
                 clouds[i, 0, k+1, 2] = rew[i, k]
                 clouds[i, 0, k+1, 3] = cip[i, k]
@@ -1244,7 +1248,7 @@ class CloudClass:
 
         if self.iovr == 3:
             for i in range(IX):
-                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
+                de_lgth[i,0] = max(0.6, 2.78 - 4.6 * rxlat[i])
 
         #  ---  compute low, mid, high, total, and boundary layer cloud fractions
         #       and clouds top/bottom layer indices for low, mid, and high clouds.
@@ -1878,7 +1882,7 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:
                         cl1[i] = cl1[i] * (1.0 - ccur)
 
@@ -1893,7 +1897,7 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:  # cloudy layer
                         cl2[i] = min(cl2[i], (1.0 - ccur))
                     else:  # clear layer
@@ -1913,7 +1917,7 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:
                         cl1[i] = max(cl1[i], ccur)
 
@@ -1931,9 +1935,9 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:  # cloudy layer
-                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, 0, k+1]) / de_lgth[i])
+                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, 0, k+1]) / de_lgth[i,0])
                         dz1[i] = dz[i, 0, k+1]
                         cl2[i] = alfa * min(cl2[i], (1.0 - ccur)) + (1.0 - alfa) * (
                             cl2(i) * (1.0 - ccur)
@@ -1980,11 +1984,11 @@ class CloudClass:
                     id1 = id + 1
 
                     pcur = plyr[i, 0, k]
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
 
                     if k > 1:
                         pnxt = plyr[i, 0, k - 1 + 1]
-                        cnxt = min(self.ovcst, max(cldtot[i, k - 1], cldcnv[i, k - 1]))
+                        cnxt = min(self.ovcst, max(cldtot[i, 0, k - 1+1], cldcnv[i, k - 1]))
                     else:
                         pnxt = -1.0
                         cnxt = 0.0
@@ -2056,11 +2060,11 @@ class CloudClass:
                     id1 = id + 1
 
                     pcur = plyr[i, 0, k + 1]
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
 
                     if k < NLAY - 1:
                         pnxt = plyr[i, 0, k + 1 + 1]
-                        cnxt = min(self.ovcst, max(cldtot[i, k + 1], cldcnv[i, k + 1]))
+                        cnxt = min(self.ovcst, max(cldtot[i, 0, k + 1+1], cldcnv[i, k + 1]))
                     else:
                         pnxt = -1.0
                         cnxt = 0.0
