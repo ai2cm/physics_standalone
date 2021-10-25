@@ -852,7 +852,7 @@ class RadLWClass:
             # "olyr": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
             # "clouds": {"shape": (npts, nlay, 9), "type": type_9},
-            "icsdlw": {"shape": (npts,), "type": DTYPE_INT},
+            # "icsdlw": {"shape": (npts,), "type": DTYPE_INT},
             # "faerlw": {"shape": (npts, nlay, nbands, 3), "type": type_nbands3},
             "semis": {"shape": (npts,), "type": DTYPE_FLT},
             # "tsfg": {"shape": (npts,), "type": DTYPE_FLT},
@@ -874,7 +874,7 @@ class RadLWClass:
             # 'olyr'    : olyr,
             # 'gasvmr'  : gasvmr,
             # 'clouds'  : clouds,
-            'icsdlw'  : icsdlw,
+            # 'icsdlw'  : icsdlw,
             # 'faerlw'  : faerlw,
             'semis'   : semis,
             # 'tsfg'    : tsfg,
@@ -906,6 +906,7 @@ class RadLWClass:
         self.indict_gt4py["dz"] = dz
         self.indict_gt4py["delp"] = delp
         self.indict_gt4py["de_lgth"] = de_lgth
+        self.indict_gt4py["icsdlw"] = icsdlw
 
     def _load_lookup_table_data(self):
         """

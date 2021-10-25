@@ -252,6 +252,60 @@ for rank in range(6):
 
         return indict
 
+    def storage_convert(indict, oneDToTwoD=False):
+        for var in indict.keys():
+            if len(indict[var]) > 0:
+                if len(indict[var].shape) == 1:
+                    if oneDToTwoD == False:
+                        if type(indict[var][0]) == np.int32 or type(indict[var][0]) == np.int64:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,),
+                                            dtype=DTYPE_INT)
+                        else:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,),
+                                            dtype=DTYPE_FLT)
+                        tempStorage[:] = indict[var][:]
+                    else:
+                        if type(indict[var][0]) == np.int32 or type(indict[var][0]) == np.int64:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,1),
+                                            dtype=DTYPE_INT)
+                        else:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,1),
+                                            dtype=DTYPE_FLT)
+                        tempStorage[:,0] = indict[var][:]
+
+                elif len(indict[var].shape) == 2:
+                    tempStorage = gt4py.storage.zeros(backend=backend, 
+                                    default_origin=default_origin,
+                                    shape=(npts, 1, nlp1),
+                                    dtype=DTYPE_FLT)
+                    if indict[var].shape[1] == nlay:
+                        tempStorage[:, 0, 1:] = indict[var][:,:]
+                    elif indict[var].shape[1] == nlp1:
+                        tempStorage[:, 0, :] = indict[var][:,:]
+                    
+
+                elif len(indict[var].shape) == 3:
+                    tempStorage = gt4py.storage.zeros(backend=backend, 
+                                    default_origin=default_origin,
+                                    shape=(npts, 1, nlp1),
+                                    dtype=(DTYPE_FLT,(indict[var].shape[2],)))
+                    if indict[var].shape[1] == nlay:
+                        tempStorage[:, 0, 1:, :] = indict[var][:,:,:]
+                    elif indict[var].shape[1] == nlp1:
+                        tempStorage[:, 0, :, :] = indict[var][:,:,:]
+
+                indict[var] = tempStorage
+
+        return indict
+
     Model = getscalars(Model)
     Statein = getscalars(Statein)
     Sfcprop = getscalars(Sfcprop)
@@ -260,6 +314,12 @@ for rank in range(6):
     Tbd = getscalars(Tbd)
     Radtend = getscalars(Radtend)
     Diag = getscalars(Diag)
+
+    Statein = storage_convert(Statein)
+    Sfcprop = storage_convert(Sfcprop)
+    Coupling = storage_convert(Coupling, True)
+    Grid = storage_convert(Grid)
+    Tbd = storage_convert(Tbd,True)
 
     Radtendout, Diagout = driver.GFS_radiation_driver(
         Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag,

@@ -592,20 +592,20 @@ class RadiationDriver:
             k1 = k + kd
             k2 = k + lsk
             for i in range(IM):
-                plvl[i, 0, k1 + kb] = Statein["prsi"][i, k2 + kb] * 0.01  # pa to mb (hpa)
-                plyr[i, 0, k1+1] = Statein["prsl"][i, k2] * 0.01  # pa to mb (hpa)
-                tlyr[i, 0, k1+1] = Statein["tgrs"][i, k2]
-                prslk1[i, 0, k1+1] = Statein["prslk"][i, k2]
+                plvl[i, 0, k1 + kb] = Statein["prsi"][i, 0, k2 + kb] * 0.01  # pa to mb (hpa)
+                plyr[i, 0, k1+1] = Statein["prsl"][i, 0, k2+1] * 0.01  # pa to mb (hpa)
+                tlyr[i, 0, k1+1] = Statein["tgrs"][i, 0, k2+1]
+                prslk1[i, 0, k1+1] = Statein["prslk"][i, 0, k2+1]
 
                 #  - Compute relative humidity.
                 es = min(
-                    Statein["prsl"][i, k2], fpvs(Statein["tgrs"][i, k2])
+                    Statein["prsl"][i, 0, k2+1], fpvs(Statein["tgrs"][i, 0, k2+1])
                 )  # fpvs and prsl in pa
                 qs = max(
-                    self.QMIN, con_eps * es / (Statein["prsl"][i, k2] + con_epsm1 * es)
+                    self.QMIN, con_eps * es / (Statein["prsl"][i, 0, k2+1] + con_epsm1 * es)
                 )
                 rhly[i, 0, k1+1] = max(
-                    0.0, min(1.0, max(self.QMIN, Statein["qgrs"][i, k2, 0]) / qs)
+                    0.0, min(1.0, max(self.QMIN, Statein["qgrs"][i, 0, k2+1, 0]) / qs)
                 )
                 qstl[i, 0, k1+1] = qs
 
@@ -614,11 +614,11 @@ class RadiationDriver:
             for k in range(LM):
                 k1 = k + kd
                 k2 = k + lsk
-                tracer1[:, k1, j] = np.maximum(0.0, Statein["qgrs"][:, k2, j])
+                tracer1[:, k1, j] = np.maximum(0.0, Statein["qgrs"][:, 0, k2+1, j])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
-                plvl[i, 0, 1 + kd] = 0.01 * Statein["prsi"][i, 0]  # pa to mb (hpa)
+                plvl[i, 0, 1 + kd] = 0.01 * Statein["prsi"][i, 0, 0]  # pa to mb (hpa)
 
             if lsk != 0:
                 for i in range(IM):
@@ -626,7 +626,7 @@ class RadiationDriver:
         else:  # input data from sfc to top
             for i in range(IM):
                 plvl[i, 0, LP1 + kd - 1] = (
-                    0.01 * Statein["prsi"][i, LP1 + lsk - 1]
+                    0.01 * Statein["prsi"][i, 0, LP1 + lsk - 1]
                 )  # pa to mb (hpa)
 
             if lsk != 0:
@@ -710,9 +710,9 @@ class RadiationDriver:
             for k in range(LM):
                 k1 = k + kd
                 for i in range(IM):
-                    qlyr[i, 0, k1+1] = max(tem1d[i, 0], Statein["qgrs"][i, k, 0])
+                    qlyr[i, 0, k1+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
                     tem1d[i, 0] = min(self.QME5, qlyr[i, k1])
-                    tvly[i, 0, k1+1] = Statein.tgrs[i, k] * (
+                    tvly[i, 0, k1+1] = Statein["tgrs"][i, 0, k+1] * (
                         1.0 + con_fvirt * qlyr[i, 0, k1+1]
                     )  # virtual T (K)
                     delp[i, 0, k1+1] = plvl[i, 0, k1 + 1] - plvl[i, 0, k1]
@@ -748,9 +748,9 @@ class RadiationDriver:
 
             for k in range(LM - 1, -1, -1):
                 for i in range(IM):
-                    qlyr[i, 0, k+1] = max(tem1d[i, 0], Statein["qgrs"][i, k, 0])
+                    qlyr[i, 0, k+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
                     tem1d[i, 0] = min(self.QME5, qlyr[i, 0, k+1])
-                    tvly[i, 0, k+1] = Statein["tgrs"][i, k] * (
+                    tvly[i, 0, k+1] = Statein["tgrs"][i, 0, k+1] * (
                         1.0 + con_fvirt * qlyr[i, 0, k+1]
                     )  # virtual T (K)
                     delp[i, 0, k+1] = plvl[i, 0, k] - plvl[i, 0, k + 1]
@@ -865,26 +865,26 @@ class RadiationDriver:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, k, Model["indcld"] - 1]
-                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 1]
-                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 2]
-                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 3]
-                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 4]
+                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
+                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
+                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
+                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
+                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
             else:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, k, Model["indcld"] - 1]
+                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
         elif Model["imp_physics"] == 11:  # GFDL MP
             cldcov[:IM, 0, kd+1 : LM + kd+1] = tracer1[:IM, :LM, Model["ntclamt"] - 1]
             if Model["effr_in"]:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 0]
-                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 1]
-                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 2]
-                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 3]
+                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 0]
+                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
+                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
+                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
         else:  # neither of the other two cases
             cldcov = 0.0
 
@@ -900,9 +900,9 @@ class RadiationDriver:
             for k in range(LM):
                 k1 = k + kd
                 for i in range(IM):
-                    deltaq[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 4]
-                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 5]
-                    cnvc[i, 0, k1+1] = Tbd["phy_f3d"][i, k, 6]
+                    deltaq[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
+                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 5]
+                    cnvc[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 6]
         elif (
             Model["npdf3d"] == 0 and Model["ncnvcld3d"] == 1
         ):  # same as MOdel%imp_physics=98
@@ -910,7 +910,7 @@ class RadiationDriver:
                 k1 = k + kd
                 for i in range(IM):
                     deltaq[i, 0, k1+1] = 0.0
-                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, k, Model["num_p3d"]]
+                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["num_p3d"]]
                     cnvc[i, 0, k1+1] = 0.0
         else:  # all the rest
             for k in range(LMK):
@@ -1098,29 +1098,29 @@ class RadiationDriver:
                 #    output.
 
                 for i in range(IM):
-                    Coupling["nirbmdi"][i] = scmpsw["nirbm"][i]
-                    Coupling["nirdfdi"][i] = scmpsw["nirdf"][i]
-                    Coupling["visbmdi"][i] = scmpsw["visbm"][i]
-                    Coupling["visdfdi"][i] = scmpsw["visdf"][i]
+                    Coupling["nirbmdi"][i,0] = scmpsw["nirbm"][i]
+                    Coupling["nirdfdi"][i,0] = scmpsw["nirdf"][i]
+                    Coupling["visbmdi"][i,0] = scmpsw["visbm"][i]
+                    Coupling["visdfdi"][i,0] = scmpsw["visdf"][i]
 
-                    Coupling["nirbmui"][i] = scmpsw["nirbm"][i] * sfcalb[i, 0]
-                    Coupling["nirdfui"][i] = scmpsw["nirdf"][i] * sfcalb[i, 1]
-                    Coupling["visbmui"][i] = scmpsw["visbm"][i] * sfcalb[i, 2]
-                    Coupling["visdfui"][i] = scmpsw["visdf"][i] * sfcalb[i, 3]
+                    Coupling["nirbmui"][i,0] = scmpsw["nirbm"][i] * sfcalb[i, 0]
+                    Coupling["nirdfui"][i,0] = scmpsw["nirdf"][i] * sfcalb[i, 1]
+                    Coupling["visbmui"][i,0] = scmpsw["visbm"][i] * sfcalb[i, 2]
+                    Coupling["visdfui"][i,0] = scmpsw["visdf"][i] * sfcalb[i, 3]
 
             else:
 
                 Radtend["htrsw"][:, :] = 0.0
 
                 for i in range(IM):
-                    Coupling["nirbmdi"][i] = 0.0
-                    Coupling["nirdfdi"][i] = 0.0
-                    Coupling["visbmdi"][i] = 0.0
-                    Coupling["visdfdi"][i] = 0.0
-                    Coupling["nirbmui"][i] = 0.0
-                    Coupling["nirdfui"][i] = 0.0
-                    Coupling["visbmui"][i] = 0.0
-                    Coupling["visdfui"][i] = 0.0
+                    Coupling["nirbmdi"][i,0] = 0.0
+                    Coupling["nirdfdi"][i,0] = 0.0
+                    Coupling["visbmdi"][i,0] = 0.0
+                    Coupling["visdfdi"][i,0] = 0.0
+                    Coupling["nirbmui"][i,0] = 0.0
+                    Coupling["nirdfui"][i,0] = 0.0
+                    Coupling["visbmui"][i,0] = 0.0
+                    Coupling["visdfui"][i,0] = 0.0
 
                 if Model["swhtr"]:
                     Radtend["swhc"][:, :] = 0
@@ -1128,10 +1128,10 @@ class RadiationDriver:
 
             # --- radiation fluxes for other physics processes
             for i in range(IM):
-                Coupling["sfcnsw"][i] = (
+                Coupling["sfcnsw"][i,0] = (
                     Radtend["sfcfsw"]["dnfxc"][i] - Radtend["sfcfsw"]["upfxc"][i]
                 )
-                Coupling["sfcdsw"][i] = Radtend["sfcfsw"]["dnfxc"][i]
+                Coupling["sfcdsw"][i,0] = Radtend["sfcfsw"]["dnfxc"][i]
 
         # Start LW radiation calculations
         if Model["lslwr"]:
@@ -1227,7 +1227,7 @@ class RadiationDriver:
                         Radtend["lwhc"][:IM, k] = Radtend["lwhc"][:IM, LM - 1]
 
             # --- radiation fluxes for other physics processes
-            Coupling["sfcdlw"][:] = Radtend["sfcflw"]["dnfxc"]
+            Coupling["sfcdlw"][:,0] = Radtend["sfcflw"]["dnfxc"]
 
         #  - For time averaged output quantities (including total-sky and
         #    clear-sky SW and LW fluxes at TOA and surface; conventional
@@ -1366,15 +1366,15 @@ class RadiationDriver:
                         Diag["fluxr"][i, 6 - j] = Diag["fluxr"][i, 6 - j] + tem0d
                         Diag["fluxr"][i, 9 - j] = (
                             Diag["fluxr"][i, 9 - j]
-                            + tem0d * Statein["prsi"][i, itop + kt - 1]
+                            + tem0d * Statein["prsi"][i, 0, itop + kt - 1]
                         )
                         Diag["fluxr"][i, 12 - j] = (
                             Diag["fluxr"][i, 12 - j]
-                            + tem0d * Statein["prsi"][i, ibtc + kb - 1]
+                            + tem0d * Statein["prsi"][i, 0, ibtc + kb - 1]
                         )
                         Diag["fluxr"][i, 15 - j] = (
                             Diag["fluxr"][i, 15 - j]
-                            + tem0d * Statein["tgrs"][i, itop - 1]
+                            + tem0d * Statein["tgrs"][i, 0, itop - 1+1]
                         )
 
                         # Anning adds optical depth and emissivity output
