@@ -1153,17 +1153,17 @@ class CloudClass:
 
         if lcrick:
             for i in range(IX):
-                clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
-                clwf[i, NLAY - 1] = 0.75 * clw[i, NLAY - 1] + 0.25 * clw[i, NLAY - 2]
+                clwf[i, 0] = 0.75 * clw[i, 0+1] + 0.25 * clw[i, 1+1]
+                clwf[i, NLAY - 1] = 0.75 * clw[i, NLAY - 1+1] + 0.25 * clw[i, NLAY - 2+1]
             for k in range(1, NLAY - 1):
                 for i in range(IX):
                     clwf[i, k] = (
-                        0.25 * clw[i, k - 1] + 0.5 * clw[i, k] + 0.25 * clw[i, k + 1]
+                        0.25 * clw[i, k - 1+1] + 0.5 * clw[i, k+1] + 0.25 * clw[i, k + 1+1]
                     )
         else:
             for k in range(NLAY):
                 for i in range(IX):
-                    clwf[i, k] = clw[i, k]
+                    clwf[i, k] = clw[i, k+1]
 
         #  ---  find top pressure for each cloud domain for given latitude
         #       ptopc(k,i): top presure of each cld domain (k=1-4 are sfc,L,m,h;

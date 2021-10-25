@@ -379,7 +379,12 @@ class RadiationDriver:
                                    default_origin=default_origin,
                                    shape=(IM, 1, Model["levr"] + self.LTP + 1),
                                    dtype=DTYPE_FLT)
-        tem2db = np.zeros((IM, Model["levr"] + self.LTP + 1))
+
+        # tem2db = np.zeros((IM, Model["levr"] + self.LTP + 1))
+        tem2db = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                   dtype=DTYPE_FLT)
 
         # plyr = np.zeros((IM, Model["levr"] + self.LTP))
         plyr = gt4py.storage.zeros(backend=backend, 
@@ -478,9 +483,38 @@ class RadiationDriver:
                                  dtype=DTYPE_FLT)
 
         tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
-        ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
+        # ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
 
-        cldtausw = np.zeros((IM, Model["levr"] + self.LTP))
+        ccnd = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=(DTYPE_FLT, (min(4, Model["ncnd"]),)))
+
+        # cldtausw = np.zeros((IM, Model["levr"] + self.LTP))
+        cldtausw = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
+
+        cldtaulw = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
+
+        htswc = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
+
+        htsw0 = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
+
+        htlwc = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=DTYPE_FLT)
 
         scmpsw = dict()
 
@@ -661,14 +695,14 @@ class RadiationDriver:
         for k in range(1, LMK):
             for i in range(IM):
                 tem2da[i, 0, k+1] = np.log(plyr[i, 0, k+1])
-                tem2db[i, k] = np.log(plvl[i, 0, k])
+                tem2db[i, 0, k] = np.log(plvl[i, 0, k])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
                 tem1d[i, 0] = self.QME6
                 tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
-                tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
-                tem2db[i, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
+                tem2db[i, 0, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
+                tem2db[i, 0, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
                 tsfa[i, 0] = tlyr[i, 0, LMK - 1 + 1]  # sfc layer air temp
                 tlvl[i, 0, 0] = tlyr[i, 0, 0+1]
                 tlvl[i, 0, LMP - 1] = tskn[i,0]
@@ -692,7 +726,7 @@ class RadiationDriver:
             for k in range(1, LMK):
                 for i in range(IM):
                     tlvl[i, 0, k] = tlyr[i, 0, k+1] + (tlyr[i, 0, k - 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, k] - tem2da[i, 0, k+1]
+                        tem2db[i, 0, k] - tem2da[i, 0, k+1]
                     ) / (tem2da[i, 0, k - 1+1] - tem2da[i, 0, k+1])
 
             #  ---  ...  level height and layer thickness (km)
@@ -700,14 +734,14 @@ class RadiationDriver:
             tem0d = 0.001 * con_rog
             for i in range(IM):
                 for k in range(LMK):
-                    dz[i, 0, k+1] = tem0d * (tem2db[i, k + 1] - tem2db[i, k]) * tvly[i, 0, k+1]
+                    dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k + 1] - tem2db[i, 0, k]) * tvly[i, 0, k+1]
         else:
 
             for i in range(IM):
                 tem1d[i, 0] = self.QME6
                 tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
-                tem2db[i, 0] = np.log(plvl[i, 0, 0])
-                tem2db[i, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
+                tem2db[i, 0, 0] = np.log(plvl[i, 0, 0])
+                tem2db[i, 0, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
                 tsfa[i, 0] = tlyr[i, 0, 0+1]  # sfc layer air temp
                 tlvl[i, 0, 0] = tskn[i,0]
                 tlvl[i, 0, LMP - 1] = tlyr[i, 0, LMK - 1+1]
@@ -730,7 +764,7 @@ class RadiationDriver:
             for k in range(LMK - 1):
                 for i in range(IM):
                     tlvl[i, 0, k + 1] = tlyr[i, 0, k+1] + (tlyr[i, 0, k + 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, k + 1] - tem2da[i, 0, k+1]
+                        tem2db[i, 0, k + 1] - tem2da[i, 0, k+1]
                     ) / (tem2da[i, 0, k + 1+1] - tem2da[i, 0, k+1])
 
             #  ---  ...  level height and layer thickness (km)
@@ -738,7 +772,7 @@ class RadiationDriver:
             tem0d = 0.001 * con_rog
             for i in range(IM):
                 for k in range(LMK - 1, -1, -1):
-                    dz[i, 0, k+1] = tem0d * (tem2db[i, k] - tem2db[i, k + 1]) * tvly[i, 0, k+1]
+                    dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k] - tem2db[i, 0, k + 1]) * tvly[i, 0, k+1]
 
         #  - Check for daytime points for SW radiation.
 
@@ -782,49 +816,49 @@ class RadiationDriver:
         if Model["ncnd"] == 1:  # Zhao_Carr_Sundqvist
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water/ice
+                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water/ice
         elif Model["ncnd"] == 2:  # MG
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
-                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, 0, k+1, 1] = tracer1[i, k, ntiw - 1]  # ice water
         elif Model["ncnd"] == 4:  # MG2
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
-                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
-                    ccnd[i, k, 2] = tracer1[i, k, ntrw - 1]  # rain water
-                    ccnd[i, k, 3] = tracer1[i, k, ntsw - 1]  # snow water
+                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, 0, k+1, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, 0, k+1, 2] = tracer1[i, k, ntrw - 1]  # rain water
+                    ccnd[i, 0, k+1, 3] = tracer1[i, k, ntsw - 1]  # snow water
         elif Model["ncnd"] == 5:  # GFDL MP, Thompson, MG3
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
-                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
-                    ccnd[i, k, 2] = tracer1[i, k, ntrw - 1]  # rain water
-                    ccnd[i, k, 3] = (
+                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, 0, k+1, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, 0, k+1, 2] = tracer1[i, k, ntrw - 1]  # rain water
+                    ccnd[i, 0, k+1, 3] = (
                         tracer1[i, k, ntsw - 1] + tracer1[i, k, ntgl - 1]
                     )  # snow + grapuel
 
         for n in range(ncndl):
             for k in range(LMK):
                 for i in range(IM):
-                    if ccnd[i, k, n] < con_epsq:
-                        ccnd[i, k, n] = 0.0
+                    if ccnd[i, 0, k+1, n] < con_epsq:
+                        ccnd[i, 0, k+1, n] = 0.0
 
         if Model["imp_physics"] == 11:
             if not Model["lgfdlmprad"]:
 
                 # rsun the  summation methods and order make the difference in calculation
-                ccnd[:, :, 0] = tracer1[:, :LMK, ntcw - 1]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntrw - 1]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntiw - 1]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntsw - 1]
-                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntgl - 1]
+                ccnd[:, 0, 1:, 0] = tracer1[:, :LMK, ntcw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntrw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntiw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntsw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntgl - 1]
 
             for k in range(LMK):
                 for i in range(IM):
-                    if ccnd[i, k, 0] < self.EPSQ:
-                        ccnd[i, k, 0] = 0.0
+                    if ccnd[i, 0, k+1, 0] < self.EPSQ:
+                        ccnd[i, 0, k+1, 0] = 0.0
 
         if Model["uni_cld"]:
             if Model["effr_in"]:
@@ -900,7 +934,7 @@ class RadiationDriver:
                     effrs[i, 0, lyb - 1+1] = effrs[i, 0, lya - 1+1]
 
         if Model["imp_physics"] == 99:
-            ccnd[:IM, :LMK, 0] = ccnd[:IM, :LMK, 0] + cnvw[:IM, 0, :LMK]
+            ccnd[:IM, 0, 1:LMK+1, 0] = ccnd[:IM, 0, 1:LMK+1, 0] + cnvw[:IM, 0, :LMK]
 
         clouds, cldsa, mtopa, mbota, de_lgth = self.cld.progcld4(
             plyr,
@@ -910,7 +944,7 @@ class RadiationDriver:
             qlyr,
             qstl,
             rhly,
-            ccnd[:IM, :LMK, 0],
+            ccnd[:IM, 0, :LMK+1, 0],
             cnvw,
             cnvc,
             Grid["xlat"],
@@ -1018,12 +1052,12 @@ class RadiationDriver:
                 else:
                     self.rsw.swrad(rank=Rank)
 
-                htswc = np.zeros((self.rsw.outdict_gt4py["htswc"].shape[0],
-                                  self.rsw.outdict_gt4py["htswc"].shape[2]-1)) 
-                htswc[:,:] = self.rsw.outdict_gt4py["htswc"][:,0,1:]
-                htsw0 = np.zeros((self.rsw.outdict_gt4py["htsw0"].shape[0],
-                                  self.rsw.outdict_gt4py["htsw0"].shape[2]-1)) 
-                htsw0[:,:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
+                # htswc = np.zeros((self.rsw.outdict_gt4py["htswc"].shape[0],
+                #                   self.rsw.outdict_gt4py["htswc"].shape[2]-1)) 
+                htswc[:,0, 1:] = self.rsw.outdict_gt4py["htswc"][:,0,1:]
+                # htsw0 = np.zeros((self.rsw.outdict_gt4py["htsw0"].shape[0],
+                #                   self.rsw.outdict_gt4py["htsw0"].shape[2]-1)) 
+                htsw0[:,0, 1:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
                 Diag["topfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
                 Diag["topfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_t"][:,0]
                 Diag["topfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_t"][:,0]
@@ -1037,13 +1071,11 @@ class RadiationDriver:
                 scmpsw["nirdf"] = self.rsw.outdict_gt4py["nirdf"][:,0]
                 scmpsw["visbm"] = self.rsw.outdict_gt4py["visbm"][:,0]
                 scmpsw["visdf"] = self.rsw.outdict_gt4py["visdf"][:,0]
-                cldtausw = np.zeros((self.rsw.outdict_gt4py["cldtausw"].shape[0],
-                                     self.rsw.outdict_gt4py["cldtausw"].shape[2]-1))
-                cldtausw[:,:] = self.rsw.outdict_gt4py["cldtausw"][:,0,1:]
+                cldtausw[:,0,1:] = self.rsw.outdict_gt4py["cldtausw"][:,0,1:]
 
                 for k in range(LM):
                     k1 = k + kd
-                    Radtend["htrsw"][:IM, k] = htswc[:IM, k1]
+                    Radtend["htrsw"][:IM, k] = htswc[:IM, 0, k1+1]
 
                 #     We are assuming that radiative tendencies are from bottom to top
                 # --- repopulate the points above levr i.e. LM
@@ -1054,7 +1086,7 @@ class RadiationDriver:
                 if Model["swhtr"]:
                     for k in range(LM):
                         k1 = k + kd
-                        Radtend["swhc"][:IM, k] = htsw0[:IM, k1]
+                        Radtend["swhc"][:IM, k] = htsw0[:IM, 0, k1+1]
 
                     # --- repopulate the points above levr i.e. LM
                     if LM < LEVS:
@@ -1092,7 +1124,7 @@ class RadiationDriver:
 
                 if Model["swhtr"]:
                     Radtend["swhc"][:, :] = 0
-                    cldtausw[:, :] = 0.0
+                    cldtausw[:, 0, 1:] = 0.0
 
             # --- radiation fluxes for other physics processes
             for i in range(IM):
@@ -1155,9 +1187,9 @@ class RadiationDriver:
                 self.rlw.lwrad(rank=Rank)
 
             # Write the outputs from the rlw.lwrad execution back into the radiation scheme
-            htlwc = np.zeros((self.rlw.outdict_gt4py["htlwc"].shape[0],
-                              self.rlw.outdict_gt4py["htlwc"].shape[2]-1)) 
-            htlwc[:,:] = self.rlw.outdict_gt4py["htlwc"][:,0,1:]
+            # htlwc = np.zeros((self.rlw.outdict_gt4py["htlwc"].shape[0],
+            #                   self.rlw.outdict_gt4py["htlwc"].shape[2]-1)) 
+            htlwc[:,0, 1:] = self.rlw.outdict_gt4py["htlwc"][:,0,1:]
             htlw0 = np.zeros((self.rlw.outdict_gt4py["htlw0"].shape[0],
                               self.rlw.outdict_gt4py["htlw0"].shape[2]-1)) 
             htlw0[:,:] = self.rlw.outdict_gt4py["htlw0"][:,0,1:]
@@ -1167,9 +1199,9 @@ class RadiationDriver:
             Radtend["sfcflw"]["upfx0"] = self.rlw.outdict_gt4py["upfx0_s"][:,0]
             Radtend["sfcflw"]["dnfxc"] = self.rlw.outdict_gt4py["dnfxc_s"][:,0]
             Radtend["sfcflw"]["dnfx0"] = self.rlw.outdict_gt4py["dnfx0_s"][:,0]
-            cldtaulw = np.zeros((self.rlw.outdict_gt4py["cldtaulw"].shape[0],
-                                 self.rlw.outdict_gt4py["cldtaulw"].shape[2]-1))
-            cldtaulw[:,:] = self.rlw.outdict_gt4py["cldtaulw"][:,0,1:]
+            # cldtaulw = np.zeros((self.rlw.outdict_gt4py["cldtaulw"].shape[0],
+            #                      self.rlw.outdict_gt4py["cldtaulw"].shape[2]-1))
+            cldtaulw[:, 0, 1:] = self.rlw.outdict_gt4py["cldtaulw"][:,0,1:]
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps
@@ -1177,7 +1209,7 @@ class RadiationDriver:
 
             for k in range(LM):
                 k1 = k + kd
-                Radtend["htrlw"][:IM, k] = htlwc[:IM, k1]
+                Radtend["htrlw"][:IM, k] = htlwc[:IM, 0, k1+1]
 
             # --- repopulate the points above levr
             if LM < LEVS:
@@ -1349,8 +1381,8 @@ class RadiationDriver:
                         tem1 = 0.0
                         tem2 = 0.0
                         for k in range(ibtc - 1, itop):
-                            tem1 = tem1 + cldtausw[i, k]  # approx .55 mu channel
-                            tem2 = tem2 + cldtaulw[i, k]  # approx 10. mu channel
+                            tem1 = tem1 + cldtausw[i, 0, k+1]  # approx .55 mu channel
+                            tem2 = tem2 + cldtaulw[i, 0, k+1]  # approx 10. mu channel
 
                         Diag["fluxr"][i, 41 - j] = (
                             Diag["fluxr"][i, 41 - j] + tem0d * tem1
