@@ -45,14 +45,19 @@ def fpvs(t):
     c2xpvs = 1.0 / xinc
     c1xpvs = 1.0 - xmin * c2xpvs
 
-    for jx in range(nxpvs):
-        x = xmin + jx * xinc
-        tt = x
-        tbpvs[jx] = fpvsx(tt)
+    # for jx in range(nxpvs):
+    #     x = xmin + jx * xinc
+    #     tt = x
+    #     tbpvs[jx] = fpvsx(tt)
 
     xj = min(max(c1xpvs + c2xpvs * t, 1.0), nxpvs)
     jx = int(min(xj, nxpvs - 1))
-    fpvs = tbpvs[jx - 1] + (xj - jx) * (tbpvs[jx] - tbpvs[jx - 1])
+
+    tbpvs_jxm1 = fpvsx(xmin+(jx-1)*xinc)
+    tbpvs_jx   = fpvsx(xmin + jx * xinc)
+
+    # fpvs = tbpvs[jx - 1] + (xj - jx) * (tbpvs[jx] - tbpvs[jx - 1])
+    fpvs = tbpvs_jxm1 + (xj - jx) * (tbpvs_jx - tbpvs_jxm1)
 
     return fpvs
 
