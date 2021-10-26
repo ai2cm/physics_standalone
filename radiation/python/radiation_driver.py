@@ -482,9 +482,14 @@ class RadiationDriver:
                                  shape=(IM, 1, Model["levr"] + self.LTP + 1),
                                  dtype=DTYPE_FLT)
 
-        tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
-        # ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
+        # tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
+        tracer1 = gt4py.storage.zeros(backend=backend, 
+                                 default_origin=default_origin,
+                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
+                                 dtype=(DTYPE_FLT, (NTRAC,)))
 
+
+        # ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
         ccnd = gt4py.storage.zeros(backend=backend, 
                                  default_origin=default_origin,
                                  shape=(IM, 1, Model["levr"] + self.LTP + 1),
@@ -614,7 +619,7 @@ class RadiationDriver:
             for k in range(LM):
                 k1 = k + kd
                 k2 = k + lsk
-                tracer1[:, k1, j] = np.maximum(0.0, Statein["qgrs"][:, 0, k2+1, j])
+                tracer1[:, 0, k1+1, j] = np.maximum(0.0, Statein["qgrs"][:, 0, k2+1, j])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
@@ -650,7 +655,7 @@ class RadiationDriver:
                 qstl[i, 0, lyb - 1+1] = qstl[i, 0, lya - 1+1]
 
             #  ---  note: may need to take care the top layer amount
-            tracer1[:, lyb - 1, :] = tracer1[:, lya - 1, :]
+            tracer1[:, 0, lyb - 1+1, :] = tracer1[:, 0, lya - 1+1, :]
 
         #  - Get layer ozone mass mixing ratio (if use ozone climatology data,
         #    call getozn()).
@@ -658,7 +663,7 @@ class RadiationDriver:
         if Model["ntoz"] > 0:  # interactive ozone generation
             for k in range(LMK):
                 for i in range(IM):
-                    olyr[i, 0, k+1] = max(self.QMIN, tracer1[i, k, Model["ntoz"] - 1])
+                    olyr[i, 0, k+1] = max(self.QMIN, tracer1[i, 0, k+1, Model["ntoz"] - 1])
         else:  # climatological ozone
             print("Climatological ozone not implemented")
 
@@ -816,27 +821,27 @@ class RadiationDriver:
         if Model["ncnd"] == 1:  # Zhao_Carr_Sundqvist
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water/ice
+                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water/ice
         elif Model["ncnd"] == 2:  # MG
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
+                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
         elif Model["ncnd"] == 4:  # MG2
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, k, ntiw - 1]  # ice water
-                    ccnd[i, 0, k+1, 2] = tracer1[i, k, ntrw - 1]  # rain water
-                    ccnd[i, 0, k+1, 3] = tracer1[i, k, ntsw - 1]  # snow water
+                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
+                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
+                    ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
+                    ccnd[i, 0, k+1, 3] = tracer1[i, 0, k+1, ntsw - 1]  # snow water
         elif Model["ncnd"] == 5:  # GFDL MP, Thompson, MG3
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, k, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, k, ntiw - 1]  # ice water
-                    ccnd[i, 0, k+1, 2] = tracer1[i, k, ntrw - 1]  # rain water
+                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
+                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
+                    ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
                     ccnd[i, 0, k+1, 3] = (
-                        tracer1[i, k, ntsw - 1] + tracer1[i, k, ntgl - 1]
+                        tracer1[i, 0, k+1, ntsw - 1] + tracer1[i, 0, k+1, ntgl - 1]
                     )  # snow + grapuel
 
         for n in range(ncndl):
@@ -849,11 +854,11 @@ class RadiationDriver:
             if not Model["lgfdlmprad"]:
 
                 # rsun the  summation methods and order make the difference in calculation
-                ccnd[:, 0, 1:, 0] = tracer1[:, :LMK, ntcw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntrw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntiw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntsw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, :LMK, ntgl - 1]
+                ccnd[:, 0, 1:, 0] = tracer1[:, 0, 1:LMK+1, ntcw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntrw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntiw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntsw - 1]
+                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntgl - 1]
 
             for k in range(LMK):
                 for i in range(IM):
@@ -876,7 +881,7 @@ class RadiationDriver:
                     for i in range(IM):
                         cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
         elif Model["imp_physics"] == 11:  # GFDL MP
-            cldcov[:IM, 0, kd+1 : LM + kd+1] = tracer1[:IM, :LM, Model["ntclamt"] - 1]
+            cldcov[:IM, 0, kd+1 : LM + kd+1] = tracer1[:IM, 0, 1:LM+1, Model["ntclamt"] - 1]
             if Model["effr_in"]:
                 for k in range(LM):
                     k1 = k + kd
