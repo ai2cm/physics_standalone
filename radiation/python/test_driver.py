@@ -3,7 +3,7 @@ import numpy as np
 from config import *
 from util import compare_data
 import serialbox as ser
-from radiation_driver import RadiationDriver
+from radiation_driver_gt import RadiationDriver
 
 rank = 0
 driver = RadiationDriver()
