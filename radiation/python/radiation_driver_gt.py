@@ -15,7 +15,7 @@ from radiation_sfc import SurfaceClass
 from radlw.radlw_main_gt4py import RadLWClass
 from radsw.radsw_main_gt4py import RadSWClass
 
-from stencils_radiation_driver import pressure_convert
+from stencils_radiation_driver import pressure_convert, extra_values, getozn
 class RadiationDriver:
 
     VTAGRAD = "NCEP-Radiation_driver    v5.2  Jan 2013"
@@ -614,6 +614,9 @@ class RadiationDriver:
         #         )
         #         qstl[i, 0, k1+1] = qs
 
+        # Note : pressure_convert and extra_values do not take into consideration the potential shifts in 
+        #        the vertical direction due to variable declared in line 549 - 573.  The 
+        #        current assumption is that those variables are all equal to 0.
         pressure_convert(plvl,
                          Statein["prsi"],
                          plyr,
@@ -627,11 +630,29 @@ class RadiationDriver:
                          qstl,
                          tracer1,
                          self.QMIN,
-                         NTRAC,                 
+                         NTRAC,
+                         ivflip,
+                         lsk,
                          domain=shape_nlp1,
                          origin=default_origin,
                         )
 
+        if self.lextop:
+            extra_values(plvl,
+                         Statein["prsi"],
+                         plyr,
+                         Statein["prsl"],
+                         tlyr,
+                         prslk1,
+                         rhly,
+                         qstl,
+                         tracer1,
+                         self.prsmin,
+                         lla,
+                         llb,
+                         domain=shape_nlp1,
+                         origin=default_origin,
+                         )
         # --- recast remaining all tracers (except sphum) forcing them all to be positive
         # for j in range(1, NTRAC):
         #     for k in range(LM):
@@ -639,49 +660,53 @@ class RadiationDriver:
         #         k2 = k + lsk
         #         tracer1[:, 0, k1+1, j] = np.maximum(0.0, Statein["qgrs"][:, 0, k2+1, j])
 
-        if ivflip == 0:  # input data from toa to sfc
-            for i in range(IM):
-                plvl[i, 0, 1 + kd] = 0.01 * Statein["prsi"][i, 0, 0]  # pa to mb (hpa)
+        # if ivflip == 0:  # input data from toa to sfc
+        #     for i in range(IM):
+        #         plvl[i, 0, 1 + kd] = 0.01 * Statein["prsi"][i, 0, 0]  # pa to mb (hpa)
 
-            if lsk != 0:
-                for i in range(IM):
-                    plvl[i, 0, 1 + kd] = 0.5 * (plvl[i, 0, 2 + kd] + plvl[i, 0, 1 + kd])
-        else:  # input data from sfc to top
-            for i in range(IM):
-                plvl[i, 0, LP1 + kd - 1] = (
-                    0.01 * Statein["prsi"][i, 0, LP1 + lsk - 1]
-                )  # pa to mb (hpa)
+        #     if lsk != 0:
+        #         for i in range(IM):
+        #             plvl[i, 0, 1 + kd] = 0.5 * (plvl[i, 0, 2 + kd] + plvl[i, 0, 1 + kd])
+        # else:  # input data from sfc to top
+        #     for i in range(IM):
+        #         plvl[i, 0, LP1 + kd - 1] = (
+        #             0.01 * Statein["prsi"][i, 0, LP1 + lsk - 1]
+        #         )  # pa to mb (hpa)
 
-            if lsk != 0:
-                for i in range(IM):
-                    plvl[i, 0, LM + kd - 1] = 0.5 * (
-                        plvl[i, 0, LP1 + k - 1] + plvl[i, 0, LM + kd - 1]
-                    )
+        #     if lsk != 0:
+        #         for i in range(IM):
+        #             plvl[i, 0, LM + kd - 1] = 0.5 * (
+        #                 plvl[i, 0, LP1 + kd - 1] + plvl[i, 0, LM + kd - 1]
+        #             )
 
-        if self.lextop:  # values for extra top layer
-            for i in range(IM):
-                plvl[i, 0, llb - 1] = self.prsmin
-                if plvl[i, 0, lla - 1] <= self.prsmin:
-                    plvl[i, 0, lla - 1] = 2.0 * self.prsmin
+        # if self.lextop:  # values for extra top layer
+        #     for i in range(IM):
+        #         plvl[i, 0, llb - 1] = self.prsmin
+        #         if plvl[i, 0, lla - 1] <= self.prsmin:
+        #             plvl[i, 0, lla - 1] = 2.0 * self.prsmin
+        
+        #         plyr[i, 0, lyb - 1 + 1] = 0.5 * plvl[i, 0, lla - 1]
+        #         tlyr[i, 0, lyb - 1 + 1] = tlyr[i, 0, lya - 1 + 1]
+        #         prslk1[i, 0, lyb - 1+1] = (
+        #             plyr[i, 0, lyb - 1 + 1] * 0.00001
+        #         ) ** con_rocp  # plyr in Pa
+        #         rhly[i, 0, lyb - 1+1] = rhly[i, 0, lya - 1+1]
+        #         qstl[i, 0, lyb - 1+1] = qstl[i, 0, lya - 1+1]
 
-                plyr[i, 0, lyb - 1 + 1] = 0.5 * plvl[i, 0, lla - 1]
-                tlyr[i, 0, lyb - 1 + 1] = tlyr[i, 0, lya - 1 + 1]
-                prslk1[i, 0, lyb - 1+1] = (
-                    plyr[i, 0, lyb - 1 + 1] * 0.00001
-                ) ** con_rocp  # plyr in Pa
-                rhly[i, 0, lyb - 1+1] = rhly[i, 0, lya - 1+1]
-                qstl[i, 0, lyb - 1+1] = qstl[i, 0, lya - 1+1]
-
-            #  ---  note: may need to take care the top layer amount
-            tracer1[:, 0, lyb - 1+1, :] = tracer1[:, 0, lya - 1+1, :]
+        #     #  ---  note: may need to take care the top layer amount
+        #     tracer1[:, 0, lyb - 1+1, :] = tracer1[:, 0, lya - 1+1, :]
 
         #  - Get layer ozone mass mixing ratio (if use ozone climatology data,
         #    call getozn()).
 
         if Model["ntoz"] > 0:  # interactive ozone generation
-            for k in range(LMK):
-                for i in range(IM):
-                    olyr[i, 0, k+1] = max(self.QMIN, tracer1[i, 0, k+1, Model["ntoz"] - 1])
+            # for k in range(LMK):
+            #     for i in range(IM):
+            #         olyr[i, 0, k+1] = max(self.QMIN, tracer1[i, 0, k+1, Model["ntoz"] - 1])
+            getozn(olyr,
+                   tracer1,
+                   self.QMIN,
+                   Model["ntoz"])
         else:  # climatological ozone
             print("Climatological ozone not implemented")
 
