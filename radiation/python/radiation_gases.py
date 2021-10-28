@@ -7,7 +7,7 @@ sys.path.insert(0, "..")
 from radphysparam import co2cyc_file, co2gbl_file, co2dat_file
 from phys_const import con_pi
 from config import *
-
+from stencils_radiation_driver import getgases_stencil
 
 class GasClass:
     VTAGGAS = "NCEP-Radiation_gases     v5.1  Nov 2012"
@@ -434,18 +434,31 @@ class GasClass:
 
         #  --- ...  assign default values
 
-        for k in range(LMAX):
-            for i in range(IMAX):
-                gasdat[i, 0, k+1, 0] = self.co2vmr_def
-                gasdat[i, 0, k+1, 1] = self.n2ovmr_def
-                gasdat[i, 0, k+1, 2] = self.ch4vmr_def
-                gasdat[i, 0, k+1, 3] = self.o2vmr_def
-                gasdat[i, 0, k+1, 4] = self.covmr_def
-                gasdat[i, 0, k+1, 5] = self.f11vmr_def
-                gasdat[i, 0, k+1, 6] = self.f12vmr_def
-                gasdat[i, 0, k+1, 7] = self.f22vmr_def
-                gasdat[i, 0, k+1, 8] = self.cl4vmr_def
-                gasdat[i, 0, k+1, 9] = self.f113vmr_def
+        # for k in range(LMAX):
+        #     for i in range(IMAX):
+        #         gasdat[i, 0, k+1, 0] = self.co2vmr_def
+        #         gasdat[i, 0, k+1, 1] = self.n2ovmr_def
+        #         gasdat[i, 0, k+1, 2] = self.ch4vmr_def
+        #         gasdat[i, 0, k+1, 3] = self.o2vmr_def
+        #         gasdat[i, 0, k+1, 4] = self.covmr_def
+        #         gasdat[i, 0, k+1, 5] = self.f11vmr_def
+        #         gasdat[i, 0, k+1, 6] = self.f12vmr_def
+        #         gasdat[i, 0, k+1, 7] = self.f22vmr_def
+        #         gasdat[i, 0, k+1, 8] = self.cl4vmr_def
+        #         gasdat[i, 0, k+1, 9] = self.f113vmr_def
+        getgases_stencil(gasdat,
+                         self.co2vmr_def,
+                         self.n2ovmr_def,
+                         self.ch4vmr_def,
+                         self.o2vmr_def,
+                         self.covmr_def,
+                         self.f11vmr_def,
+                         self.f12vmr_def,
+                         self.f22vmr_def,
+                         self.cl4vmr_def,
+                         self.f113vmr_def,
+                         domain=shape_nlp1,
+                         origin=default_origin)
 
         #  --- ...  co2 section
 

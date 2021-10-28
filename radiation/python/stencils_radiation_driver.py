@@ -156,3 +156,43 @@ def coszmn_stencil_1(coslat : FIELD_1D,
 		coszen[0,0] = coszen[0,0] + max(0.0, coszn)
 		if coszn > czlimit:
 			istsun[0,0] = istsun[0,0] + 1
+
+@stencil(backend=backend)
+def coszmn_stencil_2(coszdg : FIELD_2D,
+					 coszen : FIELD_2D,
+					 istsun : FIELD_2D,
+					 rstp   : float):
+	with computation(FORWARD), interval(0,1):
+		coszdg[0,0] = coszen[0,0] * rstp
+		if istsun[0,0] > 0:
+			coszen[0,0] = coszen[0,0] / istsun[0,0]
+
+@stencil(backend=backend)
+def getgases_stencil(gasdat : Field[type_10],
+					 co2vmr : float,
+					 n2ovmr : float,
+					 ch4vmr : float,
+					 o2vmr  : float,
+					 covmr  : float,
+					 f11vmr : float,
+					 f12vmr : float,
+					 f22vmr : float,
+					 cl4vmr : float,
+					 f113vmr: float,
+					#  ico2flg: int,
+					#  gco2cyc: float,
+					#  co2_glb: float,
+					#  raddeg : float,
+					#  resco2 : float,
+					 ):
+	with computation(FORWARD), interval(1,None):
+		gasdat[0,0,0][0] = co2vmr
+		gasdat[0,0,0][1] = n2ovmr
+		gasdat[0,0,0][2] = ch4vmr
+		gasdat[0,0,0][3] = o2vmr
+		gasdat[0,0,0][4] = covmr
+		gasdat[0,0,0][5] = f11vmr
+		gasdat[0,0,0][6] = f12vmr
+		gasdat[0,0,0][7] = f22vmr
+		gasdat[0,0,0][8] = cl4vmr
+		gasdat[0,0,0][9] = f113vmr 

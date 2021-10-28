@@ -738,7 +738,10 @@ class RadiationDriver:
             getozn(olyr,
                    tracer1,
                    self.QMIN,
-                   Model["ntoz"])
+                   Model["ntoz"],
+                   domain=shape_nlp1,
+                   origin=default_origin,
+                  )
         else:  # climatological ozone
             print("Climatological ozone not implemented")
 

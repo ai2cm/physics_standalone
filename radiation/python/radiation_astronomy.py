@@ -8,7 +8,7 @@ sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
 from config import *
-from stencils_radiation_driver import coszmn_stencil_1
+from stencils_radiation_driver import coszmn_stencil_1, coszmn_stencil_2
 
 class AstronomyClass:
     VTAGAST = "NCEP-Radiation_astronomy v5.2  Jan 2013 "
@@ -678,19 +678,36 @@ class AstronomyClass:
 
         for it in range(self.nstp):
             cns = solang + (it + 0.5) * self.anginc + self.sollag
-            for i in range(IM):
-                coszn = self.sdec * sinlat[i] + self.cdec * coslat[i] * np.cos(
-                    cns + xlon[i]
-                )
-                coszen[i,0] = coszen[i,0] + max(0.0, coszn)
-                if coszn > self.czlimt:
-                    istsun[i,0] += 1
+            # for i in range(IM):
+            #     coszn = self.sdec * sinlat[i] + self.cdec * coslat[i] * np.cos(
+            #         cns + xlon[i]
+            #     )
+            #     coszen[i,0] = coszen[i,0] + max(0.0, coszn)
+            #     if coszn > self.czlimt:
+            #         istsun[i,0] += 1
+            coszmn_stencil_1(coslat,
+                             coszen,
+                             istsun,
+                             sinlat,
+                             xlon,
+                             self.cdec,
+                             cns[0],
+                             self.czlimt,
+                             self.sdec,
+                             domain=shape,
+                             origin=default_origin)
 
         #  --- ...  compute time averages
 
-        for i in range(IM):
-            coszdg[i,0] = coszen[i,0] * rstp
-            if istsun[i,0] > 0:
-                coszen[i,0] = coszen[i,0] / istsun[i,0]
+        # for i in range(IM):
+        #     coszdg[i,0] = coszen[i,0] * rstp
+        #     if istsun[i,0] > 0:
+        #         coszen[i,0] = coszen[i,0] / istsun[i,0]
+        coszmn_stencil_2(coszdg,
+                         coszen,
+                         istsun,
+                         rstp,
+                         domain=shape,
+                         origin=default_origin)
 
         return coszen, coszdg
