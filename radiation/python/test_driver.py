@@ -322,6 +322,11 @@ for rank in range(6):
     Tbd = storage_convert(Tbd,True)
     Radtend = storage_convert(Radtend,True)
 
+    Diag['fluxr'] = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=Diag['fluxr'].shape,
+                                            dtype=DTYPE_FLT)
+
     Radtendout, Diagout = driver.GFS_radiation_driver(
         Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag,
         rank

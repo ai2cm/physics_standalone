@@ -225,8 +225,8 @@ class SurfaceClass:
 
                 #    - Calculate direct snow albedo.
 
-                if coszf[i] < 0.5:
-                    csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i]) - 1.0)
+                if coszf[i,0] < 0.5:
+                    csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i,0]) - 1.0)
                     asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
                     asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
                 else:
@@ -235,18 +235,18 @@ class SurfaceClass:
 
                 #    - Calculate direct sea surface albedo.
 
-                if coszf[i] > 0.0001:
-                    rfcs = 1.4 / (1.0 + 0.8 * coszf[i])
-                    rfcw = 1.1 / (1.0 + 0.2 * coszf[i])
+                if coszf[i,0] > 0.0001:
+                    rfcs = 1.4 / (1.0 + 0.8 * coszf[i,0])
+                    rfcw = 1.1 / (1.0 + 0.2 * coszf[i,0])
 
                     if tsknf[i,0] >= con_t0c:
                         asevb = max(
                             asevd,
-                            0.026 / (coszf[i] ** 1.7 + 0.065)
+                            0.026 / (coszf[i,0] ** 1.7 + 0.065)
                             + 0.15
-                            * (coszf[i] - 0.1)
-                            * (coszf[i] - 0.5)
-                            * (coszf[i] - 1.0),
+                            * (coszf[i,0] - 0.1)
+                            * (coszf[i,0] - 0.5)
+                            * (coszf[i,0] - 1.0),
                         )
                         asenb = asevb
                     else:
@@ -331,8 +331,8 @@ class SurfaceClass:
                 #    - Calculate direct snow albedo.
 
                 if round(slmsk[i]) == 2:
-                    if coszf[i] < 0.5:
-                        csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i]) - 1.0)
+                    if coszf[i,0] < 0.5:
+                        csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i,0]) - 1.0)
                         asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
                         asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
                     else:
@@ -345,17 +345,17 @@ class SurfaceClass:
                 #    - Calculate direct sea surface albedo, use fanglin's zenith angle
                 #      treatment.
 
-                if coszf[i] > 0.0001:
-                    rfcs = 1.775 / (1.0 + 1.55 * coszf[i])
+                if coszf[i,0] > 0.0001:
+                    rfcs = 1.775 / (1.0 + 1.55 * coszf[i,0])
 
                     if tsknf[i,0] >= con_t0c:
                         asevb = max(
                             asevd,
-                            0.026 / (coszf[i] ** 1.7 + 0.065)
+                            0.026 / (coszf[i,0] ** 1.7 + 0.065)
                             + 0.15
-                            * (coszf[i] - 0.1)
-                            * (coszf[i] - 0.5)
-                            * (coszf[i] - 1.0),
+                            * (coszf[i,0] - 0.1)
+                            * (coszf[i,0] - 0.5)
+                            * (coszf[i,0] - 1.0),
                         )
                         asenb = asevb
                     else:

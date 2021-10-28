@@ -779,7 +779,7 @@ class RadSWClass:
             # "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
-            "coszen": {"shape": (npts,), "type": DTYPE_FLT},
+            # "coszen": {"shape": (npts,), "type": DTYPE_FLT},
             "solcon": {"shape": (), "type": DTYPE_FLT},
             "nday": {"shape": (), "type": DTYPE_INT},
             "idxday": {"shape": (npts,), "type": DTYPE_BOOL},
@@ -803,7 +803,7 @@ class RadSWClass:
             # "dz"      : dz,
             # "delp"    : delp,
             # "de_lgth" : de_lgth,
-            "coszen"  : coszen,
+            # "coszen"  : coszen,
             "solcon"  : solcon,
             "nday"    : np.int64(nday),
             "idxday"  : idxday,
@@ -836,6 +836,7 @@ class RadSWClass:
         self.indict_gt4py["dz"] = dz
         self.indict_gt4py["delp"] = delp
         self.indict_gt4py["de_lgth"] = de_lgth
+        self.indict_gt4py["coszen"] = coszen
         # self.indict_gt4py["idxday"] = idxday
 
     def _load_lookup_table_data(self):

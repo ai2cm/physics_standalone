@@ -8,7 +8,7 @@ sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
 from config import *
-
+from stencils_radiation_driver import coszmn_stencil_1
 
 class AstronomyClass:
     VTAGAST = "NCEP-Radiation_astronomy v5.2  Jan 2013 "
@@ -657,9 +657,21 @@ class AstronomyClass:
         #  ===================================================================  !
         #
 
-        coszen = np.zeros(IM)
-        coszdg = np.zeros(IM)
-        istsun = np.zeros(IM)
+        # coszen = np.zeros(IM)
+        coszen = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(IM,1),
+                                            dtype=DTYPE_FLT)
+        # coszdg = np.zeros(IM)
+        coszdg = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(IM,1),
+                                            dtype=DTYPE_FLT)
+        # istsun = np.zeros(IM)
+        istsun = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(IM,1),
+                                            dtype=DTYPE_FLT)
 
         solang = self.pid12 * (solhr - 12.0)  # solar angle at present time
         rstp = 1.0 / float(self.nstp)
@@ -670,15 +682,15 @@ class AstronomyClass:
                 coszn = self.sdec * sinlat[i] + self.cdec * coslat[i] * np.cos(
                     cns + xlon[i]
                 )
-                coszen[i] = coszen[i] + max(0.0, coszn)
+                coszen[i,0] = coszen[i,0] + max(0.0, coszn)
                 if coszn > self.czlimt:
-                    istsun[i] += 1
+                    istsun[i,0] += 1
 
         #  --- ...  compute time averages
 
         for i in range(IM):
-            coszdg[i] = coszen[i] * rstp
-            if istsun[i] > 0:
-                coszen[i] = coszen[i] / istsun[i]
+            coszdg[i,0] = coszen[i,0] * rstp
+            if istsun[i,0] > 0:
+                coszen[i,0] = coszen[i,0] / istsun[i,0]
 
         return coszen, coszdg

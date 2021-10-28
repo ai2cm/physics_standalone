@@ -13,6 +13,7 @@ from gt4py.gtscript import (
     BACKWARD,
     min,
     max,
+	cos,
 )
 
 from config import *
@@ -137,3 +138,21 @@ def getozn(olyr : FIELD_FLT,
           ):
 	with computation(PARALLEL), interval(1,None):
 		olyr[0,0,0] = max(QMIN, tracer1[0,0,0][ntoz-1])
+
+@stencil(backend=backend)
+def coszmn_stencil_1(coslat : FIELD_1D,
+					 coszen : FIELD_2D,
+					 istsun : FIELD_2D,
+					 sinlat : FIELD_1D,
+					 xlon   : FIELD_1D,
+					 cdec   : float,
+					 cns    : float,
+					 czlimit: float,
+					 sdec   : float):
+	with computation(FORWARD), interval(0,1):
+		coszn = sdec * sinlat[0] + cdec * coslat[0] * cos(
+                    cns + xlon[0]
+                )
+		coszen[0,0] = coszen[0,0] + max(0.0, coszn)
+		if coszn > czlimit:
+			istsun[0,0] = istsun[0,0] + 1

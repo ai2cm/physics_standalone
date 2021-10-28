@@ -858,7 +858,7 @@ class RadiationDriver:
 
         nday = 0
         for i in range(IM):
-            if Radtend["coszen"][i] >= 0.0001:
+            if Radtend["coszen"][i,0] >= 0.0001:
                 nday += 1
                 idxday[nday - 1] = i + 1
 
@@ -1373,11 +1373,11 @@ class RadiationDriver:
             #       part of sw calling interval, while coszdg= mean cosz over entire interval
             if Model["lsswr"]:
                 for i in range(IM):
-                    if Radtend["coszen"][i] > 0.0:
+                    if Radtend["coszen"][i,0] > 0.0:
                         #  --- sw total-sky fluxes
                         #      -------------------
                         tem0d = (
-                            Model["fhswr"] * Radtend["coszdg"][i] / Radtend["coszen"][i]
+                            Model["fhswr"] * Radtend["coszdg"][i,0] / Radtend["coszen"][i,0]
                         )
                         Diag["fluxr"][i, 1] = (
                             Diag["fluxr"][i, 1] + Diag["topfsw"]["upfxc"][i] * tem0d
