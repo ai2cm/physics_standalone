@@ -320,7 +320,7 @@ for rank in range(6):
     Coupling = storage_convert(Coupling, True)
     Grid = storage_convert(Grid)
     Tbd = storage_convert(Tbd,True)
-    # Radtend = storage_convert(Radtend,True)
+    Radtend = storage_convert(Radtend,True)
 
     Radtendout, Diagout = driver.GFS_radiation_driver(
         Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag,
@@ -381,4 +381,4 @@ for rank in range(6):
         else:
             outdict[var] = Diagout[var]
 
-    compare_data(valdict, outdict)
+    compare_data(outdict, valdict)

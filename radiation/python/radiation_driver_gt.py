@@ -523,15 +523,47 @@ class RadiationDriver:
 
         scmpsw = dict()
 
-        Diag["topfsw"]["upfxc"] = np.zeros(IM)
-        Diag["topfsw"]["dnfxc"] = np.zeros(IM)
-        Diag["topfsw"]["upfx0"] = np.zeros(IM)
-        Radtend["sfcfsw"]["upfxc"] = np.zeros(IM)
-        Radtend["sfcfsw"]["dnfxc"] = np.zeros(IM)
-        Radtend["sfcfsw"]["upfx0"] = np.zeros(IM)
-        Radtend["sfcfsw"]["dnfx0"] = np.zeros(IM)
+        # Diag["topfsw"]["upfxc"] = np.zeros(IM)
+        Diag["topfsw"]["upfxc"] = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
+        # Diag["topfsw"]["dnfxc"] = np.zeros(IM)
+        Diag["topfsw"]["dnfxc"] =gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
+        # Diag["topfsw"]["upfx0"] = np.zeros(IM)
+        Diag["topfsw"]["upfx0"]=gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
+        # Radtend["sfcfsw"]["upfxc"] = np.zeros(IM)
+        Radtend["sfcfsw"]["upfxc"] = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
+        # Radtend["sfcfsw"]["dnfxc"] = np.zeros(IM)
+        Radtend["sfcfsw"]["dnfxc"] = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
+        # Radtend["sfcfsw"]["upfx0"] = np.zeros(IM)
+        Radtend["sfcfsw"]["upfx0"] = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
+        # Radtend["sfcfsw"]["dnfx0"] = np.zeros(IM)
+        Radtend["sfcfsw"]["dnfx0"] = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,),
+                                   dtype=DTYPE_FLT)
 
-        Radtend["htrlw"] = np.zeros((IM, Model["levs"]))
+        # Radtend["htrlw"] = np.zeros((IM, Model["levs"]))
+        Radtend["htrlw"] = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IM,1,Model["levs"]+1),
+                                   dtype=DTYPE_FLT)
 
         lhlwb = False
         lhlw0 = True
@@ -1057,7 +1089,7 @@ class RadiationDriver:
             )
 
             # Approximate mean surface albedo from vis- and nir-  diffuse values.
-            Radtend["sfalb"][:] = np.maximum(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
+            Radtend["sfalb"][:,0] = np.maximum(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
 
             lhswb = False
             lhsw0 = True
@@ -1106,7 +1138,7 @@ class RadiationDriver:
                 # htsw0 = np.zeros((self.rsw.outdict_gt4py["htsw0"].shape[0],
                 #                   self.rsw.outdict_gt4py["htsw0"].shape[2]-1)) 
                 htsw0[:,0, 1:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
-                Diag["topfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
+                Diag["topfsw"]["upfxc"][:] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
                 Diag["topfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_t"][:,0]
                 Diag["topfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_t"][:,0]
                 Radtend["sfcfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_s"][:,0]
@@ -1123,23 +1155,23 @@ class RadiationDriver:
 
                 for k in range(LM):
                     k1 = k + kd
-                    Radtend["htrsw"][:IM, k] = htswc[:IM, 0, k1+1]
+                    Radtend["htrsw"][:IM, 0, k+1] = htswc[:IM, 0, k1+1]
 
                 #     We are assuming that radiative tendencies are from bottom to top
                 # --- repopulate the points above levr i.e. LM
                 if LM < LEVS:
                     for k in range(LM, LEVS):
-                        Radtend["htrsw"][:IM, k] = Radtend["htrsw"][:IM, LM - 1]
+                        Radtend["htrsw"][:IM, 0, k+1] = Radtend["htrsw"][:IM, LM - 1]
 
                 if Model["swhtr"]:
                     for k in range(LM):
                         k1 = k + kd
-                        Radtend["swhc"][:IM, k] = htsw0[:IM, 0, k1+1]
+                        Radtend["swhc"][:IM, 0, k+1] = htsw0[:IM, 0, k1+1]
 
                     # --- repopulate the points above levr i.e. LM
                     if LM < LEVS:
                         for k in range(LM, LEVS):
-                            Radtend["swhc"][:IM, k] = Radtend["swhc"][:IM, LM - 1]
+                            Radtend["swhc"][:IM, 0, k+1] = Radtend["swhc"][:IM, LM - 1]
 
                 #  --- surface down and up spectral component fluxes
                 #  - Save two spectral bands' surface downward and upward fluxes for
@@ -1253,26 +1285,26 @@ class RadiationDriver:
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps
-            Radtend["tsflw"][:] = tsfa[:, 0]
+            Radtend["tsflw"][:,0] = tsfa[:, 0]
 
             for k in range(LM):
                 k1 = k + kd
-                Radtend["htrlw"][:IM, k] = htlwc[:IM, 0, k1+1]
+                Radtend["htrlw"][:IM, 0, k+1] = htlwc[:IM, 0, k1+1]
 
             # --- repopulate the points above levr
             if LM < LEVS:
                 for k in range(LM, LEVS):
-                    Radtend["htrlw"][IM, k] = Radtend["htrlw"][:IM, LM - 1]
+                    Radtend["htrlw"][IM, 0, k+1] = Radtend["htrlw"][:IM, 0, LM - 1+1]
 
             if Model["lwhtr"]:
                 for k in range(LM):
                     k1 = k + kd
-                    Radtend["lwhc"][:IM, k] = htlw0[:IM, k1]
+                    Radtend["lwhc"][:IM, 0, k+1] = htlw0[:IM, k1]
 
                 # --- repopulate the points above levr
                 if LM < LEVS:
                     for k in range(LM, LEVS):
-                        Radtend["lwhc"][:IM, k] = Radtend["lwhc"][:IM, LM - 1]
+                        Radtend["lwhc"][:IM, 0, k+1] = Radtend["lwhc"][:IM, 0, LM - 1+1]
 
             # --- radiation fluxes for other physics processes
             Coupling["sfcdlw"][:,0] = Radtend["sfcflw"]["dnfxc"]
