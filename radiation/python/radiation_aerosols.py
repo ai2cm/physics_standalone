@@ -1521,14 +1521,38 @@ class AerosolClass:
         #  ---  locals:
         psrfh = 5.0  # ref press (mb) for upper bound
 
-        alon = np.zeros(IMAX)
-        alat = np.zeros(IMAX)
-        volcae = np.zeros(IMAX)
-        rdelp = np.zeros(IMAX)
+        # alon = np.zeros(IMAX)
+        alon = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1),
+                                   dtype=DTYPE_FLT)
+        # alat = np.zeros(IMAX)
+        alat = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1),
+                                   dtype=DTYPE_FLT)
+        # volcae = np.zeros(IMAX)
+        volcae = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1),
+                                   dtype=DTYPE_FLT)
+        # rdelp = np.zeros(IMAX)
+        rdelp = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1),
+                                   dtype=DTYPE_FLT)
 
-        prsln = np.zeros(NLP1)
-        hz = np.zeros((IMAX, NLP1))
-        dz = np.zeros((IMAX, NLAY))
+        # prsln = np.zeros(NLP1)
+        # hz = np.zeros((IMAX, NLP1))
+        hz = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1, NLP1),
+                                   dtype=DTYPE_FLT)
+        # dz = np.zeros((IMAX, NLAY))
+        dz = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1, NLP1),
+                                   dtype=DTYPE_FLT)
 
         kcutl = np.zeros(IMAX, dtype=DTYPE_INT)
         kcuth = np.zeros(IMAX, dtype=DTYPE_INT)
@@ -1556,11 +1580,11 @@ class AerosolClass:
         # Convert lat/lon from radiance to degree.
 
         for i in range(IMAX):
-            alon[i] = xlon[i] * rdg
-            if alon[i] < 0.0:
-                alon[i] = alon[i] + 360.0
+            alon[i,0] = xlon[i] * rdg
+            if alon[i,0] < 0.0:
+                alon[i,0] = alon[i,0] + 360.0
 
-            alat[i] = xlat[i] * rdg  # if xlat in pi/2 -> -pi/2 range
+            alat[i,0] = xlat[i] * rdg  # if xlat in pi/2 -> -pi/2 range
 
         # Compute level height and layer thickness.
 
@@ -1570,34 +1594,39 @@ class AerosolClass:
 
                 if self.ivflip == 1:  # input from sfc to toa
 
+                    # for k in range(NLAY):
+                    #     prsln[k] = np.log(prsi[i, 0, k])
+
+                    # prsln[NLP1 - 1] = np.log(prsl[i, 0, NLAY - 1 + 1])
+
+                    dz[i,0, NLAY - 1] = rovg * (np.log(prsi[i, 0, NLAY-1]) - np.log(prsl[i, 0, NLAY - 1 + 1])) * tvly[i, 0, NLAY - 1]
+
+                    for k in range(NLAY - 2, -1, -1):
+                        # dz[i, k] = rovg * (prsln[k] - prsln[k + 1]) * tvly[i, 0, k+1]
+                        dz[i,0, k] = rovg * (np.log(prsi[i, 0, k]) - np.log(prsi[i, 0, k+1])) * tvly[i, 0, k+1]
+
+                    dz[i,0, NLAY - 1] = 2.0 * dz[i,0, NLAY - 1]
+
+                    hz[i, 0, 0] = 0.0
                     for k in range(NLAY):
-                        prsln[k] = np.log(prsi[i, 0, k])
-
-                    prsln[NLP1 - 1] = np.log(prsl[i, 0, NLAY - 1 + 1])
-
-                    for k in range(NLAY - 1, -1, -1):
-                        dz[i, k] = rovg * (prsln[k] - prsln[k + 1]) * tvly[i, 0, k+1]
-
-                    dz[i, NLAY - 1] = 2.0 * dz[i, NLAY - 1]
-
-                    hz[i, 0] = 0.0
-                    for k in range(NLAY):
-                        hz[i, k + 1] = hz[i, k] + dz[i, k]
+                        hz[i, 0, k + 1] = hz[i, 0, k] + dz[i,0, k]
 
                 else:  # input from toa to sfc
 
-                    prsln[0] = np.log(prsl[i, 0, 0+1])
-                    for k in range(1, NLP1):
-                        prsln[k] = np.log(prsi[i, 0, k])
+                    # prsln[0] = np.log(prsl[i, 0, 0+1])
+                    # for k in range(1, NLP1):
+                    #     prsln[k] = np.log(prsi[i, 0, k])
 
-                    for k in range(NLAY):
-                        dz[i, k] = rovg * (prsln[k + 1] - prsln[k]) * tvly[i, 0, k+1]
+                    dz[i,0,0] = rovg * (np.log(prsi[i, 0, 1]) - np.log(prsl[i, 0, 0+1])) * tvly[i, 0, 1]
 
-                    dz[i, 0] = 2.0 * dz[i, 0]
+                    for k in range(1,NLAY):
+                        dz[i,0, k] = rovg * (np.log(prsi[i, 0, k+1]) - np.log(prsi[i, 0, k])) * tvly[i, 0, k+1]
 
-                    hz[i, NLP1 - 1] = 0.0
+                    dz[i,0, 0] = 2.0 * dz[i,0, 0]
+
+                    hz[i, 0, NLP1 - 1] = 0.0
                     for k in range(NLAY - 1, -1, -1):
-                        hz[i, k] = hz[i, k + 1] + dz[i, k]
+                        hz[i, 0, k] = hz[i, 0, k + 1] + dz[i,0, k]
 
             # -# Calculate SW aerosol optical properties for the corresponding
             #    frequency bands:
@@ -1656,29 +1685,29 @@ class AerosolClass:
             #  ---  select data in 4 lat bands, interpolation at the boundaires
 
             for i in range(IMAX):
-                if alat[i] > 46.0:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 0, i1]
-                elif alat[i] > 44.0:
-                    volcae[i] = 5.0e-5 * (
+                if alat[i,0] > 46.0:
+                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 0, i1]
+                elif alat[i,0] > 44.0:
+                    volcae[i,0] = 5.0e-5 * (
                         self.ivolae[self.kmonsav - 1, 0, i1]
                         + self.ivolae[self.kmonsav - 1, 1, i1]
                     )
-                elif alat[i] > 1.0:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 1, i1]
-                elif alat[i] > -1.0:
-                    volcae[i] = 5.0e-5 * (
+                elif alat[i,0] > 1.0:
+                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 1, i1]
+                elif alat[i,0] > -1.0:
+                    volcae[i,0] = 5.0e-5 * (
                         self.ivolae[self.kmonsav - 1, 1, i1]
                         + self.ivolae[self.kmonsav - 1, 2, i1]
                     )
-                elif alat[i] > -44.0:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 2, i1]
-                elif alat[i] > -46.0:
-                    volcae[i] = 5.0e-5 * (
+                elif alat[i,0] > -44.0:
+                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 2, i1]
+                elif alat[i,0] > -46.0:
+                    volcae[i,0] = 5.0e-5 * (
                         self.ivolae[self.kmonsav - 1, 2, i1]
                         + self.ivolae[self.kmonsav - 1, 3, i1]
                     )
                 else:
-                    volcae[i] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 3, i1]
+                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 3, i1]
 
             if self.ivflip == 0:  # input data from toa to sfc
 
@@ -1686,7 +1715,7 @@ class AerosolClass:
 
                 for i in range(IMAX):
 
-                    tmp1 = np.abs(alat[i])
+                    tmp1 = np.abs(alat[i,0])
                     if tmp1 > 70.0:  # polar, fixed at 25000pa (250mb)
                         psrfl = 250.0
                     elif tmp1 < 20.0:  # tropic, fixed at 15000pa (150mb)
@@ -1696,7 +1725,7 @@ class AerosolClass:
 
                     kcuth[i] = NLAY - 1
                     kcutl[i] = 2
-                    rdelp[i] = 1.0 / prsi[i, 0, 1]
+                    rdelp[i,0] = 1.0 / prsi[i, 0, 1]
 
                     for k in range(1, NLAY - 2):
                         if prsi[i, 0, k] >= psrfh:
@@ -1706,7 +1735,7 @@ class AerosolClass:
                     for k in range(1, NLAY - 2):
                         if prsi[i, 0, k] >= psrfl:
                             kcutl[i] = k
-                            rdelp[i] = 1.0 / (prsi[i, 0, k] - prsi[i, 0, kcuth[i] - 1])
+                            rdelp[i,0] = 1.0 / (prsi[i, 0, k] - prsi[i, 0, kcuth[i] - 1])
                             break
 
                 #  ---  sw: add volcanic aerosol optical depth to the background value
@@ -1730,9 +1759,9 @@ class AerosolClass:
                             kh = kcuth[i]
                             kl = kcutl[i]
                             for k in range(kh - 1, kl):
-                                tmp2 = tmp1 * ((prsi[i, 0, k + 1] - prsi[i, 0, k]) * rdelp[i])
+                                tmp2 = tmp1 * ((prsi[i, 0, k + 1] - prsi[i, 0, k]) * rdelp[i,0])
                                 aerosw[i, 0, k+1, m, 0] = (
-                                    aerosw[i, 0, k+1, m, 0] + tmp2 * volcae[i]
+                                    aerosw[i, 0, k+1, m, 0] + tmp2 * volcae[i,0]
                                 )
 
                             #  ---  smoothing profile at boundary if needed
@@ -1754,8 +1783,8 @@ class AerosolClass:
                             for k in range(kh - 1, kl):
                                 tmp2 = (
                                     tmp1
-                                    * ((prsi[i, 0, k + 1] - prsi[i, 0, k]) * rdelp[i])
-                                    * volcae[i]
+                                    * ((prsi[i, 0, k + 1] - prsi[i, 0, k]) * rdelp[i,0])
+                                    * volcae[i,0]
                                 )
 
                                 for m in range(NBDLW):
@@ -1773,10 +1802,10 @@ class AerosolClass:
                                 kl = kcutl[i]
                                 for k in range(kh - 1, kl):
                                     tmp2 = tmp1 * (
-                                        (prsi[i, 0, k + 1] - prsi[i, 0, k]) * rdelp[i]
+                                        (prsi[i, 0, k + 1] - prsi[i, 0, k]) * rdelp[i,0]
                                     )
                                     aerolw[i, 0, k+1, m, 0] = (
-                                        aerolw[i, 0, k+1, m, 0] + tmp2 * volcae[i]
+                                        aerolw[i, 0, k+1, m, 0] + tmp2 * volcae[i,0]
                                     )
 
             else:  # input data from sfc to toa
@@ -1785,7 +1814,7 @@ class AerosolClass:
 
                 for i in range(IMAX):
 
-                    tmp1 = np.abs(alat[i])
+                    tmp1 = np.abs(alat[i,0])
 
                     if tmp1 > 70.0:  # polar, fixed at 25000pa (250mb)
                         psrfl = 250.0
@@ -1796,7 +1825,7 @@ class AerosolClass:
 
                     kcuth[i] = 2
                     kcutl[i] = NLAY - 1
-                    rdelp[i] = 1.0 / prsi[i, 0, NLAY - 2]
+                    rdelp[i,0] = 1.0 / prsi[i, 0, NLAY - 2]
 
                     for k in range(NLAY - 2, 0, -1):
                         if prsi[i, 0, k] >= psrfh:
@@ -1806,7 +1835,7 @@ class AerosolClass:
                     for k in range(NLAY - 1, 0, -1):
                         if prsi[i, 0, k] >= psrfl:
                             kcutl[i] = k + 1
-                            rdelp[i] = 1.0 / (prsi[i, 0, k] - prsi[i, 0, kcuth[i]])
+                            rdelp[i,0] = 1.0 / (prsi[i, 0, k] - prsi[i, 0, kcuth[i]])
                             break
 
                 #  ---  sw: add volcanic aerosol optical depth to the background value
@@ -1830,9 +1859,9 @@ class AerosolClass:
                             kh = kcuth[i] - 1
                             kl = kcutl[i] - 1
                             for k in range(kl, kh + 1):
-                                tmp2 = tmp1 * ((prsi[i, 0, k] - prsi[i, 0, k + 1]) * rdelp[i])
+                                tmp2 = tmp1 * ((prsi[i, 0, k] - prsi[i, 0, k + 1]) * rdelp[i,0])
                                 aerosw[i, 0, k+1, m, 0] = (
-                                    aerosw[i, 0, k+1, m, 0] + tmp2 * volcae[i]
+                                    aerosw[i, 0, k+1, m, 0] + tmp2 * volcae[i,0]
                                 )
 
                             #  ---  smoothing profile at boundary if needed
@@ -1854,8 +1883,8 @@ class AerosolClass:
                             for k in range(kl, kh + 1):
                                 tmp2 = (
                                     tmp1
-                                    * ((prsi[i, 0, k] - prsi[i, 0, k + 1]) * rdelp[i])
-                                    * volcae[i]
+                                    * ((prsi[i, 0, k] - prsi[i, 0, k + 1]) * rdelp[i,0])
+                                    * volcae[i,0]
                                 )
                                 for m in range(NBDLW):
                                     aerolw[i, 0, k+1, m, 0] = aerolw[i, 0, k+1, m, 0] + tmp2
@@ -1872,10 +1901,10 @@ class AerosolClass:
                                 kl = kcutl[i] - 1
                                 for k in range(kl, kh + 1):
                                     tmp2 = tmp1 * (
-                                        (prsi[i, 0, k] - prsi[i, 0, k + 1]) * rdelp[i]
+                                        (prsi[i, 0, k] - prsi[i, 0, k + 1]) * rdelp[i,0]
                                     )
                                     aerolw[i, 0, k+1, m, 0] = (
-                                        aerolw[i, 0, k+1, m, 0] + tmp2 * volcae[i]
+                                        aerolw[i, 0, k+1, m, 0] + tmp2 * volcae[i,0]
                                     )
         return aerosw, aerolw, aerodp
 
@@ -2007,14 +2036,14 @@ class AerosolClass:
             i3 = i1
             while i3 <= self.IMXAE:
                 tmp1 = dltg * (i3 - 1)
-                dtmp = alon[i] - tmp1
+                dtmp = alon[i,0] - tmp1
 
                 if dtmp > dltg:
                     i3 += 1
                     if i3 > self.IMXAE:
                         raise ValueError(
                             f"ERROR! In setclimaer alon>360. ipt = {i}",
-                            f"dltg,alon,tlon,dlon = {dltg},{alon[i]},{tmp1},{dtmp}",
+                            f"dltg,alon,tlon,dlon = {dltg},{alon[i,0]},{tmp1},{dtmp}",
                         )
                 elif dtmp >= 0.0:
                     i1 = i3
@@ -2030,21 +2059,21 @@ class AerosolClass:
                     if i3 < 1:
                         raise ValueError(
                             f"ERROR! In setclimaer alon< 0. ipt = {i}",
-                            f"dltg, alon, tlon, dlon = {dltg}, {alon[i]}, {tmp1},{dtmp}",
+                            f"dltg, alon, tlon, dlon = {dltg}, {alon[i,0]}, {tmp1},{dtmp}",
                         )
 
             #  ---  map grid in latitude direction, lat from 90n to 90s in 5 deg resolution
             j3 = j1
             while j3 <= self.JMXAE:
                 tmp2 = 90.0 - dltg * (j3 - 1)
-                dtmp = tmp2 - alat[i]
+                dtmp = tmp2 - alat[i,0]
 
                 if dtmp > dltg:
                     j3 += 1
                     if j3 >= self.JMXAE:
                         raise ValueError(
                             f"ERROR! In setclimaer alat<-90. ipt = {i}",
-                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i]}, {tmp2}, {dtmp}",
+                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i,0]}, {tmp2}, {dtmp}",
                         )
                 elif dtmp >= 0.0:
                     j1 = j3
@@ -2061,7 +2090,7 @@ class AerosolClass:
                     if j3 < 1:
                         raise ValueError(
                             f"ERROR! In setclimaer alat>90. ipt ={i}",
-                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i]}, {tmp2}, {dtmp}",
+                            f"dltg, alat, tlat, dlat = {dltg}, {alat[i,0]}, {tmp2}, {dtmp}",
                         )
 
             # -# Determin the type of aerosol profile (kp) and scale hight for
@@ -2145,7 +2174,7 @@ class AerosolClass:
 
             for k in range(NLAY):
                 self.rh1[k] = rhlay[i, 0, k+1]
-                self.dz1[k] = dz[i, k]
+                self.dz1[k] = dz[i,0, k]
 
             if self.ivflip == 1:  # input from sfc to toa
 
@@ -2174,7 +2203,7 @@ class AerosolClass:
                     if tmp1 > 0.0:
                         tmp2 = 1.0 / tmp1
                         self.delz[k] = tmp1 * (
-                            np.exp(-hz[i, k] * tmp2) - np.exp(-hz[i, k + 1] * tmp2)
+                            np.exp(-hz[i,0, k] * tmp2) - np.exp(-hz[i,0, k + 1] * tmp2)
                         )
                     else:
                         self.delz[k] = self.dz1[k]
@@ -2206,7 +2235,7 @@ class AerosolClass:
                     if tmp1 > 0.0:
                         tmp2 = 1.0 / tmp1
                         self.delz[k] = tmp1 * (
-                            np.exp(-hz[i, k + 1] * tmp2) - np.exp(-hz[i, k] * tmp2)
+                            np.exp(-hz[i,0, k + 1] * tmp2) - np.exp(-hz[i,0, k] * tmp2)
                         )
                     else:
                         self.delz[k] = self.dz1[k]

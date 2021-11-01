@@ -15,7 +15,7 @@ from radiation_sfc import SurfaceClass
 from radlw.radlw_main_gt4py import RadLWClass
 from radsw.radsw_main_gt4py import RadSWClass
 
-from stencils_radiation_driver import pressure_convert, extra_values, getozn
+from stencils_radiation_driver import pressure_convert, extra_values, getozn, get_layer_temp
 class RadiationDriver:
 
     VTAGRAD = "NCEP-Radiation_driver    v5.2  Jan 2013"
@@ -366,8 +366,8 @@ class RadiationDriver:
         idxday = np.zeros(IM, dtype=DTYPE_INT)
         # idxday = gt4py.storage.zeros(backend=backend, 
         #                            default_origin=default_origin,
-        #                            shape=(IM, 1),
-        #                            dtype=DTYPE_BOOL)
+        #                            shape=(IM,),
+        #                            dtype=DTYPE_INT)
 
         # plvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
         plvl = gt4py.storage.zeros(backend=backend, 
@@ -766,6 +766,8 @@ class RadiationDriver:
 
         #  --- ...  set up non-prognostic gas volume mixing ratioes
 
+        # -- Note : There's a portion of getgases that's still in Python due to indirect
+        # --        referencing
         gasvmr = self.gas.getgases(
             plvl,
             Grid["xlon"],
@@ -775,87 +777,109 @@ class RadiationDriver:
         )
 
         #  - Get temperature at layer interface, and layer moisture.
-        for k in range(1, LMK):
-            for i in range(IM):
-                tem2da[i, 0, k+1] = np.log(plyr[i, 0, k+1])
-                tem2db[i, 0, k] = np.log(plvl[i, 0, k])
+        get_layer_temp(tem2da,
+                       tem2db,
+                       plyr,
+                       plvl,
+                       tlyr,
+                       tlvl,
+                       Statein["tgrs"],
+                       qlyr,
+                       delp,
+                       tvly,
+                       tem1d,
+                       tsfa,
+                       tskn,
+                       Statein["qgrs"],
+                       ivflip,
+                       self.prsmin,
+                       self.QME5,
+                       self.QME6,
+                       self.lextop,
+                       domain=shape_nlp1,
+                       origin=default_origin,
+                       )
+        # for k in range(1, LMK):
+        #     for i in range(IM):
+        #         tem2da[i, 0, k+1] = np.log(plyr[i, 0, k+1])
+        #         tem2db[i, 0, k] = np.log(plvl[i, 0, k])
 
-        if ivflip == 0:  # input data from toa to sfc
-            for i in range(IM):
-                tem1d[i, 0] = self.QME6
-                tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
-                tem2db[i, 0, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
-                tem2db[i, 0, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
-                tsfa[i, 0] = tlyr[i, 0, LMK - 1 + 1]  # sfc layer air temp
-                tlvl[i, 0, 0] = tlyr[i, 0, 0+1]
-                tlvl[i, 0, LMP - 1] = tskn[i,0]
+        # if ivflip == 0:  # input data from toa to sfc
+        #     for i in range(IM):
+        #         tem1d[i, 0] = self.QME6
+        #         # tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
+        #         tem2db[i, 0, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
+        #         # tem2db[i, 0, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
+        #         tsfa[i, 0] = tlyr[i, 0, LMK - 1 + 1]  # sfc layer air temp
+        #         tlvl[i, 0, 0] = tlyr[i, 0, 0+1]
+        #         tlvl[i, 0, LMP - 1] = tskn[i,0]
 
-            for k in range(LM):
-                k1 = k + kd
-                for i in range(IM):
-                    qlyr[i, 0, k1+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
-                    tem1d[i, 0] = min(self.QME5, qlyr[i, k1])
-                    tvly[i, 0, k1+1] = Statein["tgrs"][i, 0, k+1] * (
-                        1.0 + con_fvirt * qlyr[i, 0, k1+1]
-                    )  # virtual T (K)
-                    delp[i, 0, k1+1] = plvl[i, 0, k1 + 1] - plvl[i, 0, k1]
+        #     for k in range(LM):
+        #         k1 = k + kd
+        #         for i in range(IM):
+        #             qlyr[i, 0, k1+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
+        #             tem1d[i, 0] = min(self.QME5, qlyr[i, 0, k1+1])
+        #             tvly[i, 0, k1+1] = Statein["tgrs"][i, 0, k+1] * (
+        #                 1.0 + con_fvirt * qlyr[i, 0, k1+1]
+        #             )  # virtual T (K)
+        #             delp[i, 0, k1+1] = plvl[i, 0, k1 + 1] - plvl[i, 0, k1]
 
-            if self.lextop:
-                for i in range(IM):
-                    qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
-                    tvly[i, 0, lyb - 1+1] = tvly[i, 0, lya - 1+1]
-                    delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
+        #     if self.lextop:
+        #         for i in range(IM):
+        #             qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
+        #             tvly[i, 0, lyb - 1+1] = tvly[i, 0, lya - 1+1]
+        #             delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
 
-            for k in range(1, LMK):
-                for i in range(IM):
-                    tlvl[i, 0, k] = tlyr[i, 0, k+1] + (tlyr[i, 0, k - 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, 0, k] - tem2da[i, 0, k+1]
-                    ) / (tem2da[i, 0, k - 1+1] - tem2da[i, 0, k+1])
+        #     for k in range(1, LMK):
+        #         for i in range(IM):
+        #             tlvl[i, 0, k] = tlyr[i, 0, k+1] + (tlyr[i, 0, k - 1+1] - tlyr[i, 0, k+1]) * (
+        #                 tem2db[i, 0, k] - tem2da[i, 0, k+1]
+        #             ) / (tem2da[i, 0, k - 1+1] - tem2da[i, 0, k+1])
 
-            #  ---  ...  level height and layer thickness (km)
+        #     #  ---  ...  level height and layer thickness (km)
 
-            tem0d = 0.001 * con_rog
-            for i in range(IM):
-                for k in range(LMK):
-                    dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k + 1] - tem2db[i, 0, k]) * tvly[i, 0, k+1]
-        else:
+        #     tem0d = 0.001 * con_rog
+        #     for i in range(IM):
+        #         for k in range(LMK):
+        #             dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k + 1] - tem2db[i, 0, k]) * tvly[i, 0, k+1]
+        # else:
 
-            for i in range(IM):
-                tem1d[i, 0] = self.QME6
-                tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
-                tem2db[i, 0, 0] = np.log(plvl[i, 0, 0])
-                tem2db[i, 0, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
-                tsfa[i, 0] = tlyr[i, 0, 0+1]  # sfc layer air temp
-                tlvl[i, 0, 0] = tskn[i,0]
-                tlvl[i, 0, LMP - 1] = tlyr[i, 0, LMK - 1+1]
+        #     for i in range(IM):
+        #         tem1d[i, 0] = self.QME6
+        #         # tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
+        #         tem2db[i, 0, 0] = np.log(plvl[i, 0, 0])
+        #         tem2db[i, 0, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
+        #         tsfa[i, 0] = tlyr[i, 0, 0+1]  # sfc layer air temp
+        #         tlvl[i, 0, 0] = tskn[i,0]
+        #         tlvl[i, 0, LMP - 1] = tlyr[i, 0, LMK - 1+1]
 
-            for k in range(LM - 1, -1, -1):
-                for i in range(IM):
-                    qlyr[i, 0, k+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
-                    tem1d[i, 0] = min(self.QME5, qlyr[i, 0, k+1])
-                    tvly[i, 0, k+1] = Statein["tgrs"][i, 0, k+1] * (
-                        1.0 + con_fvirt * qlyr[i, 0, k+1]
-                    )  # virtual T (K)
-                    delp[i, 0, k+1] = plvl[i, 0, k] - plvl[i, 0, k + 1]
+        #     for k in range(LM - 1, -1, -1):
+        #         for i in range(IM):
+        #             qlyr[i, 0, k+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
+        #             tem1d[i, 0] = min(self.QME5, qlyr[i, 0, k+1])
+        #             tvly[i, 0, k+1] = Statein["tgrs"][i, 0, k+1] * (
+        #                 1.0 + con_fvirt * qlyr[i, 0, k+1]
+        #             )  # virtual T (K)
+        #             delp[i, 0, k+1] = plvl[i, 0, k] - plvl[i, 0, k + 1]
 
-            if self.lextop:
-                for i in range(IM):
-                    qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
-                    tvly[i, 0, lyb - 1+1] = tvly[i, 0, lya - 1+1]
-                    delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
+        #     if self.lextop:
+        #         for i in range(IM):
+        #             qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
+        #             tvly[i, 0, lyb - 1+1] = tvly[i, 0, lya - 1+1]
+        #             delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
 
-            for k in range(LMK - 1):
-                for i in range(IM):
-                    tlvl[i, 0, k + 1] = tlyr[i, 0, k+1] + (tlyr[i, 0, k + 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, 0, k + 1] - tem2da[i, 0, k+1]
-                    ) / (tem2da[i, 0, k + 1+1] - tem2da[i, 0, k+1])
+        #     for k in range(LMK - 1):
+        #         for i in range(IM):
+        #             tlvl[i, 0, k + 1] = tlyr[i, 0, k+1] + (tlyr[i, 0, k + 1+1] - tlyr[i, 0, k+1]) * (
+        #                 tem2db[i, 0, k + 1] - tem2da[i, 0, k+1]
+        #             ) / (tem2da[i, 0, k + 1+1] - tem2da[i, 0, k+1])
 
-            #  ---  ...  level height and layer thickness (km)
+        #     #  ---  ...  level height and layer thickness (km)
 
-            tem0d = 0.001 * con_rog
-            for i in range(IM):
-                for k in range(LMK - 1, -1, -1):
-                    dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k] - tem2db[i, 0, k + 1]) * tvly[i, 0, k+1]
+        #     tem0d = 0.001 * con_rog
+        #     for i in range(IM):
+        #         for k in range(LMK - 1, -1, -1):
+        #             dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k] - tem2db[i, 0, k + 1]) * tvly[i, 0, k+1]
 
         #  - Check for daytime points for SW radiation.
 

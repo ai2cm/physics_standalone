@@ -14,6 +14,7 @@ from gt4py.gtscript import (
     min,
     max,
 	cos,
+	log,
 )
 
 from config import *
@@ -196,3 +197,94 @@ def getgases_stencil(gasdat : Field[type_10],
 		gasdat[0,0,0][7] = f22vmr
 		gasdat[0,0,0][8] = cl4vmr
 		gasdat[0,0,0][9] = f113vmr 
+
+@stencil(backend=backend,
+		 externals={"con_fvirt" : con_fvirt,
+		 			"con_rog" : con_rog,
+		  		   }
+		)
+def get_layer_temp(tem2da : FIELD_FLT,
+				   tem2db : FIELD_FLT,
+				   plyr   : FIELD_FLT,
+				   plvl   : FIELD_FLT,
+				   tlyr   : FIELD_FLT,
+				   tlvl   : FIELD_FLT,
+				   tgrs   : FIELD_FLT,
+				   qlyr   : FIELD_FLT,
+				   delp   : FIELD_FLT,
+				   tvly   : FIELD_FLT,
+				   tem1d  : FIELD_2D,
+				   tsfa   : FIELD_2D,
+				   tskn   : FIELD_2D,
+				   qgrs   : Field[(DTYPE_FLT,(8,))],
+				   ivflip : int,
+				   prsmin : float,
+				   QME5   : float,
+				   QME6   : float,
+				   lextop : bool,
+				   ):
+	from __externals__ import (con_fvirt, con_rog)
+	with computation(PARALLEL), interval(1,None):
+		tem2da = log(plyr[0,0,0])
+	with computation(PARALLEL), interval(0,-1):
+		tem2db = log(plvl[0,0,0])
+	
+	with computation(FORWARD), interval(0,1):
+		if ivflip == 0:
+			tem2db = log(max(prsmin, plvl[0,0,0]))
+			tlvl   = tlyr[0,0,1]
+			tem1d = QME6
+		else:
+			tem1d = QME6
+			tem2db = log(plvl[0,0,0])
+			tsfa = tlyr[0,0,1]
+			tlvl = tskn[0,0]
+
+	with computation(FORWARD), interval(-1,None):
+		if ivflip == 0:
+			tsfa = tlyr[0,0,0]
+			tlvl = tskn[0,0]
+		else:
+			tem2db = log(max(prsmin,plvl[0,0,0]))
+			tlvl = tlyr[0,0,0]
+	
+	with computation(FORWARD), interval(1,None):
+		if ivflip == 0:
+			qlyr = max(tem1d[0,0], qgrs[0,0,0][0])
+			tem1d = min(QME5, qlyr[0,0,0])
+			tvly = tgrs[0,0,0] * (1.0 + con_fvirt * qlyr[0,0,0])
+			delp = plvl[0,0,0] - plvl[0,0,-1]
+	
+	with computation(FORWARD), interval(1,2):
+		if lextop and ivflip == 0:
+			qlyr = qlyr[0,0,1]
+			tvly = tvly[0,0,1]
+			delp = plvl[0,0,0] - plvl[0,0,-1]
+
+	with computation(PARALLEL), interval(1,-2):
+		if ivflip == 0:
+			tlvl = tlyr[0,0,1] + (tlyr[0,0,0] - tlyr[0,0,1]) * (
+				tem2db[0,0,0] - tem2da[0,0,1]
+			) / (tem2da[0,0,0] - tem2da[0,0,1])
+			dz = 0.001*con_rog * (tem2db[0,0,0] - tem2db[0,0,-1]) * tvly[0,0,0]
+
+	with computation(BACKWARD), interval(1,None):
+		if ivflip != 0:
+			qlyr = max(tem1d[0,0],qgrs[0,0,0][0])
+			tem1d = min(QME5, qlyr[0,0,0])
+			tvly  = tgrs[0,0,0] * (1.0 + con_fvirt * qlyr[0,0,0])
+			delp  = plvl[0,0,-1] - plvl[0,0,0]
+
+	with computation(FORWARD), interval(-1,None):
+		if lextop and ivflip != 0:
+			qlyr = qlyr[0,0,-1]
+			tvly = tvly[0,0,-1]
+			delp = plvl[0,0,-2] - plvl[0,0,-1]
+	
+	with computation(PARALLEL), interval(1,-1):
+		if ivflip != 0:
+			tlvl = tlyr[0,0,0] + (tlyr[0,0,1] - tlyr[0,0,0]) * (
+				    tem2db[0,0,0] - tem2da[0,0,0]
+				   )  / (tem2da[0,0,1] - tem2da[0,0,0])
+
+			dz = 0.001 * con_rog * (tem2db[0,0,-1] - tem2db[0,0,0]) * tvly[0,0,0]
