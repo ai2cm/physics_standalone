@@ -9,6 +9,7 @@ from radlw.radlw_param import NBDLW, wvnlw1, wvnlw2
 from radsw.radsw_param import nbdsw, wvnum1, wvnum2, NSWSTR
 from phys_const import con_pi, con_plnk, con_c, con_boltz, con_t0c, con_rd, con_g
 from radphysparam import aeros_file, lalw1bd
+from stencils_radiation_driver import aerosol_stencil, comp_height_layer_ivflip0, comp_height_layer_ivflip1, bound_interpol
 
 from config import *
 
@@ -1579,54 +1580,58 @@ class AerosolClass:
 
         # Convert lat/lon from radiance to degree.
 
-        for i in range(IMAX):
-            alon[i,0] = xlon[i] * rdg
-            if alon[i,0] < 0.0:
-                alon[i,0] = alon[i,0] + 360.0
+        aerosol_stencil(alat, alon, xlat, xlon, rdg, domain=shape_nlp1, origin=default_origin)
 
-            alat[i,0] = xlat[i] * rdg  # if xlat in pi/2 -> -pi/2 range
+        # for i in range(IMAX):
+        #     alon[i,0] = xlon[i] * rdg
+        #     if alon[i,0] < 0.0:
+        #         alon[i,0] = alon[i,0] + 360.0
+
+        #     alat[i,0] = xlat[i] * rdg  # if xlat in pi/2 -> -pi/2 range
 
         # Compute level height and layer thickness.
 
         if self.laswflg or self.lalwflg:
 
-            for i in range(IMAX):
+            # for i in range(IMAX):
 
-                if self.ivflip == 1:  # input from sfc to toa
+            if self.ivflip == 1:  # input from sfc to toa
 
-                    # for k in range(NLAY):
-                    #     prsln[k] = np.log(prsi[i, 0, k])
+                # for k in range(NLAY):
+                #     prsln[k] = np.log(prsi[i, 0, k])
 
-                    # prsln[NLP1 - 1] = np.log(prsl[i, 0, NLAY - 1 + 1])
+                # prsln[NLP1 - 1] = np.log(prsl[i, 0, NLAY - 1 + 1])
 
-                    dz[i,0, NLAY - 1] = rovg * (np.log(prsi[i, 0, NLAY-1]) - np.log(prsl[i, 0, NLAY - 1 + 1])) * tvly[i, 0, NLAY - 1]
+                comp_height_layer_ivflip1(dz, hz, prsi, prsl, tvly, rovg, domain=shape_nlp1, origin=default_origin)
+                # dz[i,0, NLAY - 1] = rovg * (np.log(prsi[i, 0, NLAY-1]) - np.log(prsl[i, 0, NLAY - 1 + 1])) * tvly[i, 0, NLAY - 1]
 
-                    for k in range(NLAY - 2, -1, -1):
-                        # dz[i, k] = rovg * (prsln[k] - prsln[k + 1]) * tvly[i, 0, k+1]
-                        dz[i,0, k] = rovg * (np.log(prsi[i, 0, k]) - np.log(prsi[i, 0, k+1])) * tvly[i, 0, k+1]
+                # for k in range(NLAY - 2, -1, -1):
+                #     # dz[i, k] = rovg * (prsln[k] - prsln[k + 1]) * tvly[i, 0, k+1]
+                #     dz[i,0, k] = rovg * (np.log(prsi[i, 0, k]) - np.log(prsi[i, 0, k+1])) * tvly[i, 0, k+1]
 
-                    dz[i,0, NLAY - 1] = 2.0 * dz[i,0, NLAY - 1]
+                # dz[i,0, NLAY - 1] = 2.0 * dz[i,0, NLAY - 1]
 
-                    hz[i, 0, 0] = 0.0
-                    for k in range(NLAY):
-                        hz[i, 0, k + 1] = hz[i, 0, k] + dz[i,0, k]
+                # hz[i, 0, 0] = 0.0
+                # for k in range(NLAY):
+                #     hz[i, 0, k + 1] = hz[i, 0, k] + dz[i,0, k]
 
-                else:  # input from toa to sfc
+            else:  # input from toa to sfc
+                comp_height_layer_ivflip0(dz, hz, prsi, prsl, tvly, rovg, domain=shape_nlp1, origin=default_origin)
+                # for i in range(IMAX):
+                #     # prsln[0] = np.log(prsl[i, 0, 0+1])
+                #     # for k in range(1, NLP1):
+                #     #     prsln[k] = np.log(prsi[i, 0, k])
 
-                    # prsln[0] = np.log(prsl[i, 0, 0+1])
-                    # for k in range(1, NLP1):
-                    #     prsln[k] = np.log(prsi[i, 0, k])
+                #     dz[i,0,0] = rovg * (np.log(prsi[i, 0, 1]) - np.log(prsl[i, 0, 0+1])) * tvly[i, 0, 1]
 
-                    dz[i,0,0] = rovg * (np.log(prsi[i, 0, 1]) - np.log(prsl[i, 0, 0+1])) * tvly[i, 0, 1]
+                #     for k in range(1,NLAY):
+                #         dz[i,0, k] = rovg * (np.log(prsi[i, 0, k+1]) - np.log(prsi[i, 0, k])) * tvly[i, 0, k+1]
 
-                    for k in range(1,NLAY):
-                        dz[i,0, k] = rovg * (np.log(prsi[i, 0, k+1]) - np.log(prsi[i, 0, k])) * tvly[i, 0, k+1]
+                #     dz[i,0, 0] = 2.0 * dz[i,0, 0]
 
-                    dz[i,0, 0] = 2.0 * dz[i,0, 0]
-
-                    hz[i, 0, NLP1 - 1] = 0.0
-                    for k in range(NLAY - 1, -1, -1):
-                        hz[i, 0, k] = hz[i, 0, k + 1] + dz[i,0, k]
+                #     hz[i, 0, NLP1 - 1] = 0.0
+                #     for k in range(NLAY - 1, -1, -1):
+                #         hz[i, 0, k] = hz[i, 0, k + 1] + dz[i,0, k]
 
             # -# Calculate SW aerosol optical properties for the corresponding
             #    frequency bands:
@@ -1684,30 +1689,40 @@ class AerosolClass:
 
             #  ---  select data in 4 lat bands, interpolation at the boundaires
 
-            for i in range(IMAX):
-                if alat[i,0] > 46.0:
-                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 0, i1]
-                elif alat[i,0] > 44.0:
-                    volcae[i,0] = 5.0e-5 * (
-                        self.ivolae[self.kmonsav - 1, 0, i1]
-                        + self.ivolae[self.kmonsav - 1, 1, i1]
-                    )
-                elif alat[i,0] > 1.0:
-                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 1, i1]
-                elif alat[i,0] > -1.0:
-                    volcae[i,0] = 5.0e-5 * (
-                        self.ivolae[self.kmonsav - 1, 1, i1]
-                        + self.ivolae[self.kmonsav - 1, 2, i1]
-                    )
-                elif alat[i,0] > -44.0:
-                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 2, i1]
-                elif alat[i,0] > -46.0:
-                    volcae[i,0] = 5.0e-5 * (
-                        self.ivolae[self.kmonsav - 1, 2, i1]
-                        + self.ivolae[self.kmonsav - 1, 3, i1]
-                    )
-                else:
-                    volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 3, i1]
+            bound_interpol(alat,
+                           volcae,
+                           self.ivolae[self.kmonsav - 1, 0, i1],
+                           self.ivolae[self.kmonsav - 1, 1, i1],
+                           self.ivolae[self.kmonsav - 1, 2, i1],
+                           self.ivolae[self.kmonsav - 1, 3, i1],
+                           domain=shape_nlp1,
+                           origin=default_origin,
+                           )
+
+            # for i in range(IMAX):
+            #     if alat[i,0] > 46.0:
+            #         volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 0, i1]
+            #     elif alat[i,0] > 44.0:
+            #         volcae[i,0] = 5.0e-5 * (
+            #             self.ivolae[self.kmonsav - 1, 0, i1]
+            #             + self.ivolae[self.kmonsav - 1, 1, i1]
+            #         )
+            #     elif alat[i,0] > 1.0:
+            #         volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 1, i1]
+            #     elif alat[i,0] > -1.0:
+            #         volcae[i,0] = 5.0e-5 * (
+            #             self.ivolae[self.kmonsav - 1, 1, i1]
+            #             + self.ivolae[self.kmonsav - 1, 2, i1]
+            #         )
+            #     elif alat[i,0] > -44.0:
+            #         volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 2, i1]
+            #     elif alat[i,0] > -46.0:
+            #         volcae[i,0] = 5.0e-5 * (
+            #             self.ivolae[self.kmonsav - 1, 2, i1]
+            #             + self.ivolae[self.kmonsav - 1, 3, i1]
+            #         )
+            #     else:
+            #         volcae[i,0] = 1.0e-4 * self.ivolae[self.kmonsav - 1, 3, i1]
 
             if self.ivflip == 0:  # input data from toa to sfc
 

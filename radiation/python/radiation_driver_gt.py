@@ -15,7 +15,10 @@ from radiation_sfc import SurfaceClass
 from radlw.radlw_main_gt4py import RadLWClass
 from radsw.radsw_main_gt4py import RadSWClass
 
-from stencils_radiation_driver import pressure_convert, extra_values, getozn, get_layer_temp
+from stencils_radiation_driver import cloud_comp_5_v2, pressure_convert, extra_values, getozn, \
+                                      get_layer_temp, cloud_comp_1, cloud_comp_2, \
+                                      cloud_comp_4, cloud_comp_5, cloud_comp_5_v2, \
+                                      ccnd_zero, cloud_cover, add_cond_cloud_water
 class RadiationDriver:
 
     VTAGRAD = "NCEP-Radiation_driver    v5.2  Jan 2013"
@@ -921,79 +924,91 @@ class RadiationDriver:
         #  --- ...  obtain cloud information for radiation calculations
 
         if Model["ncnd"] == 1:  # Zhao_Carr_Sundqvist
-            for k in range(LMK):
-                for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water/ice
+            cloud_comp_1(ccnd, tracer1, ntcw-1, domain=shape_nlp1, origin=default_origin)
+            # for k in range(LMK):
+            #     for i in range(IM):
+            #         ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water/ice
         elif Model["ncnd"] == 2:  # MG
-            for k in range(LMK):
-                for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
+            cloud_comp_2(ccnd, tracer1, ntcw-1, ntiw-1, domain=shape_nlp1, origin=default_origin)
+            # for k in range(LMK):
+            #     for i in range(IM):
+            #         ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
+            #         ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
         elif Model["ncnd"] == 4:  # MG2
-            for k in range(LMK):
-                for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
-                    ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
-                    ccnd[i, 0, k+1, 3] = tracer1[i, 0, k+1, ntsw - 1]  # snow water
+            cloud_comp_4(ccnd, tracer1, ntcw-1, ntiw-1, ntrw-1, ntsw-1, domain=shape_nlp1, origin=default_origin)
+            # for k in range(LMK):
+            #     for i in range(IM):
+            #         ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
+            #         ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
+            #         ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
+            #         ccnd[i, 0, k+1, 3] = tracer1[i, 0, k+1, ntsw - 1]  # snow water
         elif Model["ncnd"] == 5:  # GFDL MP, Thompson, MG3
-            for k in range(LMK):
-                for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
-                    ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
-                    ccnd[i, 0, k+1, 3] = (
-                        tracer1[i, 0, k+1, ntsw - 1] + tracer1[i, 0, k+1, ntgl - 1]
-                    )  # snow + grapuel
+            cloud_comp_5(ccnd, tracer1, ntcw-1, ntiw-1, ntrw-1, ntsw-1, ntgl-1, domain=shape_nlp1, origin=default_origin)
+            # for k in range(LMK):
+            #     for i in range(IM):
+            #         ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
+            #         ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
+            #         ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
+            #         ccnd[i, 0, k+1, 3] = (
+            #             tracer1[i, 0, k+1, ntsw - 1] + tracer1[i, 0, k+1, ntgl - 1]
+            #         )  # snow + grapuel
 
-        for n in range(ncndl):
-            for k in range(LMK):
-                for i in range(IM):
-                    if ccnd[i, 0, k+1, n] < con_epsq:
-                        ccnd[i, 0, k+1, n] = 0.0
+        # for n in range(ncndl):
+        #     for k in range(LMK):
+        #         for i in range(IM):
+        #             if ccnd[i, 0, k+1, n] < con_epsq:
+        #                 ccnd[i, 0, k+1, n] = 0.0
 
         if Model["imp_physics"] == 11:
             if not Model["lgfdlmprad"]:
 
+                cloud_comp_5_v2(ccnd, tracer1, ntcw-1, ntrw-1, ntiw-1, ntsw-1, ntgl-1, \
+                                self.EPSQ, domain=shape_nlp1, origin=default_origin)
                 # rsun the  summation methods and order make the difference in calculation
-                ccnd[:, 0, 1:, 0] = tracer1[:, 0, 1:LMK+1, ntcw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntrw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntiw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntsw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntgl - 1]
+                # ccnd[:, 0, 1:, 0] = tracer1[:, 0, 1:LMK+1, ntcw - 1]
+                # ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntrw - 1]
+                # ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntiw - 1]
+                # ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntsw - 1]
+                # ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntgl - 1]
 
-            for k in range(LMK):
-                for i in range(IM):
-                    if ccnd[i, 0, k+1, 0] < self.EPSQ:
-                        ccnd[i, 0, k+1, 0] = 0.0
+            ccnd_zero(ccnd, self.EPSQ, domain=shape_nlp1, origin=default_origin)
+            # for k in range(LMK):
+            #     for i in range(IM):
+            #         if ccnd[i, 0, k+1, 0] < self.EPSQ:
+            #             ccnd[i, 0, k+1, 0] = 0.0
 
-        if Model["uni_cld"]:
-            if Model["effr_in"]:
-                for k in range(LM):
-                    k1 = k + kd
-                    for i in range(IM):
-                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
-                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
-                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
-                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
-                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
-            else:
-                for k in range(LM):
-                    k1 = k + kd
-                    for i in range(IM):
-                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
-        elif Model["imp_physics"] == 11:  # GFDL MP
-            cldcov[:IM, 0, kd+1 : LM + kd+1] = tracer1[:IM, 0, 1:LM+1, Model["ntclamt"] - 1]
-            if Model["effr_in"]:
-                for k in range(LM):
-                    k1 = k + kd
-                    for i in range(IM):
-                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 0]
-                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
-                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
-                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
-        else:  # neither of the other two cases
-            cldcov = 0.0
+        cloud_cover(cldcov, effrl, effri, effrr, effrs, Tbd["phy_f3d"],
+                        tracer1, Model["indcld"] - 1, Model["ntclamt"]-1, Model["uni_cld"],
+                        Model["effr_in"], Model["imp_physics"],
+                        domain=shape_nlp1, origin=default_origin)
+
+        # if Model["uni_cld"]:
+        #     if Model["effr_in"]:
+        #         for k in range(LM):
+        #             k1 = k + kd
+        #             for i in range(IM):
+        #                 cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
+        #                 effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
+        #                 effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
+        #                 effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
+        #                 effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
+        #     else:
+        #         for k in range(LM):
+        #             k1 = k + kd
+        #             for i in range(IM):
+        #                 cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
+        # elif Model["imp_physics"] == 11:  # GFDL MP
+        #     cldcov[:IM, 0, kd+1 : LM + kd+1] = tracer1[:IM, 0, 1:LM+1, Model["ntclamt"] - 1]
+        #     if Model["effr_in"]:
+        #         for k in range(LM):
+        #             k1 = k + kd
+        #             for i in range(IM):
+        #                 effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 0]
+        #                 effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
+        #                 effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
+        #                 effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
+        # else:  # neither of the other two cases
+        #     cldcov = 0.0
 
         #  --- add suspended convective cloud water to grid-scale cloud water
         #      only for cloud fraction & radiation computation
@@ -1001,47 +1016,52 @@ class RadiationDriver:
         #      for zhao/moorthi's (imp_phys=99) &
         #          ferrier's (imp_phys=5) microphysics schemes
 
-        if (
-            Model["num_p3d"] == 4 and Model["npdf3d"] == 3
-        ):  # same as Model%imp_physics = 99
-            for k in range(LM):
-                k1 = k + kd
-                for i in range(IM):
-                    deltaq[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
-                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 5]
-                    cnvc[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 6]
-        elif (
-            Model["npdf3d"] == 0 and Model["ncnvcld3d"] == 1
-        ):  # same as MOdel%imp_physics=98
-            for k in range(LM):
-                k1 = k + kd
-                for i in range(IM):
-                    deltaq[i, 0, k1+1] = 0.0
-                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["num_p3d"]]
-                    cnvc[i, 0, k1+1] = 0.0
-        else:  # all the rest
-            for k in range(LMK):
-                for i in range(IM):
-                    deltaq[i, 0, k+1] = 0.0
-                    cnvw[i, 0, k+1] = 0.0
-                    cnvc[i, 0, k+1] = 0.0
+        add_cond_cloud_water(deltaq, cnvw, cnvc, cldcov, effrl, effri, effrr, effrs,
+                             Tbd["phy_f3d"], ccnd, Model["num_p3d"], Model["npdf3d"], 
+                             Model["ncnvcld3d"], Model["imp_physics"], self.lextop,
+                             ivflip, Model["effr_in"],
+                             domain=shape_nlp1, origin=default_origin)
+        # if (
+        #     Model["num_p3d"] == 4 and Model["npdf3d"] == 3
+        # ):  # same as Model%imp_physics = 99
+        #     for k in range(LM):
+        #         k1 = k + kd
+        #         for i in range(IM):
+        #             deltaq[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
+        #             cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 5]
+        #             cnvc[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 6]
+        # elif (
+        #     Model["npdf3d"] == 0 and Model["ncnvcld3d"] == 1
+        # ):  # same as MOdel%imp_physics=98
+        #     for k in range(LM):
+        #         k1 = k + kd
+        #         for i in range(IM):
+        #             deltaq[i, 0, k1+1] = 0.0
+        #             cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["num_p3d"]]
+        #             cnvc[i, 0, k1+1] = 0.0
+        # else:  # all the rest
+        #     for k in range(LMK):
+        #         for i in range(IM):
+        #             deltaq[i, 0, k+1] = 0.0
+        #             cnvw[i, 0, k+1] = 0.0
+        #             cnvc[i, 0, k+1] = 0.0
 
-        if self.lextop:
-            for i in range(IM):
-                cldcov[i, 0, lyb - 1+1] = cldcov[i, 0, lya - 1+1]
-                deltaq[i, 0, lyb - 1+1] = deltaq[i, 0, lya - 1+1]
-                cnvw[i, 0, lyb - 1+1] = cnvw[i, 0, lya - 1+1]
-                cnvc[i, 0, lyb - 1+1] = cnvc[i, 0, lya - 1+1]
+        # if self.lextop:
+        #     for i in range(IM):
+        #         cldcov[i, 0, lyb - 1+1] = cldcov[i, 0, lya - 1+1]
+        #         deltaq[i, 0, lyb - 1+1] = deltaq[i, 0, lya - 1+1]
+        #         cnvw[i, 0, lyb - 1+1] = cnvw[i, 0, lya - 1+1]
+        #         cnvc[i, 0, lyb - 1+1] = cnvc[i, 0, lya - 1+1]
 
-            if Model["effr_in"]:
-                for i in range(IM):
-                    effrl[i, 0, lyb - 1+1] = effrl[i, 0, lya - 1+1]
-                    effri[i, 0, lyb - 1+1] = effri[i, 0, lya - 1+1]
-                    effrr[i, 0, lyb - 1+1] = effrr[i, 0, lya - 1+1]
-                    effrs[i, 0, lyb - 1+1] = effrs[i, 0, lya - 1+1]
+        #     if Model["effr_in"]:
+        #         for i in range(IM):
+        #             effrl[i, 0, lyb - 1+1] = effrl[i, 0, lya - 1+1]
+        #             effri[i, 0, lyb - 1+1] = effri[i, 0, lya - 1+1]
+        #             effrr[i, 0, lyb - 1+1] = effrr[i, 0, lya - 1+1]
+        #             effrs[i, 0, lyb - 1+1] = effrs[i, 0, lya - 1+1]
 
-        if Model["imp_physics"] == 99:
-            ccnd[:IM, 0, 1:LMK+1, 0] = ccnd[:IM, 0, 1:LMK+1, 0] + cnvw[:IM, 0, :LMK]
+        # if Model["imp_physics"] == 99:
+        #     ccnd[:IM, 0, 1:LMK+1, 0] = ccnd[:IM, 0, 1:LMK+1, 0] + cnvw[:IM, 0, :LMK]
 
         clouds, cldsa, mtopa, mbota, de_lgth = self.cld.progcld4(
             plyr,
@@ -1051,7 +1071,8 @@ class RadiationDriver:
             qlyr,
             qstl,
             rhly,
-            ccnd[:IM, 0, :LMK+1, 0],
+            # ccnd[:IM, :, :LMK+1, 0],
+            ccnd,
             cnvw,
             cnvc,
             Grid["xlat"],
