@@ -7,7 +7,7 @@ sys.path.insert(0, "..")
 from radphysparam import semis_file
 from phys_const import con_tice, con_ttp, con_t0c, con_pi
 from config import *
-
+from stencils_radiation_driver import clima_albedo_scheme, modis_albedo_land_scheme
 
 class SurfaceClass:
     VTAGSFC = "NCEP-Radiation_surface   v5.1  Nov 2012"
@@ -168,225 +168,268 @@ class SurfaceClass:
         #
 
         #  ---  outputs
-        sfcalb = np.zeros((IMAX, self.NF_ALBD))
+        # sfcalb = np.zeros((IMAX, self.NF_ALBD))
+        sfcalb = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IMAX,1, nlp1),
+                                  dtype=(DTYPE_FLT,(self.NF_ALBD,)))
 
         # If use climatological albedo scheme:
         if self.ialbflg == 0:  # use climatological albedo scheme
+            clima_albedo_scheme(snowf,
+                                   zorlf,
+                                   hprif,
+                                   slmsk,
+                                   tsknf,
+                                   facsf,
+                                   facwf,
+                                   tisfc,
+                                   fice,
+                                   coszf,
+                                   alvsf,
+                                   alvwf,
+                                   alnsf,
+                                   alnwf,
+                                   sfcalb,
+                                   domain=shape_nlp1,
+                                   origin=default_origin)
+            # for k in range(nlp1):
+            #     for i in range(IMAX):
 
-            for i in range(IMAX):
+            #         #    - Modified snow albedo scheme - units convert to m (originally
+            #         #      snowf in mm; zorlf in cm)
 
-                #    - Modified snow albedo scheme - units convert to m (originally
-                #      snowf in mm; zorlf in cm)
+            #         asnow = 0.02 * snowf[i]
+            #         argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
+            #         hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
+            #         fsno0 = asnow / (argh + asnow) * hrgh
+            #         if round(slmsk[i]) == 0 and tsknf[i,0] > con_tice:
+            #             fsno0 = 0.0
+            #         fsno1 = 1.0 - fsno0
+            #         flnd0 = min(1.0, facsf[i] + facwf[i])
+            #         fsea0 = max(0.0, 1.0 - flnd0)
+            #         fsno = fsno0
+            #         fsea = fsea0 * fsno1
+            #         flnd = flnd0 * fsno1
 
-                asnow = 0.02 * snowf[i]
-                argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
-                hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
-                fsno0 = asnow / (argh + asnow) * hrgh
-                if round(slmsk[i]) == 0 and tsknf[i,0] > con_tice:
-                    fsno0 = 0.0
-                fsno1 = 1.0 - fsno0
-                flnd0 = min(1.0, facsf[i] + facwf[i])
-                fsea0 = max(0.0, 1.0 - flnd0)
-                fsno = fsno0
-                fsea = fsea0 * fsno1
-                flnd = flnd0 * fsno1
+            #         #    - Calculate diffused sea surface albedo
 
-                #    - Calculate diffused sea surface albedo
+            #         if tsknf[i,0] >= 271.5:
+            #             asevd = 0.06
+            #             asend = 0.06
+            #         elif tsknf[i,0] < 271.1:
+            #             asevd = 0.70
+            #             asend = 0.65
+            #         else:
+            #             a1 = (tsknf[i,0] - 271.1) ** 2
+            #             asevd = 0.7 - 4.0 * a1
+            #             asend = 0.65 - 3.6875 * a1
 
-                if tsknf[i,0] >= 271.5:
-                    asevd = 0.06
-                    asend = 0.06
-                elif tsknf[i,0] < 271.1:
-                    asevd = 0.70
-                    asend = 0.65
-                else:
-                    a1 = (tsknf[i,0] - 271.1) ** 2
-                    asevd = 0.7 - 4.0 * a1
-                    asend = 0.65 - 3.6875 * a1
+            #         #    - Calculate diffused snow albedo.
 
-                #    - Calculate diffused snow albedo.
+            #         if round(slmsk[i]) == 2:
+            #             ffw = 1.0 - fice[i]
+            #             if ffw < 1.0:
+            #                 dtgd = max(0.0, min(5.0, (con_ttp - tisfc[i])))
+            #                 b1 = 0.03 * dtgd
+            #             else:
+            #                 b1 = 0.0
 
-                if round(slmsk[i]) == 2:
-                    ffw = 1.0 - fice[i]
-                    if ffw < 1.0:
-                        dtgd = max(0.0, min(5.0, (con_ttp - tisfc[i])))
-                        b1 = 0.03 * dtgd
-                    else:
-                        b1 = 0.0
+            #             b3 = 0.06 * ffw
+            #             asnvd = (0.70 + b1) * fice[i] + b3
+            #             asnnd = (0.60 + b1) * fice[i] + b3
+            #             asevd = 0.70 * fice[i] + b3
+            #             asend = 0.60 * fice[i] + b3
+            #         else:
+            #             asnvd = 0.90
+            #             asnnd = 0.75
 
-                    b3 = 0.06 * ffw
-                    asnvd = (0.70 + b1) * fice[i] + b3
-                    asnnd = (0.60 + b1) * fice[i] + b3
-                    asevd = 0.70 * fice[i] + b3
-                    asend = 0.60 * fice[i] + b3
-                else:
-                    asnvd = 0.90
-                    asnnd = 0.75
+            #         #    - Calculate direct snow albedo.
 
-                #    - Calculate direct snow albedo.
+            #         if coszf[i,0] < 0.5:
+            #             csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i,0]) - 1.0)
+            #             asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
+            #             asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
+            #         else:
+            #             asnvb = asnvd
+            #             asnnb = asnnd
 
-                if coszf[i,0] < 0.5:
-                    csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i,0]) - 1.0)
-                    asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
-                    asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
-                else:
-                    asnvb = asnvd
-                    asnnb = asnnd
+            #         #    - Calculate direct sea surface albedo.
 
-                #    - Calculate direct sea surface albedo.
+            #         if coszf[i,0] > 0.0001:
+            #             rfcs = 1.4 / (1.0 + 0.8 * coszf[i,0])
+            #             rfcw = 1.1 / (1.0 + 0.2 * coszf[i,0])
 
-                if coszf[i,0] > 0.0001:
-                    rfcs = 1.4 / (1.0 + 0.8 * coszf[i,0])
-                    rfcw = 1.1 / (1.0 + 0.2 * coszf[i,0])
+            #             if tsknf[i,0] >= con_t0c:
+            #                 asevb = max(
+            #                     asevd,
+            #                     0.026 / (coszf[i,0] ** 1.7 + 0.065)
+            #                     + 0.15
+            #                     * (coszf[i,0] - 0.1)
+            #                     * (coszf[i,0] - 0.5)
+            #                     * (coszf[i,0] - 1.0),
+            #                 )
+            #                 asenb = asevb
+            #             else:
+            #                 asevb = asevd
+            #                 asenb = asend
+            #         else:
+            #             rfcs = 1.0
+            #             rfcw = 1.0
+            #             asevb = asevd
+            #             asenb = asend
 
-                    if tsknf[i,0] >= con_t0c:
-                        asevb = max(
-                            asevd,
-                            0.026 / (coszf[i,0] ** 1.7 + 0.065)
-                            + 0.15
-                            * (coszf[i,0] - 0.1)
-                            * (coszf[i,0] - 0.5)
-                            * (coszf[i,0] - 1.0),
-                        )
-                        asenb = asevb
-                    else:
-                        asevb = asevd
-                        asenb = asend
-                else:
-                    rfcs = 1.0
-                    rfcw = 1.0
-                    asevb = asevd
-                    asenb = asend
-
-                a1 = alvsf[i] * facsf[i]
-                b1 = alvwf[i] * facwf[i]
-                a2 = alnsf[i] * facsf[i]
-                b2 = alnwf[i] * facwf[i]
-                ab1bm = a1 * rfcs + b1 * rfcw
-                ab2bm = a2 * rfcs + b2 * rfcw
-                sfcalb[i, 0] = min(0.99, ab2bm) * flnd + asenb * fsea + asnnb * fsno
-                sfcalb[i, 1] = (a2 + b2) * 0.96 * flnd + asend * fsea + asnnd * fsno
-                sfcalb[i, 2] = min(0.99, ab1bm) * flnd + asevb * fsea + asnvb * fsno
-                sfcalb[i, 3] = (a1 + b1) * 0.96 * flnd + asevd * fsea + asnvd * fsno
+            #         a1 = alvsf[i] * facsf[i]
+            #         b1 = alvwf[i] * facwf[i]
+            #         a2 = alnsf[i] * facsf[i]
+            #         b2 = alnwf[i] * facwf[i]
+            #         ab1bm = a1 * rfcs + b1 * rfcw
+            #         ab2bm = a2 * rfcs + b2 * rfcw
+            #         sfcalb[i, 0, k][0] = min(0.99, ab2bm) * flnd + asenb * fsea + asnnb * fsno
+            #         sfcalb[i, 0, k][1] = (a2 + b2) * 0.96 * flnd + asend * fsea + asnnd * fsno
+            #         sfcalb[i, 0, k][2] = min(0.99, ab1bm) * flnd + asevb * fsea + asnvb * fsno
+            #         sfcalb[i, 0, k][3] = (a1 + b1) * 0.96 * flnd + asevd * fsea + asnvd * fsno
 
         # If use modis based albedo for land area:
         else:
+            modis_albedo_land_scheme(sncovr,
+							         slmsk,
+							         tsknf,
+							         snowf,
+							         zorlf,
+							         hprif,
+							         facsf,
+							         facwf,
+							         tisfc,
+							         fice,
+							         snoalb,
+							         coszf,
+							         alnsf,
+							         alvsf,
+							         alnwf,
+							         alvwf,
+							         pertalb,
+							         albPpert,
+							         sfcalb,
+                                     domain=shape_nlp1,
+                                     origin=default_origin)
+        #     for k in range(nlp1):
+        #         for i in range(IMAX):
 
-            for i in range(IMAX):
+        #             #    - Calculate snow cover input directly for land model, no
+        #             #      conversion needed.
 
-                #    - Calculate snow cover input directly for land model, no
-                #      conversion needed.
+        #             fsno0 = sncovr[i]
 
-                fsno0 = sncovr[i]
+        #             if round(slmsk[i]) == 0 and tsknf[i,0] > con_tice:
+        #                 fsno0 = 0.0
 
-                if round(slmsk[i]) == 0 and tsknf[i,0] > con_tice:
-                    fsno0 = 0.0
+        #             if round(slmsk[i]) == 2:
+        #                 asnow = 0.02 * snowf[i]
+        #                 argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
+        #                 hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
+        #                 fsno0 = asnow / (argh + asnow) * hrgh
 
-                if round(slmsk[i]) == 2:
-                    asnow = 0.02 * snowf[i]
-                    argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
-                    hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
-                    fsno0 = asnow / (argh + asnow) * hrgh
+        #             fsno1 = 1.0 - fsno0
+        #             flnd0 = min(1.0, facsf[i] + facwf[i])
+        #             fsea0 = max(0.0, 1.0 - flnd0)
+        #             fsno = fsno0
+        #             fsea = fsea0 * fsno1
+        #             flnd = flnd0 * fsno1
 
-                fsno1 = 1.0 - fsno0
-                flnd0 = min(1.0, facsf[i] + facwf[i])
-                fsea0 = max(0.0, 1.0 - flnd0)
-                fsno = fsno0
-                fsea = fsea0 * fsno1
-                flnd = flnd0 * fsno1
+        #             #    - Calculate diffused sea surface albedo.
 
-                #    - Calculate diffused sea surface albedo.
+        #             if tsknf[i,0] >= 271.5:
+        #                 asevd = 0.06
+        #                 asend = 0.06
+        #             elif tsknf[i,0] < 271.1:
+        #                 asevd = 0.70
+        #                 asend = 0.65
+        #             else:
+        #                 a1 = (tsknf[i,0] - 271.1) ** 2
+        #                 asevd = 0.7 - 4.0 * a1
+        #                 asend = 0.65 - 3.6875 * a1
 
-                if tsknf[i,0] >= 271.5:
-                    asevd = 0.06
-                    asend = 0.06
-                elif tsknf[i,0] < 271.1:
-                    asevd = 0.70
-                    asend = 0.65
-                else:
-                    a1 = (tsknf[i,0] - 271.1) ** 2
-                    asevd = 0.7 - 4.0 * a1
-                    asend = 0.65 - 3.6875 * a1
+        #             #    - Calculate diffused snow albedo, land area use input max snow
+        #             #      albedo.
 
-                #    - Calculate diffused snow albedo, land area use input max snow
-                #      albedo.
+        #             if round(slmsk[i]) == 2:
+        #                 ffw = 1.0 - fice[i]
+        #                 if ffw < 1.0:
+        #                     dtgd = max(0.0, min(5.0, (con_ttp - tisfc[i])))
+        #                     b1 = 0.03 * dtgd
+        #                 else:
+        #                     b1 = 0.0
 
-                if round(slmsk[i]) == 2:
-                    ffw = 1.0 - fice[i]
-                    if ffw < 1.0:
-                        dtgd = max(0.0, min(5.0, (con_ttp - tisfc[i])))
-                        b1 = 0.03 * dtgd
-                    else:
-                        b1 = 0.0
+        #                 b3 = 0.06 * ffw
+        #                 asnvd = (0.70 + b1) * fice[i] + b3
+        #                 asnnd = (0.60 + b1) * fice[i] + b3
+        #                 asevd = 0.70 * fice[i] + b3
+        #                 asend = 0.60 * fice[i] + b3
+        #             else:
+        #                 asnvd = snoalb[i]
+        #                 asnnd = snoalb[i]
 
-                    b3 = 0.06 * ffw
-                    asnvd = (0.70 + b1) * fice[i] + b3
-                    asnnd = (0.60 + b1) * fice[i] + b3
-                    asevd = 0.70 * fice[i] + b3
-                    asend = 0.60 * fice[i] + b3
-                else:
-                    asnvd = snoalb[i]
-                    asnnd = snoalb[i]
+        #             #    - Calculate direct snow albedo.
 
-                #    - Calculate direct snow albedo.
+        #             if round(slmsk[i]) == 2:
+        #                 if coszf[i,0] < 0.5:
+        #                     csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i,0]) - 1.0)
+        #                     asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
+        #                     asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
+        #                 else:
+        #                     asnvb = asnvd
+        #                     asnnb = asnnd
+        #             else:
+        #                 asnvb = snoalb[i]
+        #                 asnnb = snoalb[i]
 
-                if round(slmsk[i]) == 2:
-                    if coszf[i,0] < 0.5:
-                        csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[i,0]) - 1.0)
-                        asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
-                        asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
-                    else:
-                        asnvb = asnvd
-                        asnnb = asnnd
-                else:
-                    asnvb = snoalb[i]
-                    asnnb = snoalb[i]
+        #             #    - Calculate direct sea surface albedo, use fanglin's zenith angle
+        #             #      treatment.
 
-                #    - Calculate direct sea surface albedo, use fanglin's zenith angle
-                #      treatment.
+        #             if coszf[i,0] > 0.0001:
+        #                 rfcs = 1.775 / (1.0 + 1.55 * coszf[i,0])
 
-                if coszf[i,0] > 0.0001:
-                    rfcs = 1.775 / (1.0 + 1.55 * coszf[i,0])
+        #                 if tsknf[i,0] >= con_t0c:
+        #                     asevb = max(
+        #                         asevd,
+        #                         0.026 / (coszf[i,0] ** 1.7 + 0.065)
+        #                         + 0.15
+        #                         * (coszf[i,0] - 0.1)
+        #                         * (coszf[i,0] - 0.5)
+        #                         * (coszf[i,0] - 1.0),
+        #                     )
+        #                     asenb = asevb
+        #                 else:
+        #                     asevb = asevd
+        #                     asenb = asend
+        #             else:
+        #                 rfcs = 1.0
+        #                 asevb = asevd
+        #                 asenb = asend
 
-                    if tsknf[i,0] >= con_t0c:
-                        asevb = max(
-                            asevd,
-                            0.026 / (coszf[i,0] ** 1.7 + 0.065)
-                            + 0.15
-                            * (coszf[i,0] - 0.1)
-                            * (coszf[i,0] - 0.5)
-                            * (coszf[i,0] - 1.0),
-                        )
-                        asenb = asevb
-                    else:
-                        asevb = asevd
-                        asenb = asend
-                else:
-                    rfcs = 1.0
-                    asevb = asevd
-                    asenb = asend
+        #             ab1bm = min(0.99, alnsf[i] * rfcs)
+        #             ab2bm = min(0.99, alvsf[i] * rfcs)
+        #             sfcalb[i, 0, k][0] = ab1bm * flnd + asenb * fsea + asnnb * fsno
+        #             sfcalb[i, 0, k][1] = alnwf[i] * flnd + asend * fsea + asnnd * fsno
+        #             sfcalb[i, 0, k][2] = ab2bm * flnd + asevb * fsea + asnvb * fsno
+        #             sfcalb[i, 0, k][3] = alvwf[i] * flnd + asevd * fsea + asnvd * fsno
 
-                ab1bm = min(0.99, alnsf[i] * rfcs)
-                ab2bm = min(0.99, alvsf[i] * rfcs)
-                sfcalb[i, 0] = ab1bm * flnd + asenb * fsea + asnnb * fsno
-                sfcalb[i, 1] = alnwf[i] * flnd + asend * fsea + asnnd * fsno
-                sfcalb[i, 2] = ab2bm * flnd + asevb * fsea + asnvb * fsno
-                sfcalb[i, 3] = alvwf[i] * flnd + asevd * fsea + asnvd * fsno
-
-        # sfc-perts, mgehne ***
-        # perturb all 4 kinds of surface albedo, sfcalb(:,1:4)
-        if pertalb[0] > 0.0:
-            for i in range(IMAX):
-                for kk in range(4):
-                    # compute beta distribution parameters for all 4 albedos
-                    m = sfcalb[i, kk]
-                    s = pertalb[0] * m * (1.0 - m)
-                    alpha = m * m * (1.0 - m) / (s * s) - m
-                    beta = alpha * (1.0 - m) / m
-                    # compute beta distribution value corresponding
-                    # to the given percentile albPpert to use as new albedo
-                    albtmp = ppfbet(albPpert[i,0], alpha, beta, iflag)
-                    sfcalb[i, kk] = albtmp
+        # # sfc-perts, mgehne ***
+        # # perturb all 4 kinds of surface albedo, sfcalb(:,1:4)
+        # if pertalb[0] > 0.0:
+        #     for k in range(nlp1):
+        #         for i in range(IMAX):
+        #             for kk in range(4):
+        #                 # compute beta distribution parameters for all 4 albedos
+        #                 m = sfcalb[i, 0, k][kk]
+        #                 s = pertalb[0] * m * (1.0 - m)
+        #                 alpha = m * m * (1.0 - m) / (s * s) - m
+        #                 beta = alpha * (1.0 - m) / m
+        #                 # compute beta distribution value corresponding
+        #                 # to the given percentile albPpert to use as new albedo
+        #                 albtmp = ppfbet(albPpert[i,0], alpha, beta, iflag)
+        #                 sfcalb[i, 0, k][kk] = albtmp
 
         return sfcalb
 

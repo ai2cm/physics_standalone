@@ -23,7 +23,7 @@ from config import *
 from radphysparam import *
 from phys_const import con_eps, con_epsm1, con_rocp, \
                        con_fvirt, con_rog, con_epsq, \
-					   con_ttp, con_pi
+					   con_ttp, con_pi, con_tice, con_t0c
 from funcphys_gt import fpvs
 
 backend = "gtc:gt:cpu_ifirst"
@@ -685,7 +685,7 @@ def progcld4_stencil(rew : FIELD_FLT,
 		clwt = max(0.0, (clwf[0,0,0] + cnvw[0,0,1])) * gfac * delp[0,0,1]
 		cip = clwt * tem2d[0,0,0]
 		cwp = clwt - cip[0,0,0]
-		if slmsk[0] > 0.5 and slmsk[0] < 1.5:
+		if slmsk[0] >= 0.5 and slmsk[0] < 1.5:
 			rew = 5.0 + 5.0 * tem2d[0,0,0]
 		if cldtot[0,0,1] < climit:
 			cwp = 0.0
@@ -715,3 +715,338 @@ def progcld4_stencil(rew : FIELD_FLT,
 		clouds[0,0,0][4] = rei[0,0,-1]
 		clouds[0,0,0][6] = rer[0,0,-1]
 		clouds[0,0,0][8] = res[0,0,-1]
+
+@stencil(backend=backend,
+		 externals = {
+			 "con_tice" : con_tice,
+			 "con_t0c" : con_t0c,
+		 }
+		 )
+def clima_albedo_scheme(snowf : FIELD_1D,
+						   zorlf : FIELD_1D,
+						   hprif : FIELD_1D,
+						   slmsk : FIELD_1D,
+						   tsknf : FIELD_2D,
+						   facsf : FIELD_1D,
+						   facwf : FIELD_1D,
+						   tisfc : FIELD_1D,
+						   fice  : FIELD_1D,
+						   coszf : FIELD_2D,
+						   alvsf : FIELD_1D,
+						   alvwf : FIELD_1D,
+						   alnsf : FIELD_1D,
+						   alnwf : FIELD_1D,
+						   sfcalb: Field[DTYPE_FLT,(4,)]
+						   ):
+	from __externals__ import(con_tice, con_t0c)
+	with computation(PARALLEL), interval(...):
+		asnow = 0.02 * snowf[0]
+		argh = min(0.50, max(0.025, 0.01 * zorlf[0]))
+		hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[0]))
+		fsno0 = asnow / (argh + asnow) * hrgh
+		if slmsk[0] >= -0.5 and slmsk[0] < 0.5 and tsknf[0,0] > con_tice:
+			fsno0 = 0.0
+		fsno1 = 1.0 - fsno0
+		flnd0 = min(1.0, facsf[0] + facwf[0])
+		fsea0 = max(0.0, 1.0 - flnd0)
+		fsno = fsno0
+		fsea = fsea0 * fsno1
+		flnd = flnd0 * fsno1
+
+		if tsknf[0,0] >= 271.5:
+			asevd = 0.06
+			asend = 0.06
+		elif tsknf[0,0] < 271.1:
+			asevd = 0.70
+			asend = 0.65
+		else:
+			a1 = (tsknf[0,0] - 271.1) ** 2
+			asevd = 0.7 - 4.0 * a1
+			asend = 0.65 - 3.6875 * a1
+		
+		if slmsk[0] >= 1.5 and slmsk[0] < 2.5:
+			ffw = 1.0 - fice[0]
+			if ffw < 1.0:
+				dtgd = max(0.0, min(5.0, (con_ttp - tisfc[0])))
+				b1 = 0.03 * dtgd
+			else:
+				b1 = 0.0
+			
+			b3 = 0.06 * ffw
+			asnvd = (0.70 + b1) * fice[0] + b3
+			asnnd = (0.60 + b1) * fice[0] + b3
+			asevd = 0.70 * fice[0] + b3
+			asend = 0.60 * fice[0] + b3
+		else:
+			asnvd = 0.90
+			asnnd = 0.75
+
+		if coszf[0,0] < 0.5:
+			csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[0,0]) - 1.0)
+			asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
+			asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
+		else:
+			asnvb = asnvd
+			asnnb = asnnd
+
+		if coszf[0,0] > 0.001:
+			rfcs = 1.4 / (1.0 + 0.8 * coszf[0,0])
+			rfcw = 1.1 / (1.0 + 0.2 * coszf[0,0])
+
+			if tsknf[0,0] >= con_t0c:
+				asevb = max(
+					asevd,
+					0.026 / (coszf[0,0] ** 1.7 + 0.065)
+					+ 0.15
+					* (coszf[0,0] - 0.1)
+					* (coszf[0,0] - 0.5)
+					* (coszf[0,0] - 1.0),
+				)
+				asenb = asevb
+			else:
+				asevb = asevd
+				asenb = asend
+		else:
+			rfcs = 1.0
+			rfcw = 1.0
+			asevb = asevd
+			asenb = asend
+
+		a1 = alvsf[0] * facsf[0]
+		b1 = alvwf[0] * facwf[0]
+		a2 = alnsf[0] * facsf[0]
+		b2 = alnwf[0] * facwf[0]
+		ab1bm = a1 * rfcs + b1 * rfcw
+		ab2bm = a2 * rfcs + b2 * rfcw
+		sfcalb[0, 0, 0][0] = min(0.99, ab2bm) * flnd + asenb * fsea + asnnb * fsno
+		sfcalb[0, 0, 0][1] = (a2 + b2) * 0.96 * flnd + asend * fsea + asnnd * fsno
+		sfcalb[0, 0, 0][2] = min(0.99, ab1bm) * flnd + asevb * fsea + asnvb * fsno
+		sfcalb[0, 0, 0][3] = (a1 + b1) * 0.96 * flnd + asevd * fsea + asnvd * fsno
+
+@stencil(backend=backend,
+		 externals = {
+			 "con_ttp" : con_ttp,
+			 "con_t0c" : con_t0c,
+		 }
+		 )
+def modis_albedo_land_scheme(sncovr: FIELD_1D,
+							 slmsk : FIELD_1D,
+							 tsknf : FIELD_2D,
+							 snowf : FIELD_1D,
+							 zorlf : FIELD_1D,
+							 hprif : FIELD_1D,
+							 facsf : FIELD_1D,
+							 facwf : FIELD_1D,
+							 tisfc : FIELD_1D,
+							 fice : FIELD_1D,
+							 snoalb : FIELD_1D,
+							 coszf : FIELD_2D,
+							 alnsf : FIELD_1D,
+							 alvsf : FIELD_1D,
+							 alnwf : FIELD_1D,
+							 alvwf : FIELD_1D,
+							 pertalb : FIELD_1D,
+							 albPpert : FIELD_2D,
+							 sfcalb : Field[DTYPE_FLT,(4,)],
+):
+	from __externals__ import(con_ttp, con_t0c)
+	with computation(PARALLEL), interval(...):
+		fsno0 = sncovr[0]
+
+		if slmsk[0] >= -0.5 and slmsk[0] < 0.5 and tsknf[0, 0] > con_tice:
+			fsno0 = 0.0
+
+		if slmsk[0] >= 1.5 and slmsk[0] < 2.5:
+			asnow = 0.02 * snowf[0]
+			argh = min(0.50, max(0.025, 0.01 * zorlf[0]))
+			hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[0]))
+			fsno0 = asnow / (argh + asnow) * hrgh
+
+		fsno1 = 1.0 - fsno0
+		flnd0 = min(1.0, facsf[0] + facwf[0])
+		fsea0 = max(0.0, 1.0 - flnd0)
+		fsno = fsno0
+		fsea = fsea0 * fsno1
+		flnd = flnd0 * fsno1
+
+		#    - Calculate diffused sea surface albedo.
+
+		if tsknf[0, 0] >= 271.5:
+			asevd = 0.06
+			asend = 0.06
+		elif tsknf[0, 0] < 271.1:
+			asevd = 0.70
+			asend = 0.65
+		else:
+			a1 = (tsknf[0, 0] - 271.1) ** 2
+			asevd = 0.7 - 4.0 * a1
+			asend = 0.65 - 3.6875 * a1
+
+		#    - Calculate diffused snow albedo, land area use input max snow
+		#      albedo.
+
+		if slmsk[0] >= 1.5 and slmsk[0] < 2.5:
+			ffw = 1.0 - fice[0]
+			if ffw < 1.0:
+				dtgd = max(0.0, min(5.0, (con_ttp - tisfc[0])))
+				b1 = 0.03 * dtgd
+			else:
+				b1 = 0.0
+
+			b3 = 0.06 * ffw
+			asnvd = (0.70 + b1) * fice[0] + b3
+			asnnd = (0.60 + b1) * fice[0] + b3
+			asevd = 0.70 * fice[0] + b3
+			asend = 0.60 * fice[0] + b3
+		else:
+			asnvd = snoalb[0]
+			asnnd = snoalb[0]
+
+		#    - Calculate direct snow albedo.
+
+		if slmsk[0] >= 1.5 and slmsk[0] < 2.5:
+			if coszf[0, 0] < 0.5:
+				csnow = 0.5 * (3.0 / (1.0 + 4.0 * coszf[0, 0]) - 1.0)
+				asnvb = min(0.98, asnvd + (1.0 - asnvd) * csnow)
+				asnnb = min(0.98, asnnd + (1.0 - asnnd) * csnow)
+			else:
+				asnvb = asnvd
+				asnnb = asnnd
+		else:
+			asnvb = snoalb[0]
+			asnnb = snoalb[0]
+
+		#    - Calculate direct sea surface albedo, use fanglin's zenith angle
+		#      treatment.
+
+		if coszf[0, 0] > 0.0001:
+			rfcs = 1.775 / (1.0 + 1.55 * coszf[0, 0])
+
+			if tsknf[0, 0] >= con_t0c:
+				asevb = max(
+					asevd,
+					0.026 / (coszf[0, 0] ** 1.7 + 0.065)
+					+ 0.15
+					* (coszf[0, 0] - 0.1)
+					* (coszf[0, 0] - 0.5)
+					* (coszf[0, 0] - 1.0),
+				)
+				asenb = asevb
+			else:
+				asevb = asevd
+				asenb = asend
+		else:
+			rfcs = 1.0
+			asevb = asevd
+			asenb = asend
+
+		ab1bm = min(0.99, alnsf[0] * rfcs)
+		ab2bm = min(0.99, alvsf[0] * rfcs)
+		sfcalb[0, 0, 0][0] = ab1bm * flnd + asenb * fsea + asnnb * fsno
+		sfcalb[0, 0, 0][1] = alnwf[0] * flnd + asend * fsea + asnnd * fsno
+		sfcalb[0, 0, 0][2] = ab2bm * flnd + asevb * fsea + asnvb * fsno
+		sfcalb[0, 0, 0][3] = alvwf[0] * flnd + asevd * fsea + asnvd * fsno
+
+		# sfc-perts, mgehne ***
+        # perturb all 4 kinds of surface albedo, sfcalb(:,1:4)
+
+		# *** Note : I'm copying this code here since it exists in the Python version
+		# ***        However, the ppfbet routine doesn't seem to be implemented anywhere
+
+        # if pertalb[0] > 0.0:
+        #     for k in range(nlp1):
+        #         for i in range(IMAX):
+        #             for kk in range(4):
+        #                 # compute beta distribution parameters for all 4 albedos
+        #                 m = sfcalb[i, 0, k][kk]
+        #                 s = pertalb[0] * m * (1.0 - m)
+        #                 alpha = m * m * (1.0 - m) / (s * s) - m
+        #                 beta = alpha * (1.0 - m) / m
+        #                 # compute beta distribution value corresponding
+        #                 # to the given percentile albPpert to use as new albedo
+        #                 albtmp = ppfbet(albPpert[i,0], alpha, beta, iflag)
+        #                 sfcalb[i, 0, k][kk] = albtmp
+
+@stencil(backend=backend)
+def mean_surf_albedo_approx(sfalb : FIELD_2D,
+							sfcalb : Field[DTYPE_FLT,(4,)],
+						   ):
+	with computation(FORWARD), interval(0,1):
+		sfalb = max(0.01, 0.5 * (sfcalb[0, 0, 0][1] + sfcalb[0, 0, 0][3]))
+
+@stencil(backend=backend)
+def transfer_values(storage_from : FIELD_FLT,
+ 					storage_to   : FIELD_FLT,
+				   ):
+	with computation(PARALLEL), interval(1,None):
+		storage_to = storage_from[0,0,0]
+
+@stencil(backend=backend)
+def spectral_flux(nirbmdi : FIELD_2D,
+				  nirdfdi : FIELD_2D,
+				  visbmdi : FIELD_2D,
+				  visdfdi : FIELD_2D,
+				  nirbmui : FIELD_2D,
+				  nirdfui : FIELD_2D,
+				  visbmui : FIELD_2D,
+				  visdfui : FIELD_2D,
+				  nirbm   : FIELD_2D,
+				  nirdf   : FIELD_2D,
+				  visbm   : FIELD_2D,
+				  visdf   : FIELD_2D,
+				  sfcalb  : Field[DTYPE_FLT,(4,)]
+				  ):
+	with computation(FORWARD), interval(0,1):
+		nirbmdi = nirbm[0,0]
+		nirdfdi = nirdf[0,0]
+		visbmdi = visbm[0,0]
+		visdfdi = visdf[0,0]
+		
+		nirbmui = nirbm[0,0] * sfcalb[0,0,0][0]
+		nirdfui = nirdf[0,0] * sfcalb[0,0,0][1]
+		visbmui = visbm[0,0] * sfcalb[0,0,0][2]
+		visdfui = visdf[0,0] * sfcalb[0,0,0][3]
+
+@stencil(backend=backend)
+def zero_storages(nirbmdi : FIELD_2D,
+				  nirdfdi : FIELD_2D,
+				  visbmdi : FIELD_2D,
+				  visdfdi : FIELD_2D,
+				  nirbmui : FIELD_2D,
+				  nirdfui : FIELD_2D,
+				  visbmui : FIELD_2D,
+				  visdfui : FIELD_2D,
+				  htrsw : FIELD_FLT,
+				  swhc : FIELD_FLT,
+				  cldtausw : FIELD_FLT,
+				  swhtr : bool,
+				 ):
+	with computation(FORWARD), interval(0,1):
+		nirbmdi = 0.0
+		nirdfdi = 0.0
+		visbmdi = 0.0
+		visdfdi = 0.0
+		nirbmui = 0.0
+		nirdfui = 0.0
+		visbmui = 0.0
+		visdfui = 0.0
+	with computation(PARALLEL), interval(...):
+		htrsw = 0.0
+		if swhtr:
+			swhc = 0.0
+			cldtausw = 0.0
+
+@stencil(backend=backend)
+def radiation_fluxes(sfcnsw : FIELD_2D,
+					 sfcdsw : FIELD_2D,
+					 dnfxc  : FIELD_1D,
+					 upfxc  : FIELD_1D,
+					 ):
+	with computation(FORWARD), interval(0,1):
+		sfcnsw = dnfxc[0] - upfxc[0]
+		sfcdsw = dnfxc[0]
+
+# @stencil(backend=backend)
+# def repopulate(inputStorage : FIELD_FLT):
+# 	with computation(PARALLEL), interval(...):
+# 		inputStorage = inputStorage[0,0,-2]

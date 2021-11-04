@@ -18,7 +18,8 @@ from radsw.radsw_main_gt4py import RadSWClass
 from stencils_radiation_driver import cloud_comp_5_v2, pressure_convert, extra_values, getozn, \
                                       get_layer_temp, cloud_comp_1, cloud_comp_2, \
                                       cloud_comp_4, cloud_comp_5, cloud_comp_5_v2, \
-                                      ccnd_zero, cloud_cover, add_cond_cloud_water
+                                      ccnd_zero, cloud_cover, add_cond_cloud_water,\
+                                      mean_surf_albedo_approx, radiation_fluxes, spectral_flux, transfer_values, zero_storages
 class RadiationDriver:
 
     VTAGRAD = "NCEP-Radiation_driver    v5.2  Jan 2013"
@@ -509,15 +510,15 @@ class RadiationDriver:
                                  shape=(IM, 1, Model["levr"] + self.LTP + 1),
                                  dtype=DTYPE_FLT)
 
-        htswc = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
+        # htswc = gt4py.storage.zeros(backend=backend, 
+        #                          default_origin=default_origin,
+        #                          shape=(IM, 1, Model["levr"] + self.LTP + 1),
+        #                          dtype=DTYPE_FLT)
 
-        htsw0 = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
+        # htsw0 = gt4py.storage.zeros(backend=backend, 
+        #                          default_origin=default_origin,
+        #                          shape=(IM, 1, Model["levr"] + self.LTP + 1),
+        #                          dtype=DTYPE_FLT)
 
         htlwc = gt4py.storage.zeros(backend=backend, 
                                  default_origin=default_origin,
@@ -1137,7 +1138,8 @@ class RadiationDriver:
             )
 
             # Approximate mean surface albedo from vis- and nir-  diffuse values.
-            Radtend["sfalb"][:,0] = np.maximum(0.01, 0.5 * (sfcalb[:, 1] + sfcalb[:, 3]))
+            mean_surf_albedo_approx(Radtend["sfalb"], sfcalb)
+            # Radtend["sfalb"][:,0] = np.maximum(0.01, 0.5 * (sfcalb[:, 0, 0,1] + sfcalb[:, 0, 0,3]))
 
             lhswb = False
             lhsw0 = True
@@ -1180,86 +1182,128 @@ class RadiationDriver:
                 else:
                     self.rsw.swrad(rank=Rank)
 
-                # htswc = np.zeros((self.rsw.outdict_gt4py["htswc"].shape[0],
-                #                   self.rsw.outdict_gt4py["htswc"].shape[2]-1)) 
-                htswc[:,0, 1:] = self.rsw.outdict_gt4py["htswc"][:,0,1:]
-                # htsw0 = np.zeros((self.rsw.outdict_gt4py["htsw0"].shape[0],
-                #                   self.rsw.outdict_gt4py["htsw0"].shape[2]-1)) 
-                htsw0[:,0, 1:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
-                Diag["topfsw"]["upfxc"][:] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
-                Diag["topfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_t"][:,0]
-                Diag["topfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_t"][:,0]
-                Radtend["sfcfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_s"][:,0]
-                Radtend["sfcfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_s"][:,0]
-                Radtend["sfcfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_s"][:,0]
-                Radtend["sfcfsw"]["dnfx0"] = self.rsw.outdict_gt4py["dnfx0_s"][:,0]
-                scmpsw["uvbf0"] = self.rsw.outdict_gt4py["uvbf0"][:,0]
-                scmpsw["uvbfc"] = self.rsw.outdict_gt4py["uvbfc"][:,0]
-                scmpsw["nirbm"] = self.rsw.outdict_gt4py["nirbm"][:,0]
-                scmpsw["nirdf"] = self.rsw.outdict_gt4py["nirdf"][:,0]
-                scmpsw["visbm"] = self.rsw.outdict_gt4py["visbm"][:,0]
-                scmpsw["visdf"] = self.rsw.outdict_gt4py["visdf"][:,0]
-                cldtausw[:,0,1:] = self.rsw.outdict_gt4py["cldtausw"][:,0,1:]
 
-                for k in range(LM):
-                    k1 = k + kd
-                    Radtend["htrsw"][:IM, 0, k+1] = htswc[:IM, 0, k1+1]
+                # htswc[:,0, 1:] = self.rsw.outdict_gt4py["htswc"][:,0,1:]
+                # htsw0[:,0, 1:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
+                Diag["topfsw"]["upfxc"][:] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
+                Diag["topfsw"]["dnfxc"][:] = self.rsw.outdict_gt4py["dnfxc_t"][:,0]
+                Diag["topfsw"]["upfx0"][:] = self.rsw.outdict_gt4py["upfx0_t"][:,0]
+                Radtend["sfcfsw"]["upfxc"][:] = self.rsw.outdict_gt4py["upfxc_s"][:,0]
+                Radtend["sfcfsw"]["dnfxc"][:] = self.rsw.outdict_gt4py["dnfxc_s"][:,0]
+                Radtend["sfcfsw"]["upfx0"][:] = self.rsw.outdict_gt4py["upfx0_s"][:,0]
+                Radtend["sfcfsw"]["dnfx0"][:] = self.rsw.outdict_gt4py["dnfx0_s"][:,0]
+                scmpsw["uvbf0"] = self.rsw.outdict_gt4py["uvbf0"]#[:,0]
+                scmpsw["uvbfc"] = self.rsw.outdict_gt4py["uvbfc"]#[:,0]
+                scmpsw["nirbm"] = self.rsw.outdict_gt4py["nirbm"]#[:,0]
+                scmpsw["nirdf"] = self.rsw.outdict_gt4py["nirdf"]#[:,0]
+                scmpsw["visbm"] = self.rsw.outdict_gt4py["visbm"]#[:,0]
+                scmpsw["visdf"] = self.rsw.outdict_gt4py["visdf"]#[:,0]
+
+                # cldtausw[:,0,1:] = self.rsw.outdict_gt4py["cldtausw"][:,0,1:]
+                transfer_values(self.rsw.outdict_gt4py["cldtausw"], cldtausw,
+                                domain=shape_nlp1, origin=default_origin)
+
+                # for k in range(LM):
+                #     k1 = k + kd
+                #     # Radtend["htrsw"][:IM, 0, k+1] = htswc[:IM, 0, k1+1]
+                #     Radtend["htrsw"][:IM, 0, k+1] = self.rsw.outdict_gt4py["htswc"][:IM,0,k1+1]
+
+                transfer_values(self.rsw.outdict_gt4py["htswc"], Radtend["htrsw"],
+                                domain=shape_nlp1, origin=default_origin)
 
                 #     We are assuming that radiative tendencies are from bottom to top
                 # --- repopulate the points above levr i.e. LM
                 if LM < LEVS:
                     for k in range(LM, LEVS):
-                        Radtend["htrsw"][:IM, 0, k+1] = Radtend["htrsw"][:IM, LM - 1]
+                        Radtend["htrsw"][:IM, 0, k+1] = Radtend["htrsw"][:IM, 0, LM - 1]
 
                 if Model["swhtr"]:
-                    for k in range(LM):
-                        k1 = k + kd
-                        Radtend["swhc"][:IM, 0, k+1] = htsw0[:IM, 0, k1+1]
+                    # for k in range(LM):
+                    #     k1 = k + kd
+                    #     # Radtend["swhc"][:IM, 0, k+1] = htsw0[:IM, 0, k1+1]
+                    #     Radtend["swhc"][:IM, 0, k+1] = self.rsw.outdict_gt4py["htsw0"][:IM,0,k1+1]
+                    transfer_values(self.rsw.outdict_gt4py["htsw0"], Radtend["swhc"],
+                                domain=shape_nlp1, origin=default_origin)
 
                     # --- repopulate the points above levr i.e. LM
                     if LM < LEVS:
                         for k in range(LM, LEVS):
-                            Radtend["swhc"][:IM, 0, k+1] = Radtend["swhc"][:IM, LM - 1]
+                            Radtend["swhc"][:IM, 0, k+1] = Radtend["swhc"][:IM, 0, LM - 1]
 
                 #  --- surface down and up spectral component fluxes
                 #  - Save two spectral bands' surface downward and upward fluxes for
                 #    output.
 
-                for i in range(IM):
-                    Coupling["nirbmdi"][i,0] = scmpsw["nirbm"][i]
-                    Coupling["nirdfdi"][i,0] = scmpsw["nirdf"][i]
-                    Coupling["visbmdi"][i,0] = scmpsw["visbm"][i]
-                    Coupling["visdfdi"][i,0] = scmpsw["visdf"][i]
+                spectral_flux(Coupling["nirbmdi"],
+                              Coupling["nirdfdi"],
+                              Coupling["visbmdi"],
+                              Coupling["visdfdi"],
+                              Coupling["nirbmui"],
+                              Coupling["nirdfui"],
+                              Coupling["visbmui"],
+                              Coupling["visdfui"],
+                              scmpsw["nirbm"],
+                              scmpsw["nirdf"],
+                              scmpsw["visbm"],
+                              scmpsw["visdf"],
+                              sfcalb,
+                              domain=shape_nlp1,
+                              origin=default_origin)
+                # for i in range(IM):
+                #     Coupling["nirbmdi"][i,0] = scmpsw["nirbm"][i]
+                #     Coupling["nirdfdi"][i,0] = scmpsw["nirdf"][i]
+                #     Coupling["visbmdi"][i,0] = scmpsw["visbm"][i]
+                #     Coupling["visdfdi"][i,0] = scmpsw["visdf"][i]
 
-                    Coupling["nirbmui"][i,0] = scmpsw["nirbm"][i] * sfcalb[i, 0]
-                    Coupling["nirdfui"][i,0] = scmpsw["nirdf"][i] * sfcalb[i, 1]
-                    Coupling["visbmui"][i,0] = scmpsw["visbm"][i] * sfcalb[i, 2]
-                    Coupling["visdfui"][i,0] = scmpsw["visdf"][i] * sfcalb[i, 3]
+                #     Coupling["nirbmui"][i,0] = scmpsw["nirbm"][i] * sfcalb[i, 0, 0,0]
+                #     Coupling["nirdfui"][i,0] = scmpsw["nirdf"][i] * sfcalb[i, 0, 0,1]
+                #     Coupling["visbmui"][i,0] = scmpsw["visbm"][i] * sfcalb[i, 0, 0,2]
+                #     Coupling["visdfui"][i,0] = scmpsw["visdf"][i] * sfcalb[i, 0, 0,3]
 
             else:
+                zero_storages(Coupling["nirbmdi"],
+                              Coupling["nirdfdi"],
+                              Coupling["visbmdi"],
+                              Coupling["visdfdi"],
+                              Coupling["nirbmui"],
+                              Coupling["nirdfui"],
+                              Coupling["visbmui"],
+                              Coupling["visdfui"],
+                              Radtend["htrsw"],
+                              Radtend["swhc"],
+                              cldtausw,
+                              Model["swhtr"],
+                              domain=shape_nlp1,
+                              origin=default_origin)
+                # Radtend["htrsw"][:, 0, :] = 0.0
 
-                Radtend["htrsw"][:, :] = 0.0
+                # for i in range(IM):
+                #     Coupling["nirbmdi"][i,0] = 0.0
+                #     Coupling["nirdfdi"][i,0] = 0.0
+                #     Coupling["visbmdi"][i,0] = 0.0
+                #     Coupling["visdfdi"][i,0] = 0.0
+                #     Coupling["nirbmui"][i,0] = 0.0
+                #     Coupling["nirdfui"][i,0] = 0.0
+                #     Coupling["visbmui"][i,0] = 0.0
+                #     Coupling["visdfui"][i,0] = 0.0
 
-                for i in range(IM):
-                    Coupling["nirbmdi"][i,0] = 0.0
-                    Coupling["nirdfdi"][i,0] = 0.0
-                    Coupling["visbmdi"][i,0] = 0.0
-                    Coupling["visdfdi"][i,0] = 0.0
-                    Coupling["nirbmui"][i,0] = 0.0
-                    Coupling["nirdfui"][i,0] = 0.0
-                    Coupling["visbmui"][i,0] = 0.0
-                    Coupling["visdfui"][i,0] = 0.0
-
-                if Model["swhtr"]:
-                    Radtend["swhc"][:, :] = 0
-                    cldtausw[:, 0, 1:] = 0.0
+                # if Model["swhtr"]:
+                #     Radtend["swhc"][:, 0, :] = 0
+                #     cldtausw[:, 0, 1:] = 0.0
 
             # --- radiation fluxes for other physics processes
-            for i in range(IM):
-                Coupling["sfcnsw"][i,0] = (
-                    Radtend["sfcfsw"]["dnfxc"][i] - Radtend["sfcfsw"]["upfxc"][i]
-                )
-                Coupling["sfcdsw"][i,0] = Radtend["sfcfsw"]["dnfxc"][i]
+
+            radiation_fluxes(Coupling["sfcnsw"],
+                             Coupling["sfcdsw"],
+                             Radtend["sfcfsw"]["dnfxc"],
+                             Radtend["sfcfsw"]["upfxc"],
+                             domain=shape_nlp1,
+                             origin=default_origin)
+            # for i in range(IM):
+            #     Coupling["sfcnsw"][i,0] = (
+            #         Radtend["sfcfsw"]["dnfxc"][i] - Radtend["sfcfsw"]["upfxc"][i]
+            #     )
+            #     Coupling["sfcdsw"][i,0] = Radtend["sfcfsw"]["dnfxc"][i]
 
         # Start LW radiation calculations
         if Model["lslwr"]:

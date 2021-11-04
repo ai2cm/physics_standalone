@@ -775,7 +775,7 @@ class RadSWClass:
             # "gasvmr": {"shape": (npts, nlay, 10), "type": type_10},
             # "clouds": {"shape": (npts, nlay, 9), "type": type_9},
             # "faersw": {"shape": (npts, nlay, nbdsw, 3), "type": type_nbandssw3},
-            "sfcalb": {"shape": (npts, 4), "type": (DTYPE_FLT, (4,))},
+            # "sfcalb": {"shape": (npts, 4), "type": (DTYPE_FLT, (4,))},
             # "dz": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "delp": {"shape": (npts, nlay), "type": DTYPE_FLT},
             # "de_lgth": {"shape": (npts,), "type": DTYPE_FLT},
@@ -799,7 +799,7 @@ class RadSWClass:
             # "gasvmr"  : gasvmr,
             # "clouds"  : clouds,
             # "faersw"  : faersw,
-            "sfcalb"  : sfcalb,
+            # "sfcalb"  : sfcalb,
             # "dz"      : dz,
             # "delp"    : delp,
             # "de_lgth" : de_lgth,
@@ -837,6 +837,7 @@ class RadSWClass:
         self.indict_gt4py["delp"] = delp
         self.indict_gt4py["de_lgth"] = de_lgth
         self.indict_gt4py["coszen"] = coszen
+        self.indict_gt4py["sfcalb"] = sfcalb
         # self.indict_gt4py["idxday"] = idxday
 
     def _load_lookup_table_data(self):
