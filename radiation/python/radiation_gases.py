@@ -433,19 +433,6 @@ class GasClass:
                                    dtype=(DTYPE_FLT,(10,)))
 
         #  --- ...  assign default values
-
-        # for k in range(LMAX):
-        #     for i in range(IMAX):
-        #         gasdat[i, 0, k+1, 0] = self.co2vmr_def
-        #         gasdat[i, 0, k+1, 1] = self.n2ovmr_def
-        #         gasdat[i, 0, k+1, 2] = self.ch4vmr_def
-        #         gasdat[i, 0, k+1, 3] = self.o2vmr_def
-        #         gasdat[i, 0, k+1, 4] = self.covmr_def
-        #         gasdat[i, 0, k+1, 5] = self.f11vmr_def
-        #         gasdat[i, 0, k+1, 6] = self.f12vmr_def
-        #         gasdat[i, 0, k+1, 7] = self.f22vmr_def
-        #         gasdat[i, 0, k+1, 8] = self.cl4vmr_def
-        #         gasdat[i, 0, k+1, 9] = self.f113vmr_def
         getgases_stencil(gasdat,
                          self.co2vmr_def,
                          self.n2ovmr_def,

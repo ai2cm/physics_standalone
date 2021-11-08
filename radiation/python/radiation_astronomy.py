@@ -678,13 +678,6 @@ class AstronomyClass:
 
         for it in range(self.nstp):
             cns = solang + (it + 0.5) * self.anginc + self.sollag
-            # for i in range(IM):
-            #     coszn = self.sdec * sinlat[i] + self.cdec * coslat[i] * np.cos(
-            #         cns + xlon[i]
-            #     )
-            #     coszen[i,0] = coszen[i,0] + max(0.0, coszn)
-            #     if coszn > self.czlimt:
-            #         istsun[i,0] += 1
             coszmn_stencil_1(coslat,
                              coszen,
                              istsun,
@@ -699,10 +692,6 @@ class AstronomyClass:
 
         #  --- ...  compute time averages
 
-        # for i in range(IM):
-        #     coszdg[i,0] = coszen[i,0] * rstp
-        #     if istsun[i,0] > 0:
-        #         coszen[i,0] = coszen[i,0] / istsun[i,0]
         coszmn_stencil_2(coszdg,
                          coszen,
                          istsun,
