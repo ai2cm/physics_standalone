@@ -219,7 +219,7 @@ def get_layer_temp(tem2da : FIELD_FLT,
 				   tvly   : FIELD_FLT,
 				   tem1d  : FIELD_2D,
 				   tsfa   : FIELD_2D,
-				   tskn   : FIELD_2D,
+				   tskn   : FIELD_1D,
 				   qgrs   : Field[(DTYPE_FLT,(8,))],
 				   ivflip : int,
 				   prsmin : float,
@@ -242,12 +242,12 @@ def get_layer_temp(tem2da : FIELD_FLT,
 			tem1d = QME6
 			tem2db = log(plvl[0,0,0])
 			tsfa = tlyr[0,0,1]
-			tlvl = tskn[0,0]
+			tlvl = tskn[0]
 
 	with computation(FORWARD), interval(-1,None):
 		if ivflip == 0:
 			tsfa = tlyr[0,0,0]
-			tlvl = tskn[0,0]
+			tlvl = tskn[0]
 		else:
 			tem2db = log(max(prsmin,plvl[0,0,0]))
 			tlvl = tlyr[0,0,0]
@@ -726,7 +726,7 @@ def clima_albedo_scheme(snowf : FIELD_1D,
 						   zorlf : FIELD_1D,
 						   hprif : FIELD_1D,
 						   slmsk : FIELD_1D,
-						   tsknf : FIELD_2D,
+						   tsknf : FIELD_1D,
 						   facsf : FIELD_1D,
 						   facwf : FIELD_1D,
 						   tisfc : FIELD_1D,
@@ -744,7 +744,7 @@ def clima_albedo_scheme(snowf : FIELD_1D,
 		argh = min(0.50, max(0.025, 0.01 * zorlf[0]))
 		hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[0]))
 		fsno0 = asnow / (argh + asnow) * hrgh
-		if slmsk[0] >= -0.5 and slmsk[0] < 0.5 and tsknf[0,0] > con_tice:
+		if slmsk[0] >= -0.5 and slmsk[0] < 0.5 and tsknf[0] > con_tice:
 			fsno0 = 0.0
 		fsno1 = 1.0 - fsno0
 		flnd0 = min(1.0, facsf[0] + facwf[0])
@@ -753,14 +753,14 @@ def clima_albedo_scheme(snowf : FIELD_1D,
 		fsea = fsea0 * fsno1
 		flnd = flnd0 * fsno1
 
-		if tsknf[0,0] >= 271.5:
+		if tsknf[0] >= 271.5:
 			asevd = 0.06
 			asend = 0.06
-		elif tsknf[0,0] < 271.1:
+		elif tsknf[0] < 271.1:
 			asevd = 0.70
 			asend = 0.65
 		else:
-			a1 = (tsknf[0,0] - 271.1) ** 2
+			a1 = (tsknf[0] - 271.1) ** 2
 			asevd = 0.7 - 4.0 * a1
 			asend = 0.65 - 3.6875 * a1
 		
@@ -793,7 +793,7 @@ def clima_albedo_scheme(snowf : FIELD_1D,
 			rfcs = 1.4 / (1.0 + 0.8 * coszf[0,0])
 			rfcw = 1.1 / (1.0 + 0.2 * coszf[0,0])
 
-			if tsknf[0,0] >= con_t0c:
+			if tsknf[0] >= con_t0c:
 				asevb = max(
 					asevd,
 					0.026 / (coszf[0,0] ** 1.7 + 0.065)
@@ -831,7 +831,7 @@ def clima_albedo_scheme(snowf : FIELD_1D,
 		 )
 def modis_albedo_land_scheme(sncovr: FIELD_1D,
 							 slmsk : FIELD_1D,
-							 tsknf : FIELD_2D,
+							 tsknf : FIELD_1D,
 							 snowf : FIELD_1D,
 							 zorlf : FIELD_1D,
 							 hprif : FIELD_1D,
@@ -853,7 +853,7 @@ def modis_albedo_land_scheme(sncovr: FIELD_1D,
 	with computation(PARALLEL), interval(...):
 		fsno0 = sncovr[0]
 
-		if slmsk[0] >= -0.5 and slmsk[0] < 0.5 and tsknf[0, 0] > con_tice:
+		if slmsk[0] >= -0.5 and slmsk[0] < 0.5 and tsknf[0] > con_tice:
 			fsno0 = 0.0
 
 		if slmsk[0] >= 1.5 and slmsk[0] < 2.5:
@@ -871,14 +871,14 @@ def modis_albedo_land_scheme(sncovr: FIELD_1D,
 
 		#    - Calculate diffused sea surface albedo.
 
-		if tsknf[0, 0] >= 271.5:
+		if tsknf[0] >= 271.5:
 			asevd = 0.06
 			asend = 0.06
-		elif tsknf[0, 0] < 271.1:
+		elif tsknf[0] < 271.1:
 			asevd = 0.70
 			asend = 0.65
 		else:
-			a1 = (tsknf[0, 0] - 271.1) ** 2
+			a1 = (tsknf[0] - 271.1) ** 2
 			asevd = 0.7 - 4.0 * a1
 			asend = 0.65 - 3.6875 * a1
 
@@ -922,7 +922,7 @@ def modis_albedo_land_scheme(sncovr: FIELD_1D,
 		if coszf[0, 0] > 0.0001:
 			rfcs = 1.775 / (1.0 + 1.55 * coszf[0, 0])
 
-			if tsknf[0, 0] >= con_t0c:
+			if tsknf[0] >= con_t0c:
 				asevb = max(
 					asevd,
 					0.026 / (coszf[0, 0] ** 1.7 + 0.065)
@@ -980,6 +980,27 @@ def transfer_values(storage_from : FIELD_FLT,
 				   ):
 	with computation(PARALLEL), interval(1,None):
 		storage_to = storage_from[0,0,0]
+
+@stencil(backend=backend)
+def transfer_values_2d(storage_from : FIELD_2D,
+					   storage_to   : FIELD_2D,
+					  ):
+	with computation(FORWARD), interval(0,1):
+		storage_to = storage_from[0,0]
+
+@stencil(backend=backend)
+def transfer_values_2d_to_3d(storage_from : FIELD_2D,
+					   		 storage_to   : FIELD_FLT,
+					  ):
+	with computation(FORWARD), interval(1,None):
+		storage_to = storage_from[0,0]
+
+@stencil(backend=backend)
+def transfer_values_1d_to_3d(storage_from : FIELD_1D,
+					   		 storage_to   : FIELD_FLT,
+					  ):
+	with computation(FORWARD), interval(1,None):
+		storage_to = storage_from[0]
 
 @stencil(backend=backend)
 def spectral_flux(nirbmdi : FIELD_2D,

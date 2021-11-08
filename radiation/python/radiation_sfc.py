@@ -551,7 +551,7 @@ class SurfaceClass:
                         argh = min(0.50, max(0.025, 0.01 * zorlf[i]))
                         hrgh = min(1.0, max(0.20, 1.0577 - 1.1538e-3 * hprif[i]))
                         fsno0 = asnow / (argh + asnow) * hrgh
-                        if round(slmsk[i]) == 0 and tsknf[i,0] > 271.2:
+                        if round(slmsk[i]) == 0 and tsknf[i] > 271.2:
                             fsno0 = 0.0
 
                         fsno1 = 1.0 - fsno0

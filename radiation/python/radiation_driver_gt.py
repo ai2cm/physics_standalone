@@ -19,7 +19,7 @@ from stencils_radiation_driver import cloud_comp_5_v2, pressure_convert, extra_v
                                       get_layer_temp, cloud_comp_1, cloud_comp_2, \
                                       cloud_comp_4, cloud_comp_5, cloud_comp_5_v2, \
                                       ccnd_zero, cloud_cover, add_cond_cloud_water,\
-                                      mean_surf_albedo_approx, radiation_fluxes, spectral_flux, transfer_values, zero_storages
+                                      mean_surf_albedo_approx, radiation_fluxes, spectral_flux, transfer_values, transfer_values_1d_to_3d, transfer_values_2d, transfer_values_2d_to_3d, zero_storages
 class RadiationDriver:
 
     VTAGRAD = "NCEP-Radiation_driver    v5.2  Jan 2013"
@@ -342,20 +342,13 @@ class RadiationDriver:
         LP1 = LM + 1  # num of in/out levels
 
         # tskn = np.zeros(IM)
-        tskn = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
+
         # tsfa = np.zeros(IM)
         tsfa = gt4py.storage.zeros(backend=backend, 
                                    default_origin=default_origin,
                                    shape=(IM, 1),
                                    dtype=DTYPE_FLT)
         # tsfg = np.zeros(IM)
-        tsfg = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
 
         # tem1d = np.zeros(IM)
         tem1d = gt4py.storage.zeros(backend=backend, 
@@ -520,10 +513,18 @@ class RadiationDriver:
         #                          shape=(IM, 1, Model["levr"] + self.LTP + 1),
         #                          dtype=DTYPE_FLT)
 
-        htlwc = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
+        # htlwc = gt4py.storage.zeros(backend=backend, 
+        #                          default_origin=default_origin,
+        #                          shape=(IM, 1, Model["levr"] + self.LTP + 1),
+        #                          dtype=DTYPE_FLT)
+
+        # htlw0 = np.zeros((self.rlw.outdict_gt4py["htlw0"].shape[0],
+        #                       self.rlw.outdict_gt4py["htlw0"].shape[2]-1)) 
+
+        # htlw0 = gt4py.storage.zeros(backend=backend, 
+        #                          default_origin=default_origin,
+        #                          shape=(IM, 1, Model["levr"] + self.LTP + 1),
+        #                          dtype=DTYPE_FLT)
 
         scmpsw = dict()
 
@@ -613,14 +614,17 @@ class RadiationDriver:
         # -# Setup surface ground temperature and ground/air skin temperature
         # if required.
 
-        if self.itsfc == 0:  # use same sfc skin-air/ground temp
-            for i in range(IM):
-                tskn[i,0] = Sfcprop["tsfc"][i]
-                tsfg[i,0] = Sfcprop["tsfc"][i]
-        else:  # use diff sfc skin-air/ground temp
-            for i in range(IM):
-                tskn[i,0] = Sfcprop["tsfc"][i]
-                tsfg[i,0] = Sfcprop["tsfc"][i]
+        # Note : I'm not sure why there're two different comparisons since both
+        #        branches perform the same data transfer
+
+        # if self.itsfc == 0:  # use same sfc skin-air/ground temp
+        #     for i in range(IM):
+        #         tskn[i,0] = Sfcprop["tsfc"][i]
+        #         tsfg[i,0] = Sfcprop["tsfc"][i]
+        # else:  # use diff sfc skin-air/ground temp
+        #     for i in range(IM):
+        #         tskn[i,0] = Sfcprop["tsfc"][i]
+        #         tsfg[i,0] = Sfcprop["tsfc"][i]
 
         # Prepare atmospheric profiles for radiation input.
         #
@@ -793,7 +797,7 @@ class RadiationDriver:
                        tvly,
                        tem1d,
                        tsfa,
-                       tskn,
+                       Sfcprop["tsfc"],
                        Statein["qgrs"],
                        ivflip,
                        self.prsmin,
@@ -1121,7 +1125,7 @@ class RadiationDriver:
                 Sfcprop["snoalb"],
                 Sfcprop["zorl"],
                 Radtend["coszen"],
-                tsfg,
+                Sfcprop["tsfc"],
                 tsfa,
                 Sfcprop["hprime"],
                 Sfcprop["alvsf"],
@@ -1318,7 +1322,7 @@ class RadiationDriver:
                 Sfcprop["snowd"],
                 Sfcprop["sncovr"],
                 Sfcprop["zorl"],
-                tsfg,
+                Sfcprop["tsfc"],
                 tsfa,
                 Sfcprop["hprime"],
                 IM,
@@ -1338,7 +1342,7 @@ class RadiationDriver:
                 Tbd["icsdlw"],
                 faerlw,
                 Radtend["semis"],
-                tsfg,
+                Sfcprop["tsfc"],
                 dz,
                 delp,
                 de_lgth,
@@ -1361,10 +1365,10 @@ class RadiationDriver:
             # Write the outputs from the rlw.lwrad execution back into the radiation scheme
             # htlwc = np.zeros((self.rlw.outdict_gt4py["htlwc"].shape[0],
             #                   self.rlw.outdict_gt4py["htlwc"].shape[2]-1)) 
-            htlwc[:,0, 1:] = self.rlw.outdict_gt4py["htlwc"][:,0,1:]
-            htlw0 = np.zeros((self.rlw.outdict_gt4py["htlw0"].shape[0],
-                              self.rlw.outdict_gt4py["htlw0"].shape[2]-1)) 
-            htlw0[:,:] = self.rlw.outdict_gt4py["htlw0"][:,0,1:]
+            # htlwc[:,0, 1:] = self.rlw.outdict_gt4py["htlwc"][:,0,1:]
+            # htlw0 = np.zeros((self.rlw.outdict_gt4py["htlw0"].shape[0],
+            #                   self.rlw.outdict_gt4py["htlw0"].shape[2]-1)) 
+            # htlw0[:,0,1:] = self.rlw.outdict_gt4py["htlw0"][:,0,1:]
             Diag["topflw"]["upfxc"] = self.rlw.outdict_gt4py["upfxc_t"][:,0]
             Diag["topflw"]["upfx0"] = self.rlw.outdict_gt4py["upfx0_t"][:,0]
             Radtend["sfcflw"]["upfxc"] = self.rlw.outdict_gt4py["upfxc_s"][:,0]
@@ -1373,25 +1377,37 @@ class RadiationDriver:
             Radtend["sfcflw"]["dnfx0"] = self.rlw.outdict_gt4py["dnfx0_s"][:,0]
             # cldtaulw = np.zeros((self.rlw.outdict_gt4py["cldtaulw"].shape[0],
             #                      self.rlw.outdict_gt4py["cldtaulw"].shape[2]-1))
-            cldtaulw[:, 0, 1:] = self.rlw.outdict_gt4py["cldtaulw"][:,0,1:]
+            
+            # cldtaulw[:, 0, 1:] = self.rlw.outdict_gt4py["cldtaulw"][:,0,1:]
+            transfer_values(self.rlw.outdict_gt4py["cldtaulw"], cldtaulw,
+                            domain=shape_nlp1, origin=default_origin)
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps
-            Radtend["tsflw"][:,0] = tsfa[:, 0]
+            # Radtend["tsflw"][:,0] = tsfa[:, 0]
+            transfer_values_2d(tsfa, Radtend["tsflw"],
+                               domain=shape_nlp1, origin=default_origin)
 
-            for k in range(LM):
-                k1 = k + kd
-                Radtend["htrlw"][:IM, 0, k+1] = htlwc[:IM, 0, k1+1]
+            # for k in range(LM):
+            #     k1 = k + kd
+            #     Radtend["htrlw"][:IM, 0, k+1] = htlwc[:IM, 0, k1+1]
+            transfer_values(self.rlw.outdict_gt4py["htlwc"], Radtend["htrlw"],
+                            domain=shape_nlp1, origin=default_origin)
 
             # --- repopulate the points above levr
             if LM < LEVS:
                 for k in range(LM, LEVS):
                     Radtend["htrlw"][IM, 0, k+1] = Radtend["htrlw"][:IM, 0, LM - 1+1]
 
+                transfer_values_1d_to_3d(Radtend["htrlw"][:IM, 0, LM - 1+1],Radtend["htrlw"],
+                                        domain=(IM, 1, LEVS-LM), origin=(0,0,LM))
+
             if Model["lwhtr"]:
-                for k in range(LM):
-                    k1 = k + kd
-                    Radtend["lwhc"][:IM, 0, k+1] = htlw0[:IM, k1]
+                # for k in range(LM):
+                #     k1 = k + kd
+                #     Radtend["lwhc"][:IM, 0, k+1] = htlw0[:IM, k1]
+                transfer_values(self.rlw.outdict_gt4py["htlw0"], Radtend["lwhc"],
+                                domain=shape_nlp1, origin=default_origin)
 
                 # --- repopulate the points above levr
                 if LM < LEVS:
