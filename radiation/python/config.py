@@ -38,12 +38,12 @@ if IS_DOCKER:
         SW_SERIALIZED_DIR = "/work/radiation/fortran/radsw/dump"
         FORCING_DIR = "/work/radiation/python/forcing"
 else:
-    SERIALBOX_DIR = "/home/ckung/Documents/Code/serialbox/install"
-    LOOKUP_DIR = "/home/ckung/Documents/Code/physics_standalone/radiation/python/lookupdata"
-    FORTRANDATA_DIR = "/home/ckung/Documents/Code/physics_standalone/radiation/fortran/data"
-    LW_SERIALIZED_DIR = "/home/ckung/Documents/Code/physics_standalone/radiation/fortran/radlw/dump"
-    SW_SERIALIZED_DIR = "/home/ckung/Documents/Code/physics_standalone/radiation/fortran/radsw/dump"
-    FORCING_DIR = "/home/ckung/Documents/Code/physics_standalone/radiation/python/forcing"
+    SERIALBOX_DIR = "/path/to/serialbox/install"
+    LOOKUP_DIR = "/path/to/physics_standalone/radiation/python/lookupdata"
+    FORTRANDATA_DIR = "/path/to/physics_standalone/radiation/fortran/data"
+    LW_SERIALIZED_DIR = "/path/to/physics_standalone/radiation/fortran/radlw/dump"
+    SW_SERIALIZED_DIR = "/path/to/physics_standalone/radiation/fortran/radsw/dump"
+    FORCING_DIR = "/path/to/physics_standalone/radiation/python/forcing"
 
 backend = "gtc:gt:cpu_ifirst"
 
