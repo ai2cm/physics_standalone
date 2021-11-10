@@ -8,7 +8,7 @@ sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
 from config import *
-from stencils_radiation_driver import calculate_cosine_solar_zenith_angle, coszmn_stencil_2
+from stencils_radiation_driver import calculate_cosine_solar_zenith_angle
 
 class AstronomyClass:
     VTAGAST = "NCEP-Radiation_astronomy v5.2  Jan 2013 "

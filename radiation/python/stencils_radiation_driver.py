@@ -598,7 +598,7 @@ def add_cond_cloud_water(deltaq : FIELD_FLT,
 			 "con_pi" : con_pi,
 		 	}
 		 )
-def progcld4_stencil(rew : FIELD_FLT,
+def prognostic_cloud_gfdl_microphysics(rew : FIELD_FLT,
 					 rei : FIELD_FLT,
 					 rer : FIELD_FLT,
 					 res : FIELD_FLT,

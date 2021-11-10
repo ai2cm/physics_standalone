@@ -7,7 +7,7 @@ sys.path.insert(0, "..")
 from phys_const import con_ttp, con_pi, con_g, con_rd, con_t0c, con_thgni
 from radphysparam import lcrick, lcnorm, lnoprec
 from config import *
-from stencils_radiation_driver import progcld4_stencil
+from stencils_radiation_driver import prognostic_cloud_gfdl_microphysics
 
 class CloudClass:
     VTAGCLD = "NCEP-Radiation_clouds    v5.1  Nov 2012 "
@@ -1181,7 +1181,7 @@ class CloudClass:
                                    shape=(IX, 1),
                                    dtype=DTYPE_FLT)
 
-        progcld4_stencil(rew, rei, rer, res, tem2d, clwf, clw, ptop1, clouds, tlyr, rxlat, xlat,
+        prognostic_cloud_gfdl_microphysics(rew, rei, rer, res, tem2d, clwf, clw, ptop1, clouds, tlyr, rxlat, xlat,
                          cnvw, delp, cip, cwp, slmsk, cldtot, plyr, tvly, de_lgth, self.gord,
                          self.climit, self.climit2, self.gfac, self.iovr,
                          self.reliq_def, self.reice_def, self.rrain_def, self.rsnow_def,
