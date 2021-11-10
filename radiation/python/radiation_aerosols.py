@@ -9,7 +9,7 @@ from radlw.radlw_param import NBDLW, wvnlw1, wvnlw2
 from radsw.radsw_param import nbdsw, wvnum1, wvnum2, NSWSTR
 from phys_const import con_pi, con_plnk, con_c, con_boltz, con_t0c, con_rd, con_g
 from radphysparam import aeros_file, lalw1bd
-from stencils_radiation_driver import aerosol_stencil, comp_height_layer_ivflip0, comp_height_layer_ivflip1, bound_interpol
+from stencils_radiation_driver import radians2degrees, compute_height_layer_toa2surface, compute_height_layer_surface2toa, bound_interpol
 
 from config import *
 
@@ -1580,7 +1580,7 @@ class AerosolClass:
 
         # Convert lat/lon from radiance to degree.
 
-        aerosol_stencil(alat, alon, xlat, xlon, rdg, domain=shape_nlp1, origin=default_origin)
+        radians2degrees(alat, alon, xlat, xlon, rdg, domain=shape_nlp1, origin=default_origin)
 
         # Compute level height and layer thickness.
 
@@ -1588,10 +1588,10 @@ class AerosolClass:
 
             if self.ivflip == 1:  # input from sfc to toa
 
-                comp_height_layer_ivflip1(dz, hz, prsi, prsl, tvly, rovg, domain=shape_nlp1, origin=default_origin)
+                compute_height_layer_surface2toa(dz, hz, prsi, prsl, tvly, rovg, domain=shape_nlp1, origin=default_origin)
 
             else:  # input from toa to sfc
-                comp_height_layer_ivflip0(dz, hz, prsi, prsl, tvly, rovg, domain=shape_nlp1, origin=default_origin)
+                compute_height_layer_toa2surface(dz, hz, prsi, prsl, tvly, rovg, domain=shape_nlp1, origin=default_origin)
 
             # -# Calculate SW aerosol optical properties for the corresponding
             #    frequency bands:

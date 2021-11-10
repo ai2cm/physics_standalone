@@ -306,7 +306,7 @@ def comp_height_layer_fxn(prsi, p_val, rovg, tvly):
 	return rovg * (log(prsi) - log(p_val)) * tvly
 
 @stencil(backend=backend)
-def aerosol_stencil(alat : FIELD_2D,
+def radians2degrees(alat : FIELD_2D,
 					alon : FIELD_2D,
 					xlat : FIELD_1D,
 					xlon : FIELD_1D,
@@ -316,7 +316,7 @@ def aerosol_stencil(alat : FIELD_2D,
 		alat, alon = lat_lon_convert(alat, alon, xlat, xlon, rdg)
 
 @stencil(backend=backend)
-def comp_height_layer_ivflip1(dz : FIELD_FLT, 
+def compute_height_layer_surface2toa(dz : FIELD_FLT, 
 					  hz : FIELD_FLT,
 					  prsi : FIELD_FLT, 
 					  prsl : FIELD_FLT, 
@@ -336,7 +336,7 @@ def comp_height_layer_ivflip1(dz : FIELD_FLT,
 			hz = hz[0,0,-1] + dz[0,0,-1]
 
 @stencil(backend=backend)
-def comp_height_layer_ivflip0(dz : FIELD_FLT, 
+def compute_height_layer_toa2surface(dz : FIELD_FLT, 
 					  hz : FIELD_FLT,
 					  prsi : FIELD_FLT, 
 					  prsl : FIELD_FLT, 
