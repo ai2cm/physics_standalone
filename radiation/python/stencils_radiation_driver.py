@@ -145,29 +145,29 @@ def getozn(olyr : FIELD_FLT,
 		olyr[0,0,0] = max(QMIN, tracer1[0,0,0][ntoz-1])
 
 @stencil(backend=backend)
-def coszmn_stencil_1(coslat : FIELD_1D,
-					 coszen : FIELD_2D,
-					 istsun : FIELD_2D,
-					 sinlat : FIELD_1D,
-					 xlon   : FIELD_1D,
-					 cdec   : float,
-					 cns    : float,
-					 czlimit: float,
-					 sdec   : float):
+def calculate_cosine_solar_zenith_angle(coslat : FIELD_1D,
+										coszdg : FIELD_2D,
+										coszen : FIELD_2D,
+										istsun : FIELD_2D,
+										sinlat : FIELD_1D,
+										xlon   : FIELD_1D,
+										cdec   : float,
+										nstp : int,
+										solang : float,
+										anginc : DTYPE_FLT,
+										sollag : float,
+										czlimit: float,
+										sdec   : float,
+										rstp   : float,):
 	with computation(FORWARD), interval(0,1):
-		coszn = sdec * sinlat[0] + cdec * coslat[0] * cos(
-                    cns + xlon[0]
-                )
-		coszen[0,0] = coszen[0,0] + max(0.0, coszn)
-		if coszn > czlimit:
-			istsun[0,0] = istsun[0,0] + 1
-
-@stencil(backend=backend)
-def coszmn_stencil_2(coszdg : FIELD_2D,
-					 coszen : FIELD_2D,
-					 istsun : FIELD_2D,
-					 rstp   : float):
-	with computation(FORWARD), interval(0,1):
+		for it in range(nstp):
+			cns = solang + (it + 0.5) * anginc + sollag
+			coszn = sdec * sinlat[0] + cdec * coslat[0] * cos(
+						cns + xlon[0]
+					)
+			coszen[0,0] = coszen[0,0] + max(0.0, coszn)
+			if coszn > czlimit:
+				istsun[0,0] = istsun[0,0] + 1
 		coszdg[0,0] = coszen[0,0] * rstp
 		if istsun[0,0] > 0:
 			coszen[0,0] = coszen[0,0] / istsun[0,0]

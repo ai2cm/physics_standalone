@@ -8,7 +8,7 @@ sys.path.insert(0, "..")
 from phys_const import con_pi, con_solr, con_solr_old
 from radphysparam import solar_file
 from config import *
-from stencils_radiation_driver import coszmn_stencil_1, coszmn_stencil_2
+from stencils_radiation_driver import calculate_cosine_solar_zenith_angle, coszmn_stencil_2
 
 class AstronomyClass:
     VTAGAST = "NCEP-Radiation_astronomy v5.2  Jan 2013 "
@@ -676,27 +676,21 @@ class AstronomyClass:
         solang = self.pid12 * (solhr - 12.0)  # solar angle at present time
         rstp = 1.0 / float(self.nstp)
 
-        for it in range(self.nstp):
-            cns = solang + (it + 0.5) * self.anginc + self.sollag
-            coszmn_stencil_1(coslat,
-                             coszen,
-                             istsun,
-                             sinlat,
-                             xlon,
-                             self.cdec,
-                             cns[0],
-                             self.czlimt,
-                             self.sdec,
-                             domain=shape,
-                             origin=default_origin)
-
-        #  --- ...  compute time averages
-
-        coszmn_stencil_2(coszdg,
-                         coszen,
-                         istsun,
-                         rstp,
-                         domain=shape,
-                         origin=default_origin)
+        calculate_cosine_solar_zenith_angle(coslat,
+                                            coszdg,
+                                            coszen,
+                                            istsun,
+                                            sinlat,
+                                            xlon,
+                                            self.cdec,
+                                            self.nstp,
+                                            solang,
+                                            self.anginc[0],
+                                            self.sollag,
+                                            self.czlimt,
+                                            self.sdec,
+                                            rstp,
+                                            domain=shape,
+                                            origin=default_origin)
 
         return coszen, coszdg
