@@ -1,4 +1,3 @@
-import gt4py
 import numpy as np
 import warnings
 
@@ -12,8 +11,8 @@ from radiation_aerosols import AerosolClass
 from radiation_clouds import CloudClass
 from radiation_gases import GasClass
 from radiation_sfc import SurfaceClass
-from radlw.radlw_main_gt4py import RadLWClass
-from radsw.radsw_main_gt4py import RadSWClass
+from radlw.radlw_main import RadLWClass
+from radsw.radsw_main import RadSWClass
 
 
 class RadiationDriver:
@@ -312,7 +311,6 @@ class RadiationDriver:
         Tbd,
         Radtend,
         Diag,
-        Rank
     ):
 
         if not (Model["lsswr"] or Model["lslwr"]):
@@ -337,189 +335,41 @@ class RadiationDriver:
 
         LP1 = LM + 1  # num of in/out levels
 
-        # tskn = np.zeros(IM)
-        tskn = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
-        # tsfa = np.zeros(IM)
-        tsfa = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
-        # tsfg = np.zeros(IM)
-        tsfg = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
-
-        # tem1d = np.zeros(IM)
-        tem1d = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
-        # alb1d = np.zeros(IM)
-        alb1d = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1),
-                                   dtype=DTYPE_FLT)
+        tskn = np.zeros(IM)
+        tsfa = np.zeros(IM)
+        tsfg = np.zeros(IM)
+        tem1d = np.zeros(IM)
+        alb1d = np.zeros(IM)
         idxday = np.zeros(IM, dtype=DTYPE_INT)
-        # idxday = gt4py.storage.zeros(backend=backend, 
-        #                            default_origin=default_origin,
-        #                            shape=(IM, 1),
-        #                            dtype=DTYPE_BOOL)
 
-        # plvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
-        plvl = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # tlvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
-        tlvl = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
+        plvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
+        tlvl = np.zeros((IM, Model["levr"] + self.LTP + 1))
+        tem2db = np.zeros((IM, Model["levr"] + self.LTP + 1))
 
-        # tem2db = np.zeros((IM, Model["levr"] + self.LTP + 1))
-        tem2db = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
+        plyr = np.zeros((IM, Model["levr"] + self.LTP))
+        tlyr = np.zeros((IM, Model["levr"] + self.LTP))
+        olyr = np.zeros((IM, Model["levr"] + self.LTP))
+        qlyr = np.zeros((IM, Model["levr"] + self.LTP))
+        rhly = np.zeros((IM, Model["levr"] + self.LTP))
+        tvly = np.zeros((IM, Model["levr"] + self.LTP))
+        delp = np.zeros((IM, Model["levr"] + self.LTP))
+        qstl = np.zeros((IM, Model["levr"] + self.LTP))
+        cldcov = np.zeros((IM, Model["levr"] + self.LTP))
+        deltaq = np.zeros((IM, Model["levr"] + self.LTP))
+        cnvc = np.zeros((IM, Model["levr"] + self.LTP))
+        cnvw = np.zeros((IM, Model["levr"] + self.LTP))
+        effrl = np.zeros((IM, Model["levr"] + self.LTP))
+        effri = np.zeros((IM, Model["levr"] + self.LTP))
+        effrr = np.zeros((IM, Model["levr"] + self.LTP))
+        effrs = np.zeros((IM, Model["levr"] + self.LTP))
+        dz = np.zeros((IM, Model["levr"] + self.LTP))
+        prslk1 = np.zeros((IM, Model["levr"] + self.LTP))
+        tem2da = np.zeros((IM, Model["levr"] + self.LTP))
 
-        # plyr = np.zeros((IM, Model["levr"] + self.LTP))
-        plyr = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # tlyr = np.zeros((IM, Model["levr"] + self.LTP))
-        tlyr = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # olyr = np.zeros((IM, Model["levr"] + self.LTP))
-        olyr = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # qlyr = np.zeros((IM, Model["levr"] + self.LTP))
-        qlyr = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # rhly = np.zeros((IM, Model["levr"] + self.LTP))
-        rhly = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # tvly = np.zeros((IM, Model["levr"] + self.LTP))
-        tvly = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # delp = np.zeros((IM, Model["levr"] + self.LTP))
-        delp = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # qstl = np.zeros((IM, Model["levr"] + self.LTP))
-        qstl = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # cldcov = np.zeros((IM, Model["levr"] + self.LTP))
-        cldcov = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # deltaq = np.zeros((IM, Model["levr"] + self.LTP))
-        deltaq = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # cnvc = np.zeros((IM, Model["levr"] + self.LTP))
-        cnvc = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # cnvw = np.zeros((IM, Model["levr"] + self.LTP))
-        cnvw = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # effrl = np.zeros((IM, Model["levr"] + self.LTP))
-        effrl = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # effri = np.zeros((IM, Model["levr"] + self.LTP))
-        effri = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # effrr = np.zeros((IM, Model["levr"] + self.LTP))
-        effrr = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # effrs = np.zeros((IM, Model["levr"] + self.LTP))
-        effrs = gt4py.storage.zeros(backend=backend, 
-                                   default_origin=default_origin,
-                                   shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                   dtype=DTYPE_FLT)
-        # dz = np.zeros((IM, Model["levr"] + self.LTP))
-        dz = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
-        # prslk1 = np.zeros((IM, Model["levr"] + self.LTP))
-        prslk1 = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
-        # tem2da = np.zeros((IM, Model["levr"] + self.LTP))
-        tem2da = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
+        tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
+        ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
 
-        # tracer1 = np.zeros((IM, Model["levr"] + self.LTP, NTRAC))
-        tracer1 = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=(DTYPE_FLT, (NTRAC,)))
-
-
-        # ccnd = np.zeros((IM, Model["levr"] + self.LTP, min(4, Model["ncnd"])))
-        ccnd = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=(DTYPE_FLT, (min(4, Model["ncnd"]),)))
-
-        # cldtausw = np.zeros((IM, Model["levr"] + self.LTP))
-        cldtausw = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
-
-        cldtaulw = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
-
-        htswc = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
-
-        htsw0 = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
-
-        htlwc = gt4py.storage.zeros(backend=backend, 
-                                 default_origin=default_origin,
-                                 shape=(IM, 1, Model["levr"] + self.LTP + 1),
-                                 dtype=DTYPE_FLT)
+        cldtausw = np.zeros((IM, Model["levr"] + self.LTP))
 
         scmpsw = dict()
 
@@ -579,12 +429,12 @@ class RadiationDriver:
 
         if self.itsfc == 0:  # use same sfc skin-air/ground temp
             for i in range(IM):
-                tskn[i,0] = Sfcprop["tsfc"][i]
-                tsfg[i,0] = Sfcprop["tsfc"][i]
+                tskn[i] = Sfcprop["tsfc"][i]
+                tsfg[i] = Sfcprop["tsfc"][i]
         else:  # use diff sfc skin-air/ground temp
             for i in range(IM):
-                tskn[i,0] = Sfcprop["tsfc"][i]
-                tsfg[i,0] = Sfcprop["tsfc"][i]
+                tskn[i] = Sfcprop["tsfc"][i]
+                tsfg[i] = Sfcprop["tsfc"][i]
 
         # Prepare atmospheric profiles for radiation input.
         #
@@ -597,65 +447,65 @@ class RadiationDriver:
             k1 = k + kd
             k2 = k + lsk
             for i in range(IM):
-                plvl[i, 0, k1 + kb] = Statein["prsi"][i, 0, k2 + kb] * 0.01  # pa to mb (hpa)
-                plyr[i, 0, k1+1] = Statein["prsl"][i, 0, k2+1] * 0.01  # pa to mb (hpa)
-                tlyr[i, 0, k1+1] = Statein["tgrs"][i, 0, k2+1]
-                prslk1[i, 0, k1+1] = Statein["prslk"][i, 0, k2+1]
+                plvl[i, k1 + kb] = Statein["prsi"][i, k2 + kb] * 0.01  # pa to mb (hpa)
+                plyr[i, k1] = Statein["prsl"][i, k2] * 0.01  # pa to mb (hpa)
+                tlyr[i, k1] = Statein["tgrs"][i, k2]
+                prslk1[i, k1] = Statein["prslk"][i, k2]
 
                 #  - Compute relative humidity.
                 es = min(
-                    Statein["prsl"][i, 0, k2+1], fpvs(Statein["tgrs"][i, 0, k2+1])
+                    Statein["prsl"][i, k2], fpvs(Statein["tgrs"][i, k2])
                 )  # fpvs and prsl in pa
                 qs = max(
-                    self.QMIN, con_eps * es / (Statein["prsl"][i, 0, k2+1] + con_epsm1 * es)
+                    self.QMIN, con_eps * es / (Statein["prsl"][i, k2] + con_epsm1 * es)
                 )
-                rhly[i, 0, k1+1] = max(
-                    0.0, min(1.0, max(self.QMIN, Statein["qgrs"][i, 0, k2+1, 0]) / qs)
+                rhly[i, k1] = max(
+                    0.0, min(1.0, max(self.QMIN, Statein["qgrs"][i, k2, 0]) / qs)
                 )
-                qstl[i, 0, k1+1] = qs
+                qstl[i, k1] = qs
 
         # --- recast remaining all tracers (except sphum) forcing them all to be positive
         for j in range(1, NTRAC):
             for k in range(LM):
                 k1 = k + kd
                 k2 = k + lsk
-                tracer1[:, 0, k1+1, j] = np.maximum(0.0, Statein["qgrs"][:, 0, k2+1, j])
+                tracer1[:, k1, j] = np.maximum(0.0, Statein["qgrs"][:, k2, j])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
-                plvl[i, 0, 1 + kd] = 0.01 * Statein["prsi"][i, 0, 0]  # pa to mb (hpa)
+                plvl[i, 1 + kd] = 0.01 * Statein["prsi"][i, 0]  # pa to mb (hpa)
 
             if lsk != 0:
                 for i in range(IM):
-                    plvl[i, 0, 1 + kd] = 0.5 * (plvl[i, 0, 2 + kd] + plvl[i, 0, 1 + kd])
+                    plvl[i, 1 + kd] = 0.5 * (plvl[i, 2 + kd] + plvl[i, 1 + kd])
         else:  # input data from sfc to top
             for i in range(IM):
-                plvl[i, 0, LP1 + kd - 1] = (
-                    0.01 * Statein["prsi"][i, 0, LP1 + lsk - 1]
+                plvl[i, LP1 + kd - 1] = (
+                    0.01 * Statein["prsi"][i, LP1 + lsk - 1]
                 )  # pa to mb (hpa)
 
             if lsk != 0:
                 for i in range(IM):
-                    plvl[i, 0, LM + kd - 1] = 0.5 * (
-                        plvl[i, 0, LP1 + k - 1] + plvl[i, 0, LM + kd - 1]
+                    plvl[i, LM + kd - 1] = 0.5 * (
+                        plvl[i, LP1 + k - 1] + plvl[i, LM + kd - 1]
                     )
 
         if self.lextop:  # values for extra top layer
             for i in range(IM):
-                plvl[i, 0, llb - 1] = self.prsmin
-                if plvl[i, 0, lla - 1] <= self.prsmin:
-                    plvl[i, 0, lla - 1] = 2.0 * self.prsmin
+                plvl[i, llb - 1] = self.prsmin
+                if plvl[i, lla - 1] <= self.prsmin:
+                    plvl[i, lla - 1] = 2.0 * self.prsmin
 
-                plyr[i, 0, lyb - 1 + 1] = 0.5 * plvl[i, 0, lla - 1]
-                tlyr[i, 0, lyb - 1 + 1] = tlyr[i, 0, lya - 1 + 1]
-                prslk1[i, 0, lyb - 1+1] = (
-                    plyr[i, 0, lyb - 1 + 1] * 0.00001
+                plyr[i, lyb - 1] = 0.5 * plvl[i, lla - 1]
+                tlyr[i, lyb - 1] = tlyr[i, lya - 1]
+                prslk1[i, lyb - 1] = (
+                    plyr[i, lyb - 1] * 0.00001
                 ) ** con_rocp  # plyr in Pa
-                rhly[i, 0, lyb - 1+1] = rhly[i, 0, lya - 1+1]
-                qstl[i, 0, lyb - 1+1] = qstl[i, 0, lya - 1+1]
+                rhly[i, lyb - 1] = rhly[i, lya - 1]
+                qstl[i, lyb - 1] = qstl[i, lya - 1]
 
             #  ---  note: may need to take care the top layer amount
-            tracer1[:, 0, lyb - 1+1, :] = tracer1[:, 0, lya - 1+1, :]
+            tracer1[:, lyb - 1, :] = tracer1[:, lya - 1, :]
 
         #  - Get layer ozone mass mixing ratio (if use ozone climatology data,
         #    call getozn()).
@@ -663,7 +513,7 @@ class RadiationDriver:
         if Model["ntoz"] > 0:  # interactive ozone generation
             for k in range(LMK):
                 for i in range(IM):
-                    olyr[i, 0, k+1] = max(self.QMIN, tracer1[i, 0, k+1, Model["ntoz"] - 1])
+                    olyr[i, k] = max(self.QMIN, tracer1[i, k, Model["ntoz"] - 1])
         else:  # climatological ozone
             print("Climatological ozone not implemented")
 
@@ -699,85 +549,85 @@ class RadiationDriver:
         #  - Get temperature at layer interface, and layer moisture.
         for k in range(1, LMK):
             for i in range(IM):
-                tem2da[i, 0, k+1] = np.log(plyr[i, 0, k+1])
-                tem2db[i, 0, k] = np.log(plvl[i, 0, k])
+                tem2da[i, k] = np.log(plyr[i, k])
+                tem2db[i, k] = np.log(plvl[i, k])
 
         if ivflip == 0:  # input data from toa to sfc
             for i in range(IM):
-                tem1d[i, 0] = self.QME6
-                tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
-                tem2db[i, 0, 0] = np.log(max(self.prsmin, plvl[i, 0, 0]))
-                tem2db[i, 0, LMP - 1] = np.log(plvl[i, 0, LMP - 1])
-                tsfa[i, 0] = tlyr[i, 0, LMK - 1 + 1]  # sfc layer air temp
-                tlvl[i, 0, 0] = tlyr[i, 0, 0+1]
-                tlvl[i, 0, LMP - 1] = tskn[i,0]
+                tem1d[i] = self.QME6
+                tem2da[i, 0] = np.log(plyr[i, 0])
+                tem2db[i, 0] = np.log(max(self.prsmin, plvl[i, 0]))
+                tem2db[i, LMP - 1] = np.log(plvl[i, LMP - 1])
+                tsfa[i] = tlyr[i, LMK - 1]  # sfc layer air temp
+                tlvl[i, 0] = tlyr[i, 0]
+                tlvl[i, LMP - 1] = tskn[i]
 
             for k in range(LM):
                 k1 = k + kd
                 for i in range(IM):
-                    qlyr[i, 0, k1+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
-                    tem1d[i, 0] = min(self.QME5, qlyr[i, k1])
-                    tvly[i, 0, k1+1] = Statein["tgrs"][i, 0, k+1] * (
-                        1.0 + con_fvirt * qlyr[i, 0, k1+1]
+                    qlyr[i, k1] = max(tem1d[i], Statein["qgrs"][i, k, 0])
+                    tem1d[i] = min(self.QME5, qlyr[i, k1])
+                    tvly[i, k1] = Statein.tgrs[i, k] * (
+                        1.0 + con_fvirt * qlyr[i, k1]
                     )  # virtual T (K)
-                    delp[i, 0, k1+1] = plvl[i, 0, k1 + 1] - plvl[i, 0, k1]
+                    delp[i, k1] = plvl[i, k1 + 1] - plvl[i, k1]
 
             if self.lextop:
                 for i in range(IM):
-                    qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
-                    tvly[i, 0, lyb - 1+1] = tvly[i, 0, lya - 1+1]
-                    delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
+                    qlyr[i, lyb - 1] = qlyr[i, lya - 1]
+                    tvly[i, lyb - 1] = tvly[i, lya - 1]
+                    delp[i, lyb - 1] = plvl[i, lla - 1] - plvl[i, llb - 1]
 
             for k in range(1, LMK):
                 for i in range(IM):
-                    tlvl[i, 0, k] = tlyr[i, 0, k+1] + (tlyr[i, 0, k - 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, 0, k] - tem2da[i, 0, k+1]
-                    ) / (tem2da[i, 0, k - 1+1] - tem2da[i, 0, k+1])
+                    tlvl[i, k] = tlyr[i, k] + (tlyr[i, k - 1] - tlyr[i, k]) * (
+                        tem2db[i, k] - tem2da[i, k]
+                    ) / (tem2da[i, k - 1] - tem2da[i, k])
 
             #  ---  ...  level height and layer thickness (km)
 
             tem0d = 0.001 * con_rog
             for i in range(IM):
                 for k in range(LMK):
-                    dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k + 1] - tem2db[i, 0, k]) * tvly[i, 0, k+1]
+                    dz[i, k] = tem0d * (tem2db[i, k + 1] - tem2db[i, k]) * tvly[i, k]
         else:
 
             for i in range(IM):
-                tem1d[i, 0] = self.QME6
-                tem2da[i, 0, 0+1] = np.log(plyr[i, 0, 0+1])
-                tem2db[i, 0, 0] = np.log(plvl[i, 0, 0])
-                tem2db[i, 0, LMP - 1] = np.log(max(self.prsmin, plvl[i, 0, LMP - 1]))
-                tsfa[i, 0] = tlyr[i, 0, 0+1]  # sfc layer air temp
-                tlvl[i, 0, 0] = tskn[i,0]
-                tlvl[i, 0, LMP - 1] = tlyr[i, 0, LMK - 1+1]
+                tem1d[i] = self.QME6
+                tem2da[i, 0] = np.log(plyr[i, 0])
+                tem2db[i, 0] = np.log(plvl[i, 0])
+                tem2db[i, LMP - 1] = np.log(max(self.prsmin, plvl[i, LMP - 1]))
+                tsfa[i] = tlyr[i, 0]  # sfc layer air temp
+                tlvl[i, 0] = tskn[i]
+                tlvl[i, LMP - 1] = tlyr[i, LMK - 1]
 
             for k in range(LM - 1, -1, -1):
                 for i in range(IM):
-                    qlyr[i, 0, k+1] = max(tem1d[i, 0], Statein["qgrs"][i, 0, k+1, 0])
-                    tem1d[i, 0] = min(self.QME5, qlyr[i, 0, k+1])
-                    tvly[i, 0, k+1] = Statein["tgrs"][i, 0, k+1] * (
-                        1.0 + con_fvirt * qlyr[i, 0, k+1]
+                    qlyr[i, k] = max(tem1d[i], Statein["qgrs"][i, k, 0])
+                    tem1d[i] = min(self.QME5, qlyr[i, k])
+                    tvly[i, k] = Statein["tgrs"][i, k] * (
+                        1.0 + con_fvirt * qlyr[i, k]
                     )  # virtual T (K)
-                    delp[i, 0, k+1] = plvl[i, 0, k] - plvl[i, 0, k + 1]
+                    delp[i, k] = plvl[i, k] - plvl[i, k + 1]
 
             if self.lextop:
                 for i in range(IM):
-                    qlyr[i, 0, lyb - 1+1] = qlyr[i, 0, lya - 1+1]
-                    tvly[i, 0, lyb - 1+1] = tvly[i, 0, lya - 1+1]
-                    delp[i, 0, lyb - 1+1] = plvl[i, 0, lla - 1] - plvl[i, 0, llb - 1]
+                    qlyr[i, lyb - 1] = qlyr[i, lya - 1]
+                    tvly[i, lyb - 1] = tvly[i, lya - 1]
+                    delp[i, lyb - 1] = plvl[i, lla - 1] - plvl[i, llb - 1]
 
             for k in range(LMK - 1):
                 for i in range(IM):
-                    tlvl[i, 0, k + 1] = tlyr[i, 0, k+1] + (tlyr[i, 0, k + 1+1] - tlyr[i, 0, k+1]) * (
-                        tem2db[i, 0, k + 1] - tem2da[i, 0, k+1]
-                    ) / (tem2da[i, 0, k + 1+1] - tem2da[i, 0, k+1])
+                    tlvl[i, k + 1] = tlyr[i, k] + (tlyr[i, k + 1] - tlyr[i, k]) * (
+                        tem2db[i, k + 1] - tem2da[i, k]
+                    ) / (tem2da[i, k + 1] - tem2da[i, k])
 
             #  ---  ...  level height and layer thickness (km)
 
             tem0d = 0.001 * con_rog
             for i in range(IM):
                 for k in range(LMK - 1, -1, -1):
-                    dz[i, 0, k+1] = tem0d * (tem2db[i, 0, k] - tem2db[i, 0, k + 1]) * tvly[i, 0, k+1]
+                    dz[i, k] = tem0d * (tem2db[i, k] - tem2db[i, k + 1]) * tvly[i, k]
 
         #  - Check for daytime points for SW radiation.
 
@@ -821,75 +671,75 @@ class RadiationDriver:
         if Model["ncnd"] == 1:  # Zhao_Carr_Sundqvist
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water/ice
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water/ice
         elif Model["ncnd"] == 2:  # MG
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
         elif Model["ncnd"] == 4:  # MG2
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
-                    ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
-                    ccnd[i, 0, k+1, 3] = tracer1[i, 0, k+1, ntsw - 1]  # snow water
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, k, 2] = tracer1[i, k, ntrw - 1]  # rain water
+                    ccnd[i, k, 3] = tracer1[i, k, ntsw - 1]  # snow water
         elif Model["ncnd"] == 5:  # GFDL MP, Thompson, MG3
             for k in range(LMK):
                 for i in range(IM):
-                    ccnd[i, 0, k+1, 0] = tracer1[i, 0, k+1, ntcw - 1]  # liquid water
-                    ccnd[i, 0, k+1, 1] = tracer1[i, 0, k+1, ntiw - 1]  # ice water
-                    ccnd[i, 0, k+1, 2] = tracer1[i, 0, k+1, ntrw - 1]  # rain water
-                    ccnd[i, 0, k+1, 3] = (
-                        tracer1[i, 0, k+1, ntsw - 1] + tracer1[i, 0, k+1, ntgl - 1]
+                    ccnd[i, k, 0] = tracer1[i, k, ntcw - 1]  # liquid water
+                    ccnd[i, k, 1] = tracer1[i, k, ntiw - 1]  # ice water
+                    ccnd[i, k, 2] = tracer1[i, k, ntrw - 1]  # rain water
+                    ccnd[i, k, 3] = (
+                        tracer1[i, k, ntsw - 1] + tracer1[i, k, ntgl - 1]
                     )  # snow + grapuel
 
         for n in range(ncndl):
             for k in range(LMK):
                 for i in range(IM):
-                    if ccnd[i, 0, k+1, n] < con_epsq:
-                        ccnd[i, 0, k+1, n] = 0.0
+                    if ccnd[i, k, n] < con_epsq:
+                        ccnd[i, k, n] = 0.0
 
         if Model["imp_physics"] == 11:
             if not Model["lgfdlmprad"]:
 
                 # rsun the  summation methods and order make the difference in calculation
-                ccnd[:, 0, 1:, 0] = tracer1[:, 0, 1:LMK+1, ntcw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntrw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntiw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntsw - 1]
-                ccnd[:, 0, 1:, 0] = ccnd[:, 0, 1:, 0] + tracer1[:, 0, 1:LMK+1, ntgl - 1]
+                ccnd[:, :, 0] = tracer1[:, :LMK, ntcw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntrw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntiw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntsw - 1]
+                ccnd[:, :, 0] = ccnd[:, :, 0] + tracer1[:, :LMK, ntgl - 1]
 
             for k in range(LMK):
                 for i in range(IM):
-                    if ccnd[i, 0, k+1, 0] < self.EPSQ:
-                        ccnd[i, 0, k+1, 0] = 0.0
+                    if ccnd[i, k, 0] < self.EPSQ:
+                        ccnd[i, k, 0] = 0.0
 
         if Model["uni_cld"]:
             if Model["effr_in"]:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
-                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
-                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
-                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
-                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
+                        cldcov[i, k1] = Tbd["phy_f3d"][i, k, Model["indcld"] - 1]
+                        effrl[i, k1] = Tbd["phy_f3d"][i, k, 1]
+                        effri[i, k1] = Tbd["phy_f3d"][i, k, 2]
+                        effrr[i, k1] = Tbd["phy_f3d"][i, k, 3]
+                        effrs[i, k1] = Tbd["phy_f3d"][i, k, 4]
             else:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        cldcov[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["indcld"] - 1]
+                        cldcov[i, k1] = Tbd["phy_f3d"][i, k, Model["indcld"] - 1]
         elif Model["imp_physics"] == 11:  # GFDL MP
-            cldcov[:IM, 0, kd+1 : LM + kd+1] = tracer1[:IM, 0, 1:LM+1, Model["ntclamt"] - 1]
+            cldcov[:IM, kd : LM + kd] = tracer1[:IM, :LM, Model["ntclamt"] - 1]
             if Model["effr_in"]:
                 for k in range(LM):
                     k1 = k + kd
                     for i in range(IM):
-                        effrl[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 0]
-                        effri[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 1]
-                        effrr[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 2]
-                        effrs[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 3]
+                        effrl[i, k1] = Tbd["phy_f3d"][i, k, 0]
+                        effri[i, k1] = Tbd["phy_f3d"][i, k, 1]
+                        effrr[i, k1] = Tbd["phy_f3d"][i, k, 2]
+                        effrs[i, k1] = Tbd["phy_f3d"][i, k, 3]
         else:  # neither of the other two cases
             cldcov = 0.0
 
@@ -905,41 +755,41 @@ class RadiationDriver:
             for k in range(LM):
                 k1 = k + kd
                 for i in range(IM):
-                    deltaq[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 4]
-                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 5]
-                    cnvc[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, 6]
+                    deltaq[i, k1] = Tbd["phy_f3d"][i, k, 4]
+                    cnvw[i, k1] = Tbd["phy_f3d"][i, k, 5]
+                    cnvc[i, k1] = Tbd["phy_f3d"][i, k, 6]
         elif (
             Model["npdf3d"] == 0 and Model["ncnvcld3d"] == 1
         ):  # same as MOdel%imp_physics=98
             for k in range(LM):
                 k1 = k + kd
                 for i in range(IM):
-                    deltaq[i, 0, k1+1] = 0.0
-                    cnvw[i, 0, k1+1] = Tbd["phy_f3d"][i, 0, k+1, Model["num_p3d"]]
-                    cnvc[i, 0, k1+1] = 0.0
+                    deltaq[i, k1] = 0.0
+                    cnvw[i, k1] = Tbd["phy_f3d"][i, k, Model["num_p3d"]]
+                    cnvc[i, k1] = 0.0
         else:  # all the rest
             for k in range(LMK):
                 for i in range(IM):
-                    deltaq[i, 0, k+1] = 0.0
-                    cnvw[i, 0, k+1] = 0.0
-                    cnvc[i, 0, k+1] = 0.0
+                    deltaq[i, k] = 0.0
+                    cnvw[i, k] = 0.0
+                    cnvc[i, k] = 0.0
 
         if self.lextop:
             for i in range(IM):
-                cldcov[i, 0, lyb - 1+1] = cldcov[i, 0, lya - 1+1]
-                deltaq[i, 0, lyb - 1+1] = deltaq[i, 0, lya - 1+1]
-                cnvw[i, 0, lyb - 1+1] = cnvw[i, 0, lya - 1+1]
-                cnvc[i, 0, lyb - 1+1] = cnvc[i, 0, lya - 1+1]
+                cldcov[i, lyb - 1] = cldcov[i, lya - 1]
+                deltaq[i, lyb - 1] = deltaq[i, lya - 1]
+                cnvw[i, lyb - 1] = cnvw[i, lya - 1]
+                cnvc[i, lyb - 1] = cnvc[i, lya - 1]
 
             if Model["effr_in"]:
                 for i in range(IM):
-                    effrl[i, 0, lyb - 1+1] = effrl[i, 0, lya - 1+1]
-                    effri[i, 0, lyb - 1+1] = effri[i, 0, lya - 1+1]
-                    effrr[i, 0, lyb - 1+1] = effrr[i, 0, lya - 1+1]
-                    effrs[i, 0, lyb - 1+1] = effrs[i, 0, lya - 1+1]
+                    effrl[i, lyb - 1] = effrl[i, lya - 1]
+                    effri[i, lyb - 1] = effri[i, lya - 1]
+                    effrr[i, lyb - 1] = effrr[i, lya - 1]
+                    effrs[i, lyb - 1] = effrs[i, lya - 1]
 
         if Model["imp_physics"] == 99:
-            ccnd[:IM, 0, 1:LMK+1, 0] = ccnd[:IM, 0, 1:LMK+1, 0] + cnvw[:IM, 0, :LMK]
+            ccnd[:IM, :LMK, 0] = ccnd[:IM, :LMK, 0] + cnvw[:IM, :LMK]
 
         clouds, cldsa, mtopa, mbota, de_lgth = self.cld.progcld4(
             plyr,
@@ -949,7 +799,7 @@ class RadiationDriver:
             qlyr,
             qstl,
             rhly,
-            ccnd[:IM, 0, :LMK+1, 0],
+            ccnd[:IM, :LMK, 0],
             cnvw,
             cnvc,
             Grid["xlat"],
@@ -977,11 +827,11 @@ class RadiationDriver:
         # mg, sfc-perts
 
         if Model["do_only_clearsky_rad"]:
-            clouds[:, 0, :, 0] = 0.0  # layer total cloud fraction
-            clouds[:, 0, :, 1] = 0.0  # layer cloud liq water path
-            clouds[:, 0, :, 3] = 0.0  # layer cloud ice water path
-            clouds[:, 0, :, 5] = 0.0  # layer rain water path
-            clouds[:, 0, :, 7] = 0.0  # layer snow water path
+            clouds[:, :, 0] = 0.0  # layer total cloud fraction
+            clouds[:, :, 1] = 0.0  # layer cloud liq water path
+            clouds[:, :, 3] = 0.0  # layer cloud ice water path
+            clouds[:, :, 5] = 0.0  # layer rain water path
+            clouds[:, :, 7] = 0.0  # layer snow water path
             cldsa[:, :] = 0.0  # fraction of clouds for low, mid, hi, tot, bl
 
         # Start SW radiation calculations
@@ -1026,61 +876,103 @@ class RadiationDriver:
                 #  - Call module_radsw_main::swrad(), to compute SW heating rates and
                 #   fluxes.
 
-                self.rsw.create_input_data_rad_driver(
-                    plyr,
-                    plvl,
-                    tlyr,
-                    tlvl,
-                    qlyr,
-                    olyr,
-                    gasvmr,
-                    clouds,
-                    faersw,
-                    sfcalb,
-                    dz,
-                    delp,
-                    de_lgth,
-                    Radtend["coszen"],
-                    Model["solcon"],
-                    nday,
-                    idxday,
-                    IM,
-                    LMK,
-                    LMP,
-                    Model["lprnt"]
-                )
-
-                self.rsw.set_locdict_zero()
-
                 if Model["swhtr"]:
-                    self.rsw.swrad(rank=Rank)
+                    (
+                        htswc,
+                        Diag["topfsw"]["upfxc"],
+                        Diag["topfsw"]["dnfxc"],
+                        Diag["topfsw"]["upfx0"],
+                        Radtend["sfcfsw"]["upfxc"],
+                        Radtend["sfcfsw"]["dnfxc"],
+                        Radtend["sfcfsw"]["upfx0"],
+                        Radtend["sfcfsw"]["dnfx0"],
+                        cldtausw,
+                        htsw0,
+                        scmpsw["uvbf0"],
+                        scmpsw["uvbfc"],
+                        scmpsw["nirbm"],
+                        scmpsw["nirdf"],
+                        scmpsw["visbm"],
+                        scmpsw["visdf"],
+                    ) = self.rsw.swrad(
+                        plyr,
+                        plvl,
+                        tlyr,
+                        tlvl,
+                        qlyr,
+                        olyr,
+                        gasvmr,
+                        clouds,
+                        Tbd["icsdsw"],
+                        faersw,
+                        sfcalb,
+                        dz,
+                        delp,
+                        de_lgth,
+                        Radtend["coszen"],
+                        Model["solcon"],
+                        nday,
+                        idxday,
+                        IM,
+                        LMK,
+                        LMP,
+                        Model["lprnt"],
+                        lhswb,
+                        lhsw0,
+                        lflxprf,
+                        lfdncmp,
+                        sw_rand_file,
+                    )
                 else:
-                    self.rsw.swrad(rank=Rank)
-
-                # htswc = np.zeros((self.rsw.outdict_gt4py["htswc"].shape[0],
-                #                   self.rsw.outdict_gt4py["htswc"].shape[2]-1)) 
-                htswc[:,0, 1:] = self.rsw.outdict_gt4py["htswc"][:,0,1:]
-                # htsw0 = np.zeros((self.rsw.outdict_gt4py["htsw0"].shape[0],
-                #                   self.rsw.outdict_gt4py["htsw0"].shape[2]-1)) 
-                htsw0[:,0, 1:] = self.rsw.outdict_gt4py["htsw0"][:,0,1:]
-                Diag["topfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_t"][:,0]
-                Diag["topfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_t"][:,0]
-                Diag["topfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_t"][:,0]
-                Radtend["sfcfsw"]["upfxc"] = self.rsw.outdict_gt4py["upfxc_s"][:,0]
-                Radtend["sfcfsw"]["dnfxc"] = self.rsw.outdict_gt4py["dnfxc_s"][:,0]
-                Radtend["sfcfsw"]["upfx0"] = self.rsw.outdict_gt4py["upfx0_s"][:,0]
-                Radtend["sfcfsw"]["dnfx0"] = self.rsw.outdict_gt4py["dnfx0_s"][:,0]
-                scmpsw["uvbf0"] = self.rsw.outdict_gt4py["uvbf0"][:,0]
-                scmpsw["uvbfc"] = self.rsw.outdict_gt4py["uvbfc"][:,0]
-                scmpsw["nirbm"] = self.rsw.outdict_gt4py["nirbm"][:,0]
-                scmpsw["nirdf"] = self.rsw.outdict_gt4py["nirdf"][:,0]
-                scmpsw["visbm"] = self.rsw.outdict_gt4py["visbm"][:,0]
-                scmpsw["visdf"] = self.rsw.outdict_gt4py["visdf"][:,0]
-                cldtausw[:,0,1:] = self.rsw.outdict_gt4py["cldtausw"][:,0,1:]
+                    (
+                        htswc,
+                        Diag["topfsw"]["upfxc"],
+                        Diag["topfsw"]["dnfxc"],
+                        Diag["topfsw"]["upfx0"],
+                        Radtend["sfcfsw"]["upfxc"],
+                        Radtend["sfcfsw"]["dnfxc"],
+                        Radtend["sfcfsw"]["upfx0"],
+                        Radtend["sfcfsw"]["dnfx0"],
+                        cldtausw,
+                        scmpsw["uvbf0"],
+                        scmpsw["uvbfc"],
+                        scmpsw["nirbm"],
+                        scmpsw["nirdf"],
+                        scmpsw["visbm"],
+                        scmpsw["visdf"],
+                    ) = self.rsw.swrad(
+                        plyr,
+                        plvl,
+                        tlyr,
+                        tlvl,
+                        qlyr,
+                        olyr,
+                        gasvmr,
+                        clouds,
+                        Tbd["icsdsw"],
+                        faersw,
+                        sfcalb,
+                        dz,
+                        delp,
+                        de_lgth,
+                        Radtend["coszen"],
+                        Model["solcon"],
+                        nday,
+                        idxday,
+                        IM,
+                        LMK,
+                        LMP,
+                        Model["lprnt"],
+                        lhswb,
+                        lhsw0,
+                        lflxprf,
+                        lfdncmp,
+                        sw_rand_file,
+                    )
 
                 for k in range(LM):
                     k1 = k + kd
-                    Radtend["htrsw"][:IM, k] = htswc[:IM, 0, k1+1]
+                    Radtend["htrsw"][:IM, k] = htswc[:IM, k1]
 
                 #     We are assuming that radiative tendencies are from bottom to top
                 # --- repopulate the points above levr i.e. LM
@@ -1091,7 +983,7 @@ class RadiationDriver:
                 if Model["swhtr"]:
                     for k in range(LM):
                         k1 = k + kd
-                        Radtend["swhc"][:IM, k] = htsw0[:IM, 0, k1+1]
+                        Radtend["swhc"][:IM, k] = htsw0[:IM, k1]
 
                     # --- repopulate the points above levr i.e. LM
                     if LM < LEVS:
@@ -1103,40 +995,40 @@ class RadiationDriver:
                 #    output.
 
                 for i in range(IM):
-                    Coupling["nirbmdi"][i,0] = scmpsw["nirbm"][i]
-                    Coupling["nirdfdi"][i,0] = scmpsw["nirdf"][i]
-                    Coupling["visbmdi"][i,0] = scmpsw["visbm"][i]
-                    Coupling["visdfdi"][i,0] = scmpsw["visdf"][i]
+                    Coupling["nirbmdi"][i] = scmpsw["nirbm"][i]
+                    Coupling["nirdfdi"][i] = scmpsw["nirdf"][i]
+                    Coupling["visbmdi"][i] = scmpsw["visbm"][i]
+                    Coupling["visdfdi"][i] = scmpsw["visdf"][i]
 
-                    Coupling["nirbmui"][i,0] = scmpsw["nirbm"][i] * sfcalb[i, 0]
-                    Coupling["nirdfui"][i,0] = scmpsw["nirdf"][i] * sfcalb[i, 1]
-                    Coupling["visbmui"][i,0] = scmpsw["visbm"][i] * sfcalb[i, 2]
-                    Coupling["visdfui"][i,0] = scmpsw["visdf"][i] * sfcalb[i, 3]
+                    Coupling["nirbmui"][i] = scmpsw["nirbm"][i] * sfcalb[i, 0]
+                    Coupling["nirdfui"][i] = scmpsw["nirdf"][i] * sfcalb[i, 1]
+                    Coupling["visbmui"][i] = scmpsw["visbm"][i] * sfcalb[i, 2]
+                    Coupling["visdfui"][i] = scmpsw["visdf"][i] * sfcalb[i, 3]
 
             else:
 
                 Radtend["htrsw"][:, :] = 0.0
 
                 for i in range(IM):
-                    Coupling["nirbmdi"][i,0] = 0.0
-                    Coupling["nirdfdi"][i,0] = 0.0
-                    Coupling["visbmdi"][i,0] = 0.0
-                    Coupling["visdfdi"][i,0] = 0.0
-                    Coupling["nirbmui"][i,0] = 0.0
-                    Coupling["nirdfui"][i,0] = 0.0
-                    Coupling["visbmui"][i,0] = 0.0
-                    Coupling["visdfui"][i,0] = 0.0
+                    Coupling["nirbmdi"][i] = 0.0
+                    Coupling["nirdfdi"][i] = 0.0
+                    Coupling["visbmdi"][i] = 0.0
+                    Coupling["visdfdi"][i] = 0.0
+                    Coupling["nirbmui"][i] = 0.0
+                    Coupling["nirdfui"][i] = 0.0
+                    Coupling["visbmui"][i] = 0.0
+                    Coupling["visdfui"][i] = 0.0
 
                 if Model["swhtr"]:
                     Radtend["swhc"][:, :] = 0
-                    cldtausw[:, 0, 1:] = 0.0
+                    cldtausw[:, :] = 0.0
 
             # --- radiation fluxes for other physics processes
             for i in range(IM):
-                Coupling["sfcnsw"][i,0] = (
+                Coupling["sfcnsw"][i] = (
                     Radtend["sfcfsw"]["dnfxc"][i] - Radtend["sfcfsw"]["upfxc"][i]
                 )
-                Coupling["sfcdsw"][i,0] = Radtend["sfcfsw"]["dnfxc"][i]
+                Coupling["sfcdsw"][i] = Radtend["sfcfsw"]["dnfxc"][i]
 
         # Start LW radiation calculations
         if Model["lslwr"]:
@@ -1157,64 +1049,88 @@ class RadiationDriver:
                 IM,
             )
 
-            # Take current radiation_driver variables that're inputs to the LW scheme
-            # and convert them into storages
-            self.rlw.create_input_data_rad_driver(
-                plyr,
-                plvl,
-                tlyr,
-                tlvl,
-                qlyr,
-                olyr,
-                gasvmr,
-                clouds,
-                Tbd["icsdlw"],
-                faerlw,
-                Radtend["semis"],
-                tsfg,
-                dz,
-                delp,
-                de_lgth,
-                IM,
-                LMK,
-                LMP,
-                Model["lprnt"],
-            )
-
-            self.rlw.set_locdict_zero()
-
             #  - Call module_radlw_main::lwrad(), to compute LW heating rates and
             #    fluxes.
 
             if Model["lwhtr"]:
-                self.rlw.lwrad(rank=Rank)
+                (
+                    htlwc,
+                    Diag["topflw"]["upfxc"],
+                    Diag["topflw"]["upfx0"],
+                    Radtend["sfcflw"]["upfxc"],
+                    Radtend["sfcflw"]["upfx0"],
+                    Radtend["sfcflw"]["dnfxc"],
+                    Radtend["sfcflw"]["dnfx0"],
+                    cldtaulw,
+                    htlw0,
+                ) = self.rlw.lwrad(
+                    plyr,
+                    plvl,
+                    tlyr,
+                    tlvl,
+                    qlyr,
+                    olyr,
+                    gasvmr,
+                    clouds,
+                    Tbd["icsdlw"],
+                    faerlw,
+                    Radtend["semis"],
+                    tsfg,
+                    dz,
+                    delp,
+                    de_lgth,
+                    IM,
+                    LMK,
+                    LMP,
+                    Model["lprnt"],
+                    lhlwb,
+                    lhlw0,
+                    lflxprf,
+                    lw_rand_file,
+                )
             else:
-                self.rlw.lwrad(rank=Rank)
-
-            # Write the outputs from the rlw.lwrad execution back into the radiation scheme
-            # htlwc = np.zeros((self.rlw.outdict_gt4py["htlwc"].shape[0],
-            #                   self.rlw.outdict_gt4py["htlwc"].shape[2]-1)) 
-            htlwc[:,0, 1:] = self.rlw.outdict_gt4py["htlwc"][:,0,1:]
-            htlw0 = np.zeros((self.rlw.outdict_gt4py["htlw0"].shape[0],
-                              self.rlw.outdict_gt4py["htlw0"].shape[2]-1)) 
-            htlw0[:,:] = self.rlw.outdict_gt4py["htlw0"][:,0,1:]
-            Diag["topflw"]["upfxc"] = self.rlw.outdict_gt4py["upfxc_t"][:,0]
-            Diag["topflw"]["upfx0"] = self.rlw.outdict_gt4py["upfx0_t"][:,0]
-            Radtend["sfcflw"]["upfxc"] = self.rlw.outdict_gt4py["upfxc_s"][:,0]
-            Radtend["sfcflw"]["upfx0"] = self.rlw.outdict_gt4py["upfx0_s"][:,0]
-            Radtend["sfcflw"]["dnfxc"] = self.rlw.outdict_gt4py["dnfxc_s"][:,0]
-            Radtend["sfcflw"]["dnfx0"] = self.rlw.outdict_gt4py["dnfx0_s"][:,0]
-            # cldtaulw = np.zeros((self.rlw.outdict_gt4py["cldtaulw"].shape[0],
-            #                      self.rlw.outdict_gt4py["cldtaulw"].shape[2]-1))
-            cldtaulw[:, 0, 1:] = self.rlw.outdict_gt4py["cldtaulw"][:,0,1:]
+                (
+                    htlwc,
+                    Diag["topflw"]["upfxc"],
+                    Diag["topflw"]["upfx0"],
+                    Radtend["sfcflw"]["upfxc"],
+                    Radtend["sfcflw"]["upfx0"],
+                    Radtend["sfcflw"]["dnfxc"],
+                    Radtend["sfcflw"]["dnfx0"],
+                    cldtaulw,
+                ) = self.rlw.lwrad(
+                    plyr,
+                    plvl,
+                    tlyr,
+                    tlvl,
+                    qlyr,
+                    olyr,
+                    gasvmr,
+                    clouds,
+                    Tbd["icsdlw"],
+                    faerlw,
+                    Radtend["semis"],
+                    tsfg,
+                    dz,
+                    delp,
+                    de_lgth,
+                    IM,
+                    LMK,
+                    LMP,
+                    Model["lprnt"],
+                    lhlwb,
+                    lhlw0,
+                    lflxprf,
+                    lw_rand_file,
+                )
 
             # Save calculation results
             #  - Save surface air temp for diurnal adjustment at model t-steps
-            Radtend["tsflw"][:] = tsfa[:, 0]
+            Radtend["tsflw"][:] = tsfa[:]
 
             for k in range(LM):
                 k1 = k + kd
-                Radtend["htrlw"][:IM, k] = htlwc[:IM, 0, k1+1]
+                Radtend["htrlw"][:IM, k] = htlwc[:IM, k1]
 
             # --- repopulate the points above levr
             if LM < LEVS:
@@ -1232,7 +1148,7 @@ class RadiationDriver:
                         Radtend["lwhc"][:IM, k] = Radtend["lwhc"][:IM, LM - 1]
 
             # --- radiation fluxes for other physics processes
-            Coupling["sfcdlw"][:,0] = Radtend["sfcflw"]["dnfxc"]
+            Coupling["sfcdlw"][:] = Radtend["sfcflw"]["dnfxc"]
 
         #  - For time averaged output quantities (including total-sky and
         #    clear-sky SW and LW fluxes at TOA and surface; conventional
@@ -1371,23 +1287,23 @@ class RadiationDriver:
                         Diag["fluxr"][i, 6 - j] = Diag["fluxr"][i, 6 - j] + tem0d
                         Diag["fluxr"][i, 9 - j] = (
                             Diag["fluxr"][i, 9 - j]
-                            + tem0d * Statein["prsi"][i, 0, itop + kt - 1]
+                            + tem0d * Statein["prsi"][i, itop + kt - 1]
                         )
                         Diag["fluxr"][i, 12 - j] = (
                             Diag["fluxr"][i, 12 - j]
-                            + tem0d * Statein["prsi"][i, 0, ibtc + kb - 1]
+                            + tem0d * Statein["prsi"][i, ibtc + kb - 1]
                         )
                         Diag["fluxr"][i, 15 - j] = (
                             Diag["fluxr"][i, 15 - j]
-                            + tem0d * Statein["tgrs"][i, 0, itop - 1+1]
+                            + tem0d * Statein["tgrs"][i, itop - 1]
                         )
 
                         # Anning adds optical depth and emissivity output
                         tem1 = 0.0
                         tem2 = 0.0
                         for k in range(ibtc - 1, itop):
-                            tem1 = tem1 + cldtausw[i, 0, k+1]  # approx .55 mu channel
-                            tem2 = tem2 + cldtaulw[i, 0, k+1]  # approx 10. mu channel
+                            tem1 = tem1 + cldtausw[i, k]  # approx .55 mu channel
+                            tem2 = tem2 + cldtaulw[i, k]  # approx 10. mu channel
 
                         Diag["fluxr"][i, 41 - j] = (
                             Diag["fluxr"][i, 41 - j] + tem0d * tem1
