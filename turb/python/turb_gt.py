@@ -178,40 +178,63 @@ def satmedmfvdif_gt(
     kmscu = int(km / 2)
 
     # 3D GT storage
+    # qcko = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_FLT,
+    #     shape=(im, km + 1, ntrac),
+    #     default_origin=(0, 0, 0),
+    # )
+
     qcko = gt_storage.zeros(
         backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, km + 1, ntrac),
+        dtype=(DTYPE_FLT, (ntrac,)),
+        shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
+
+    # qcdo = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_FLT,
+    #     shape=(im, km + 1, ntrac),
+    #     default_origin=(0, 0, 0),
+    # )
+
     qcdo = gt_storage.zeros(
         backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, km + 1, ntrac),
+        dtype=(DTYPE_FLT,(ntrac,)),
+        shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
+
     f2 = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
         shape=(im, 1, km * (ntrac - 1)),
         default_origin=(0, 0, 0),
     )
-    pcnvflg_v2 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_BOOL,
-        shape=(im, km + 1, ntrac),
-        default_origin=(0, 0, 0),
-    )
-    scuflg_v2 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_BOOL,
-        shape=(im, km + 1, ntrac),
-        default_origin=(0, 0, 0),
-    )
+    # pcnvflg_v2 = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_BOOL,
+    #     shape=(im, km + 1, ntrac),
+    #     default_origin=(0, 0, 0),
+    # )
+    # scuflg_v2 = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_BOOL,
+    #     shape=(im, km + 1, ntrac),
+    #     default_origin=(0, 0, 0),
+    # )
+    # q1_gt = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_FLT,
+    #     shape=(im, km + 1, ntrac),
+    #     default_origin=(0, 0, 0),
+    # )
+
     q1_gt = gt_storage.zeros(
         backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, km + 1, ntrac),
+        dtype=(DTYPE_FLT,(ntrac,)),
+        shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
 
@@ -1041,7 +1064,8 @@ def satmedmfvdif_gt(
         domain=(im, 1, kmscu),
     )
 
-    q1_gt[:, :-1, :] = q1[:, :, :]
+    for I in range(8):
+        q1_gt[:, 0, :-1, I] = q1[:, :, I]
 
     part4(
         pcnvflg=pcnvflg,
@@ -1055,20 +1079,18 @@ def satmedmfvdif_gt(
         v1=v1,
         vcdo=vcdo,
         vcko=vcko,
-        q1=q1_gt,
         qcdo=qcdo,
-        qcko=qcko,
     )
 
-    pcnvflg_v2[:, :, 0] = pcnvflg[:, 0, :]
-    scuflg_v2[:, :, 0] = scuflg[:, 0, :]
+    # pcnvflg_v2[:, :, 0] = pcnvflg[:, 0, :]
+    # scuflg_v2[:, :, 0] = scuflg[:, 0, :]
 
     part4a(
-        pcnvflg_v2=pcnvflg_v2,
+        pcnvflg_v2=pcnvflg,
         q1=q1_gt,
         qcdo=qcdo,
         qcko=qcko,
-        scuflg_v2=scuflg_v2,
+        scuflg_v2=scuflg,
         domain=(im, km, ntrac1),
     )
 
@@ -2325,8 +2347,6 @@ def part3e(
 @gtscript.stencil(backend=backend)
 def part4(
     pcnvflg: FIELD_BOOL,
-    q1: FIELD_FLT,
-    qcko: FIELD_FLT,
     qcdo: FIELD_FLT,
     scuflg: FIELD_BOOL,
     t1: FIELD_FLT,
@@ -2360,20 +2380,21 @@ def part4(
 def part4a(
     pcnvflg_v2: FIELD_BOOL,
     q1: FIELD_FLT,
-    qcdo: FIELD_FLT,
-    qcko: FIELD_FLT,
+    qcdo: FIELD_FLT_8,
+    qcko: FIELD_FLT_8,
     scuflg_v2: FIELD_BOOL,
 ):
 
-    with computation(FORWARD), interval(1, None):
-        pcnvflg_v2 = pcnvflg_v2[0, 0, -1]
-        scuflg_v2 = scuflg_v2[0, 0, -1]
+    # with computation(FORWARD), interval(1, None):
+    #     pcnvflg_v2 = pcnvflg_v2[0, 0, -1]
+    #     scuflg_v2 = scuflg_v2[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
-        if pcnvflg_v2[0, 0, 0]:
-            qcko = q1[0, 0, 0]
-        if scuflg_v2[0, 0, 0]:
-            qcdo = q1[0, 0, 0]
+        for I in range(8):
+            if pcnvflg_v2[0, 0, 0]:
+                qcko[0,0,0][I] = q1[0, 0, 0][I]
+            if scuflg_v2[0, 0, 0]:
+                qcdo[0,0,0][I] = q1[0, 0, 0][I]
 
 
 # Possible stencil name : prandtl_comp_exchg_coeff

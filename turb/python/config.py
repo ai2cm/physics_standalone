@@ -14,6 +14,11 @@ FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLT = gtscript.Field[DTYPE_FLT]
 FIELD_FLT_IJ = gtscript.Field[gtscript.IJ, DTYPE_FLT]
 FIELD_BOOL = gtscript.Field[DTYPE_BOOL]
+
+FIELD_BOOL_8 = gtscript.Field[DTYPE_BOOL, (8,)]
+FIELD_FLT_8 = gtscript.Field[DTYPE_FLT, (8,)]
+FIELD_FLT_7 = gtscript.Field[DTYPE_FLT, (7,)
+]
 # Path of serialbox directory
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
