@@ -1093,460 +1093,460 @@ def satmedmfvdif_gt(
     # pcnvflg_v2[:, :, 0] = pcnvflg[:, 0, :]
     # scuflg_v2[:, :, 0] = scuflg[:, 0, :]
 
-    # part4a(
-    #     pcnvflg_v2=pcnvflg,
-    #     q1=q1_gt,
-    #     qcdo=qcdo,
-    #     qcko=qcko,
-    #     scuflg_v2=scuflg,
-    #     domain=(im, km, ntrac1),
-    # )
+    part4a(
+        pcnvflg_v2=pcnvflg,
+        q1=q1_gt,
+        qcdo=qcdo,
+        qcko=qcko,
+        scuflg_v2=scuflg,
+        domain=(im, 1, km),
+    )
 
-    # kpbl, hpbl, buou, xmf, tcko, qcko, ucko, vcko, xlamue = mfpblt(
-    #     im,
-    #     ix,
-    #     km,
-    #     kmpbl,
-    #     ntcw,
-    #     ntrac1,
-    #     dt2,
-    #     pcnvflg,
-    #     zl,
-    #     zm,
-    #     q1,
-    #     q1_0,
-    #     q1_ntcw,
-    #     t1,
-    #     u1,
-    #     v1,
-    #     plyr,
-    #     pix,
-    #     thlx,
-    #     thvx,
-    #     gdx,
-    #     hpbl,
-    #     kpbl,
-    #     vpert,
-    #     buou,
-    #     xmf,
-    #     tcko,
-    #     qcko,
-    #     ucko,
-    #     vcko,
-    #     xlamue,
-    #     g,
-    #     gocp,
-    #     elocp,
-    #     el2orc,
-    #     mask,
-    # )
+    kpbl, hpbl, buou, xmf, tcko, qcko, ucko, vcko, xlamue = mfpblt(
+        im,
+        ix,
+        km,
+        kmpbl,
+        ntcw,
+        ntrac1,
+        dt2,
+        pcnvflg,
+        zl,
+        zm,
+        q1,
+        q1_0,
+        q1_ntcw,
+        t1,
+        u1,
+        v1,
+        plyr,
+        pix,
+        thlx,
+        thvx,
+        gdx,
+        hpbl,
+        kpbl,
+        vpert,
+        buou,
+        xmf,
+        tcko,
+        qcko,
+        ucko,
+        vcko,
+        xlamue,
+        g,
+        gocp,
+        elocp,
+        el2orc,
+        mask,
+    )
 
-    # radj, mrad, buod, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde = mfscu(
-    #     im,
-    #     ix,
-    #     km,
-    #     kmscu,
-    #     ntcw,
-    #     ntrac1,
-    #     dt2,
-    #     scuflg,
-    #     zl,
-    #     zm,
-    #     q1,
-    #     q1_0,
-    #     q1_ntcw,
-    #     t1,
-    #     u1,
-    #     v1,
-    #     plyr,
-    #     pix,
-    #     thlx,
-    #     thvx,
-    #     thlvx,
-    #     gdx,
-    #     thetae,
-    #     radj,
-    #     krad,
-    #     mrad,
-    #     radmin,
-    #     buod,
-    #     xmfd,
-    #     tcdo,
-    #     qcdo,
-    #     ucdo,
-    #     vcdo,
-    #     xlamde,
-    #     g,
-    #     gocp,
-    #     elocp,
-    #     el2orc,
-    #     mask,
-    # )
+    radj, mrad, buod, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde = mfscu(
+        im,
+        ix,
+        km,
+        kmscu,
+        ntcw,
+        ntrac1,
+        dt2,
+        scuflg,
+        zl,
+        zm,
+        q1,
+        q1_0,
+        q1_ntcw,
+        t1,
+        u1,
+        v1,
+        plyr,
+        pix,
+        thlx,
+        thvx,
+        thlvx,
+        gdx,
+        thetae,
+        radj,
+        krad,
+        mrad,
+        radmin,
+        buod,
+        xmfd,
+        tcdo,
+        qcdo,
+        ucdo,
+        vcdo,
+        xlamde,
+        g,
+        gocp,
+        elocp,
+        el2orc,
+        mask,
+    )
 
-    # part5(
-    #     chz=chz,
-    #     ckz=ckz,
-    #     hpbl=hpbl,
-    #     kpbl=kpbl,
-    #     mask=mask,
-    #     pcnvflg=pcnvflg,
-    #     phih=phih,
-    #     phim=phim,
-    #     prn=prn,
-    #     zi=zi,
-    #     domain=(im, 1, kmpbl),
-    # )
+    part5(
+        chz=chz,
+        ckz=ckz,
+        hpbl=hpbl,
+        kpbl=kpbl,
+        mask=mask,
+        pcnvflg=pcnvflg,
+        phih=phih,
+        phim=phim,
+        prn=prn,
+        zi=zi,
+        domain=(im, 1, kmpbl),
+    )
 
-    # # Compute asymtotic mixing length
-    # for k in range(km1):
-    #     for i in range(im):
-    #         zlup = 0.0
-    #         bsum = 0.0
-    #         mlenflg = True
-    #         for n in range(k, km1):
-    #             if mlenflg:
-    #                 dz = zl[i, 0, n + 1] - zl[i, 0, n]
-    #                 ptem = gotvx[i, 0, n] * (thvx[i, 0, n + 1] - thvx[i, 0, k]) * dz
-    #                 bsum = bsum + ptem
-    #                 zlup = zlup + dz
-    #                 if bsum >= tke[i, 0, k]:
-    #                     if ptem >= 0.0:
-    #                         tem2 = max(ptem, zfmin)
-    #                     else:
-    #                         tem2 = min(ptem, -zfmin)
-    #                     ptem1 = (bsum - tke[i, 0, k]) / tem2
-    #                     zlup = zlup - ptem1 * dz
-    #                     zlup = max(zlup, 0.0)
-    #                     mlenflg = False
-    #         zldn = 0.0
-    #         bsum = 0.0
-    #         mlenflg = True
-    #         for n in range(k, -1, -1):
-    #             if mlenflg:
-    #                 if n == 0:
-    #                     dz = zl[i, 0, 0]
-    #                     tem1 = tsea[i, 0, 0] * (1.0 + fv * max(q1[i, 0, 0], qmin))
-    #                 else:
-    #                     dz = zl[i, 0, n] - zl[i, 0, n - 1]
-    #                     tem1 = thvx[i, 0, n - 1]
-    #                 ptem = gotvx[i, 0, n] * (thvx[i, 0, k] - tem1) * dz
-    #                 bsum = bsum + ptem
-    #                 zldn = zldn + dz
-    #                 if bsum >= tke[i, 0, k]:
-    #                     if ptem >= 0.0:
-    #                         tem2 = max(ptem, zfmin)
-    #                     else:
-    #                         tem2 = min(ptem, -zfmin)
-    #                     ptem1 = (bsum - tke[i, 0, k]) / tem2
-    #                     zldn = zldn - ptem1 * dz
-    #                     zldn = max(zldn, 0.0)
-    #                     mlenflg = False
+    # Compute asymtotic mixing length
+    for k in range(km1):
+        for i in range(im):
+            zlup = 0.0
+            bsum = 0.0
+            mlenflg = True
+            for n in range(k, km1):
+                if mlenflg:
+                    dz = zl[i, 0, n + 1] - zl[i, 0, n]
+                    ptem = gotvx[i, 0, n] * (thvx[i, 0, n + 1] - thvx[i, 0, k]) * dz
+                    bsum = bsum + ptem
+                    zlup = zlup + dz
+                    if bsum >= tke[i, 0, k]:
+                        if ptem >= 0.0:
+                            tem2 = max(ptem, zfmin)
+                        else:
+                            tem2 = min(ptem, -zfmin)
+                        ptem1 = (bsum - tke[i, 0, k]) / tem2
+                        zlup = zlup - ptem1 * dz
+                        zlup = max(zlup, 0.0)
+                        mlenflg = False
+            zldn = 0.0
+            bsum = 0.0
+            mlenflg = True
+            for n in range(k, -1, -1):
+                if mlenflg:
+                    if n == 0:
+                        dz = zl[i, 0, 0]
+                        tem1 = tsea[i, 0, 0] * (1.0 + fv * max(q1[i, 0, 0], qmin))
+                    else:
+                        dz = zl[i, 0, n] - zl[i, 0, n - 1]
+                        tem1 = thvx[i, 0, n - 1]
+                    ptem = gotvx[i, 0, n] * (thvx[i, 0, k] - tem1) * dz
+                    bsum = bsum + ptem
+                    zldn = zldn + dz
+                    if bsum >= tke[i, 0, k]:
+                        if ptem >= 0.0:
+                            tem2 = max(ptem, zfmin)
+                        else:
+                            tem2 = min(ptem, -zfmin)
+                        ptem1 = (bsum - tke[i, 0, k]) / tem2
+                        zldn = zldn - ptem1 * dz
+                        zldn = max(zldn, 0.0)
+                        mlenflg = False
 
-    #         tem = 0.5 * (zi[i, 0, k + 1] - zi[i, 0, k])
-    #         tem1 = min(tem, rlmn)
+            tem = 0.5 * (zi[i, 0, k + 1] - zi[i, 0, k])
+            tem1 = min(tem, rlmn)
 
-    #         ptem2 = min(zlup, zldn)
-    #         rlam[i, 0, k] = elmfac * ptem2
-    #         rlam[i, 0, k] = max(rlam[i, 0, k], tem1)
-    #         rlam[i, 0, k] = min(rlam[i, 0, k], rlmx)
+            ptem2 = min(zlup, zldn)
+            rlam[i, 0, k] = elmfac * ptem2
+            rlam[i, 0, k] = max(rlam[i, 0, k], tem1)
+            rlam[i, 0, k] = min(rlam[i, 0, k], rlmx)
 
-    #         ptem2 = math.sqrt(zlup * zldn)
-    #         ele[i, 0, k] = elefac * ptem2
-    #         ele[i, 0, k] = max(ele[i, 0, k], tem1)
-    #         ele[i, 0, k] = min(ele[i, 0, k], elmx)
+            ptem2 = math.sqrt(zlup * zldn)
+            ele[i, 0, k] = elefac * ptem2
+            ele[i, 0, k] = max(ele[i, 0, k], tem1)
+            ele[i, 0, k] = min(ele[i, 0, k], elmx)
 
-    # part6(
-    #     bf=bf,
-    #     buod=buod,
-    #     buou=buou,
-    #     chz=chz,
-    #     ckz=ckz,
-    #     dku=dku,
-    #     dkt=dkt,
-    #     dkq=dkq,
-    #     ele=ele,
-    #     elm=elm,
-    #     gdx=gdx,
-    #     gotvx=gotvx,
-    #     kpbl=kpbl,
-    #     mask=mask,
-    #     mrad=mrad,
-    #     krad=krad,
-    #     pblflg=pblflg,
-    #     pcnvflg=pcnvflg,
-    #     phim=phim,
-    #     prn=prn,
-    #     prod=prod,
-    #     radj=radj,
-    #     rdzt=rdzt,
-    #     rlam=rlam,
-    #     rle=rle,
-    #     scuflg=scuflg,
-    #     sflux=sflux,
-    #     shr2=shr2,
-    #     stress=stress,
-    #     tke=tke,
-    #     u1=u1,
-    #     ucdo=ucdo,
-    #     ucko=ucko,
-    #     ustar=ustar,
-    #     v1=v1,
-    #     vcdo=vcdo,
-    #     vcko=vcko,
-    #     xkzo=xkzo,
-    #     xkzmo=xkzmo,
-    #     xmf=xmf,
-    #     xmfd=xmfd,
-    #     zi=zi,
-    #     zl=zl,
-    #     zol=zol,
-    #     domain=(im, 1, km),
-    # )
+    part6(
+        bf=bf,
+        buod=buod,
+        buou=buou,
+        chz=chz,
+        ckz=ckz,
+        dku=dku,
+        dkt=dkt,
+        dkq=dkq,
+        ele=ele,
+        elm=elm,
+        gdx=gdx,
+        gotvx=gotvx,
+        kpbl=kpbl,
+        mask=mask,
+        mrad=mrad,
+        krad=krad,
+        pblflg=pblflg,
+        pcnvflg=pcnvflg,
+        phim=phim,
+        prn=prn,
+        prod=prod,
+        radj=radj,
+        rdzt=rdzt,
+        rlam=rlam,
+        rle=rle,
+        scuflg=scuflg,
+        sflux=sflux,
+        shr2=shr2,
+        stress=stress,
+        tke=tke,
+        u1=u1,
+        ucdo=ucdo,
+        ucko=ucko,
+        ustar=ustar,
+        v1=v1,
+        vcdo=vcdo,
+        vcko=vcko,
+        xkzo=xkzo,
+        xkzmo=xkzmo,
+        xmf=xmf,
+        xmfd=xmfd,
+        zi=zi,
+        zl=zl,
+        zol=zol,
+        domain=(im, 1, km),
+    )
 
-    # kk = max(round(dt2 / cdtn), 1)
-    # dtn = dt2 / kk
+    kk = max(round(dt2 / cdtn), 1)
+    dtn = dt2 / kk
 
-    # for n in range(kk):
-    #     part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, domain=(im, 1, km1))
+    for n in range(kk):
+        part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, domain=(im, 1, km1))
 
-    # # qcko_ntke[:, :, :] = qcko[:, :, ntke - 1].reshape((im, 1, km + 1))
-    # # qcdo_ntke[:, :, :] = qcdo[:, :, ntke - 1].reshape((im, 1, km + 1))
+    # qcko_ntke[:, :, :] = qcko[:, :, ntke - 1].reshape((im, 1, km + 1))
+    # qcdo_ntke[:, :, :] = qcdo[:, :, ntke - 1].reshape((im, 1, km + 1))
 
-    # part9(
-    #     pcnvflg=pcnvflg,
-    #     qcdo=qcdo,
-    #     qcko=qcko,
-    #     scuflg=scuflg,
-    #     tke=tke,
-    #     domain=(im, 1, km),
-    # )
+    part9(
+        pcnvflg=pcnvflg,
+        qcdo=qcdo,
+        qcko=qcko,
+        scuflg=scuflg,
+        tke=tke,
+        domain=(im, 1, km),
+    )
 
-    # part10(
-    #     kpbl=kpbl,
-    #     mask=mask,
-    #     pcnvflg=pcnvflg,
-    #     qcko=qcko,
-    #     tke=tke,
-    #     xlamue=xlamue,
-    #     zl=zl,
-    #     domain=(im, 1, kmpbl),
-    # )
+    part10(
+        kpbl=kpbl,
+        mask=mask,
+        pcnvflg=pcnvflg,
+        qcko=qcko,
+        tke=tke,
+        xlamue=xlamue,
+        zl=zl,
+        domain=(im, 1, kmpbl),
+    )
 
-    # part11(
-    #     ad=ad,
-    #     f1=f1,
-    #     krad=krad,
-    #     mask=mask,
-    #     mrad=mrad,
-    #     qcdo=qcdo,
-    #     scuflg=scuflg,
-    #     tke=tke,
-    #     xlamde=xlamde,
-    #     zl=zl,
-    #     domain=(im, 1, kmscu),
-    # )
+    part11(
+        ad=ad,
+        f1=f1,
+        krad=krad,
+        mask=mask,
+        mrad=mrad,
+        qcdo=qcdo,
+        scuflg=scuflg,
+        tke=tke,
+        xlamde=xlamde,
+        zl=zl,
+        domain=(im, 1, kmscu),
+    )
 
-    # part12(
-    #     ad=ad,
-    #     ad_p1=ad_p1,
-    #     al=al,
-    #     au=au,
-    #     del_=del_,
-    #     dkq=dkq,
-    #     dt2=dt2,
-    #     f1=f1,
-    #     f1_p1=f1_p1,
-    #     kpbl=kpbl,
-    #     krad=krad,
-    #     mask=mask,
-    #     mrad=mrad,
-    #     pcnvflg=pcnvflg,
-    #     prsl=prsl,
-    #     qcdo=qcdo,
-    #     qcko=qcko,
-    #     rdzt=rdzt,
-    #     scuflg=scuflg,
-    #     tke=tke,
-    #     xmf=xmf,
-    #     xmfd=xmfd,
-    #     domain=(im, 1, km),
-    # )
+    part12(
+        ad=ad,
+        ad_p1=ad_p1,
+        al=al,
+        au=au,
+        del_=del_,
+        dkq=dkq,
+        dt2=dt2,
+        f1=f1,
+        f1_p1=f1_p1,
+        kpbl=kpbl,
+        krad=krad,
+        mask=mask,
+        mrad=mrad,
+        pcnvflg=pcnvflg,
+        prsl=prsl,
+        qcdo=qcdo,
+        qcko=qcko,
+        rdzt=rdzt,
+        scuflg=scuflg,
+        tke=tke,
+        xmf=xmf,
+        xmfd=xmfd,
+        domain=(im, 1, km),
+    )
 
-    # tridit(au=au, cm=ad, cl=al, f1=f1, domain=(im, 1, km))
+    tridit(au=au, cm=ad, cl=al, f1=f1, domain=(im, 1, km))
 
-    # for k in range(km):
-    #     for i in range(im):
-    #         rtg[i, k, ntke - 1] = (
-    #             rtg[i, k, ntke - 1] + (f1[i, 0, k] - q1[i, k, ntke - 1]) * rdt
-    #         )
+    for k in range(km):
+        for i in range(im):
+            rtg[i, k, ntke - 1] = (
+                rtg[i, k, ntke - 1] + (f1[i, 0, k] - q1[i, k, ntke - 1]) * rdt
+            )
 
-    # for i in range(im):
-    #     ad[i, 0, 0] = 1.0
-    #     f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0, 0]
-    #     f2[i, 0, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0, 0]
+    for i in range(im):
+        ad[i, 0, 0] = 1.0
+        f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0, 0]
+        f2[i, 0, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0, 0]
 
-    # if ntrac1 >= 2:
-    #     for kk in range(1, ntrac1):
-    #         # is_ = kk * km
-    #         for i in range(im):
-    #             f2[i, 0, 0, kk] = q1[i, 0, kk]
+    if ntrac1 >= 2:
+        for kk in range(1, ntrac1):
+            # is_ = kk * km
+            for i in range(im):
+                f2[i, 0, 0, kk] = q1[i, 0, kk]
 
-    # # f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
-    # # qcdo_0[:, :, :] = qcdo[:, :, 0].reshape((im, 1, km + 1))
-    # # qcko_0[:, :, :] = qcko[:, :, 0].reshape((im, 1, km + 1))
+    # f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
+    # qcdo_0[:, :, :] = qcdo[:, :, 0].reshape((im, 1, km + 1))
+    # qcko_0[:, :, :] = qcko[:, :, 0].reshape((im, 1, km + 1))
 
-    # part13(
-    #     ad=ad,
-    #     ad_p1=ad_p1,
-    #     al=al,
-    #     au=au,
-    #     del_=del_,
-    #     dkt=dkt,
-    #     f1=f1,
-    #     f1_p1=f1_p1,
-    #     f2=f2,
-    #     f2_p1=f2_p1,
-    #     kpbl=kpbl,
-    #     krad=krad,
-    #     mask=mask,
-    #     mrad=mrad,
-    #     pcnvflg=pcnvflg,
-    #     prsl=prsl,
-    #     q1=q1_0,
-    #     qcdo=qcdo,
-    #     qcko=qcko,
-    #     rdzt=rdzt,
-    #     scuflg=scuflg,
-    #     tcdo=tcdo,
-    #     tcko=tcko,
-    #     t1=t1,
-    #     xmf=xmf,
-    #     xmfd=xmfd,
-    #     dt2=dt2,
-    #     gocp=gocp,
-    #     domain=(im, 1, km),
-    # )
+    part13(
+        ad=ad,
+        ad_p1=ad_p1,
+        al=al,
+        au=au,
+        del_=del_,
+        dkt=dkt,
+        f1=f1,
+        f1_p1=f1_p1,
+        f2=f2,
+        f2_p1=f2_p1,
+        kpbl=kpbl,
+        krad=krad,
+        mask=mask,
+        mrad=mrad,
+        pcnvflg=pcnvflg,
+        prsl=prsl,
+        q1=q1_0,
+        qcdo=qcdo,
+        qcko=qcko,
+        rdzt=rdzt,
+        scuflg=scuflg,
+        tcdo=tcdo,
+        tcko=tcko,
+        t1=t1,
+        xmf=xmf,
+        xmfd=xmfd,
+        dt2=dt2,
+        gocp=gocp,
+        domain=(im, 1, km),
+    )
 
-    # # f2[:, 0, 0:km] = f2_km[:, 0, 0:km]
+    # f2[:, 0, 0:km] = f2_km[:, 0, 0:km]
 
-    # if ntrac1 >= 2:
-    #     for kk in range(1, ntrac1):
-    #         # is_ = kk * km
-    #         for k in range(km1):
-    #             for i in range(im):
-    #                 if pcnvflg[i, 0, 0] and k < kpbl[i, 0, 0]:
-    #                     dtodsd = dt2 / del_[i, 0, k]
-    #                     dtodsu = dt2 / del_[i, 0, k + 1]
-    #                     dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
-    #                     tem = dsig * rdzt[i, 0, k]
-    #                     ptem = 0.5 * tem * xmf[i, 0, k]
-    #                     ptem1 = dtodsd * ptem
-    #                     ptem2 = dtodsu * ptem
-    #                     tem1 = qcko[i, 0, k, kk] + qcko[i, 0, k + 1, kk]
-    #                     tem2 = q1[i, k, kk] + q1[i, k + 1, kk]
-    #                     f2[i, 0, k, kk] = f2[i, 0, k, kk] - (tem1 - tem2) * ptem1
-    #                     f2[i, 0, k + 1, kk] = q1[i, k + 1, kk] + (tem1 - tem2) * ptem2
-    #                 else:
-    #                     f2[i, 0, k + 1, kk] = q1[i, k + 1, kk]
+    if ntrac1 >= 2:
+        for kk in range(1, ntrac1):
+            # is_ = kk * km
+            for k in range(km1):
+                for i in range(im):
+                    if pcnvflg[i, 0, 0] and k < kpbl[i, 0, 0]:
+                        dtodsd = dt2 / del_[i, 0, k]
+                        dtodsu = dt2 / del_[i, 0, k + 1]
+                        dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
+                        tem = dsig * rdzt[i, 0, k]
+                        ptem = 0.5 * tem * xmf[i, 0, k]
+                        ptem1 = dtodsd * ptem
+                        ptem2 = dtodsu * ptem
+                        tem1 = qcko[i, 0, k, kk] + qcko[i, 0, k + 1, kk]
+                        tem2 = q1[i, k, kk] + q1[i, k + 1, kk]
+                        f2[i, 0, k, kk] = f2[i, 0, k, kk] - (tem1 - tem2) * ptem1
+                        f2[i, 0, k + 1, kk] = q1[i, k + 1, kk] + (tem1 - tem2) * ptem2
+                    else:
+                        f2[i, 0, k + 1, kk] = q1[i, k + 1, kk]
 
-    #                 if scuflg[i, 0, 0] and k >= mrad[i, 0, 0] and k < krad[i, 0, 0]:
-    #                     dtodsd = dt2 / del_[i, 0, k]
-    #                     dtodsu = dt2 / del_[i, 0, k + 1]
-    #                     dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
-    #                     tem = dsig * rdzt[i, 0, k]
-    #                     ptem = 0.5 * tem * xmfd[i, 0, k]
-    #                     ptem1 = dtodsd * ptem
-    #                     ptem2 = dtodsu * ptem
-    #                     tem1 = qcdo[i, 0, k, kk] + qcdo[i, 0, k + 1, kk]
-    #                     tem2 = q1[i, k, kk] + q1[i, k + 1, kk]
-    #                     f2[i, 0, k, kk] = f2[i, 0, k, kk] + (tem1 - tem2) * ptem1
-    #                     f2[i, 0, k + 1, kk] = (
-    #                         f2[i, 0, k + 1, kk] - (tem1 - tem2) * ptem2
-    #                     )
+                    if scuflg[i, 0, 0] and k >= mrad[i, 0, 0] and k < krad[i, 0, 0]:
+                        dtodsd = dt2 / del_[i, 0, k]
+                        dtodsu = dt2 / del_[i, 0, k + 1]
+                        dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
+                        tem = dsig * rdzt[i, 0, k]
+                        ptem = 0.5 * tem * xmfd[i, 0, k]
+                        ptem1 = dtodsd * ptem
+                        ptem2 = dtodsu * ptem
+                        tem1 = qcdo[i, 0, k, kk] + qcdo[i, 0, k + 1, kk]
+                        tem2 = q1[i, k, kk] + q1[i, k + 1, kk]
+                        f2[i, 0, k, kk] = f2[i, 0, k, kk] + (tem1 - tem2) * ptem1
+                        f2[i, 0, k + 1, kk] = (
+                            f2[i, 0, k + 1, kk] - (tem1 - tem2) * ptem2
+                        )
 
-    # au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2)
+    au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2)
 
-    # for k in range(km):
-    #     for i in range(im):
-    #         ttend = (f1[i, 0, k] - t1[i, 0, k]) * rdt
-    #         qtend = (f2[i, 0, k, 0] - q1[i, k, 0]) * rdt
-    #         tdt[i, k] = tdt[i, k] + ttend
-    #         rtg[i, k, 0] = rtg[i, k, 0] + qtend
-    #         dtsfc[i, 0, 0] = dtsfc[i, 0, 0] + cont * del_[i, 0, k] * ttend
-    #         dqsfc[i, 0, 0] = dqsfc[i, 0, 0] + conq * del_[i, 0, k] * qtend
+    for k in range(km):
+        for i in range(im):
+            ttend = (f1[i, 0, k] - t1[i, 0, k]) * rdt
+            qtend = (f2[i, 0, k, 0] - q1[i, k, 0]) * rdt
+            tdt[i, k] = tdt[i, k] + ttend
+            rtg[i, k, 0] = rtg[i, k, 0] + qtend
+            dtsfc[i, 0, 0] = dtsfc[i, 0, 0] + cont * del_[i, 0, k] * ttend
+            dqsfc[i, 0, 0] = dqsfc[i, 0, 0] + conq * del_[i, 0, k] * qtend
 
-    # if ntrac1 >= 2:
-    #     for kk in range(1, ntrac1):
-    #         # is_ = kk * km
-    #         for k in range(km):
-    #             for i in range(im):
-    #                 rtg[i, k, kk] = rtg[i, k, kk] + (
-    #                     (f2[i, 0, k, kk] - q1[i, k, kk]) * rdt
-    #                 )
+    if ntrac1 >= 2:
+        for kk in range(1, ntrac1):
+            # is_ = kk * km
+            for k in range(km):
+                for i in range(im):
+                    rtg[i, k, kk] = rtg[i, k, kk] + (
+                        (f2[i, 0, k, kk] - q1[i, k, kk]) * rdt
+                    )
 
-    # tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
-    # # f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
+    tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
+    # f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
 
-    # part14(
-    #     ad=ad,
-    #     ad_p1=ad_p1,
-    #     al=al,
-    #     au=au,
-    #     del_=del_,
-    #     diss=diss,
-    #     dku=dku,
-    #     dtdz1=dtdz1,
-    #     f1=f1,
-    #     f1_p1=f1_p1,
-    #     f2=f2,
-    #     f2_p1=f2_p1,
-    #     kpbl=kpbl,
-    #     krad=krad,
-    #     mask=mask,
-    #     mrad=mrad,
-    #     pcnvflg=pcnvflg,
-    #     prsl=prsl,
-    #     rdzt=rdzt,
-    #     scuflg=scuflg,
-    #     spd1=spd1,
-    #     stress=stress,
-    #     tdt=tdt,
-    #     u1=u1,
-    #     ucdo=ucdo,
-    #     ucko=ucko,
-    #     v1=v1,
-    #     vcdo=vcdo,
-    #     vcko=vcko,
-    #     xmf=xmf,
-    #     xmfd=xmfd,
-    #     dspheat=dspheat,
-    #     dt2=dt2,
-    #     domain=(im, 1, km),
-    # )
+    part14(
+        ad=ad,
+        ad_p1=ad_p1,
+        al=al,
+        au=au,
+        del_=del_,
+        diss=diss,
+        dku=dku,
+        dtdz1=dtdz1,
+        f1=f1,
+        f1_p1=f1_p1,
+        f2=f2,
+        f2_p1=f2_p1,
+        kpbl=kpbl,
+        krad=krad,
+        mask=mask,
+        mrad=mrad,
+        pcnvflg=pcnvflg,
+        prsl=prsl,
+        rdzt=rdzt,
+        scuflg=scuflg,
+        spd1=spd1,
+        stress=stress,
+        tdt=tdt,
+        u1=u1,
+        ucdo=ucdo,
+        ucko=ucko,
+        v1=v1,
+        vcdo=vcdo,
+        vcko=vcko,
+        xmf=xmf,
+        xmfd=xmfd,
+        dspheat=dspheat,
+        dt2=dt2,
+        domain=(im, 1, km),
+    )
 
-    # tridi2(
-    #     a1=f1, a2=f2, au=au, cl=al, cm=ad, cu=au, r1=f1, r2=f2, domain=(im, 1, km)
-    # )
+    tridi2(
+        a1=f1, a2=f2, au=au, cl=al, cm=ad, cu=au, r1=f1, r2=f2, domain=(im, 1, km)
+    )
 
-    # part15(
-    #     del_=del_,
-    #     du=du,
-    #     dusfc=dusfc,
-    #     dv=dv,
-    #     dvsfc=dvsfc,
-    #     f1=f1,
-    #     f2=f2,
-    #     hpbl=hpbl,
-    #     hpblx=hpblx,
-    #     kpbl=kpbl,
-    #     kpblx=kpblx,
-    #     mask=mask,
-    #     u1=u1,
-    #     v1=v1,
-    #     conw=conw,
-    #     rdt=rdt,
-    #     domain=(im, 1, km),
-    # )
+    part15(
+        del_=del_,
+        du=du,
+        dusfc=dusfc,
+        dv=dv,
+        dvsfc=dvsfc,
+        f1=f1,
+        f2=f2,
+        hpbl=hpbl,
+        hpblx=hpblx,
+        kpbl=kpbl,
+        kpblx=kpblx,
+        mask=mask,
+        u1=u1,
+        v1=v1,
+        conw=conw,
+        rdt=rdt,
+        domain=(im, 1, km),
+    )
 
     dv = storage_to_numpy(dv, (im, km))
     du = storage_to_numpy(du, (im, km))
@@ -2013,7 +2013,7 @@ def part3a(
 
 
 # Possible stencil name : mrf_pbl_2_thermal_1
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
 def part3a1(
     crb: FIELD_FLT,
     evap: FIELD_FLT,
@@ -2388,9 +2388,9 @@ def part4(
 def part4a(
     pcnvflg_v2: FIELD_BOOL,
     q1: FIELD_FLT_8,
-    # qcdo: FIELD_FLT_8,
+    qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
-    # scuflg_v2: FIELD_BOOL,
+    scuflg_v2: FIELD_BOOL,
 ):
 
     # with computation(FORWARD), interval(1, None):
@@ -2401,13 +2401,13 @@ def part4a(
         if pcnvflg_v2[0, 0, 0]:
             for ii in range(8): 
                 qcko[0, 0, 0][ii] = q1[0, 0, 0][ii]
-        # if scuflg_v2[0, 0, 0]:
-        #     for i2 in range(8):
-        #         qcdo[0, 0, 0][i2] = q1[0, 0, 0][i2]
+        if scuflg_v2[0, 0, 0]:
+            for i2 in range(8):
+                qcdo[0, 0, 0][i2] = q1[0, 0, 0][i2]
 
 
 # Possible stencil name : prandtl_comp_exchg_coeff
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
 def part5(
     chz: FIELD_FLT,
     ckz: FIELD_FLT,
@@ -4181,8 +4181,8 @@ def mfscu(
         cnvflg=cnvflg, krad=krad, mask=mask, thld=thld, thlx=thlx, domain=(im, 1, km)
     )
 
-    qcdo_1[:, :, :] = qcdo[:, :, 0].reshape((im, 1, km + 1))
-    qcdo_ntcw[:, :, :] = qcdo[:, :, ntcw - 1].reshape((im, 1, km + 1))
+    qcdo_1[:, :, :] = qcdo[:, 0, :, 0].reshape((im, 1, km + 1))
+    qcdo_ntcw[:, :, :] = qcdo[:, 0, :, ntcw - 1].reshape((im, 1, km + 1))
 
     mfscu_s4(
         cnvflg=cnvflg,
@@ -4217,8 +4217,8 @@ def mfscu(
     for k in range(kmscu):
         for i in range(im):
             if qcdo_track[i, 0, k] == 1:
-                qcdo[i, k, 0] = qcdo_1[i, 0, k]
-                qcdo[i, k, ntcw - 1] = qcdo_ntcw[i, 0, k]
+                qcdo[i, 0, k, 0] = qcdo_1[i, 0, k]
+                qcdo[i, 0, k, ntcw - 1] = qcdo_ntcw[i, 0, k]
 
     if ntcw > 2:
         for n in range(1, ntcw - 1):
@@ -4228,8 +4228,8 @@ def mfscu(
                         dz = zl[i, 0, k + 1] - zl[i, 0, k]
                         tem = 0.5 * xlamde[i, 0, k] * dz
                         factor = 1.0 + tem
-                        qcdo[i, k, n] = (
-                            (1.0 - tem) * qcdo[i, k + 1, n]
+                        qcdo[i, 0, k, n] = (
+                            (1.0 - tem) * qcdo[i, 0, k + 1, n]
                             + tem * (q1[i, k, n] + q1[i, k + 1, n])
                         ) / factor
 
@@ -4244,8 +4244,8 @@ def mfscu(
                         tem = 0.5 * xlamde[i, 0, k] * dz
                         factor = 1.0 + tem
 
-                        qcdo[i, k, n] = (
-                            (1.0 - tem) * qcdo[i, k + 1, n]
+                        qcdo[i, 0, k, n] = (
+                            (1.0 - tem) * qcdo[i, 0, k + 1, n]
                             + tem * (q1[i, k, n] + q1[i, k + 1, n])
                         ) / factor
 
@@ -4457,7 +4457,7 @@ def mfscu_s1(
             buo = g * (1.0 - thvd / thvx[0, 0, 0])
 
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
 def mfscu_s1a(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL,
@@ -4479,7 +4479,7 @@ def mfscu_s1a(
                 )
 
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
 def mfscu_s2(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL,
