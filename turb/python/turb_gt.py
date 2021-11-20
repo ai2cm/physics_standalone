@@ -178,26 +178,12 @@ def satmedmfvdif_gt(
     kmscu = int(km / 2)
 
     # 3D GT storage
-    # qcko = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, km + 1, ntrac),
-    #     default_origin=(0, 0, 0),
-    # )
-
     qcko = gt_storage.zeros(
         backend=backend,
         dtype=(DTYPE_FLT, (ntrac,)),
         shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
-
-    # qcdo = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, km + 1, ntrac),
-    #     default_origin=(0, 0, 0),
-    # )
 
     qcdo = gt_storage.zeros(
         backend=backend,
@@ -206,38 +192,12 @@ def satmedmfvdif_gt(
         default_origin=(0, 0, 0),
     )
 
-    # f2 = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km * (ntrac - 1)),
-    #     default_origin=(0, 0, 0),
-    # )
-
     f2 = gt_storage.zeros(
         backend=backend,
         dtype=(DTYPE_FLT,(ntrac-1,)),
         shape=(im, 1, km),
         default_origin=(0, 0, 0),
     )
-
-    # pcnvflg_v2 = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_BOOL,
-    #     shape=(im, km + 1, ntrac),
-    #     default_origin=(0, 0, 0),
-    # )
-    # scuflg_v2 = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_BOOL,
-    #     shape=(im, km + 1, ntrac),
-    #     default_origin=(0, 0, 0),
-    # )
-    # q1_gt = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, km + 1, ntrac),
-    #     default_origin=(0, 0, 0),
-    # )
 
     q1_gt = gt_storage.zeros(
         backend=backend,
@@ -466,30 +426,7 @@ def satmedmfvdif_gt(
         shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
-    # qcko_0 = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    # qcko_ntke = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    # qcdo_0 = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    # qcdo_ntke = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
+
     buou = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
@@ -610,12 +547,7 @@ def satmedmfvdif_gt(
         shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
-    f2_km = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
+
     f2_p1 = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
@@ -848,10 +780,6 @@ def satmedmfvdif_gt(
 
     phii = numpy_to_gt4py_storage_2D(phii, backend, km + 1)
     phil = numpy_to_gt4py_storage_2D(phil, backend, km + 1)
-    q1_ntke = numpy_to_gt4py_storage_2D(q1[:, :, ntke - 1], backend, km + 1)
-    q1_ntcw = numpy_to_gt4py_storage_2D(q1[:, :, ntcw - 1], backend, km + 1)
-    q1_ntiw = numpy_to_gt4py_storage_2D(q1[:, :, ntiw - 1], backend, km + 1)
-    q1_0 = numpy_to_gt4py_storage_2D(q1[:, :, 0], backend, km + 1)
     prsi = numpy_to_gt4py_storage_2D(prsi, backend, km + 1)
     swh = numpy_to_gt4py_storage_2D(swh, backend, km + 1)
     hlw = numpy_to_gt4py_storage_2D(hlw, backend, km + 1)
@@ -869,6 +797,9 @@ def satmedmfvdif_gt(
     prsl = numpy_to_gt4py_storage_2D(prsl, backend, km + 1)
 
     mask_init(mask=mask)
+
+    for I in range(8):
+        q1_gt[:, 0, :-1, I] = q1[:, :, I]
 
     init(
         bf=bf,
@@ -906,7 +837,6 @@ def satmedmfvdif_gt(
         gravi=gravi,
         mask=mask,
         mrad=mrad,
-        ntiw=ntiw,
         pblflg=pblflg,
         pcnvflg=pcnvflg,
         phii=phii,
@@ -918,10 +848,7 @@ def satmedmfvdif_gt(
         prsl=prsl,
         prslk=prslk,
         psk=psk,
-        q1_0=q1_0,
-        q1_ntcw=q1_ntcw,
-        q1_ntiw=q1_ntiw,
-        q1_ntke=q1_ntke,
+        q1=q1_gt,
         qlx=qlx,
         qstl=qstl,
         qtx=qtx,
@@ -969,6 +896,9 @@ def satmedmfvdif_gt(
         zl=zl,
         zm=zm,
         zorl=zorl,
+        ntke=ntke-1,
+        ntcw=ntcw-1,
+        ntiw=ntiw-1,
         domain=(im, 1, km + 1),
     )
 
@@ -1072,9 +1002,6 @@ def satmedmfvdif_gt(
         domain=(im, 1, kmscu),
     )
 
-    for I in range(8):
-        q1_gt[:, 0, :-1, I] = q1[:, :, I]
-
     part4(
         pcnvflg=pcnvflg,
         scuflg=scuflg,
@@ -1089,9 +1016,6 @@ def satmedmfvdif_gt(
         vcko=vcko,
         qcdo=qcdo,
     )
-
-    # pcnvflg_v2[:, :, 0] = pcnvflg[:, 0, :]
-    # scuflg_v2[:, :, 0] = scuflg[:, 0, :]
 
     part4a(
         pcnvflg_v2=pcnvflg,
@@ -1113,9 +1037,7 @@ def satmedmfvdif_gt(
         pcnvflg,
         zl,
         zm,
-        q1,
-        q1_0,
-        q1_ntcw,
+        q1_gt,
         t1,
         u1,
         v1,
@@ -1152,9 +1074,7 @@ def satmedmfvdif_gt(
         scuflg,
         zl,
         zm,
-        q1,
-        q1_0,
-        q1_ntcw,
+        q1_gt,
         t1,
         u1,
         v1,
@@ -1309,9 +1229,6 @@ def satmedmfvdif_gt(
     for n in range(kk):
         part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, domain=(im, 1, km1))
 
-    # qcko_ntke[:, :, :] = qcko[:, :, ntke - 1].reshape((im, 1, km + 1))
-    # qcdo_ntke[:, :, :] = qcdo[:, :, ntke - 1].reshape((im, 1, km + 1))
-
     part9(
         pcnvflg=pcnvflg,
         qcdo=qcdo,
@@ -1387,13 +1304,8 @@ def satmedmfvdif_gt(
 
     if ntrac1 >= 2:
         for kk in range(1, ntrac1):
-            # is_ = kk * km
             for i in range(im):
                 f2[i, 0, 0, kk] = q1[i, 0, kk]
-
-    # f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
-    # qcdo_0[:, :, :] = qcdo[:, :, 0].reshape((im, 1, km + 1))
-    # qcko_0[:, :, :] = qcko[:, :, 0].reshape((im, 1, km + 1))
 
     part13(
         ad=ad,
@@ -1412,7 +1324,7 @@ def satmedmfvdif_gt(
         mrad=mrad,
         pcnvflg=pcnvflg,
         prsl=prsl,
-        q1=q1_0,
+        q1=q1_gt,
         qcdo=qcdo,
         qcko=qcko,
         rdzt=rdzt,
@@ -1427,11 +1339,8 @@ def satmedmfvdif_gt(
         domain=(im, 1, km),
     )
 
-    # f2[:, 0, 0:km] = f2_km[:, 0, 0:km]
-
     if ntrac1 >= 2:
         for kk in range(1, ntrac1):
-            # is_ = kk * km
             for k in range(km1):
                 for i in range(im):
                     if pcnvflg[i, 0, 0] and k < kpbl[i, 0, 0]:
@@ -1485,7 +1394,6 @@ def satmedmfvdif_gt(
                     )
 
     tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
-    # f2_km[:, :, :-1] = f2[:, 0, 0:km].reshape((im, 1, km))
 
     part14(
         ad=ad,
@@ -1704,8 +1612,7 @@ def init(
     garea: FIELD_FLT,
     gdx: FIELD_FLT,
     tke: FIELD_FLT,
-    q1_ntke: FIELD_FLT,
-    q1_0: FIELD_FLT,
+    q1: FIELD_FLT_8,
     rdzt: FIELD_FLT,
     prn: FIELD_FLT,
     kx1: FIELD_INT,
@@ -1743,8 +1650,6 @@ def init(
     psk: FIELD_FLT,
     t1: FIELD_FLT,
     pix: FIELD_FLT,
-    q1_ntcw: FIELD_FLT,
-    q1_ntiw: FIELD_FLT,
     qlx: FIELD_FLT,
     slx: FIELD_FLT,
     thvx: FIELD_FLT,
@@ -1792,12 +1697,15 @@ def init(
     elocp: float,
     g: float,
     eps: float,
+    ntke: int,
+    ntcw: int,
 ):
 
     with computation(FORWARD), interval(...):
         zi = phii[0, 0, 0] * gravi
         zl = phil[0, 0, 0] * gravi
-        tke = max(q1_ntke[0, 0, 0], tkmin)
+        # tke = max(q1_ntke[0, 0, 0], tkmin)
+        tke = max(q1[0, 0, 0][ntke], tkmin)
     with computation(PARALLEL), interval(0, -1):
         ckz = ck1
         chz = ch1
@@ -1866,23 +1774,29 @@ def init(
 
         pix = psk[0, 0, 0] / prslk[0, 0, 0]
         theta = t1[0, 0, 0] * pix[0, 0, 0]
-        if ntiw > 0:
-            tem = max(q1_ntcw[0, 0, 0], qlmin)
-            tem1 = max(q1_ntiw[0, 0, 0], qlmin)
+        if (ntiw+1) > 0:
+            # tem = max(q1_ntcw[0, 0, 0], qlmin)
+            tem = max(q1[0, 0, 0][ntcw], qlmin)
+            # tem1 = max(q1_ntiw[0, 0, 0], qlmin)
+            tem1 = max(q1[0, 0, 0][ntiw], qlmin)
             ptem = hvap * tem + (hvap + hfus) * tem1
             qlx = tem + tem1
             slx = cp * t1[0, 0, 0] + phil[0, 0, 0] - ptem
         else:
-            qlx = max(q1_ntcw[0, 0, 0], qlmin)
+            # qlx = max(q1_ntcw[0, 0, 0], qlmin)
+            qlx = max(q1[0, 0, 0][ntcw], qlmin)
             slx = cp * t1[0, 0, 0] + phil[0, 0, 0] - hvap * qlx[0, 0, 0]
 
-        tem = 1.0 + fv * max(q1_0[0, 0, 0], qmin) - qlx[0, 0, 0]
+        # tem = 1.0 + fv * max(q1_0[0, 0, 0], qmin) - qlx[0, 0, 0]
+        tem = 1.0 + fv * max(q1[0, 0, 0][0], qmin) - qlx[0, 0, 0]
         thvx = theta[0, 0, 0] * tem
-        qtx = max(q1_0[0, 0, 0], qmin) + qlx[0, 0, 0]
+        # qtx = max(q1_0[0, 0, 0], qmin) + qlx[0, 0, 0]
+        qtx = max(q1[0, 0, 0][0], qmin) + qlx[0, 0, 0]
         thlx = theta[0, 0, 0] - pix[0, 0, 0] * elocp * qlx[0, 0, 0]
         thlvx = thlx[0, 0, 0] * (1.0 + fv * qtx[0, 0, 0])
         svx = cp * t1[0, 0, 0] * tem
-        thetae = theta[0, 0, 0] + elocp * pix[0, 0, 0] * max(q1_0[0, 0, 0], qmin)
+        # thetae = theta[0, 0, 0] + elocp * pix[0, 0, 0] * max(q1_0[0, 0, 0], qmin)
+        thetae = theta[0, 0, 0] + elocp * pix[0, 0, 0] * max(q1[0, 0, 0][0], qmin)
         gotvx = g / (t1[0, 0, 0] * tem)
 
         tem = (t1[0, 0, 1] - t1[0, 0, 0]) * tem * rdzt[0, 0, 0]
@@ -1893,7 +1807,8 @@ def init(
         plyr = 0.01 * prsl[0, 0, 0]
         es = 0.01 * fpvs(t1)
         qs = max(qmin, eps * es / (plyr[0, 0, 0] + (eps - 1) * es))
-        rhly = max(0.0, min(1.0, max(qmin, q1_0[0, 0, 0]) / qs))
+        # rhly = max(0.0, min(1.0, max(qmin, q1_0[0, 0, 0]) / qs))
+        rhly = max(0.0, min(1.0, max(qmin, q1[0, 0, 0][0]) / qs))
         qstl = qs
 
     with computation(FORWARD), interval(...):
@@ -1937,7 +1852,7 @@ def init(
                     max(sqrt(u10m[0, 0, 0] ** 2 + v10m[0, 0, 0] ** 2), 1.0)
                     / (f0 * z0[0, 0, 0])
                 )
-                thermal = tsea[0, 0, 0] * (1.0 + fv * max(q1_0[0, 0, 0], qmin))
+                thermal = tsea[0, 0, 0] * (1.0 + fv * max(q1[0, 0, 0][0], qmin))
                 crb = max(min(0.16 * (tem1 ** (-0.18)), crbmax), crbmin)
 
             dtdz1 = dt2 / (zi[0, 0, 1] - zi[0, 0, 0])
@@ -2914,7 +2829,7 @@ def part13(
     mrad: FIELD_INT,
     pcnvflg: FIELD_BOOL,
     prsl: FIELD_FLT,
-    q1: FIELD_FLT,  # q1(:,:,1)
+    q1: FIELD_FLT_8,
     qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
     rdzt: FIELD_FLT,
@@ -2954,13 +2869,13 @@ def part13(
                 tem = tcko[0, 0, 0] + tcko[0, 0, 1] - (t1[0, 0, 0] + t1[0, 0, 1])
                 f1 = f1[0, 0, 0] + dtodsd * dsdzt - tem * ptem1
                 f1_p1 = t1[0, 0, 1] - dtodsu * dsdzt + tem * ptem2
-                tem = qcko[0, 0, 0][0] + qcko[0, 0, 1][0] - (q1[0, 0, 0] + q1[0, 0, 1])
+                tem = qcko[0, 0, 0][0] + qcko[0, 0, 1][0] - (q1[0, 0, 0][0] + q1[0, 0, 1][0])
                 f2[0,0,0][0] = f2[0, 0, 0][0] - tem * ptem1
-                f2_p1 = q1[0, 0, 1] + tem * ptem2
+                f2_p1 = q1[0, 0, 1][0] + tem * ptem2
             else:
                 f1 = f1[0, 0, 0] + dtodsd * dsdzt
                 f1_p1 = t1[0, 0, 1] - dtodsu * dsdzt
-                f2_p1 = q1[0, 0, 1]
+                f2_p1 = q1[0, 0, 1][0]
 
             if (
                 scuflg[0, 0, 0]
@@ -2973,7 +2888,7 @@ def part13(
                 tem = tcdo[0, 0, 0] + tcdo[0, 0, 1] - (t1[0, 0, 0] + t1[0, 0, 1])
                 f1 = f1[0, 0, 0] + tem * ptem1
                 f1_p1 = f1_p1[0, 0, 0] - tem * ptem2
-                tem = qcdo[0, 0, 0][0] + qcdo[0, 0, 1][0] - (q1[0, 0, 0] + q1[0, 0, 1])
+                tem = qcdo[0, 0, 0][0] + qcdo[0, 0, 1][0] - (q1[0, 0, 0][0] + q1[0, 0, 1][0])
                 f2[0,0,0][0] = f2[0, 0, 0][0] + tem * ptem1
                 f2_p1 = f2_p1[0, 0, 0] - tem * ptem2
         with interval(-1, None):
@@ -3132,9 +3047,7 @@ def mfpblt(
     cnvflg,
     zl,
     zm,
-    q1,
-    q1_0,
-    q1_ntcw,
+    q1_gt,
     t1,
     u1,
     v1,
@@ -3276,25 +3189,6 @@ def mfpblt(
         default_origin=(0, 0, 0),
     )
 
-    # qcko_1 = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    # qcko_ntcw = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    # qcko_track = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_INT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-
     totflag = True
 
     for i in range(im):
@@ -3310,8 +3204,7 @@ def mfpblt(
         g=g,
         hpbl=hpbl,
         kpbl=kpbl,
-        q1_0=q1_0,
-        q1_ntcw=q1_ntcw,
+        q1=q1_gt,
         qtu=qtu,
         qtx=qtx,
         thlu=thlu,
@@ -3319,6 +3212,7 @@ def mfpblt(
         thvx=thvx,
         vpert=vpert,
         wu2=wu2,
+        ntcw=ntcw-1,
     )
 
     mfpblt_s1(
@@ -3409,12 +3303,6 @@ def mfpblt(
         domain=(im, 1, kmpbl),
     )
 
-    # for k in range(1, kmpbl):
-    #     for i in range(im):
-    #         if qcko_track[i, 0, k] == 1:
-    #             qcko[i, k, 0] = qcko_1[i, 0, k]
-    #             qcko[i, k, ntcw - 1] = qcko_ntcw[i, 0, k]
-
     if ntcw > 2:
         for n in range(1, ntcw - 1):
             for k in range(1, kmpbl):
@@ -3425,7 +3313,7 @@ def mfpblt(
                         factor = 1.0 + tem
                         qcko[i, 0, k, n] = (
                             (1.0 - tem) * qcko[i, 0, k - 1, n]
-                            + tem * (q1[i, k, n] + q1[i, k - 1, n])
+                            + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
                         ) / factor
 
     ndc = ntrac1 - ntcw
@@ -3441,7 +3329,7 @@ def mfpblt(
 
                         qcko[i, 0, k, n] = (
                             (1.0 - tem) * qcko[i, 0, k - 1, n]
-                            + tem * (q1[i, k, n] + q1[i, k - 1, n])
+                            + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
                         ) / factor
 
     return kpbl, hpbl, buo, xmf, tcko, qcko, ucko, vcko, xlamue
@@ -3453,8 +3341,7 @@ def mfpblt_s0(
     cnvflg: FIELD_BOOL,
     hpbl: FIELD_FLT,
     kpbl: FIELD_INT,
-    q1_0: FIELD_FLT,
-    q1_ntcw: FIELD_FLT,
+    q1: FIELD_FLT_8,
     qtu: FIELD_FLT,
     qtx: FIELD_FLT,
     thlu: FIELD_FLT,
@@ -3464,13 +3351,14 @@ def mfpblt_s0(
     wu2: FIELD_FLT,
     alp: float,
     g: float,
+    ntcw: int,
 ):
 
     with computation(PARALLEL), interval(0, -1):
         if cnvflg[0, 0, 0]:
             buo = 0.0
             wu2 = 0.0
-            qtx = q1_0[0, 0, 0] + q1_ntcw[0, 0, 0]
+            qtx = q1[0, 0, 0][0] + q1[0, 0, 0][ntcw]
 
     with computation(PARALLEL), interval(0, 1):
         if cnvflg[0, 0, 0]:
@@ -3815,8 +3703,6 @@ def mfscu(
     zl,
     zm,
     q1,
-    q1_1,
-    q1_ntcw,
     t1,
     u1,
     v1,
@@ -4014,8 +3900,7 @@ def mfscu(
         krad1=krad1,
         mask=mask,
         mrad=mrad,
-        q1_1=q1_1,
-        q1_ntcw=q1_ntcw,
+        q1=q1,
         qtd=qtd,
         qtx=qtx,
         ra1=ra1,
@@ -4039,6 +3924,7 @@ def mfscu(
         cp=cp,
         hvap=hvap,
         g=g,
+        ntcw=ntcw,
         domain=(im, 1, km),
     )
 
@@ -4230,7 +4116,7 @@ def mfscu(
                         factor = 1.0 + tem
                         qcdo[i, 0, k, n] = (
                             (1.0 - tem) * qcdo[i, 0, k + 1, n]
-                            + tem * (q1[i, k, n] + q1[i, k + 1, n])
+                            + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
                         ) / factor
 
     ndc = ntrac1 - ntcw
@@ -4246,28 +4132,10 @@ def mfscu(
 
                         qcdo[i, 0, k, n] = (
                             (1.0 - tem) * qcdo[i, 0, k + 1, n]
-                            + tem * (q1[i, k, n] + q1[i, k + 1, n])
+                            + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
                         ) / factor
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
-
-
-@gtscript.stencil(backend=backend)
-def mfscu_s0(
-    buo: FIELD_FLT,
-    cnvflg: FIELD_BOOL,
-    q1_1: FIELD_FLT,
-    q1_ntcw: FIELD_FLT,
-    qtx: FIELD_FLT,
-    wd2: FIELD_FLT,
-):
-
-    with computation(PARALLEL), interval(...):
-        if cnvflg[0, 0, 0]:
-            buo = 0.0
-            wd2 = 0.0
-            qtx = q1_1[0, 0, 0] + q1_ntcw[0, 0, 0]
-
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0a(
@@ -4279,8 +4147,7 @@ def mfscu_s0a(
     krad1: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
-    q1_1: FIELD_FLT,
-    q1_ntcw: FIELD_FLT,
+    q1: FIELD_FLT_8,
     qtd: FIELD_FLT,
     qtx: FIELD_FLT,
     ra1: FIELD_FLT,
@@ -4304,13 +4171,14 @@ def mfscu_s0a(
     cp: float,
     hvap: float,
     g: float,
+    ntcw: int,
 ):
 
     with computation(PARALLEL), interval(...):
         if cnvflg[0, 0, 0]:
             buo = 0.0
             wd2 = 0.0
-            qtx = q1_1[0, 0, 0] + q1_ntcw[0, 0, 0]
+            qtx = q1[0, 0, 0][0] + q1[0, 0, 0][ntcw-1]
 
     with computation(FORWARD), interval(...):
         if mask[0, 0, 0] > 0:
@@ -4797,7 +4665,6 @@ def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
         )
 
     for k in range(nt):
-        # is_ = k * n
         for i in range(l):
             a2[i, 0, n-1, k] = fk[i, 0, 0] * (
                 r2[i, 0, n-1, k] - cl[i, 0, n - 2] * a2[i, 0, n-2, k]
@@ -4808,7 +4675,6 @@ def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
             a1[i, 0, k] = a1[i, 0, k] - au[i, 0, k] * a1[i, 0, k + 1]
 
     for kk in range(nt):
-        # is_ = kk * n
         for k in range(n - 2, -1, -1):
             for i in range(l):
                 a2[i, 0, k, kk] = (
