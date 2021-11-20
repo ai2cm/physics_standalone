@@ -3864,24 +3864,6 @@ def mfscu(
         shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
-    qcdo_1 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qcdo_ntcw = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qcdo_track = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_INT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
 
     totflg = True
 
@@ -4067,9 +4049,6 @@ def mfscu(
         cnvflg=cnvflg, krad=krad, mask=mask, thld=thld, thlx=thlx, domain=(im, 1, km)
     )
 
-    qcdo_1[:, :, :] = qcdo[:, 0, :, 0].reshape((im, 1, km + 1))
-    qcdo_ntcw[:, :, :] = qcdo[:, 0, :, ntcw - 1].reshape((im, 1, km + 1))
-
     mfscu_s4(
         cnvflg=cnvflg,
         el2orc=el2orc,
@@ -4082,9 +4061,7 @@ def mfscu(
         pgcon=pgcon,
         pix=pix,
         plyr=plyr,
-        qcdo_1=qcdo_1,
-        qcdo_ntcw=qcdo_ntcw,
-        qcdo_track=qcdo_track,
+        qcdo=qcdo,
         qtd=qtd,
         qtx=qtx,
         tcdo=tcdo,
@@ -4097,14 +4074,9 @@ def mfscu(
         xlamde=xlamde,
         xlamdem=xlamdem,
         zl=zl,
+        ntcw=ntcw,
         domain=(im, 1, kmscu),
     )
-
-    for k in range(kmscu):
-        for i in range(im):
-            if qcdo_track[i, 0, k] == 1:
-                qcdo[i, 0, k, 0] = qcdo_1[i, 0, k]
-                qcdo[i, 0, k, ntcw - 1] = qcdo_ntcw[i, 0, k]
 
     if ntcw > 2:
         for n in range(1, ntcw - 1):
@@ -4521,9 +4493,7 @@ def mfscu_s4(
     mrad: FIELD_INT,
     pix: FIELD_FLT,
     plyr: FIELD_FLT,
-    qcdo_1: FIELD_FLT,
-    qcdo_ntcw: FIELD_FLT,
-    qcdo_track: FIELD_INT,
+    qcdo: FIELD_FLT_8,
     qtd: FIELD_FLT,
     qtx: FIELD_FLT,
     tcdo: FIELD_FLT,
@@ -4541,6 +4511,7 @@ def mfscu_s4(
     eps: float,
     epsm1: float,
     pgcon: float,
+    ntcw: int,
 ):
 
     with computation(BACKWARD), interval(...):
@@ -4571,15 +4542,14 @@ def mfscu_s4(
             and mask[0, 0, 0] >= mrad[0, 0, 0]
             and mask[0, 0, 0] < krad[0, 0, 0]
         ):
-            qcdo_track = 1
             if dq > 0.0:
                 qtd = qs + qld
-                qcdo_1 = qs
-                qcdo_ntcw = qld
+                qcdo[0,0,0][0] = qs
+                qcdo[0,0,0][ntcw-1] = qld
                 tcdo = tld + elocp * qld
             else:
-                qcdo_1 = qtd[0, 0, 0]
-                qcdo_ntcw = 0.0
+                qcdo[0,0,0] = qtd[0, 0, 0]
+                qcdo[0,0,0][ntcw-1] = 0.0
                 tcdo = tld
 
         if (
