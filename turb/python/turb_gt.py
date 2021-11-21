@@ -613,7 +613,7 @@ def satmedmfvdif_gt(
     pcnvflg = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_BOOL,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     scuflg = gt_storage.zeros(
@@ -1018,7 +1018,7 @@ def satmedmfvdif_gt(
     )
 
     part4a(
-        pcnvflg_v2=pcnvflg,
+        pcnvflg=pcnvflg,
         q1=q1_gt,
         qcdo=qcdo,
         qcko=qcko,
@@ -1343,7 +1343,7 @@ def satmedmfvdif_gt(
         for kk in range(1, ntrac1):
             for k in range(km1):
                 for i in range(im):
-                    if pcnvflg[i, 0, 0] and k < kpbl[i, 0, 0]:
+                    if pcnvflg[i, 0] and k < kpbl[i, 0, 0]:
                         dtodsd = dt2 / del_[i, 0, k]
                         dtodsu = dt2 / del_[i, 0, k + 1]
                         dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
@@ -1630,7 +1630,7 @@ def init(
     hpblx: FIELD_FLT,
     pblflg: FIELD_BOOL,
     sfcflg: FIELD_BOOL,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     scuflg: FIELD_BOOL,
     zorl: FIELD_FLT,
     dusfc: FIELD_FLT,
@@ -1701,10 +1701,12 @@ def init(
     ntcw: int,
 ):
 
-    with computation(FORWARD), interval(...):
+    with computation(FORWARD), interval(0,1):
+        pcnvflg = 0
+
+    with computation(PARALLEL), interval(...):
         zi = phii[0, 0, 0] * gravi
         zl = phil[0, 0, 0] * gravi
-        # tke = max(q1_ntke[0, 0, 0], tkmin)
         tke = max(q1[0, 0, 0][ntke], tkmin)
     with computation(PARALLEL), interval(0, -1):
         ckz = ck1
@@ -1764,7 +1766,7 @@ def init(
         sfcflg = 1
         if rbsoil[0, 0, 0] > 0.0:
             sfcflg = 0
-        pcnvflg = 0
+        # pcnvflg = 0
         scuflg = 1
         radmin = 0.0
         mrad = km1
@@ -1775,27 +1777,21 @@ def init(
         pix = psk[0, 0, 0] / prslk[0, 0, 0]
         theta = t1[0, 0, 0] * pix[0, 0, 0]
         if (ntiw+1) > 0:
-            # tem = max(q1_ntcw[0, 0, 0], qlmin)
             tem = max(q1[0, 0, 0][ntcw], qlmin)
-            # tem1 = max(q1_ntiw[0, 0, 0], qlmin)
             tem1 = max(q1[0, 0, 0][ntiw], qlmin)
             ptem = hvap * tem + (hvap + hfus) * tem1
             qlx = tem + tem1
             slx = cp * t1[0, 0, 0] + phil[0, 0, 0] - ptem
         else:
-            # qlx = max(q1_ntcw[0, 0, 0], qlmin)
             qlx = max(q1[0, 0, 0][ntcw], qlmin)
             slx = cp * t1[0, 0, 0] + phil[0, 0, 0] - hvap * qlx[0, 0, 0]
 
-        # tem = 1.0 + fv * max(q1_0[0, 0, 0], qmin) - qlx[0, 0, 0]
         tem = 1.0 + fv * max(q1[0, 0, 0][0], qmin) - qlx[0, 0, 0]
         thvx = theta[0, 0, 0] * tem
-        # qtx = max(q1_0[0, 0, 0], qmin) + qlx[0, 0, 0]
         qtx = max(q1[0, 0, 0][0], qmin) + qlx[0, 0, 0]
         thlx = theta[0, 0, 0] - pix[0, 0, 0] * elocp * qlx[0, 0, 0]
         thlvx = thlx[0, 0, 0] * (1.0 + fv * qtx[0, 0, 0])
         svx = cp * t1[0, 0, 0] * tem
-        # thetae = theta[0, 0, 0] + elocp * pix[0, 0, 0] * max(q1_0[0, 0, 0], qmin)
         thetae = theta[0, 0, 0] + elocp * pix[0, 0, 0] * max(q1[0, 0, 0][0], qmin)
         gotvx = g / (t1[0, 0, 0] * tem)
 
@@ -1807,7 +1803,6 @@ def init(
         plyr = 0.01 * prsl[0, 0, 0]
         es = 0.01 * fpvs(t1)
         qs = max(qmin, eps * es / (plyr[0, 0, 0] + (eps - 1) * es))
-        # rhly = max(0.0, min(1.0, max(qmin, q1_0[0, 0, 0]) / qs))
         rhly = max(0.0, min(1.0, max(qmin, q1[0, 0, 0][0]) / qs))
         qstl = qs
 
@@ -1943,7 +1938,7 @@ def part3a1(
     kpblx: FIELD_INT,
     mask: FIELD_INT,
     pblflg: FIELD_BOOL,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     phih: FIELD_FLT,
     phim: FIELD_FLT,
     rbdn: FIELD_FLT,
@@ -2010,7 +2005,7 @@ def part3a1(
         hpbl = hpbl[0, 0, 1]
         pblflg = pblflg[0, 0, 1]
 
-    with computation(PARALLEL), interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
         zol = max(rbsoil[0, 0, 0] * fm[0, 0, 0] * fm[0, 0, 0] / fh[0, 0, 0], rimin)
         if sfcflg[0, 0, 0]:
             zol = min(zol[0, 0, 0], -zfmin)
@@ -2038,7 +2033,7 @@ def part3a1(
 
         flg = 1
 
-        if pcnvflg[0, 0, 0]:
+        if pcnvflg[0, 0]:
             hgamt = heat[0, 0, 0] / wscale[0, 0, 0]
             hgamq = evap[0, 0, 0] / wscale[0, 0, 0]
             vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
@@ -2125,7 +2120,7 @@ def part3c1(
     lcld: FIELD_INT,
     mask: FIELD_INT,
     pblflg: FIELD_BOOL,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     rbdn: FIELD_FLT,
     rbup: FIELD_FLT,
     scuflg: FIELD_BOOL,
@@ -2139,11 +2134,11 @@ def part3c1(
             hpbl = hpbl[0, 0, -1]
             kpbl = kpbl[0, 0, -1]
             pblflg = pblflg[0, 0, -1]
-            pcnvflg = pcnvflg[0, 0, -1]
+            # pcnvflg = pcnvflg[0, 0, -1]
             rbdn = rbdn[0, 0, -1]
             rbup = rbup[0, 0, -1]
 
-        if pcnvflg[0, 0, 0] and kpbl[0, 0, 0] == mask[0, 0, 0]:
+        if pcnvflg[0, 0] and kpbl[0, 0, 0] == mask[0, 0, 0]:
             if rbdn[0, 0, 0] >= crb[0, 0, 0]:
                 rbint = 0.0
             elif rbup[0, 0, 0] <= crb[0, 0, 0]:
@@ -2158,13 +2153,13 @@ def part3c1(
 
             if kpbl[0, 0, 0] <= 0:
                 pblflg[0, 0, 0] = 0
-                pcnvflg[0, 0, 0] = 0
+                pcnvflg[0, 0] = 0
 
     with computation(BACKWARD), interval(0, -1):
         hpbl = hpbl[0, 0, 1]
         kpbl = kpbl[0, 0, 1]
         pblflg = pblflg[0, 0, 1]
-        pcnvflg = pcnvflg[0, 0, 1]
+        # pcnvflg = pcnvflg[0, 0, 1]
 
     with computation(FORWARD):
         with interval(0, 1):
@@ -2269,7 +2264,7 @@ def part3e(
 # Possible stencil name : mass_flux_comp_1
 @gtscript.stencil(backend=backend)
 def part4(
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     qcdo: FIELD_FLT,
     scuflg: FIELD_BOOL,
     t1: FIELD_FLT,
@@ -2284,11 +2279,11 @@ def part4(
 ):
 
     with computation(FORWARD), interval(1, None):
-        pcnvflg = pcnvflg[0, 0, -1]
+        # pcnvflg = pcnvflg[0, 0, -1]
         scuflg = scuflg[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
-        if pcnvflg[0, 0, 0]:
+        if pcnvflg[0, 0]:
             tcko = t1[0, 0, 0]
             ucko = u1[0, 0, 0]
             vcko = v1[0, 0, 0]
@@ -2301,7 +2296,7 @@ def part4(
 # # Possible stencil name : mass_flux_comp_2
 @gtscript.stencil(backend=backend)
 def part4a(
-    pcnvflg_v2: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     q1: FIELD_FLT_8,
     qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
@@ -2313,7 +2308,7 @@ def part4a(
     #     scuflg_v2 = scuflg_v2[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
-        if pcnvflg_v2[0, 0, 0]:
+        if pcnvflg[0, 0]:
             for ii in range(8): 
                 qcko[0, 0, 0][ii] = q1[0, 0, 0][ii]
         if scuflg_v2[0, 0, 0]:
@@ -2329,7 +2324,7 @@ def part5(
     hpbl: FIELD_FLT,
     kpbl: FIELD_INT,
     mask: FIELD_INT,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     phih: FIELD_FLT,
     phim: FIELD_FLT,
     prn: FIELD_FLT,
@@ -2344,7 +2339,7 @@ def part5(
         tem1 = max(zi[0, 0, 1] - sfcfrac * hpbl[0, 0, 0], 0.0)
         ptem = -3.0 * (tem1 ** 2.0) / (hpbl[0, 0, 0] ** 2.0)
         if mask[0, 0, 0] < kpbl[0, 0, 0]:
-            if pcnvflg[0, 0, 0]:
+            if pcnvflg[0, 0]:
                 prn = 1.0 + ((phih[0, 0, 0] / phim[0, 0, 0]) - 1.0) * exp(ptem)
             else:
                 prn = phih[0, 0, 0] / phim[0, 0, 0]
@@ -2375,7 +2370,7 @@ def part6(
     mrad: FIELD_INT,
     krad: FIELD_INT,
     pblflg: FIELD_BOOL,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     phim: FIELD_FLT,
     prn: FIELD_FLT,
     prod: FIELD_FLT,
@@ -2485,7 +2480,7 @@ def part6(
         phim = phim[0, 0, -1]
         kpbl = kpbl[0, 0, -1]
         scuflg = scuflg[0, 0, -1]
-        pcnvflg = pcnvflg[0, 0, -1]
+        # pcnvflg = pcnvflg[0, 0, -1]
         stress = stress[0, 0, -1]
         mrad = mrad[0, 0, -1]
         krad = krad[0, 0, -1]
@@ -2538,7 +2533,7 @@ def part6(
             prod = buop + shrp
 
         with interval(1, -1):
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
                 ptem1 = 0.5 * (xmf[0, 0, -1] + xmf[0, 0, 0]) * buou[0, 0, 0]
             else:
                 ptem1 = 0.0
@@ -2560,7 +2555,7 @@ def part6(
             tem1 = (u1[0, 0, 1] - u1[0, 0, 0]) * rdzt[0, 0, 0]
             tem2 = (u1[0, 0, 0] - u1[0, 0, -1]) * rdzt[0, 0, -1]
 
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
                 ptem1 = (
                     0.5
                     * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
@@ -2590,7 +2585,7 @@ def part6(
             tem1 = (v1[0, 0, 1] - v1[0, 0, 0]) * rdzt[0, 0, 0]
             tem2 = (v1[0, 0, 0] - v1[0, 0, -1]) * rdzt[0, 0, -1]
 
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
                 ptem1 = (
                     0.5
                     * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
@@ -2636,7 +2631,7 @@ def part8(diss: FIELD_FLT, prod: FIELD_FLT, rle: FIELD_FLT, tke: FIELD_FLT, dtn:
 # Possible stencil name : tke_up_down_prop_1
 @gtscript.stencil(backend=backend)
 def part9(
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
     scuflg: FIELD_BOOL,
@@ -2645,10 +2640,10 @@ def part9(
 
     with computation(FORWARD), interval(1, None):
         scuflg = scuflg[0, 0, -1]
-        pcnvflg = pcnvflg[0, 0, -1]
+        # pcnvflg = pcnvflg[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
-        if pcnvflg[0, 0, 0]:
+        if pcnvflg[0, 0]:
             qcko[0,0,0][7] = tke[0, 0, 0]
         if scuflg[0, 0, 0]:
             qcdo[0,0,0][7] = tke[0, 0, 0]
@@ -2659,7 +2654,7 @@ def part9(
 def part10(
     kpbl: FIELD_INT,
     mask: FIELD_INT,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     qcko: FIELD_FLT_8,
     tke: FIELD_FLT,
     xlamue: FIELD_FLT,
@@ -2668,7 +2663,7 @@ def part10(
 
     with computation(FORWARD), interval(1, None):
         tem = 0.5 * xlamue[0, 0, -1] * (zl[0, 0, 0] - zl[0, 0, -1])
-        if pcnvflg[0, 0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+        if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
             qcko[0,0,0][7] = (
                 (1.0 - tem) * qcko[0, 0, -1][7] + tem * (tke[0, 0, 0] + tke[0, 0, -1])
             ) / (1.0 + tem)
@@ -2719,7 +2714,7 @@ def part12(
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     prsl: FIELD_FLT,
     qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
@@ -2744,7 +2739,7 @@ def part12(
             ad_p1 = 1.0 - al[0, 0, 0]
             tem2 = dsig * rdz
 
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
                 tem = (
                     qcko[0, 0, 0][7]
                     + qcko[0, 0, 1][7]
@@ -2781,7 +2776,7 @@ def part12(
             ad = ad[0, 0, 0] - au[0, 0, 0]
             ad_p1 = 1.0 - al[0, 0, 0]
 
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
                 tem = (
                     qcko[0, 0, 0][7]
                     + qcko[0, 0, 1][7]
@@ -2827,7 +2822,7 @@ def part13(
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     prsl: FIELD_FLT,
     q1: FIELD_FLT_8,
     qcdo: FIELD_FLT_8,
@@ -2862,7 +2857,7 @@ def part13(
             ad = ad[0, 0, 0] - au[0, 0, 0]
             ad_p1 = 1.0 - al[0, 0, 0]
 
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
                 ptem = 0.5 * dsig * rdz * xmf[0, 0, 0]
                 ptem1 = dtodsd * ptem
                 ptem2 = dtodsu * ptem
@@ -2916,7 +2911,7 @@ def part14(
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
-    pcnvflg: FIELD_BOOL,
+    pcnvflg: FIELD_BOOL_IJ,
     prsl: FIELD_FLT,
     rdzt: FIELD_FLT,
     scuflg: FIELD_BOOL,
@@ -2963,7 +2958,7 @@ def part14(
             ad = ad[0, 0, 0] - au[0, 0, 0]
             ad_p1 = 1.0 - al[0, 0, 0]
 
-            if pcnvflg[0, 0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
                 ptem = 0.5 * dsig * rdz * xmf[0, 0, 0]
                 ptem1 = dtodsd * ptem
                 ptem2 = dtodsu * ptem
@@ -3192,7 +3187,7 @@ def mfpblt(
     totflag = True
 
     for i in range(im):
-        totflag = totflag and ~cnvflg[i, 0, 0]
+        totflag = totflag and ~cnvflg[i, 0]
 
     if totflag:
         return kpbl, hpbl, buo, xmf, tcko, qcko, ucko, vcko, xlamue
@@ -3307,7 +3302,7 @@ def mfpblt(
         for n in range(1, ntcw - 1):
             for k in range(1, kmpbl):
                 for i in range(im):
-                    if cnvflg[i, 0, 0] and k <= kpbl[i, 0, 0]:
+                    if cnvflg[i, 0] and k <= kpbl[i, 0, 0]:
                         dz = zl[i, 0, k] - zl[i, 0, k - 1]
                         tem = 0.5 * xlamue[i, 0, k - 1] * dz
                         factor = 1.0 + tem
@@ -3322,7 +3317,7 @@ def mfpblt(
         for n in range(ntcw, ntrac1):
             for k in range(1, kmpbl):
                 for i in range(im):
-                    if cnvflg[i, 0, 0] and k <= kpbl[i, 0, 0]:
+                    if cnvflg[i, 0] and k <= kpbl[i, 0, 0]:
                         dz = zl[i, 0, k] - zl[i, 0, k - 1]
                         tem = 0.5 * xlamue[i, 0, k - 1] * dz
                         factor = 1.0 + tem
@@ -3338,7 +3333,7 @@ def mfpblt(
 @gtscript.stencil(backend=backend)
 def mfpblt_s0(
     buo: FIELD_FLT,
-    cnvflg: FIELD_BOOL,
+    cnvflg: FIELD_BOOL_IJ,
     hpbl: FIELD_FLT,
     kpbl: FIELD_INT,
     q1: FIELD_FLT_8,
@@ -3355,13 +3350,13 @@ def mfpblt_s0(
 ):
 
     with computation(PARALLEL), interval(0, -1):
-        if cnvflg[0, 0, 0]:
+        if cnvflg[0, 0]:
             buo = 0.0
             wu2 = 0.0
             qtx = q1[0, 0, 0][0] + q1[0, 0, 0][ntcw]
 
     with computation(PARALLEL), interval(0, 1):
-        if cnvflg[0, 0, 0]:
+        if cnvflg[0, 0]:
             ptem = min(alp * vpert[0, 0, 0], 3.0)
             thlu = thlx[0, 0, 0] + ptem
             qtu = qtx[0, 0, 0]
@@ -3377,7 +3372,7 @@ def mfpblt_s0(
 @gtscript.stencil(backend=backend)
 def mfpblt_s1(
     buo: FIELD_FLT,
-    cnvflg: FIELD_BOOL,
+    cnvflg: FIELD_BOOL_IJ,
     flg: FIELD_BOOL,
     hpbl: FIELD_FLT,
     kpbl: FIELD_INT,
@@ -3408,7 +3403,7 @@ def mfpblt_s1(
     g: float,
 ):
     with computation(PARALLEL), interval(...):
-        if cnvflg[0, 0, 0]:
+        if cnvflg[0, 0]:
             dz = zl[0, 0, 1] - zl[0, 0, 0]
             if mask[0, 0, 0] < kpbl[0, 0, 0]:
                 xlamue = ce0 * (
@@ -3421,7 +3416,7 @@ def mfpblt_s1(
 
     with computation(FORWARD):
         with interval(1, None):
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 tem = 0.5 * xlamue[0, 0, -1] * (zl[0, 0, 0] - zl[0, 0, -1])
                 factor = 1.0 + tem
                 thlu = (
@@ -3450,12 +3445,12 @@ def mfpblt_s1(
 
     with computation(FORWARD):
         with interval(0, 1):
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 wu2 = (4.0 * buo[0, 0, 0] * zm[0, 0, 0]) / (
                     1.0 + (0.5 * 2.0 * xlamue[0, 0, 0] * zm[0, 0, 0])
                 )
         with interval(1, None):
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 dz = zm[0, 0, 0] - zm[0, 0, -1]
                 tem = 0.25 * 2.0 * (xlamue[0, 0, 0] + xlamue[0, 0, -1]) * dz
                 wu2 = (((1.0 - tem) * wu2[0, 0, -1]) + (4.0 * buo[0, 0, 0] * dz)) / (
@@ -3465,7 +3460,7 @@ def mfpblt_s1(
     with computation(FORWARD), interval(0, 1):
         flg = True
         kpbly = kpbl[0, 0, 0]
-        if cnvflg[0, 0, 0]:
+        if cnvflg[0, 0]:
             flg = False
             rbup = wu2[0, 0, 0]
 
@@ -3489,7 +3484,7 @@ def mfpblt_s1(
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s1a(
-    cnvflg: FIELD_BOOL,
+    cnvflg: FIELD_BOOL_IJ,
     hpblx: FIELD_FLT,
     kpblx: FIELD_INT,
     mask: FIELD_INT,
@@ -3503,12 +3498,12 @@ def mfpblt_s1a(
             hpblx = hpblx[0, 0, -1]
             rbdn = rbdn[0, 0, -1]
             rbup = rbup[0, 0, -1]
-            cnvflg = cnvflg[0, 0, -1]
+            # cnvflg = cnvflg[0, 0, -1]
 
         rbint = 0.0
 
         if mask[0, 0, 0] == kpblx[0, 0, 0]:
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 if rbdn[0, 0, 0] <= 0.0:
                     rbint = 0.0
                 elif rbup[0, 0, 0] >= 0.0:
@@ -3524,7 +3519,7 @@ def mfpblt_s1a(
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s2(
-    cnvflg: FIELD_BOOL,
+    cnvflg: FIELD_BOOL_IJ,
     gdx: FIELD_FLT,
     hpbl: FIELD_FLT,
     hpblx: FIELD_FLT,
@@ -3567,7 +3562,7 @@ def mfpblt_s2(
 
     with computation(FORWARD):
         with interval(0, 1):
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 if kpbl[0, 0, 0] > kpblx[0, 0, 0]:
                     kpbl = kpblx[0, 0, 0]
                     hpbl = hpblx[0, 0, 0]
@@ -3577,7 +3572,7 @@ def mfpblt_s2(
             hpbl = hpbl[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
-        if cnvflg[0, 0, 0] and (kpbly[0, 0, 0] > kpblx[0, 0, 0]):
+        if cnvflg[0, 0] and (kpbly[0, 0, 0] > kpblx[0, 0, 0]):
             dz = zl[0, 0, 1] - zl[0, 0, 0]
             if mask[0, 0, 0] < kpbl[0, 0, 0]:
                 ptem = 1 / (zm[0, 0, 0] + dz)
@@ -3590,14 +3585,14 @@ def mfpblt_s2(
     with computation(FORWARD):
         with interval(0, 1):
             dz = zl[0, 0, 1] - zl[0, 0, 0]
-            if cnvflg[0, 0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
                 xlamavg = xlamavg[0, 0, 0] + xlamue[0, 0, 0] * dz
                 sumx = sumx[0, 0, 0] + dz
         with interval(1, None):
             xlamavg = xlamavg[0, 0, -1]
             sumx = sumx[0, 0, -1]
             dz = zl[0, 0, 1] - zl[0, 0, 0]
-            if cnvflg[0, 0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
                 xlamavg = xlamavg[0, 0, 0] + xlamue[0, 0, 0] * dz
                 sumx = sumx[0, 0, 0] + dz
 
@@ -3606,11 +3601,11 @@ def mfpblt_s2(
         sumx = sumx[0, 0, 1]
 
     with computation(PARALLEL), interval(0, 1):
-        if cnvflg[0, 0, 0]:
+        if cnvflg[0, 0]:
             xlamavg = xlamavg[0, 0, 0] / sumx[0, 0, 0]
 
     with computation(PARALLEL), interval(...):
-        if cnvflg[0, 0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+        if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
             if wu2[0, 0, 0] > 0.0:
                 xmf = a1 * sqrt(wu2[0, 0, 0])
             else:
@@ -3618,7 +3613,7 @@ def mfpblt_s2(
 
     with computation(FORWARD):
         with interval(0, 1):
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 tem = 0.2 / xlamavg[0, 0, 0]
                 sigma = min(
                     max((3.14 * tem * tem) / (gdx[0, 0, 0] * gdx[0, 0, 0]), 0.001),
@@ -3636,19 +3631,19 @@ def mfpblt_s2(
 
     with computation(PARALLEL), interval(...):
         xmmx = (zl[0, 0, 1] - zl[0, 0, 0]) / dt2
-        if cnvflg[0, 0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+        if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
             xmf = min(scaldfunc[0, 0, 0] * xmf[0, 0, 0], xmmx)
 
     with computation(FORWARD):
         with interval(0, 1):
-            if cnvflg[0, 0, 0]:
+            if cnvflg[0, 0]:
                 thlu = thlx[0, 0, 0]
         with interval(1, None):
             dz = zl[0, 0, 0] - zl[0, 0, -1]
             tem = 0.5 * xlamue[0, 0, -1] * dz
             factor = 1.0 + tem
 
-            if cnvflg[0, 0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
                 thlu = (
                     (1.0 - tem) * thlu[0, 0, -1]
                     + tem * (thlx[0, 0, -1] + thlx[0, 0, 0])
@@ -3663,7 +3658,7 @@ def mfpblt_s2(
             dq = qtu[0, 0, 0] - qs
             qlu = dq / (1.0 + (el2orc * qs / (tlu ** 2)))
 
-            if cnvflg[0, 0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
                 if dq > 0.0:
                     qtu = qs + qlu
                     qcko[0,0,0][0] = qs
@@ -3678,7 +3673,7 @@ def mfpblt_s2(
             tem = 0.5 * xlamuem[0, 0, -1] * dz
             factor = 1.0 + tem
 
-            if cnvflg[0, 0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
                 ucko = (
                     (1.0 - tem) * ucko[0, 0, -1]
                     + (tem + pgcon) * u1[0, 0, 0]

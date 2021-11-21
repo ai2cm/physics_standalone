@@ -13,6 +13,7 @@ DTYPE_BOOL = bool
 FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLT = gtscript.Field[DTYPE_FLT]
 FIELD_FLT_IJ = gtscript.Field[gtscript.IJ, DTYPE_FLT]
+FIELD_BOOL_IJ = gtscript.Field[gtscript.IJ, DTYPE_BOOL]
 FIELD_BOOL = gtscript.Field[DTYPE_BOOL]
 
 FIELD_BOOL_8 = gtscript.Field[(DTYPE_BOOL, (8,))]
