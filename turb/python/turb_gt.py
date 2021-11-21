@@ -667,7 +667,7 @@ def satmedmfvdif_gt(
     rbdn = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     sflux = gt_storage.zeros(
@@ -1871,7 +1871,7 @@ def part3a(
     flg: FIELD_BOOL,
     kpblx: FIELD_INT,
     mask: FIELD_INT,
-    rbdn: FIELD_FLT,
+    rbdn: FIELD_FLT_IJ,
     rbup: FIELD_FLT,
     thermal: FIELD_FLT,
     thlvx: FIELD_FLT,
@@ -1911,13 +1911,13 @@ def part3a(
                 kpblx = mask[0, 0, 0]
                 flg = rbup[0, 0, 0] > crb[0, 0, 0]
             else:
-                rbdn = rbdn[0, 0, -1]
+                # rbdn = rbdn[0, 0, -1]
                 rbup = rbup[0, 0, -1]
                 kpblx = kpblx[0, 0, -1]
                 flg = flg[0, 0, -1]
 
     with computation(BACKWARD), interval(0, -1):
-        rbdn = rbdn[0, 0, 1]
+        # rbdn = rbdn[0, 0, 1]
         rbup = rbup[0, 0, 1]
         kpblx = kpblx[0, 0, 1]
         flg = flg[0, 0, 1]
@@ -1942,7 +1942,7 @@ def part3a1(
     pcnvflg: FIELD_BOOL_IJ,
     phih: FIELD_FLT,
     phim: FIELD_FLT,
-    rbdn: FIELD_FLT,
+    rbdn: FIELD_FLT_IJ,
     rbup: FIELD_FLT,
     rbsoil: FIELD_FLT,
     sfcflg: FIELD_BOOL,
@@ -1973,17 +1973,17 @@ def part3a1(
             pblflg = pblflg[0, 0, -1]
             crb = crb[0, 0, -1]
             rbup = rbup[0, 0, -1]
-            rbdn = rbdn[0, 0, -1]
+            # rbdn = rbdn[0, 0, -1]
 
         if mask[0, 0, 0] == kpblx[0, 0, 0]:
             if kpblx[0, 0, 0] > 0:
-                if rbdn[0, 0, 0] >= crb[0, 0, 0]:
+                if rbdn[0, 0] >= crb[0, 0, 0]:
                     rbint = 0.0
                 elif rbup[0, 0, 0] <= crb[0, 0, 0]:
                     rbint = 1.0
                 else:
-                    rbint = (crb[0, 0, 0] - rbdn[0, 0, 0]) / (
-                        rbup[0, 0, 0] - rbdn[0, 0, 0]
+                    rbint = (crb[0, 0, 0] - rbdn[0, 0]) / (
+                        rbup[0, 0, 0] - rbdn[0, 0]
                     )
                 hpblx = zl[0, 0, -1] + rbint * (zl[0, 0, 0] - zl[0, 0, -1])
 
@@ -2050,7 +2050,7 @@ def part3c(
     flg: FIELD_BOOL,
     kpblx: FIELD_INT,
     mask: FIELD_INT,
-    rbdn: FIELD_FLT,
+    rbdn: FIELD_FLT_IJ,
     rbup: FIELD_FLT,
     thermal: FIELD_FLT,
     thlvx: FIELD_FLT,
@@ -2099,13 +2099,13 @@ def part3c(
                 kpblx = mask[0, 0, 0]
                 flg = rbup[0, 0, 0] > crb[0, 0, 0]
             else:
-                rbdn = rbdn[0, 0, -1]
+                # rbdn = rbdn[0, 0, -1]
                 rbup = rbup[0, 0, -1]
                 kpblx = kpblx[0, 0, -1]
                 flg = flg[0, 0, -1]
 
     with computation(BACKWARD), interval(0, -1):
-        rbdn = rbdn[0, 0, 1]
+        # rbdn = rbdn[0, 0, 1]
         rbup = rbup[0, 0, 1]
         kpblx = kpblx[0, 0, 1]
         flg = flg[0, 0, 1]
@@ -2122,7 +2122,7 @@ def part3c1(
     mask: FIELD_INT,
     pblflg: FIELD_BOOL,
     pcnvflg: FIELD_BOOL_IJ,
-    rbdn: FIELD_FLT,
+    rbdn: FIELD_FLT_IJ,
     rbup: FIELD_FLT,
     scuflg: FIELD_BOOL_IJ,
     zi: FIELD_FLT,
@@ -2136,16 +2136,16 @@ def part3c1(
             kpbl = kpbl[0, 0, -1]
             pblflg = pblflg[0, 0, -1]
             # pcnvflg = pcnvflg[0, 0, -1]
-            rbdn = rbdn[0, 0, -1]
+            # rbdn = rbdn[0, 0, -1]
             rbup = rbup[0, 0, -1]
 
         if pcnvflg[0, 0] and kpbl[0, 0, 0] == mask[0, 0, 0]:
-            if rbdn[0, 0, 0] >= crb[0, 0, 0]:
+            if rbdn[0, 0] >= crb[0, 0, 0]:
                 rbint = 0.0
             elif rbup[0, 0, 0] <= crb[0, 0, 0]:
                 rbint = 1.0
             else:
-                rbint = (crb[0, 0, 0] - rbdn[0, 0, 0]) / (rbup[0, 0, 0] - rbdn[0, 0, 0])
+                rbint = (crb[0, 0, 0] - rbdn[0, 0]) / (rbup[0, 0, 0] - rbdn[0, 0])
 
             hpbl[0, 0, 0] = zl[0, 0, -1] + rbint * (zl[0, 0, 0] - zl[0, 0, -1])
 
