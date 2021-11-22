@@ -206,6 +206,13 @@ def satmedmfvdif_gt(
         default_origin=(0, 0, 0),
     )
 
+    rtg_gt = gt_storage.zeros(
+        backend=backend,
+        dtype=(DTYPE_FLT,(ntrac,)),
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+
     # 2D GT storages extended into 3D
     # Note : I'm setting 2D GT storages to be size (im, 1, km+1) since this represents
     #        the largest "2D" array that will be examined.  There is a 1 in the 2nd dimension
@@ -798,8 +805,9 @@ def satmedmfvdif_gt(
 
     mask_init(mask=mask)
 
-    for I in range(8):
+    for I in range(ntrac):
         q1_gt[:, 0, :-1, I] = q1[:, :, I]
+        rtg_gt[:,0,:-1, I] = rtg[:,:,I]
 
     init(
         bf=bf,
@@ -1145,7 +1153,7 @@ def satmedmfvdif_gt(
                 if mlenflg:
                     if n == 0:
                         dz = zl[i, 0, 0]
-                        tem1 = tsea[i, 0] * (1.0 + fv * max(q1[i, 0, 0], qmin))
+                        tem1 = tsea[i, 0] * (1.0 + fv * max(q1_gt[i, 0, 0, 0], qmin))
                     else:
                         dz = zl[i, 0, n] - zl[i, 0, n - 1]
                         tem1 = thvx[i, 0, n - 1]
@@ -1293,19 +1301,19 @@ def satmedmfvdif_gt(
 
     for k in range(km):
         for i in range(im):
-            rtg[i, k, ntke - 1] = (
-                rtg[i, k, ntke - 1] + (f1[i, 0, k] - q1[i, k, ntke - 1]) * rdt
+            rtg_gt[i, 0, k, ntke - 1] = (
+                rtg_gt[i, 0, k, ntke - 1] + (f1[i, 0, k] - q1_gt[i, 0, k, ntke - 1]) * rdt
             )
 
     for i in range(im):
         ad[i, 0, 0] = 1.0
         f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0]
-        f2[i, 0, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0]
+        f2[i, 0, 0, 0] = q1_gt[i, 0, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0]
 
     if ntrac1 >= 2:
         for kk in range(1, ntrac1):
             for i in range(im):
-                f2[i, 0, 0, kk] = q1[i, 0, kk]
+                f2[i, 0, 0, kk] = q1_gt[i, 0, 0, kk]
 
     part13(
         ad=ad,
@@ -1352,11 +1360,11 @@ def satmedmfvdif_gt(
                         ptem1 = dtodsd * ptem
                         ptem2 = dtodsu * ptem
                         tem1 = qcko[i, 0, k, kk] + qcko[i, 0, k + 1, kk]
-                        tem2 = q1[i, k, kk] + q1[i, k + 1, kk]
+                        tem2 = q1_gt[i, 0, k, kk] + q1_gt[i, 0, k + 1, kk]
                         f2[i, 0, k, kk] = f2[i, 0, k, kk] - (tem1 - tem2) * ptem1
-                        f2[i, 0, k + 1, kk] = q1[i, k + 1, kk] + (tem1 - tem2) * ptem2
+                        f2[i, 0, k + 1, kk] = q1_gt[i, 0, k + 1, kk] + (tem1 - tem2) * ptem2
                     else:
-                        f2[i, 0, k + 1, kk] = q1[i, k + 1, kk]
+                        f2[i, 0, k + 1, kk] = q1_gt[i, 0, k + 1, kk]
 
                     if scuflg[i, 0] and k >= mrad[i, 0, 0] and k < krad[i, 0, 0]:
                         dtodsd = dt2 / del_[i, 0, k]
@@ -1367,7 +1375,7 @@ def satmedmfvdif_gt(
                         ptem1 = dtodsd * ptem
                         ptem2 = dtodsu * ptem
                         tem1 = qcdo[i, 0, k, kk] + qcdo[i, 0, k + 1, kk]
-                        tem2 = q1[i, k, kk] + q1[i, k + 1, kk]
+                        tem2 = q1_gt[i, 0, k, kk] + q1_gt[i, 0, k + 1, kk]
                         f2[i, 0, k, kk] = f2[i, 0, k, kk] + (tem1 - tem2) * ptem1
                         f2[i, 0, k + 1, kk] = (
                             f2[i, 0, k + 1, kk] - (tem1 - tem2) * ptem2
@@ -1378,9 +1386,9 @@ def satmedmfvdif_gt(
     for k in range(km):
         for i in range(im):
             ttend = (f1[i, 0, k] - t1[i, 0, k]) * rdt
-            qtend = (f2[i, 0, k, 0] - q1[i, k, 0]) * rdt
+            qtend = (f2[i, 0, k, 0] - q1_gt[i, 0, k, 0]) * rdt
             tdt[i, k] = tdt[i, k] + ttend
-            rtg[i, k, 0] = rtg[i, k, 0] + qtend
+            rtg_gt[i, 0, k, 0] = rtg_gt[i, 0, k, 0] + qtend
             dtsfc[i, 0] = dtsfc[i, 0] + cont * del_[i, 0, k] * ttend
             dqsfc[i, 0] = dqsfc[i, 0] + conq * del_[i, 0, k] * qtend
 
@@ -1389,8 +1397,8 @@ def satmedmfvdif_gt(
             # is_ = kk * km
             for k in range(km):
                 for i in range(im):
-                    rtg[i, k, kk] = rtg[i, k, kk] + (
-                        (f2[i, 0, k, kk] - q1[i, k, kk]) * rdt
+                    rtg_gt[i, 0, k, kk] = rtg_gt[i, 0, k, kk] + (
+                        (f2[i, 0, k, kk] - q1_gt[i, 0, k, kk]) * rdt
                     )
 
     tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
@@ -1467,6 +1475,9 @@ def satmedmfvdif_gt(
     hpbl = storage_to_numpy(hpbl, im)
 
     kpbl[:] = kpbl + 1
+
+    for I in range(ntrac):
+        rtg[:,:, I] = rtg_gt[:,0, :-1, I]
 
     return dv, du, tdt, rtg, kpbl, dusfc, dvsfc, dtsfc, dqsfc, hpbl
 
