@@ -3320,37 +3320,86 @@ def mfpblt(
         domain=(im, 1, kmpbl),
     )
 
-    if ntcw > 2:
-        for n in range(1, ntcw - 1):
-            for k in range(1, kmpbl):
-                for i in range(im):
-                    if cnvflg[i, 0] and k <= kpbl[i, 0]:
-                        dz = zl[i, 0, k] - zl[i, 0, k - 1]
-                        tem = 0.5 * xlamue[i, 0, k - 1] * dz
-                        factor = 1.0 + tem
-                        qcko[i, 0, k, n] = (
-                            (1.0 - tem) * qcko[i, 0, k - 1, n]
-                            + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
-                        ) / factor
+    # if ntcw > 2:
+    #     for n in range(1, ntcw - 1):
+    #         for k in range(1, kmpbl):
+    #             for i in range(im):
+    #                 if cnvflg[i, 0] and k <= kpbl[i, 0]:
+    #                     dz = zl[i, 0, k] - zl[i, 0, k - 1]
+    #                     tem = 0.5 * xlamue[i, 0, k - 1] * dz
+    #                     factor = 1.0 + tem
+    #                     qcko[i, 0, k, n] = (
+    #                         (1.0 - tem) * qcko[i, 0, k - 1, n]
+    #                         + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
+    #                     ) / factor
+    # ndc = ntrac1 - ntcw
 
-    ndc = ntrac1 - ntcw
+    # if ndc > 0:
+    #     for n in range(ntcw, ntrac1):
+    #         for k in range(1, kmpbl):
+    #             for i in range(im):
+    #                 if cnvflg[i, 0] and k <= kpbl[i, 0]:
+    #                     dz = zl[i, 0, k] - zl[i, 0, k - 1]
+    #                     tem = 0.5 * xlamue[i, 0, k - 1] * dz
+    #                     factor = 1.0 + tem
 
-    if ndc > 0:
-        for n in range(ntcw, ntrac1):
-            for k in range(1, kmpbl):
-                for i in range(im):
-                    if cnvflg[i, 0] and k <= kpbl[i, 0]:
-                        dz = zl[i, 0, k] - zl[i, 0, k - 1]
-                        tem = 0.5 * xlamue[i, 0, k - 1] * dz
-                        factor = 1.0 + tem
+    #                     qcko[i, 0, k, n] = (
+    #                         (1.0 - tem) * qcko[i, 0, k - 1, n]
+    #                         + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
+    #                     ) / factor
 
-                        qcko[i, 0, k, n] = (
-                            (1.0 - tem) * qcko[i, 0, k - 1, n]
-                            + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
-                        ) / factor
+    mfpblt_leftover(cnvflg = cnvflg,
+                kpbl = kpbl,
+                mask = mask,
+                xlamue = xlamue,
+                qcko = qcko,
+                q1_gt = q1_gt,
+                zl = zl,
+                kmpbl = kmpbl,
+                ntcw = ntcw,
+                ntrac1 = ntrac1,
+                domain=(im, 1, kmpbl)
+    )
 
     return kpbl, hpbl, buo, xmf, tcko, qcko, ucko, vcko, xlamue
 
+
+@gtscript.stencil(backend=backend)
+def mfpblt_leftover(cnvflg : FIELD_BOOL_IJ,
+                    kpbl : FIELD_INT_IJ,
+                    mask : FIELD_INT,
+                    xlamue : FIELD_FLT,
+                    qcko : FIELD_FLT_8,
+                    q1_gt : FIELD_FLT_8,
+                    zl : FIELD_FLT,
+                    kmpbl : int,
+                    ntcw  : int,
+                    ntrac1 : int,
+                   ):
+    with computation(FORWARD), interval(1,None):
+        if ntcw > 2:
+            for n in range(ntcw, ntcw - 1):
+                if cnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
+                    dz = zl[0, 0, 0] - zl[0, 0, -1]
+                    tem = 0.5 * xlamue[0, 0, -1] * dz
+                    factor = 1.0 + tem
+                    qcko[0,0,0][n] = (
+                        (1.0 - tem) * qcko[0,0,-1][n]
+                        + tem * (q1_gt[0,0,0][n] + q1_gt[0,0,-1][n])
+                    ) / factor
+
+    with computation(FORWARD), interval(1,None):
+        ndc = ntrac1 - ntcw
+        if ndc > 0:
+            for n2 in range(ntcw, ntrac1):
+                if cnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
+                    dz = zl[0, 0, 0] - zl[0, 0, -1]
+                    tem = 0.5 * xlamue[0, 0, -1] * dz
+                    factor = 1.0 + tem
+                    qcko[0,0,0][n2] = (
+                        (1.0 - tem) * qcko[0,0,-1][n2]
+                        + tem * (q1_gt[0,0,0][n2] + q1_gt[0,0,-1][n2])
+                    ) / factor
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s0(
