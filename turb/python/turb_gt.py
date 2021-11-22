@@ -958,7 +958,7 @@ def satmedmfvdif_gt(
         crb=crb,
         flg=flg,
         g=g,
-        kpblx=kpbl,
+        kpbl=kpbl,
         mask=mask,
         rbdn=rbdn,
         rbup=rbup,
@@ -1145,7 +1145,7 @@ def satmedmfvdif_gt(
                 if mlenflg:
                     if n == 0:
                         dz = zl[i, 0, 0]
-                        tem1 = tsea[i, 0, 0] * (1.0 + fv * max(q1[i, 0, 0], qmin))
+                        tem1 = tsea[i, 0] * (1.0 + fv * max(q1[i, 0, 0], qmin))
                     else:
                         dz = zl[i, 0, n] - zl[i, 0, n - 1]
                         tem1 = thvx[i, 0, n - 1]
@@ -1299,8 +1299,8 @@ def satmedmfvdif_gt(
 
     for i in range(im):
         ad[i, 0, 0] = 1.0
-        f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0, 0]
-        f2[i, 0, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0, 0]
+        f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0]
+        f2[i, 0, 0, 0] = q1[i, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0]
 
     if ntrac1 >= 2:
         for kk in range(1, ntrac1):
@@ -1343,7 +1343,7 @@ def satmedmfvdif_gt(
         for kk in range(1, ntrac1):
             for k in range(km1):
                 for i in range(im):
-                    if pcnvflg[i, 0] and k < kpbl[i, 0, 0]:
+                    if pcnvflg[i, 0] and k < kpbl[i, 0]:
                         dtodsd = dt2 / del_[i, 0, k]
                         dtodsu = dt2 / del_[i, 0, k + 1]
                         dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
@@ -1381,8 +1381,8 @@ def satmedmfvdif_gt(
             qtend = (f2[i, 0, k, 0] - q1[i, k, 0]) * rdt
             tdt[i, k] = tdt[i, k] + ttend
             rtg[i, k, 0] = rtg[i, k, 0] + qtend
-            dtsfc[i, 0, 0] = dtsfc[i, 0, 0] + cont * del_[i, 0, k] * ttend
-            dqsfc[i, 0, 0] = dqsfc[i, 0, 0] + conq * del_[i, 0, k] * qtend
+            dtsfc[i, 0] = dtsfc[i, 0] + cont * del_[i, 0, k] * ttend
+            dqsfc[i, 0] = dqsfc[i, 0] + conq * del_[i, 0, k] * qtend
 
     if ntrac1 >= 2:
         for kk in range(1, ntrac1):
@@ -1489,7 +1489,7 @@ def numpy_to_gt4py_storage_1D(arr, backend, k_depth):
     if data.dtype == "bool":
         data = data.astype(np.int32)
     # Replicate 2D array in z direction "k_depth" number of times
-    data = np.repeat(data[:, :, np.newaxis], k_depth, axis=2)
+    # data = np.repeat(data[:, :, np.newaxis], k_depth, axis=2)
     return gt_storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
 
@@ -1499,7 +1499,12 @@ def storage_to_numpy(gt_storage, array_dim):
         np_tmp[:, :] = gt_storage[0 : array_dim[0], 0, 0 : array_dim[1]]
     else:
         np_tmp = np.zeros(array_dim)
-        np_tmp[:] = gt_storage[0:array_dim, 0, 0]
+        if len(gt_storage.shape) == 1:
+            np_tmp[:] = gt_storage[0:array_dim]
+        elif len(gt_storage.shape) == 2:
+            np_tmp[:] = gt_storage[0:array_dim, 0]
+        else:
+            np_tmp[:] = gt_storage[0:array_dim, 0, 0]
 
     if gt_storage.dtype == "int32":
         np_tmp.astype(int)
@@ -1609,7 +1614,7 @@ def init(
     phil: FIELD_FLT,
     chz: FIELD_FLT,
     ckz: FIELD_FLT,
-    garea: FIELD_FLT,
+    garea: FIELD_FLT_IJ,
     gdx: FIELD_FLT,
     tke: FIELD_FLT,
     q1: FIELD_FLT_8,
@@ -1620,9 +1625,9 @@ def init(
     xkzm_hx: FIELD_FLT,
     xkzm_mx: FIELD_FLT,
     mask: FIELD_INT,
-    kinver: FIELD_INT,
-    tx1: FIELD_FLT,
-    tx2: FIELD_FLT,
+    kinver: FIELD_INT_IJ,
+    tx1: FIELD_FLT_IJ,
+    tx2: FIELD_FLT_IJ,
     xkzo: FIELD_FLT,
     xkzmo: FIELD_FLT,
     z0: FIELD_FLT,
@@ -1632,14 +1637,14 @@ def init(
     sfcflg: FIELD_BOOL,
     pcnvflg: FIELD_BOOL_IJ,
     scuflg: FIELD_BOOL_IJ,
-    zorl: FIELD_FLT,
-    dusfc: FIELD_FLT,
-    dvsfc: FIELD_FLT,
-    dtsfc: FIELD_FLT,
-    dqsfc: FIELD_FLT,
-    kpbl: FIELD_INT,
-    hpbl: FIELD_FLT,
-    rbsoil: FIELD_FLT,
+    zorl: FIELD_FLT_IJ,
+    dusfc: FIELD_FLT_IJ,
+    dvsfc: FIELD_FLT_IJ,
+    dtsfc: FIELD_FLT_IJ,
+    dqsfc: FIELD_FLT_IJ,
+    kpbl: FIELD_INT_IJ,
+    hpbl: FIELD_FLT_IJ,
+    rbsoil: FIELD_FLT_IJ,
     radmin: FIELD_FLT,
     mrad: FIELD_INT,
     krad: FIELD_INT,
@@ -1647,7 +1652,7 @@ def init(
     kcld: FIELD_INT,
     theta: FIELD_FLT,
     prslk: FIELD_FLT,
-    psk: FIELD_FLT,
+    psk: FIELD_FLT_IJ,
     t1: FIELD_FLT,
     pix: FIELD_FLT,
     qlx: FIELD_FLT,
@@ -1667,23 +1672,23 @@ def init(
     cfly: FIELD_FLT,
     crb: FIELD_FLT,
     dtdz1: FIELD_FLT,
-    evap: FIELD_FLT,
-    heat: FIELD_FLT,
+    evap: FIELD_FLT_IJ,
+    heat: FIELD_FLT_IJ,
     hlw: FIELD_FLT,
     radx: FIELD_FLT,
     rbup: FIELD_FLT,
     sflux: FIELD_FLT,
     shr2: FIELD_FLT,
-    stress: FIELD_FLT,
+    stress: FIELD_FLT_IJ,
     swh: FIELD_FLT,
     thermal: FIELD_FLT,
-    tsea: FIELD_FLT,
-    u10m: FIELD_FLT,
+    tsea: FIELD_FLT_IJ,
+    u10m: FIELD_FLT_IJ,
     ustar: FIELD_FLT,
     u1: FIELD_FLT,
     v1: FIELD_FLT,
-    v10m: FIELD_FLT,
-    xmu: FIELD_FLT,
+    v10m: FIELD_FLT_IJ,
+    xmu: FIELD_FLT_IJ,
     gravi: float,
     dt2: float,
     el2orc: float,
@@ -1704,6 +1709,12 @@ def init(
     with computation(FORWARD), interval(0,1):
         pcnvflg = 0
         scuflg = 1
+        dusfc = 0.0
+        dvsfc = 0.0
+        dtsfc = 0.0
+        dqsfc = 0.0
+        kpbl = 1
+        hpbl = 0.0
 
     with computation(PARALLEL), interval(...):
         zi = phii[0, 0, 0] * gravi
@@ -1712,7 +1723,7 @@ def init(
     with computation(PARALLEL), interval(0, -1):
         ckz = ck1
         chz = ch1
-        gdx = sqrt(garea[0, 0, 0])
+        gdx = sqrt(garea[0, 0])
         prn = 1.0
         kx1 = 0.0
         zm = zi[0, 0, 1]
@@ -1729,11 +1740,11 @@ def init(
                 gdx[0, 0, 0] - 5.0
             )
 
-        if mask[0, 0, 0] == kx1[0, 0, 0] and mask[0, 0, 0] > 0:
-            tx2 = 1.0 / prsi[0, 0, 0]
+        # if mask[0, 0, 0] == kx1[0, 0, 0] and mask[0, 0, 0] > 0:
+        #     tx2 = 1.0 / prsi[0, 0, 0]
 
-        if mask[0, 0, 0] < kinver[0, 0, 0]:
-            ptem = prsi[0, 0, 1] * tx1[0, 0, 0]
+        if mask[0, 0, 0] < kinver[0, 0]:
+            ptem = prsi[0, 0, 1] * tx1[0, 0]
             xkzo = xkzm_hx[0, 0, 0] * min(
                 1.0, exp(-((1.0 - ptem) * (1.0 - ptem) * 10.0))
             )
@@ -1746,26 +1757,26 @@ def init(
                     1.0,
                     exp(
                         -(
-                            (1.0 - prsi[0, 0, 1] * tx2[0, 0, 0])
-                            * (1.0 - prsi[0, 0, 1] * tx2[0, 0, 0])
+                            (1.0 - prsi[0, 0, 1] * tx2[0, 0])
+                            * (1.0 - prsi[0, 0, 1] * tx2[0, 0])
                             * 5.0
                         )
                     ),
                 )
                 xkzmo = xkzm_mx[0, 0, 0] * tem1
 
-        z0 = 0.01 * zorl[0, 0, 0]
-        dusfc = 0.0
-        dvsfc = 0.0
-        dtsfc = 0.0
-        dqsfc = 0.0
-        kpbl = 1
-        hpbl = 0.0
+        z0 = 0.01 * zorl[0, 0]
+        # dusfc = 0.0
+        # dvsfc = 0.0
+        # dtsfc = 0.0
+        # dqsfc = 0.0
+        # kpbl = 1
+        # hpbl = 0.0
         kpblx = 1
         hpblx = 0.0
         pblflg = 1
         sfcflg = 1
-        if rbsoil[0, 0, 0] > 0.0:
+        if rbsoil[0, 0] > 0.0:
             sfcflg = 0
         # pcnvflg = 0
         # scuflg = 1
@@ -1775,7 +1786,7 @@ def init(
         lcld = km1 - 1
         kcld = km1 - 1
 
-        pix = psk[0, 0, 0] / prslk[0, 0, 0]
+        pix = psk[0, 0] / prslk[0, 0, 0]
         theta = t1[0, 0, 0] * pix[0, 0, 0]
         if (ntiw+1) > 0:
             tem = max(q1[0, 0, 0][ntcw], qlmin)
@@ -1830,12 +1841,12 @@ def init(
             (qtx[0, 0, 1] - qtx[0, 0, 0]) * rdzt[0, 0, 0]
         )
         radx = (zi[0, 0, 1] - zi[0, 0, 0]) * (
-            swh[0, 0, 0] * xmu[0, 0, 0] + hlw[0, 0, 0]
+            swh[0, 0, 0] * xmu[0, 0] + hlw[0, 0, 0]
         )
 
     with computation(PARALLEL):
         with interval(0, 1):
-            sflux = heat[0, 0, 0] + evap[0, 0, 0] * fv * theta[0, 0, 0]
+            sflux = heat[0, 0] + evap[0, 0] * fv * theta[0, 0, 0]
 
             if sfcflg[0, 0, 0] == 0 or sflux[0, 0, 0] <= 0.0:
                 pblflg = 0
@@ -1845,14 +1856,14 @@ def init(
                 crb = rbcr
             else:
                 tem1 = 1e-7 * (
-                    max(sqrt(u10m[0, 0, 0] ** 2 + v10m[0, 0, 0] ** 2), 1.0)
+                    max(sqrt(u10m[0, 0] ** 2 + v10m[0, 0] ** 2), 1.0)
                     / (f0 * z0[0, 0, 0])
                 )
-                thermal = tsea[0, 0, 0] * (1.0 + fv * max(q1[0, 0, 0][0], qmin))
+                thermal = tsea[0, 0] * (1.0 + fv * max(q1[0, 0, 0][0], qmin))
                 crb = max(min(0.16 * (tem1 ** (-0.18)), crbmax), crbmin)
 
             dtdz1 = dt2 / (zi[0, 0, 1] - zi[0, 0, 0])
-            ustar = sqrt(stress[0, 0, 0])
+            ustar = sqrt(stress[0, 0])
 
     with computation(PARALLEL):
         with interval(0, -2):
@@ -1861,7 +1872,7 @@ def init(
 
     with computation(PARALLEL):
         with interval(...):
-            rbup = rbsoil[0, 0, 0]
+            rbup = rbsoil[0, 0]
 
 
 # Possible stencil name : mrf_pbl_scheme_part1
@@ -1927,15 +1938,15 @@ def part3a(
 @gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
 def part3a1(
     crb: FIELD_FLT,
-    evap: FIELD_FLT,
-    fh: FIELD_FLT,
+    evap: FIELD_FLT_IJ,
+    fh: FIELD_FLT_IJ,
     flg: FIELD_BOOL,
-    fm: FIELD_FLT,
+    fm: FIELD_FLT_IJ,
     gotvx: FIELD_FLT,
-    heat: FIELD_FLT,
-    hpbl: FIELD_FLT,
+    heat: FIELD_FLT_IJ,
+    hpbl: FIELD_FLT_IJ,
     hpblx: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     kpblx: FIELD_INT,
     mask: FIELD_INT,
     pblflg: FIELD_BOOL,
@@ -1944,7 +1955,7 @@ def part3a1(
     phim: FIELD_FLT,
     rbdn: FIELD_FLT_IJ,
     rbup: FIELD_FLT,
-    rbsoil: FIELD_FLT,
+    rbsoil: FIELD_FLT_IJ,
     sfcflg: FIELD_BOOL,
     sflux: FIELD_FLT,
     thermal: FIELD_FLT,
@@ -1967,9 +1978,8 @@ def part3a1(
             kpblx = kpblx[0, 0, -1]
             hpblx = hpblx[0, 0, -1]
             zl_0 = zl_0[0, 0, -1]
-            kpbl = kpbl[0, 0, -1]
-            hpbl = hpbl[0, 0, -1]
-            kpbl = kpbl[0, 0, -1]
+            # kpbl = kpbl[0, 0, -1]
+            # hpbl = hpbl[0, 0, -1]
             pblflg = pblflg[0, 0, -1]
             crb = crb[0, 0, -1]
             rbup = rbup[0, 0, -1]
@@ -1996,24 +2006,24 @@ def part3a1(
             hpbl = hpblx[0, 0, 0]
             kpbl = kpblx[0, 0, 0]
 
-            if kpbl[0, 0, 0] <= 0:
+            if kpbl[0, 0] <= 0:
                 pblflg = 0
 
     with computation(BACKWARD), interval(0, -1):
         kpblx = kpblx[0, 0, 1]
         hpblx = hpblx[0, 0, 1]
-        kpbl = kpbl[0, 0, 1]
-        hpbl = hpbl[0, 0, 1]
+        # kpbl = kpbl[0, 0, 1]
+        # hpbl = hpbl[0, 0, 1]
         pblflg = pblflg[0, 0, 1]
 
     with computation(FORWARD), interval(0, 1):
-        zol = max(rbsoil[0, 0, 0] * fm[0, 0, 0] * fm[0, 0, 0] / fh[0, 0, 0], rimin)
+        zol = max(rbsoil[0, 0] * fm[0, 0] * fm[0, 0] / fh[0, 0], rimin)
         if sfcflg[0, 0, 0]:
             zol = min(zol[0, 0, 0], -zfmin)
         else:
             zol = max(zol[0, 0, 0], zfmin)
 
-        zol1 = zol[0, 0, 0] * sfcfrac * hpbl[0, 0, 0] / zl[0, 0, 0]
+        zol1 = zol[0, 0, 0] * sfcfrac * hpbl[0, 0] / zl[0, 0, 0]
 
         if sfcflg[0, 0, 0]:
             phih = sqrt(1.0 / (1.0 - aphi16 * zol1))
@@ -2024,7 +2034,7 @@ def part3a1(
 
         pcnvflg = pblflg[0, 0, 0] and (zol[0, 0, 0] < zolcru)
 
-        wst3 = gotvx[0, 0, 0] * sflux[0, 0, 0] * hpbl[0, 0, 0]
+        wst3 = gotvx[0, 0, 0] * sflux[0, 0, 0] * hpbl[0, 0]
         ust3 = ustar[0, 0, 0] ** 3.0
 
         if pblflg[0, 0, 0]:
@@ -2035,12 +2045,12 @@ def part3a1(
         flg = 1
 
         if pcnvflg[0, 0]:
-            hgamt = heat[0, 0, 0] / wscale[0, 0, 0]
-            hgamq = evap[0, 0, 0] / wscale[0, 0, 0]
+            hgamt = heat[0, 0] / wscale[0, 0, 0]
+            hgamq = evap[0, 0] / wscale[0, 0, 0]
             vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
             thermal = thermal[0, 0, 0] + min(cfac * vpert[0, 0, 0], gamcrt)
             flg = 0
-            rbup = rbsoil[0, 0, 0]
+            rbup = rbsoil[0, 0]
 
 
 # Possible stencil name : thermal_2
@@ -2048,7 +2058,7 @@ def part3a1(
 def part3c(
     crb: FIELD_FLT,
     flg: FIELD_BOOL,
-    kpblx: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     mask: FIELD_INT,
     rbdn: FIELD_FLT_IJ,
     rbup: FIELD_FLT,
@@ -2071,7 +2081,7 @@ def part3c(
             thermal = thermal[0, 0, -1]
             rbup = rbup[0, 0, -1]
             flg = flg[0, 0, -1]
-            kpblx = kpblx[0, 0, -1]
+            # kpblx = kpblx[0, 0, -1]
             if flg[0, 0, 0] == 0:
                 rbdn = rbup[0, 0, 0]
                 rbup = (
@@ -2079,7 +2089,7 @@ def part3c(
                     * (g * zl[0, 0, 0] / thlvx_0[0, 0, 0])
                     / max(u1[0, 0, 0] ** 2 + v1[0, 0, 0] ** 2, 1.0)
                 )
-                kpblx = mask[0, 0, 0]
+                kpbl = mask[0, 0, 0]
                 flg = rbup[0, 0, 0] > crb[0, 0, 0]
 
         with interval(2, None):
@@ -2088,7 +2098,7 @@ def part3c(
             thermal = thermal[0, 0, -1]
             rbup = rbup[0, 0, -1]
             flg = flg[0, 0, -1]
-            kpblx = kpblx[0, 0, -1]
+            # kpblx = kpblx[0, 0, -1]
             if flg[0, 0, -1] == 0:
                 rbdn = rbup[0, 0, -1]
                 rbup = (
@@ -2096,18 +2106,18 @@ def part3c(
                     * (g * zl[0, 0, 0] / thlvx_0[0, 0, 0])
                     / max(u1[0, 0, 0] ** 2 + v1[0, 0, 0] ** 2, 1.0)
                 )
-                kpblx = mask[0, 0, 0]
+                kpbl = mask[0, 0, 0]
                 flg = rbup[0, 0, 0] > crb[0, 0, 0]
             else:
                 # rbdn = rbdn[0, 0, -1]
                 rbup = rbup[0, 0, -1]
-                kpblx = kpblx[0, 0, -1]
+                # kpblx = kpblx[0, 0, -1]
                 flg = flg[0, 0, -1]
 
     with computation(BACKWARD), interval(0, -1):
         # rbdn = rbdn[0, 0, 1]
         rbup = rbup[0, 0, 1]
-        kpblx = kpblx[0, 0, 1]
+        # kpblx = kpblx[0, 0, 1]
         flg = flg[0, 0, 1]
 
 
@@ -2116,8 +2126,8 @@ def part3c(
 def part3c1(
     crb: FIELD_FLT,
     flg: FIELD_BOOL,
-    hpbl: FIELD_FLT,
-    kpbl: FIELD_INT,
+    hpbl: FIELD_FLT_IJ,
+    kpbl: FIELD_INT_IJ,
     lcld: FIELD_INT,
     mask: FIELD_INT,
     pblflg: FIELD_BOOL,
@@ -2132,14 +2142,14 @@ def part3c1(
     with computation(FORWARD), interval(...):
         if mask[0, 0, 0] > 0:
             crb = crb[0, 0, -1]
-            hpbl = hpbl[0, 0, -1]
-            kpbl = kpbl[0, 0, -1]
+            # hpbl = hpbl[0, 0, -1]
+            # kpbl = kpbl[0, 0, -1]
             pblflg = pblflg[0, 0, -1]
             # pcnvflg = pcnvflg[0, 0, -1]
             # rbdn = rbdn[0, 0, -1]
             rbup = rbup[0, 0, -1]
 
-        if pcnvflg[0, 0] and kpbl[0, 0, 0] == mask[0, 0, 0]:
+        if pcnvflg[0, 0] and kpbl[0, 0] == mask[0, 0, 0]:
             if rbdn[0, 0] >= crb[0, 0, 0]:
                 rbint = 0.0
             elif rbup[0, 0, 0] <= crb[0, 0, 0]:
@@ -2147,18 +2157,18 @@ def part3c1(
             else:
                 rbint = (crb[0, 0, 0] - rbdn[0, 0]) / (rbup[0, 0, 0] - rbdn[0, 0])
 
-            hpbl[0, 0, 0] = zl[0, 0, -1] + rbint * (zl[0, 0, 0] - zl[0, 0, -1])
+            hpbl[0, 0] = zl[0, 0, -1] + rbint * (zl[0, 0, 0] - zl[0, 0, -1])
 
-            if hpbl[0, 0, 0] < zi[0, 0, 0]:
-                kpbl[0, 0, 0] = kpbl[0, 0, 0] - 1
+            if hpbl[0, 0] < zi[0, 0, 0]:
+                kpbl[0, 0] = kpbl[0, 0] - 1
 
-            if kpbl[0, 0, 0] <= 0:
+            if kpbl[0, 0] <= 0:
                 pblflg[0, 0, 0] = 0
                 pcnvflg[0, 0] = 0
 
     with computation(BACKWARD), interval(0, -1):
-        hpbl = hpbl[0, 0, 1]
-        kpbl = kpbl[0, 0, 1]
+        # hpbl = hpbl[0, 0, 1]
+        # kpbl = kpbl[0, 0, 1]
         pblflg = pblflg[0, 0, 1]
         # pcnvflg = pcnvflg[0, 0, 1]
 
@@ -2322,8 +2332,8 @@ def part4a(
 def part5(
     chz: FIELD_FLT,
     ckz: FIELD_FLT,
-    hpbl: FIELD_FLT,
-    kpbl: FIELD_INT,
+    hpbl: FIELD_FLT_IJ,
+    kpbl: FIELD_INT_IJ,
     mask: FIELD_INT,
     pcnvflg: FIELD_BOOL_IJ,
     phih: FIELD_FLT,
@@ -2337,15 +2347,15 @@ def part5(
         phim = phim[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
-        tem1 = max(zi[0, 0, 1] - sfcfrac * hpbl[0, 0, 0], 0.0)
-        ptem = -3.0 * (tem1 ** 2.0) / (hpbl[0, 0, 0] ** 2.0)
-        if mask[0, 0, 0] < kpbl[0, 0, 0]:
+        tem1 = max(zi[0, 0, 1] - sfcfrac * hpbl[0, 0], 0.0)
+        ptem = -3.0 * (tem1 ** 2.0) / (hpbl[0, 0] ** 2.0)
+        if mask[0, 0, 0] < kpbl[0, 0]:
             if pcnvflg[0, 0]:
                 prn = 1.0 + ((phih[0, 0, 0] / phim[0, 0, 0]) - 1.0) * exp(ptem)
             else:
                 prn = phih[0, 0, 0] / phim[0, 0, 0]
 
-        if mask[0, 0, 0] < kpbl[0, 0, 0]:
+        if mask[0, 0, 0] < kpbl[0, 0]:
             prn = max(min(prn[0, 0, 0], prmax), prmin)
             ckz = max(min(ck1 + (ck0 - ck1) * exp(ptem), ck0), ck1)
             chz = max(min(ch1 + (ch0 - ch1) * exp(ptem), ch0), ch1)
@@ -2366,7 +2376,7 @@ def part6(
     elm: FIELD_FLT,
     gdx: FIELD_FLT,
     gotvx: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     mask: FIELD_INT,
     mrad: FIELD_INT,
     krad: FIELD_INT,
@@ -2382,7 +2392,7 @@ def part6(
     scuflg: FIELD_BOOL_IJ,
     sflux: FIELD_FLT,
     shr2: FIELD_FLT,
-    stress: FIELD_FLT,
+    stress: FIELD_FLT_IJ,
     tke: FIELD_FLT,
     u1: FIELD_FLT,
     ucdo: FIELD_FLT,
@@ -2432,7 +2442,7 @@ def part6(
         )
         ri = max(bf[0, 0, 0] / shr2[0, 0, 0], rimin)
 
-        if mask[0, 0, 0] < kpbl[0, 0, 0]:
+        if mask[0, 0, 0] < kpbl[0, 0]:
             if pblflg[0, 0, 0]:
                 dku = ckz[0, 0, 0] * tem
                 dkt = dku[0, 0, 0] / prn[0, 0, 0]
@@ -2479,10 +2489,10 @@ def part6(
         sflux = sflux[0, 0, -1]
         ustar = ustar[0, 0, -1]
         phim = phim[0, 0, -1]
-        kpbl = kpbl[0, 0, -1]
+        # kpbl = kpbl[0, 0, -1]
         # scuflg = scuflg[0, 0, -1]
         # pcnvflg = pcnvflg[0, 0, -1]
-        stress = stress[0, 0, -1]
+        # stress = stress[0, 0, -1]
         mrad = mrad[0, 0, -1]
         krad = krad[0, 0, -1]
 
@@ -2524,7 +2534,7 @@ def part6(
                 + ptem1
                 + ptem2
                 + (
-                    stress[0, 0, 0]
+                    stress[0, 0]
                     * ustar[0, 0, 0]
                     * phim[0, 0, 0]
                     / (vk * zl[0, 0, 0])
@@ -2534,7 +2544,7 @@ def part6(
             prod = buop + shrp
 
         with interval(1, -1):
-            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
                 ptem1 = 0.5 * (xmf[0, 0, -1] + xmf[0, 0, 0]) * buou[0, 0, 0]
             else:
                 ptem1 = 0.0
@@ -2556,7 +2566,7 @@ def part6(
             tem1 = (u1[0, 0, 1] - u1[0, 0, 0]) * rdzt[0, 0, 0]
             tem2 = (u1[0, 0, 0] - u1[0, 0, -1]) * rdzt[0, 0, -1]
 
-            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
                 ptem1 = (
                     0.5
                     * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
@@ -2586,7 +2596,7 @@ def part6(
             tem1 = (v1[0, 0, 1] - v1[0, 0, 0]) * rdzt[0, 0, 0]
             tem2 = (v1[0, 0, 0] - v1[0, 0, -1]) * rdzt[0, 0, -1]
 
-            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
                 ptem1 = (
                     0.5
                     * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
@@ -2653,7 +2663,7 @@ def part9(
 # Possible stencil name : tke_up_down_prop_2
 @gtscript.stencil(backend=backend)
 def part10(
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     mask: FIELD_INT,
     pcnvflg: FIELD_BOOL_IJ,
     qcko: FIELD_FLT_8,
@@ -2664,7 +2674,7 @@ def part10(
 
     with computation(FORWARD), interval(1, None):
         tem = 0.5 * xlamue[0, 0, -1] * (zl[0, 0, 0] - zl[0, 0, -1])
-        if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0, 0]:
+        if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
             qcko[0,0,0][7] = (
                 (1.0 - tem) * qcko[0, 0, -1][7] + tem * (tke[0, 0, 0] + tke[0, 0, -1])
             ) / (1.0 + tem)
@@ -2711,7 +2721,7 @@ def part12(
     dkq: FIELD_FLT,
     f1: FIELD_FLT,
     f1_p1: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
@@ -2740,7 +2750,7 @@ def part12(
             ad_p1 = 1.0 - al[0, 0, 0]
             tem2 = dsig * rdz
 
-            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0]:
                 tem = (
                     qcko[0, 0, 0][7]
                     + qcko[0, 0, 1][7]
@@ -2777,7 +2787,7 @@ def part12(
             ad = ad[0, 0, 0] - au[0, 0, 0]
             ad_p1 = 1.0 - al[0, 0, 0]
 
-            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0]:
                 tem = (
                     qcko[0, 0, 0][7]
                     + qcko[0, 0, 1][7]
@@ -2819,7 +2829,7 @@ def part13(
     f1_p1: FIELD_FLT,
     f2: FIELD_FLT_7,
     f2_p1: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
@@ -2858,7 +2868,7 @@ def part13(
             ad = ad[0, 0, 0] - au[0, 0, 0]
             ad_p1 = 1.0 - al[0, 0, 0]
 
-            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0]:
                 ptem = 0.5 * dsig * rdz * xmf[0, 0, 0]
                 ptem1 = dtodsd * ptem
                 ptem2 = dtodsu * ptem
@@ -2908,7 +2918,7 @@ def part14(
     f1_p1: FIELD_FLT,
     f2: FIELD_FLT_7,
     f2_p1: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     krad: FIELD_INT,
     mask: FIELD_INT,
     mrad: FIELD_INT,
@@ -2916,8 +2926,8 @@ def part14(
     prsl: FIELD_FLT,
     rdzt: FIELD_FLT,
     scuflg: FIELD_BOOL_IJ,
-    spd1: FIELD_FLT,
-    stress: FIELD_FLT,
+    spd1: FIELD_FLT_IJ,
+    stress: FIELD_FLT_IJ,
     tdt: FIELD_FLT,
     u1: FIELD_FLT,
     ucdo: FIELD_FLT,
@@ -2938,7 +2948,7 @@ def part14(
 
     with computation(PARALLEL):
         with interval(0, 1):
-            ad = 1.0 + dtdz1[0, 0, 0] * stress[0, 0, 0] / spd1[0, 0, 0]
+            ad = 1.0 + dtdz1[0, 0, 0] * stress[0, 0] / spd1[0, 0]
             f1 = u1[0, 0, 0]
             f2[0,0,0][0] = v1[0, 0, 0]
 
@@ -2959,7 +2969,7 @@ def part14(
             ad = ad[0, 0, 0] - au[0, 0, 0]
             ad_p1 = 1.0 - al[0, 0, 0]
 
-            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0]:
                 ptem = 0.5 * dsig * rdz * xmf[0, 0, 0]
                 ptem1 = dtodsd * ptem
                 ptem2 = dtodsu * ptem
@@ -2999,14 +3009,14 @@ def part14(
 def part15(
     del_: FIELD_FLT,
     du: FIELD_FLT,
-    dusfc: FIELD_FLT,
+    dusfc: FIELD_FLT_IJ,
     dv: FIELD_FLT,
-    dvsfc: FIELD_FLT,
+    dvsfc: FIELD_FLT_IJ,
     f1: FIELD_FLT,
     f2: FIELD_FLT_7,
-    hpbl: FIELD_FLT,
+    hpbl: FIELD_FLT_IJ,
     hpblx: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     kpblx: FIELD_INT,
     mask: FIELD_INT,
     u1: FIELD_FLT,
@@ -3015,19 +3025,19 @@ def part15(
     rdt: float,
 ):
 
-    with computation(PARALLEL), interval(...):
+    with computation(FORWARD), interval(...):
         utend = (f1[0, 0, 0] - u1[0, 0, 0]) * rdt
         vtend = (f2[0, 0, 0][0] - v1[0, 0, 0]) * rdt
         du = du[0, 0, 0] + utend
         dv = dv[0, 0, 0] + vtend
-        dusfc = dusfc[0, 0, 0] + conw * del_[0, 0, 0] * utend
-        dvsfc = dvsfc[0, 0, 0] + conw * del_[0, 0, 0] * vtend
+        dusfc = dusfc[0, 0] + conw * del_[0, 0, 0] * utend
+        dvsfc = dvsfc[0, 0] + conw * del_[0, 0, 0] * vtend
 
-    with computation(BACKWARD), interval(0, -1):
-        dusfc = dusfc[0, 0, 0] + dusfc[0, 0, 1]
-        dvsfc = dvsfc[0, 0, 0] + dvsfc[0, 0, 1]
+    # with computation(BACKWARD), interval(0, -1):
+    #     dusfc = dusfc[0, 0, 0] + dusfc[0, 0, 1]
+    #     dvsfc = dvsfc[0, 0, 0] + dvsfc[0, 0, 1]
 
-    with computation(PARALLEL), interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
         hpbl = hpblx[0, 0, 0]
         kpbl = kpblx[0, 0, 0]
 
@@ -3303,7 +3313,7 @@ def mfpblt(
         for n in range(1, ntcw - 1):
             for k in range(1, kmpbl):
                 for i in range(im):
-                    if cnvflg[i, 0] and k <= kpbl[i, 0, 0]:
+                    if cnvflg[i, 0] and k <= kpbl[i, 0]:
                         dz = zl[i, 0, k] - zl[i, 0, k - 1]
                         tem = 0.5 * xlamue[i, 0, k - 1] * dz
                         factor = 1.0 + tem
@@ -3318,7 +3328,7 @@ def mfpblt(
         for n in range(ntcw, ntrac1):
             for k in range(1, kmpbl):
                 for i in range(im):
-                    if cnvflg[i, 0] and k <= kpbl[i, 0, 0]:
+                    if cnvflg[i, 0] and k <= kpbl[i, 0]:
                         dz = zl[i, 0, k] - zl[i, 0, k - 1]
                         tem = 0.5 * xlamue[i, 0, k - 1] * dz
                         factor = 1.0 + tem
@@ -3335,8 +3345,8 @@ def mfpblt(
 def mfpblt_s0(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL_IJ,
-    hpbl: FIELD_FLT,
-    kpbl: FIELD_INT,
+    hpbl: FIELD_FLT_IJ,
+    kpbl: FIELD_INT_IJ,
     q1: FIELD_FLT_8,
     qtu: FIELD_FLT,
     qtx: FIELD_FLT,
@@ -3365,9 +3375,9 @@ def mfpblt_s0(
 
     # CK : This may not be needed later if stencils previous to this one update
     #       hpbl and kpbl over its entire range
-    with computation(FORWARD), interval(1, None):
-        hpbl = hpbl[0, 0, -1]
-        kpbl = kpbl[0, 0, -1]
+    # with computation(FORWARD), interval(1, None):
+    #     hpbl = hpbl[0, 0, -1]
+    #     kpbl = kpbl[0, 0, -1]
 
 
 @gtscript.stencil(backend=backend)
@@ -3375,8 +3385,8 @@ def mfpblt_s1(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL_IJ,
     flg: FIELD_BOOL,
-    hpbl: FIELD_FLT,
-    kpbl: FIELD_INT,
+    hpbl: FIELD_FLT_IJ,
+    kpbl: FIELD_INT_IJ,
     kpblx: FIELD_INT,
     kpbly: FIELD_INT,
     mask: FIELD_INT,
@@ -3406,10 +3416,10 @@ def mfpblt_s1(
     with computation(PARALLEL), interval(...):
         if cnvflg[0, 0]:
             dz = zl[0, 0, 1] - zl[0, 0, 0]
-            if mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if mask[0, 0, 0] < kpbl[0, 0]:
                 xlamue = ce0 * (
                     1.0 / (zm[0, 0, 0] + dz)
-                    + 1.0 / max(hpbl[0, 0, 0] - zm[0, 0, 0] + dz, dz)
+                    + 1.0 / max(hpbl[0, 0] - zm[0, 0, 0] + dz, dz)
                 )
             else:
                 xlamue = ce0 / dz
@@ -3460,7 +3470,7 @@ def mfpblt_s1(
 
     with computation(FORWARD), interval(0, 1):
         flg = True
-        kpbly = kpbl[0, 0, 0]
+        kpbly = kpbl[0, 0]
         if cnvflg[0, 0]:
             flg = False
             rbup = wu2[0, 0, 0]
@@ -3522,9 +3532,9 @@ def mfpblt_s1a(
 def mfpblt_s2(
     cnvflg: FIELD_BOOL_IJ,
     gdx: FIELD_FLT,
-    hpbl: FIELD_FLT,
+    hpbl: FIELD_FLT_IJ,
     hpblx: FIELD_FLT,
-    kpbl: FIELD_INT,
+    kpbl: FIELD_INT_IJ,
     kpblx: FIELD_INT,
     kpbly: FIELD_INT,
     mask: FIELD_INT,
@@ -3564,20 +3574,20 @@ def mfpblt_s2(
     with computation(FORWARD):
         with interval(0, 1):
             if cnvflg[0, 0]:
-                if kpbl[0, 0, 0] > kpblx[0, 0, 0]:
+                if kpbl[0, 0] > kpblx[0, 0, 0]:
                     kpbl = kpblx[0, 0, 0]
                     hpbl = hpblx[0, 0, 0]
         with interval(1, None):
             kpbly = kpbly[0, 0, -1]
-            kpbl = kpbl[0, 0, -1]
-            hpbl = hpbl[0, 0, -1]
+            # kpbl = kpbl[0, 0, -1]
+            # hpbl = hpbl[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         if cnvflg[0, 0] and (kpbly[0, 0, 0] > kpblx[0, 0, 0]):
             dz = zl[0, 0, 1] - zl[0, 0, 0]
-            if mask[0, 0, 0] < kpbl[0, 0, 0]:
+            if mask[0, 0, 0] < kpbl[0, 0]:
                 ptem = 1 / (zm[0, 0, 0] + dz)
-                ptem1 = 1 / max(hpbl[0, 0, 0] - zm[0, 0, 0] + dz, dz)
+                ptem1 = 1 / max(hpbl[0, 0] - zm[0, 0, 0] + dz, dz)
                 xlamue = ce0 * (ptem + ptem1)
             else:
                 xlamue = ce0 / dz
@@ -3586,14 +3596,14 @@ def mfpblt_s2(
     with computation(FORWARD):
         with interval(0, 1):
             dz = zl[0, 0, 1] - zl[0, 0, 0]
-            if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
                 xlamavg = xlamavg[0, 0, 0] + xlamue[0, 0, 0] * dz
                 sumx = sumx[0, 0, 0] + dz
         with interval(1, None):
             xlamavg = xlamavg[0, 0, -1]
             sumx = sumx[0, 0, -1]
             dz = zl[0, 0, 1] - zl[0, 0, 0]
-            if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
                 xlamavg = xlamavg[0, 0, 0] + xlamue[0, 0, 0] * dz
                 sumx = sumx[0, 0, 0] + dz
 
@@ -3606,7 +3616,7 @@ def mfpblt_s2(
             xlamavg = xlamavg[0, 0, 0] / sumx[0, 0, 0]
 
     with computation(PARALLEL), interval(...):
-        if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+        if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
             if wu2[0, 0, 0] > 0.0:
                 xmf = a1 * sqrt(wu2[0, 0, 0])
             else:
@@ -3632,7 +3642,7 @@ def mfpblt_s2(
 
     with computation(PARALLEL), interval(...):
         xmmx = (zl[0, 0, 1] - zl[0, 0, 0]) / dt2
-        if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0, 0]):
+        if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
             xmf = min(scaldfunc[0, 0, 0] * xmf[0, 0, 0], xmmx)
 
     with computation(FORWARD):
@@ -3644,7 +3654,7 @@ def mfpblt_s2(
             tem = 0.5 * xlamue[0, 0, -1] * dz
             factor = 1.0 + tem
 
-            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0]):
                 thlu = (
                     (1.0 - tem) * thlu[0, 0, -1]
                     + tem * (thlx[0, 0, -1] + thlx[0, 0, 0])
@@ -3659,7 +3669,7 @@ def mfpblt_s2(
             dq = qtu[0, 0, 0] - qs
             qlu = dq / (1.0 + (el2orc * qs / (tlu ** 2)))
 
-            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0]):
                 if dq > 0.0:
                     qtu = qs + qlu
                     qcko[0,0,0][0] = qs
@@ -3674,7 +3684,7 @@ def mfpblt_s2(
             tem = 0.5 * xlamuem[0, 0, -1] * dz
             factor = 1.0 + tem
 
-            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0, 0]):
+            if cnvflg[0, 0] and (mask[0, 0, 0] <= kpbl[0, 0]):
                 ucko = (
                     (1.0 - tem) * ucko[0, 0, -1]
                     + (tem + pgcon) * u1[0, 0, 0]
