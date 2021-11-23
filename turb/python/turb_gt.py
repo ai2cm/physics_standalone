@@ -527,7 +527,7 @@ def satmedmfvdif_gt(
     ad_p1 = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     f1 = gt_storage.zeros(
@@ -539,7 +539,7 @@ def satmedmfvdif_gt(
     f1_p1 = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     al = gt_storage.zeros(
@@ -558,7 +558,7 @@ def satmedmfvdif_gt(
     f2_p1 = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
 
@@ -2725,13 +2725,13 @@ def part11(
 @gtscript.stencil(backend=backend)
 def part12(
     ad: FIELD_FLT,
-    ad_p1: FIELD_FLT,
+    ad_p1: FIELD_FLT_IJ,
     al: FIELD_FLT,
     au: FIELD_FLT,
     del_: FIELD_FLT,
     dkq: FIELD_FLT,
     f1: FIELD_FLT,
-    f1_p1: FIELD_FLT,
+    f1_p1: FIELD_FLT_IJ,
     kpbl: FIELD_INT_IJ,
     krad: FIELD_INT_IJ,
     mask: FIELD_INT,
@@ -2783,10 +2783,10 @@ def part12(
                     - (tke[0, 0, 0] + tke[0, 0, 1])
                 )
                 f1 = f1[0, 0, 0] + tem * dtodsd * 0.5 * tem2 * xmfd[0, 0, 0]
-                f1_p1 = f1_p1[0, 0, 0] - tem * dtodsu * 0.5 * tem2 * xmfd[0, 0, 0]
+                f1_p1 = f1_p1 - tem * dtodsu * 0.5 * tem2 * xmfd[0, 0, 0]
         with interval(1, -1):
-            ad = ad_p1[0, 0, -1]
-            f1 = f1_p1[0, 0, -1]
+            ad = ad_p1[0, 0]
+            f1 = f1_p1[0, 0]
 
             dtodsd = dt2 / del_[0, 0, 0]
             dtodsu = dt2 / del_[0, 0, 1]
@@ -2820,26 +2820,26 @@ def part12(
                     - (tke[0, 0, 0] + tke[0, 0, 1])
                 )
                 f1 = f1[0, 0, 0] + tem * dtodsd * 0.5 * dsig * rdz * xmfd[0, 0, 0]
-                f1_p1 = f1_p1[0, 0, 0] - tem * dtodsu * 0.5 * dsig * rdz * xmfd[0, 0, 0]
+                f1_p1 = f1_p1 - tem * dtodsu * 0.5 * dsig * rdz * xmfd[0, 0, 0]
 
         with interval(-1, None):
-            ad = ad_p1[0, 0, -1]
-            f1 = f1_p1[0, 0, -1]
+            ad = ad_p1[0, 0]
+            f1 = f1_p1[0, 0]
 
 
 # Possible stencil name : heat_moist_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
 def part13(
     ad: FIELD_FLT,
-    ad_p1: FIELD_FLT,
+    ad_p1: FIELD_FLT_IJ,
     al: FIELD_FLT,
     au: FIELD_FLT,
     del_: FIELD_FLT,
     dkt: FIELD_FLT,
     f1: FIELD_FLT,
-    f1_p1: FIELD_FLT,
+    f1_p1: FIELD_FLT_IJ,
     f2: FIELD_FLT_7,
-    f2_p1: FIELD_FLT,
+    f2_p1: FIELD_FLT_IJ,
     kpbl: FIELD_INT_IJ,
     krad: FIELD_INT_IJ,
     mask: FIELD_INT,
@@ -2861,11 +2861,53 @@ def part13(
 ):
 
     with computation(FORWARD):
-        with interval(0, -1):
-            if mask[0, 0, 0] > 0:
-                f1 = f1_p1[0, 0, -1]
-                f2[0,0,0][0] = f2_p1[0, 0, -1]
-                ad = ad_p1[0, 0, -1]
+        with interval(0, 1):
+            dtodsd = dt2 / del_[0, 0, 0]
+            dtodsu = dt2 / del_[0, 0, 1]
+            dsig = prsl[0, 0, 0] - prsl[0, 0, 1]
+            rdz = rdzt[0, 0, 0]
+            tem1 = dsig * dkt[0, 0, 0] * rdz
+            dsdzt = tem1 * gocp
+            dsdz2 = tem1 * rdz
+            au = -dtodsd * dsdz2
+            al = -dtodsu * dsdz2
+            ad = ad[0, 0, 0] - au[0, 0, 0]
+            ad_p1 = 1.0 - al[0, 0, 0]
+
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0]:
+                ptem = 0.5 * dsig * rdz * xmf[0, 0, 0]
+                ptem1 = dtodsd * ptem
+                ptem2 = dtodsu * ptem
+                tem = tcko[0, 0, 0] + tcko[0, 0, 1] - (t1[0, 0, 0] + t1[0, 0, 1])
+                f1 = f1[0, 0, 0] + dtodsd * dsdzt - tem * ptem1
+                f1_p1 = t1[0, 0, 1] - dtodsu * dsdzt + tem * ptem2
+                tem = qcko[0, 0, 0][0] + qcko[0, 0, 1][0] - (q1[0, 0, 0][0] + q1[0, 0, 1][0])
+                f2[0,0,0][0] = f2[0, 0, 0][0] - tem * ptem1
+                f2_p1 = q1[0, 0, 1][0] + tem * ptem2
+            else:
+                f1 = f1[0, 0, 0] + dtodsd * dsdzt
+                f1_p1 = t1[0, 0, 1] - dtodsu * dsdzt
+                f2_p1 = q1[0, 0, 1][0]
+
+            if (
+                scuflg[0, 0]
+                and mask[0, 0, 0] >= mrad[0, 0]
+                and mask[0, 0, 0] < krad[0, 0]
+            ):
+                ptem = 0.5 * dsig * rdz * xmfd[0, 0, 0]
+                ptem1 = dtodsd * ptem
+                ptem2 = dtodsu * ptem
+                tem = tcdo[0, 0, 0] + tcdo[0, 0, 1] - (t1[0, 0, 0] + t1[0, 0, 1])
+                f1 = f1[0, 0, 0] + tem * ptem1
+                f1_p1 = f1_p1[0, 0] - tem * ptem2
+                tem = qcdo[0, 0, 0][0] + qcdo[0, 0, 1][0] - (q1[0, 0, 0][0] + q1[0, 0, 1][0])
+                f2[0,0,0][0] = f2[0, 0, 0][0] + tem * ptem1
+                f2_p1 = f2_p1[0, 0] - tem * ptem2
+        with interval(1, -1):
+            # if mask[0, 0, 0] > 0:
+            f1 = f1_p1[0, 0]
+            f2[0,0,0][0] = f2_p1[0, 0]
+            ad = ad_p1[0, 0]
 
             dtodsd = dt2 / del_[0, 0, 0]
             dtodsu = dt2 / del_[0, 0, 1]
@@ -2904,21 +2946,21 @@ def part13(
                 ptem2 = dtodsu * ptem
                 tem = tcdo[0, 0, 0] + tcdo[0, 0, 1] - (t1[0, 0, 0] + t1[0, 0, 1])
                 f1 = f1[0, 0, 0] + tem * ptem1
-                f1_p1 = f1_p1[0, 0, 0] - tem * ptem2
+                f1_p1 = f1_p1[0, 0] - tem * ptem2
                 tem = qcdo[0, 0, 0][0] + qcdo[0, 0, 1][0] - (q1[0, 0, 0][0] + q1[0, 0, 1][0])
                 f2[0,0,0][0] = f2[0, 0, 0][0] + tem * ptem1
-                f2_p1 = f2_p1[0, 0, 0] - tem * ptem2
+                f2_p1 = f2_p1[0, 0] - tem * ptem2
         with interval(-1, None):
-            f1 = f1_p1[0, 0, -1]
-            f2[0,0,0][0] = f2_p1[0, 0, -1]
-            ad = ad_p1[0, 0, -1]
+            f1 = f1_p1[0, 0]
+            f2[0,0,0][0] = f2_p1[0, 0]
+            ad = ad_p1[0, 0]
 
 
 # Possible stencil name : moment_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
 def part14(
     ad: FIELD_FLT,
-    ad_p1: FIELD_FLT,
+    ad_p1: FIELD_FLT_IJ,
     al: FIELD_FLT,
     au: FIELD_FLT,
     del_: FIELD_FLT,
@@ -2926,9 +2968,9 @@ def part14(
     dku: FIELD_FLT,
     dtdz1: FIELD_FLT,
     f1: FIELD_FLT,
-    f1_p1: FIELD_FLT,
+    f1_p1: FIELD_FLT_IJ,
     f2: FIELD_FLT_7,
-    f2_p1: FIELD_FLT,
+    f2_p1: FIELD_FLT_IJ,
     kpbl: FIELD_INT_IJ,
     krad: FIELD_INT_IJ,
     mask: FIELD_INT,
@@ -2964,11 +3006,50 @@ def part14(
             f2[0,0,0][0] = v1[0, 0, 0]
 
     with computation(FORWARD):
-        with interval(0, -1):
-            if mask[0, 0, 0] > 0:
-                f1 = f1_p1[0, 0, -1]
-                f2[0,0,0][0] = f2_p1[0, 0, -1]
-                ad = ad_p1[0, 0, -1]
+        with interval(0, 1):
+            dtodsd = dt2 / del_[0, 0, 0]
+            dtodsu = dt2 / del_[0, 0, 1]
+            dsig = prsl[0, 0, 0] - prsl[0, 0, 1]
+            rdz = rdzt[0, 0, 0]
+            dsdz2 = dsig * dku[0, 0, 0] * rdz * rdz
+            au = -dtodsd * dsdz2
+            al = -dtodsu * dsdz2
+            ad = ad[0, 0, 0] - au[0, 0, 0]
+            ad_p1 = 1.0 - al[0, 0, 0]
+
+            if pcnvflg[0, 0] and mask[0, 0, 0] < kpbl[0, 0]:
+                ptem = 0.5 * dsig * rdz * xmf[0, 0, 0]
+                ptem1 = dtodsd * ptem
+                ptem2 = dtodsu * ptem
+                tem = ucko[0, 0, 0] + ucko[0, 0, 1] - (u1[0, 0, 0] + u1[0, 0, 1])
+                f1 = f1[0, 0, 0] - tem * ptem1
+                f1_p1 = u1[0, 0, 1] + tem * ptem2
+                tem = vcko[0, 0, 0] + vcko[0, 0, 1] - (v1[0, 0, 0] + v1[0, 0, 1])
+                f2[0, 0, 0][0] = f2[0, 0, 0][0] - tem * ptem1
+                f2_p1 = v1[0, 0, 1] + tem * ptem2
+            else:
+                f1_p1 = u1[0, 0, 1]
+                f2_p1 = v1[0, 0, 1]
+
+            if (
+                scuflg[0, 0]
+                and mask[0, 0, 0] >= mrad[0, 0]
+                and mask[0, 0, 0] < krad[0, 0]
+            ):
+                ptem = 0.5 * dsig * rdz * xmfd[0, 0, 0]
+                ptem1 = dtodsd * ptem
+                ptem2 = dtodsu * ptem
+                tem = ucdo[0, 0, 0] + ucdo[0, 0, 1] - (u1[0, 0, 0] + u1[0, 0, 1])
+                f1 = f1[0, 0, 0] + tem * ptem1
+                f1_p1 = f1_p1[0, 0]- tem * ptem2
+                tem = vcdo[0, 0, 0] + vcdo[0, 0, 1] - (v1[0, 0, 0] + v1[0, 0, 1])
+                f2[0, 0, 0][0] = f2[0, 0, 0][0] + tem * ptem1
+                f2_p1 = f2_p1[0, 0] - tem * ptem2
+        with interval(1, -1):
+            # if mask[0, 0, 0] > 0:
+            f1 = f1_p1[0, 0]
+            f2[0,0,0][0] = f2_p1[0, 0]
+            ad = ad_p1[0, 0]
 
             dtodsd = dt2 / del_[0, 0, 0]
             dtodsu = dt2 / del_[0, 0, 1]
@@ -3004,15 +3085,15 @@ def part14(
                 ptem2 = dtodsu * ptem
                 tem = ucdo[0, 0, 0] + ucdo[0, 0, 1] - (u1[0, 0, 0] + u1[0, 0, 1])
                 f1 = f1[0, 0, 0] + tem * ptem1
-                f1_p1 = f1_p1[0, 0, 0] - tem * ptem2
+                f1_p1 = f1_p1[0, 0] - tem * ptem2
                 tem = vcdo[0, 0, 0] + vcdo[0, 0, 1] - (v1[0, 0, 0] + v1[0, 0, 1])
                 f2[0, 0, 0][0] = f2[0, 0, 0][0] + tem * ptem1
-                f2_p1 = f2_p1[0, 0, 0] - tem * ptem2
+                f2_p1 = f2_p1[0, 0] - tem * ptem2
 
         with interval(-1, None):
-            f1 = f1_p1[0, 0, -1]
-            f2[0, 0, 0][0] = f2_p1[0, 0, -1]
-            ad = ad_p1[0, 0, -1]
+            f1 = f1_p1[0, 0]
+            f2[0, 0, 0][0] = f2_p1[0, 0]
+            ad = ad_p1[0, 0]
 
 
 # Possible stencil name : moment_recover
@@ -3184,25 +3265,25 @@ def mfpblt(
     xlamavg = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     sumx = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
-    sigma = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
+    # sigma = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_FLT,
+    #     shape=(im, 1, km + 1),
+    #     default_origin=(0, 0, 0),
+    # )
     scaldfunc = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
 
@@ -3301,7 +3382,7 @@ def mfpblt(
         qtu=qtu,
         qtx=qtx,
         scaldfunc=scaldfunc,
-        sigma=sigma,
+        # sigma=sigma,
         sumx=sumx,
         tcko=tcko,
         thlu=thlu,
@@ -3603,9 +3684,9 @@ def mfpblt_s2(
     qcko: FIELD_FLT_8,
     qtu: FIELD_FLT,
     qtx: FIELD_FLT,
-    scaldfunc: FIELD_FLT,
-    sigma: FIELD_FLT,
-    sumx: FIELD_FLT,
+    scaldfunc: FIELD_FLT_IJ,
+    # sigma: FIELD_FLT,
+    sumx: FIELD_FLT_IJ,
     tcko: FIELD_FLT,
     thlu: FIELD_FLT,
     thlx: FIELD_FLT,
@@ -3614,7 +3695,7 @@ def mfpblt_s2(
     v1: FIELD_FLT,
     vcko: FIELD_FLT,
     xmf: FIELD_FLT,
-    xlamavg: FIELD_FLT,
+    xlamavg: FIELD_FLT_IJ,
     xlamue: FIELD_FLT,
     xlamuem: FIELD_FLT,
     wu2: FIELD_FLT,
@@ -3657,23 +3738,23 @@ def mfpblt_s2(
         with interval(0, 1):
             dz = zl[0, 0, 1] - zl[0, 0, 0]
             if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
-                xlamavg = xlamavg[0, 0, 0] + xlamue[0, 0, 0] * dz
-                sumx = sumx[0, 0, 0] + dz
+                xlamavg = xlamavg[0, 0] + xlamue[0, 0, 0] * dz
+                sumx = sumx[0, 0] + dz
         with interval(1, None):
-            xlamavg = xlamavg[0, 0, -1]
-            sumx = sumx[0, 0, -1]
+            # xlamavg = xlamavg[0, 0, -1]
+            # sumx = sumx[0, 0, -1]
             dz = zl[0, 0, 1] - zl[0, 0, 0]
             if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
-                xlamavg = xlamavg[0, 0, 0] + xlamue[0, 0, 0] * dz
-                sumx = sumx[0, 0, 0] + dz
+                xlamavg = xlamavg[0, 0] + xlamue[0, 0, 0] * dz
+                sumx = sumx[0, 0] + dz
 
-    with computation(BACKWARD), interval(0, -1):
-        xlamavg = xlamavg[0, 0, 1]
-        sumx = sumx[0, 0, 1]
+    # with computation(BACKWARD), interval(0, -1):
+        # xlamavg = xlamavg[0, 0, 1]
+        # sumx = sumx[0, 0, 1]
 
-    with computation(PARALLEL), interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
         if cnvflg[0, 0]:
-            xlamavg = xlamavg[0, 0, 0] / sumx[0, 0, 0]
+            xlamavg = xlamavg[0, 0] / sumx[0, 0]
 
     with computation(PARALLEL), interval(...):
         if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
@@ -3685,25 +3766,25 @@ def mfpblt_s2(
     with computation(FORWARD):
         with interval(0, 1):
             if cnvflg[0, 0]:
-                tem = 0.2 / xlamavg[0, 0, 0]
+                tem = 0.2 / xlamavg[0, 0]
                 sigma = min(
                     max((3.14 * tem * tem) / (gdx[0, 0, 0] * gdx[0, 0, 0]), 0.001),
                     0.999,
                 )
 
-                if sigma[0, 0, 0] > a1:
+                if sigma > a1:
                     scaldfunc = max(
-                        min((1.0 - sigma[0, 0, 0]) * (1.0 - sigma[0, 0, 0]), 1.0), 0.0
+                        min((1.0 - sigma) * (1.0 - sigma), 1.0), 0.0
                     )
                 else:
                     scaldfunc = 1.0
-        with interval(1, None):
-            scaldfunc = scaldfunc[0, 0, -1]
+        # with interval(1, None):
+        #     scaldfunc = scaldfunc[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         xmmx = (zl[0, 0, 1] - zl[0, 0, 0]) / dt2
         if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
-            xmf = min(scaldfunc[0, 0, 0] * xmf[0, 0, 0], xmmx)
+            xmf = min(scaldfunc[0, 0] * xmf[0, 0, 0], xmmx)
 
     with computation(FORWARD):
         with interval(0, 1):
@@ -3897,13 +3978,13 @@ def mfscu(
     sumx = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     xlamavg = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
     xmfd = gt_storage.zeros(
@@ -3912,16 +3993,16 @@ def mfscu(
         shape=(im, 1, km + 1),
         default_origin=(0, 0, 0),
     )
-    sigma = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
+    # sigma = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_FLT,
+    #     shape=(im, 1, km + 1),
+    #     default_origin=(0, 0, 0),
+    # )
     scaldfunc = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
+        shape=(im, 1),
         default_origin=(0, 0, 0),
     )
 
@@ -4069,6 +4150,20 @@ def mfscu(
     if totflg:
         return
 
+    # zm_test = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=(DTYPE_FLT,(km+1)),
+    #     shape=(im, 1),
+    #     default_origin=(0, 0, 0),
+    # )
+
+    # zm_transfer(zm=zm,
+    #             zm_trans=zm_test,
+    #             mrad=mrad,
+    #             mask=mask,
+    #             domain=(im, 1, km)
+    #             )
+
     for k in range(kmscu):
         for i in range(im):
             if cnvflg[i, 0] and mrady[i, 0] < mradx[i, 0]:
@@ -4093,7 +4188,7 @@ def mfscu(
         mask=mask,
         mrad=mrad,
         ra1=ra1,
-        sigma=sigma,
+        # sigma=sigma,
         scaldfunc=scaldfunc,
         sumx=sumx,
         wd2=wd2,
@@ -4167,6 +4262,15 @@ def mfscu(
                         ) / factor
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
+
+# @gtscript.stencil(backend=backend)
+# def zm_transfer(zm : FIELD_FLT,
+#                 zm_trans : gtscript.Field[gtscript.IJ, (DTYPE_FLT, (80,))],
+#                 mrad : FIELD_INT_IJ,
+#                 mask : FIELD_INT):
+#     with computation(FORWARD), interval(...):
+#         if(mrad[0,0] != 0 and (mask[0,0,0] == mrad[0,0] - 1)):
+#             zm_trans[0,0][mask[0,0,0]] = zm[0,0,0]
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0a(
@@ -4447,12 +4551,12 @@ def mfscu_s3(
     mask: FIELD_INT,
     mrad: FIELD_INT_IJ,
     ra1: FIELD_FLT_IJ,
-    scaldfunc: FIELD_FLT,
-    sigma: FIELD_FLT,
-    sumx: FIELD_FLT,
+    scaldfunc: FIELD_FLT_IJ,
+    # sigma: FIELD_FLT,
+    sumx: FIELD_FLT_IJ,
     wd2: FIELD_FLT,
     xlamde: FIELD_FLT,
-    xlamavg: FIELD_FLT,
+    xlamavg: FIELD_FLT_IJ,
     xmfd: FIELD_FLT,
     zl: FIELD_FLT,
     dt2: float,
@@ -4471,23 +4575,23 @@ def mfscu_s3(
                 and mask[0, 0, 0] < krad[0, 0]
             ):
                 dz = zl[0, 0, 1] - zl[0, 0, 0]
-                xlamavg = xlamavg[0, 0, 0] + xlamde[0, 0, 0] * dz
-                sumx = sumx[0, 0, 0] + dz
-        with interval(0, -1):
-            xlamavg = xlamavg[0, 0, 1]
-            sumx = sumx[0, 0, 1]
+                xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
+                sumx = sumx[0, 0] + dz
+        # with interval(0, -1):
+        #     xlamavg = xlamavg[0, 0, 1]
+        #     sumx = sumx[0, 0, 1]
             if (
                 cnvflg[0, 0]
                 and mask[0, 0, 0] >= mrad[0, 0]
                 and mask[0, 0, 0] < krad[0, 0]
             ):
                 dz = zl[0, 0, 1] - zl[0, 0, 0]
-                xlamavg = xlamavg[0, 0, 0] + xlamde[0, 0, 0] * dz
-                sumx = sumx[0, 0, 0] + dz
+                xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
+                sumx = sumx[0, 0] + dz
 
-    with computation(PARALLEL), interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
         if cnvflg[0, 0]:
-            xlamavg = xlamavg[0, 0, 0] / sumx[0, 0, 0]
+            xlamavg = xlamavg[0, 0] / sumx[0, 0]
 
     with computation(BACKWARD), interval(...):
         if (
@@ -4503,20 +4607,20 @@ def mfscu_s3(
     with computation(FORWARD):
         with interval(0, 1):
             if cnvflg[0, 0]:
-                tem1 = (3.14 * (0.2 / xlamavg[0, 0, 0]) * (0.2 / xlamavg[0, 0, 0])) / (
+                tem1 = (3.14 * (0.2 / xlamavg[0, 0]) * (0.2 / xlamavg[0, 0])) / (
                     gdx[0, 0, 0] * gdx[0, 0, 0]
                 )
                 sigma = min(max(tem1, 0.001), 0.999)
 
             if cnvflg[0, 0]:
-                if sigma[0, 0, 0] > ra1[0, 0]:
+                if sigma > ra1[0, 0]:
                     scaldfunc = max(
-                        min((1.0 - sigma[0, 0, 0]) * (1.0 - sigma[0, 0, 0]), 1.0), 0.0
+                        min((1.0 - sigma) * (1.0 - sigma), 1.0), 0.0
                     )
                 else:
                     scaldfunc = 1.0
-        with interval(1, None):
-            scaldfunc = scaldfunc[0, 0, -1]
+        # with interval(1, None):
+        #     scaldfunc = scaldfunc[0, 0, -1]
 
     with computation(BACKWARD), interval(...):
         if (
@@ -4525,7 +4629,7 @@ def mfscu_s3(
             and mask[0, 0, 0] < krad[0, 0]
         ):
             xmmx = (zl[0, 0, 1] - zl[0, 0, 0]) / dt2
-            xmfd = min(scaldfunc[0, 0, 0] * xmfd[0, 0, 0], xmmx)
+            xmfd = min(scaldfunc[0, 0] * xmfd[0, 0, 0], xmmx)
 
 
 @gtscript.stencil(backend=backend)
