@@ -1228,8 +1228,8 @@ def satmedmfvdif_gt(
     kk = max(round(dt2 / cdtn), 1)
     dtn = dt2 / kk
 
-    for n in range(kk):
-        part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, domain=(im, 1, km1))
+    # for n in range(kk):
+    part8(diss=diss, prod=prod, rle=rle, tke=tke, dtn=dtn, kk=kk, domain=(im, 1, km1))
 
     part9(
         pcnvflg=pcnvflg,
@@ -2701,16 +2701,17 @@ def part6(
 
 # Possible stencil name : predict_tke
 @gtscript.stencil(backend=backend)
-def part8(diss: FIELD_FLT, prod: FIELD_FLT, rle: FIELD_FLT, tke: FIELD_FLT, dtn: float):
+def part8(diss: FIELD_FLT, prod: FIELD_FLT, rle: FIELD_FLT, tke: FIELD_FLT, dtn: float, kk : int,):
     with computation(PARALLEL), interval(...):
-        diss = max(
-            min(
-                rle[0, 0, 0] * tke[0, 0, 0] * sqrt(tke[0, 0, 0]),
-                prod[0, 0, 0] + tke[0, 0, 0] / dtn,
-            ),
-            0.0,
-        )
-        tke = max(tke[0, 0, 0] + dtn * (prod[0, 0, 0] - diss[0, 0, 0]), tkmin)
+        for n in range(kk):
+            diss = max(
+                min(
+                    rle[0, 0, 0] * tke[0, 0, 0] * sqrt(tke[0, 0, 0]),
+                    prod[0, 0, 0] + tke[0, 0, 0] / dtn,
+                ),
+                0.0,
+            )
+            tke = max(tke[0, 0, 0] + dtn * (prod[0, 0, 0] - diss[0, 0, 0]), tkmin)
 
 
 # Possible stencil name : tke_up_down_prop_1
@@ -4360,20 +4361,6 @@ def mfscu(
     if totflg:
         return
 
-    # zm_test = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=(DTYPE_FLT,(km+1)),
-    #     shape=(im, 1),
-    #     default_origin=(0, 0, 0),
-    # )
-
-    # zm_transfer(zm=zm,
-    #             zm_trans=zm_test,
-    #             mrad=mrad,
-    #             mask=mask,
-    #             domain=(im, 1, km)
-    #             )
-
     for k in range(kmscu):
         for i in range(im):
             if cnvflg[i, 0] and mrady[i, 0] < mradx[i, 0]:
@@ -4486,15 +4473,6 @@ def mfscu(
                    )
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
-
-# @gtscript.stencil(backend=backend)
-# def zm_transfer(zm : FIELD_FLT,
-#                 zm_trans : gtscript.Field[gtscript.IJ, (DTYPE_FLT, (80,))],
-#                 mrad : FIELD_INT_IJ,
-#                 mask : FIELD_INT):
-#     with computation(FORWARD), interval(...):
-#         if(mrad[0,0] != 0 and (mask[0,0,0] == mrad[0,0] - 1)):
-#             zm_trans[0,0][mask[0,0,0]] = zm[0,0,0]
 
 @gtscript.stencil(backend=backend)
 def mfscu_remainder(cnvflg : FIELD_BOOL_IJ,
