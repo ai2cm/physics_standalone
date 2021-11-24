@@ -14,6 +14,7 @@ import timeit
 from config import *
 from gt4py.gtscript import (
     __INLINED,
+    BACKWARD,
     PARALLEL,
     computation,
     interval,
@@ -4232,34 +4233,48 @@ def mfscu(
         domain=(im, 1, kmscu),
     )
 
-    if ntcw > 2:
-        for n in range(1, ntcw - 1):
-            for k in range(kmscu - 1, -1, -1):
-                for i in range(im):
-                    if cnvflg[i, 0] and k < krad[i, 0] and k >= mrad[i, 0]:
-                        dz = zl[i, 0, k + 1] - zl[i, 0, k]
-                        tem = 0.5 * xlamde[i, 0, k] * dz
-                        factor = 1.0 + tem
-                        qcdo[i, 0, k, n] = (
-                            (1.0 - tem) * qcdo[i, 0, k + 1, n]
-                            + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
-                        ) / factor
+    # if ntcw > 2:
+    #     for n in range(1, ntcw - 1):
+    #         for k in range(kmscu - 1, -1, -1):
+    #             for i in range(im):
+    #                 if cnvflg[i, 0] and k < krad[i, 0] and k >= mrad[i, 0]:
+    #                     dz = zl[i, 0, k + 1] - zl[i, 0, k]
+    #                     tem = 0.5 * xlamde[i, 0, k] * dz
+    #                     factor = 1.0 + tem
+    #                     qcdo[i, 0, k, n] = (
+    #                         (1.0 - tem) * qcdo[i, 0, k + 1, n]
+    #                         + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
+    #                     ) / factor
 
-    ndc = ntrac1 - ntcw
+    # ndc = ntrac1 - ntcw
 
-    if ndc > 0:
-        for n in range(ntcw, ntrac1):
-            for k in range(kmscu - 1, -1, -1):
-                for i in range(im):
-                    if cnvflg[i, 0] and k < krad[i, 0] and k >= mrad[i, 0]:
-                        dz = zl[i, 0, k + 1] - zl[i, 0, k]
-                        tem = 0.5 * xlamde[i, 0, k] * dz
-                        factor = 1.0 + tem
+    # if ndc > 0:
+    #     for n in range(ntcw, ntrac1):
+    #         for k in range(kmscu - 1, -1, -1):
+    #             for i in range(im):
+    #                 if cnvflg[i, 0] and k < krad[i, 0] and k >= mrad[i, 0]:
+    #                     dz = zl[i, 0, k + 1] - zl[i, 0, k]
+    #                     tem = 0.5 * xlamde[i, 0, k] * dz
+    #                     factor = 1.0 + tem
 
-                        qcdo[i, 0, k, n] = (
-                            (1.0 - tem) * qcdo[i, 0, k + 1, n]
-                            + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
-                        ) / factor
+    #                     qcdo[i, 0, k, n] = (
+    #                         (1.0 - tem) * qcdo[i, 0, k + 1, n]
+    #                         + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
+    #                     ) / factor
+
+    mfscu_remainder(cnvflg = cnvflg,
+                    krad = krad,
+                    mrad = mrad,
+                    mask = mask,
+                    zl = zl,
+                    xlamde = xlamde,
+                    qcdo = qcdo,
+                    q1 = q1,
+                    ntcw = ntcw,
+                    kmscu = kmscu,
+                    ntrac1 = ntrac1,
+                    domain = (im, 1, kmscu),
+                   )
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
 
@@ -4271,6 +4286,46 @@ def mfscu(
 #     with computation(FORWARD), interval(...):
 #         if(mrad[0,0] != 0 and (mask[0,0,0] == mrad[0,0] - 1)):
 #             zm_trans[0,0][mask[0,0,0]] = zm[0,0,0]
+
+@gtscript.stencil(backend=backend)
+def mfscu_remainder(cnvflg : FIELD_BOOL_IJ,
+                    krad   : FIELD_INT_IJ,
+                    mrad   : FIELD_INT_IJ,
+                    mask   : FIELD_INT,
+                    zl     : FIELD_FLT,
+                    xlamde : FIELD_FLT,
+                    qcdo   : FIELD_FLT_8,
+                    q1     : FIELD_FLT_8,
+                    ntcw   : int,
+                    kmscu  : int,
+                    ntrac1 : int,
+
+                   ):
+    with computation(BACKWARD), interval(...):
+        if ntcw > 2:
+            for n in range(1, ntcw-1):
+                if cnvflg[0,0] and mask[0,0,0] < krad[0,0] and mask[0,0,0] >= mrad[0,0]:
+                    dz = zl[0,0,1] - zl[0,0,0]
+                    tem = 0.5 * xlamde[0,0,0] * dz
+                    factor = 1.0 + tem
+                    qcdo[0,0,0][n] = (
+                        (1.0 - tem) * qcdo[0,0,1][n]
+                        + tem * (q1[0,0,0][n] + q1[0,0,1][n])
+                    ) / factor
+            
+
+    with computation(BACKWARD), interval(...):
+        ndc = ntrac1 - ntcw
+        if ndc > 0:
+            for n1 in range(ntcw, ntrac1):
+                if cnvflg[0,0] and mask[0,0,0] < krad[0,0] and mask[0,0,0] >= mrad[0,0]:
+                    dz = zl[0,0,1] - zl[0,0,0]
+                    tem = 0.5 * xlamde[0,0,0] * dz
+                    factor = 1.0 + tem
+                    qcdo[0,0,0][n1] = (
+                        (1.0 - tem) * qcdo[0,0,1][n1]
+                        + tem * (q1[0,0,0][n1] + q1[0,0,1][n1])
+                    ) / factor
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0a(
