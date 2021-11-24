@@ -789,6 +789,7 @@ def satmedmfvdif_gt(
     del_ = numpy_to_gt4py_storage_2D(del_, backend, km + 1)
     du = numpy_to_gt4py_storage_2D(du, backend, km + 1)
     dv = numpy_to_gt4py_storage_2D(dv, backend, km + 1)
+    tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
 
     # Note: prslk has dimensions (ix,km)
     prslk = numpy_to_gt4py_storage_2D(prslk, backend, km + 1)
@@ -1292,21 +1293,37 @@ def satmedmfvdif_gt(
 
     tridit(au=au, cm=ad, cl=al, f1=f1, domain=(im, 1, km))
 
-    for k in range(km):
-        for i in range(im):
-            rtg_gt[i, 0, k, ntke - 1] = (
-                rtg_gt[i, 0, k, ntke - 1] + (f1[i, 0, k] - q1_gt[i, 0, k, ntke - 1]) * rdt
-            )
+    part12a(
+            rtg=rtg_gt,
+            f1=f1,
+            q1=q1_gt,
+            ad=ad,
+            f2=f2,
+            dtdz1=dtdz1,
+            evap=evap,
+            heat=heat,
+            t1=t1,
+            rdt=rdt,
+            ntrac1=ntrac1,
+            ntke=ntke,
+            domain=(im,1,km),
+    )
 
-    for i in range(im):
-        ad[i, 0, 0] = 1.0
-        f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0]
-        f2[i, 0, 0, 0] = q1_gt[i, 0, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0]
+    # for k in range(km):
+    #     for i in range(im):
+    #         rtg_gt[i, 0, k, ntke - 1] = (
+    #             rtg_gt[i, 0, k, ntke - 1] + (f1[i, 0, k] - q1_gt[i, 0, k, ntke - 1]) * rdt
+    #         )
 
-    if ntrac1 >= 2:
-        for kk in range(1, ntrac1):
-            for i in range(im):
-                f2[i, 0, 0, kk] = q1_gt[i, 0, 0, kk]
+    # for i in range(im):
+    #     ad[i, 0, 0] = 1.0
+    #     f1[i, 0, 0] = t1[i, 0, 0] + dtdz1[i, 0, 0] * heat[i, 0]
+    #     f2[i, 0, 0, 0] = q1_gt[i, 0, 0, 0] + dtdz1[i, 0, 0] * evap[i, 0]
+
+    # if ntrac1 >= 2:
+    #     for kk in range(1, ntrac1):
+    #         for i in range(im):
+    #             f2[i, 0, 0, kk] = q1_gt[i, 0, 0, kk]
 
     part13(
         ad=ad,
@@ -1341,60 +1358,105 @@ def satmedmfvdif_gt(
     )
 
     if ntrac1 >= 2:
-        for kk in range(1, ntrac1):
-            for k in range(km1):
-                for i in range(im):
-                    if pcnvflg[i, 0] and k < kpbl[i, 0]:
-                        dtodsd = dt2 / del_[i, 0, k]
-                        dtodsu = dt2 / del_[i, 0, k + 1]
-                        dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
-                        tem = dsig * rdzt[i, 0, k]
-                        ptem = 0.5 * tem * xmf[i, 0, k]
-                        ptem1 = dtodsd * ptem
-                        ptem2 = dtodsu * ptem
-                        tem1 = qcko[i, 0, k, kk] + qcko[i, 0, k + 1, kk]
-                        tem2 = q1_gt[i, 0, k, kk] + q1_gt[i, 0, k + 1, kk]
-                        f2[i, 0, k, kk] = f2[i, 0, k, kk] - (tem1 - tem2) * ptem1
-                        f2[i, 0, k + 1, kk] = q1_gt[i, 0, k + 1, kk] + (tem1 - tem2) * ptem2
-                    else:
-                        f2[i, 0, k + 1, kk] = q1_gt[i, 0, k + 1, kk]
+        part13a(pcnvflg=pcnvflg,
+                mask=mask,
+                kpbl=kpbl,
+                del_=del_,
+                prsl=prsl,
+                rdzt=rdzt,
+                xmf=xmf,
+                qcko=qcko,
+                q1=q1_gt,
+                f2=f2,
+                scuflg=scuflg,
+                mrad=mrad,
+                krad=krad,
+                xmfd=xmfd,
+                qcdo=qcdo,
+                ntrac1=ntrac1,
+                dt2=dt2,
+                domain=(im,1,km)
+                )
+        # for kk in range(1, ntrac1):
+        #     for k in range(km1):
+        #         for i in range(im):
+        #             if pcnvflg[i, 0] and k < kpbl[i, 0]:
+        #                 dtodsd = dt2 / del_[i, 0, k]
+        #                 dtodsu = dt2 / del_[i, 0, k + 1]
+        #                 dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
+        #                 tem = dsig * rdzt[i, 0, k]
+        #                 ptem = 0.5 * tem * xmf[i, 0, k]
+        #                 ptem1 = dtodsd * ptem
+        #                 ptem2 = dtodsu * ptem
+        #                 tem1 = qcko[i, 0, k, kk] + qcko[i, 0, k + 1, kk]
+        #                 tem2 = q1_gt[i, 0, k, kk] + q1_gt[i, 0, k + 1, kk]
+        #                 f2[i, 0, k, kk] = f2[i, 0, k, kk] - (tem1 - tem2) * ptem1
+        #                 f2[i, 0, k + 1, kk] = q1_gt[i, 0, k + 1, kk] + (tem1 - tem2) * ptem2
+        #             else:
+        #                 f2[i, 0, k + 1, kk] = q1_gt[i, 0, k + 1, kk]
 
-                    if scuflg[i, 0] and k >= mrad[i, 0] and k < krad[i, 0]:
-                        dtodsd = dt2 / del_[i, 0, k]
-                        dtodsu = dt2 / del_[i, 0, k + 1]
-                        dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
-                        tem = dsig * rdzt[i, 0, k]
-                        ptem = 0.5 * tem * xmfd[i, 0, k]
-                        ptem1 = dtodsd * ptem
-                        ptem2 = dtodsu * ptem
-                        tem1 = qcdo[i, 0, k, kk] + qcdo[i, 0, k + 1, kk]
-                        tem2 = q1_gt[i, 0, k, kk] + q1_gt[i, 0, k + 1, kk]
-                        f2[i, 0, k, kk] = f2[i, 0, k, kk] + (tem1 - tem2) * ptem1
-                        f2[i, 0, k + 1, kk] = (
-                            f2[i, 0, k + 1, kk] - (tem1 - tem2) * ptem2
-                        )
+        #             if scuflg[i, 0] and k >= mrad[i, 0] and k < krad[i, 0]:
+        #                 dtodsd = dt2 / del_[i, 0, k]
+        #                 dtodsu = dt2 / del_[i, 0, k + 1]
+        #                 dsig = prsl[i, 0, k] - prsl[i, 0, k + 1]
+        #                 tem = dsig * rdzt[i, 0, k]
+        #                 ptem = 0.5 * tem * xmfd[i, 0, k]
+        #                 ptem1 = dtodsd * ptem
+        #                 ptem2 = dtodsu * ptem
+        #                 tem1 = qcdo[i, 0, k, kk] + qcdo[i, 0, k + 1, kk]
+        #                 tem2 = q1_gt[i, 0, k, kk] + q1_gt[i, 0, k + 1, kk]
+        #                 f2[i, 0, k, kk] = f2[i, 0, k, kk] + (tem1 - tem2) * ptem1
+        #                 f2[i, 0, k + 1, kk] = (
+        #                     f2[i, 0, k + 1, kk] - (tem1 - tem2) * ptem2
+        #                 )
 
-    au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2)
+    # au, f1, f2 = tridin(im, km, ntrac1, al, ad, au, f1, f2, au, f1, f2)
+    tridin(cl = al,
+           cm = ad,
+           cu = au,
+           r1 = f1,
+           r2 = f2,
+           au = au,
+           a1 = f1,
+           a2 = f2,
+           nt = ntrac1,
+           domain =(im, 1, km))
 
-    for k in range(km):
-        for i in range(im):
-            ttend = (f1[i, 0, k] - t1[i, 0, k]) * rdt
-            qtend = (f2[i, 0, k, 0] - q1_gt[i, 0, k, 0]) * rdt
-            tdt[i, k] = tdt[i, k] + ttend
-            rtg_gt[i, 0, k, 0] = rtg_gt[i, 0, k, 0] + qtend
-            dtsfc[i, 0] = dtsfc[i, 0] + cont * del_[i, 0, k] * ttend
-            dqsfc[i, 0] = dqsfc[i, 0] + conq * del_[i, 0, k] * qtend
+    part13b(f1=f1,
+            t1=t1,
+            f2=f2,
+            q1=q1_gt,
+            tdt=tdt,
+            rtg=rtg_gt,
+            dtsfc=dtsfc,
+            del_=del_,
+            dqsfc=dqsfc,
+            conq=conq,
+            cont=cont,
+            rdt=rdt,
+            ntrac1=ntrac1,
+            domain=(im,1,km)
+            )
 
-    if ntrac1 >= 2:
-        for kk in range(1, ntrac1):
-            # is_ = kk * km
-            for k in range(km):
-                for i in range(im):
-                    rtg_gt[i, 0, k, kk] = rtg_gt[i, 0, k, kk] + (
-                        (f2[i, 0, k, kk] - q1_gt[i, 0, k, kk]) * rdt
-                    )
+    # for k in range(km):
+    #     for i in range(im):
+    #         ttend = (f1[i, 0, k] - t1[i, 0, k]) * rdt
+    #         qtend = (f2[i, 0, k, 0] - q1_gt[i, 0, k, 0]) * rdt
+    #         tdt[i, 0, k] = tdt[i, 0, k] + ttend
+    #         rtg_gt[i, 0, k, 0] = rtg_gt[i, 0, k, 0] + qtend
+    #         dtsfc[i, 0] = dtsfc[i, 0] + cont * del_[i, 0, k] * ttend
+    #         dqsfc[i, 0] = dqsfc[i, 0] + conq * del_[i, 0, k] * qtend
 
-    tdt = numpy_to_gt4py_storage_2D(tdt, backend, km + 1)
+    # if ntrac1 >= 2:
+    #     for kk in range(1, ntrac1):
+    #         # is_ = kk * km
+    #         for k in range(km):
+    #             for i in range(im):
+    #                 rtg_gt[i, 0, k, kk] = rtg_gt[i, 0, k, kk] + (
+    #                     (f2[i, 0, k, kk] - q1_gt[i, 0, k, kk]) * rdt
+    #                 )
+
+    
 
     part14(
         ad=ad,
@@ -2828,6 +2890,36 @@ def part12(
             f1 = f1_p1[0, 0]
 
 
+@gtscript.stencil(backend=backend)
+def part12a(
+            rtg : FIELD_FLT_8,
+            f1 : FIELD_FLT,
+            q1 : FIELD_FLT_8,
+            ad : FIELD_FLT,
+            f2 : FIELD_FLT_8,
+            dtdz1 : FIELD_FLT,
+            evap : FIELD_FLT_IJ,
+            heat : FIELD_FLT_IJ,
+            t1 : FIELD_FLT,
+            rdt : float,
+            ntrac1 : int,
+            ntke : int,
+):
+    with computation(PARALLEL), interval(...):
+        rtg[0,0,0][ntke-1] = (rtg[0,0,0][ntke-1] + (f1[0,0,0] - q1[0,0,0][ntke-1]) * rdt)
+
+    with computation(FORWARD), interval(0,1):
+        ad = 1.0
+        f1 = t1[0,0,0] + dtdz1[0,0,0] * heat[0,0]
+        f2[0,0,0][0] = q1[0,0,0][0] + dtdz1[0,0,0] * evap[0,0]
+    
+    with computation(FORWARD), interval(0,1):
+        if ntrac1 >= 2:
+            for kk in range(1,ntrac1):
+                f2[0,0,0][kk] = q1[0,0,0][kk]
+
+    
+
 # Possible stencil name : heat_moist_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
 def part13(
@@ -2956,6 +3048,123 @@ def part13(
             f2[0,0,0][0] = f2_p1[0, 0]
             ad = ad_p1[0, 0]
 
+
+@gtscript.stencil(backend=backend)
+def part13a(
+    pcnvflg : FIELD_BOOL_IJ,
+    mask : FIELD_INT,
+    kpbl : FIELD_INT_IJ,
+    del_ : FIELD_FLT,
+    prsl : FIELD_FLT,
+    rdzt : FIELD_FLT,
+    xmf : FIELD_FLT,
+    qcko : FIELD_FLT_8,
+    q1 : FIELD_FLT_8,
+    f2 : FIELD_FLT_8,
+    scuflg : FIELD_BOOL_IJ,
+    mrad : FIELD_INT_IJ,
+    krad : FIELD_INT_IJ,
+    xmfd : FIELD_FLT,
+    qcdo : FIELD_FLT_8,
+    ntrac1 : int,
+    dt2 : float,
+):
+    with computation(FORWARD), interval(0,-1):
+        for kk in range(1, ntrac1):
+            if mask[0,0,0] > 0:
+                if pcnvflg[0, 0] and mask[0,0,-1] < kpbl[0,0]:
+                    dtodsu = dt2 / del_[0,0,0]
+                    dsig = prsl[0,0,-1] - prsl[0,0,0]
+                    tem = dsig * rdzt[0,0,-1]
+                    ptem = 0.5 * tem * xmf[0,0,-1]
+                    ptem2 = dtodsu * ptem
+                    tem1 = qcko[0,0,-1][kk] + qcko[0,0,0][kk]
+                    tem2 = q1[0,0,-1][kk] + q1[0,0,0][kk]
+                    f2[0,0,0][kk] = q1[0,0,0][kk] + (tem1 - tem2) * ptem2
+                else:
+                    f2[0,0,0][kk] = q1[0,0,0][kk]
+
+                if scuflg[0,0] and mask[0,0,-1] >= mrad[0,0] and mask[0,0,-1] < krad[0,0]:
+                    dtodsu = dt2 / del_[0,0,0]
+                    dsig = prsl[0,0,-1] - prsl[0,0,0]
+                    tem = dsig * rdzt[0,0,-1]
+                    ptem = 0.5 * tem * xmfd[0,0,-1]
+                    ptem2 = dtodsu * ptem
+                    tem1 = qcdo[0,0,-1][kk] + qcdo[0,0,0][kk]
+                    tem2 = q1[0,0,-1][kk] + q1[0,0,0][kk]
+                    f2[0,0,0][kk] = f2[0,0,0][kk] - (tem1 - tem2) * ptem2
+
+
+            if pcnvflg[0,0] and mask[0,0,0] < kpbl[0,0]:
+                dtodsd = dt2 / del_[0,0,0]
+                dtodsu = dt2 / del_[0,0,1]
+                dsig = prsl[0,0,0] - prsl[0,0,1]
+                tem = dsig * rdzt[0,0,0]
+                ptem = 0.5 * tem * xmf[0,0,0]
+                ptem1 = dtodsd * ptem
+                ptem2 = dtodsu * ptem
+                tem1 = qcko[0,0,0][kk] + qcko[0,0,1][kk]
+                tem2 = q1[0,0,0][kk] + q1[0,0,1][kk]
+                f2[0,0,0][kk] = f2[0,0,0][kk] - (tem1 - tem2) * ptem1
+
+            
+            if scuflg[0,0] and mask[0,0,0] >= mrad[0,0] and mask[0,0,0] < krad[0,0]:
+                dtodsd = dt2 / del_[0,0,0]
+                dtodsu = dt2 / del_[0,0,1]
+                dsig = prsl[0,0,0] - prsl[0,0,1]
+                tem = dsig * rdzt[0,0,0]
+                ptem = 0.5 * tem * xmfd[0,0,0]
+                ptem1 = dtodsd * ptem
+                ptem2 = dtodsu * ptem
+                tem1 = qcdo[0,0,0][kk] + qcdo[0,0,1][kk]
+                tem2 = q1[0,0,0][kk] + q1[0,0,1][kk]
+                f2[0,0,0][kk] = f2[0,0,0][kk] + (tem1 - tem2) * ptem1
+    
+    with computation(FORWARD), interval(-1,None):
+        for kk2 in range(1, ntrac1):
+            if pcnvflg[0, 0] and mask[0,0,-1] < kpbl[0,0]:
+                dtodsu = dt2 / del_[0,0,0]
+                dsig = prsl[0,0,-1] - prsl[0,0,0]
+                tem = dsig * rdzt[0,0,-1]
+                ptem = 0.5 * tem * xmf[0,0,-1]
+                ptem2 = dtodsu * ptem
+                tem1 = qcko[0,0,-1][kk2] + qcko[0,0,0][kk2]
+                tem2 = q1[0,0,-1][kk2] + q1[0,0,0][kk2]
+                f2[0,0,0][kk2] = q1[0,0,0][kk2] + (tem1 - tem2) * ptem2
+            else:
+                f2[0,0,0][kk2] = q1[0,0,0][kk2]
+
+
+@gtscript.stencil(backend=backend)
+def part13b(
+            f1 : FIELD_FLT,
+            t1 : FIELD_FLT,
+            f2 : FIELD_FLT_8,
+            q1 : FIELD_FLT_8,
+            tdt : FIELD_FLT,
+            rtg : FIELD_FLT_8,
+            dtsfc : FIELD_FLT_IJ,
+            del_ : FIELD_FLT,
+            dqsfc : FIELD_FLT_IJ,
+            conq : float,
+            cont : float,
+            rdt : float,
+            ntrac1 : int,
+           ):
+    with computation(PARALLEL), interval(...):
+        ttend = (f1[0,0,0] - t1[0,0,0]) * rdt
+        qtend = (f2[0,0,0][0] - q1[0,0,0][0]) * rdt
+        tdt = tdt[0,0,0] + ttend
+        rtg[0,0,0][0] = rtg[0,0,0][0] + qtend
+
+    with computation(FORWARD), interval(...):
+        dtsfc = dtsfc[0,0] + cont * del_[0,0,0] * ((f1[0,0,0] - t1[0,0,0]) * rdt)
+        dqsfc = dqsfc[0,0] + conq * del_[0,0,0] * ((f2[0,0,0][0] - q1[0,0,0][0]) * rdt)
+
+    with computation(PARALLEL), interval(...):
+        if ntrac1 >= 2:
+            for kk in range(1, ntrac1):
+                rtg[0,0,0][kk] = rtg[0,0,0][kk] + ((f2[0,0,0][kk] - q1[0,0,0][kk]) * rdt)
 
 # Possible stencil name : moment_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
@@ -4811,64 +5020,101 @@ def tridit(
             f1 = f1[0, 0, 0] - au[0, 0, 0] * f1[0, 0, 1]
 
 
-def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
-    fk = gt_storage.zeros(
-        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
-    )
-    fkk = gt_storage.zeros(
-        backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
-    )
+# def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
+@gtscript.stencil(backend=backend)
+def tridin(
+           cl : FIELD_FLT, 
+           cm : FIELD_FLT,
+           cu : FIELD_FLT, 
+           r1 : FIELD_FLT, 
+           r2 : FIELD_FLT_7, 
+           au : FIELD_FLT, 
+           a1 : FIELD_FLT, 
+           a2 : FIELD_FLT_7,
+           nt : int,
+           ):
+    # fk = gt_storage.zeros(
+    #     backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+    # )
+    # fkk = gt_storage.zeros(
+    #     backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
+    # )
 
-    for i in range(l):
-        fk[i, 0, 0] = 1.0 / cm[i, 0, 0]
-        au[i, 0, 0] = fk[i, 0, 0] * cu[i, 0, 0]
-        a1[i, 0, 0] = fk[i, 0, 0] * r1[i, 0, 0]
+    # for i in range(l):
+    with computation(FORWARD):
+        with interval(0,1):
+            fk = 1.0 / cm[0,0,0]
+            au = fk * cu[0,0,0]
+            a1 = fk * r1[0,0,0]
+            for n0 in range(nt):
+                a2[0,0,0][n0] = fk * r2[0,0,0][n0]
 
-    for k in range(nt):
-        # is_ = k * n
-        for i in range(l):
-            a2[i, 0, 0, k] = fk[i, 0, 0] * r2[i, 0, 0, k]
+        with interval(1,-1):
+            fkk = 1.0 / (cm[0,0,0] - cl[0,0,-1] * au[0,0,-1])
+            au = fkk * cu[0,0,0]
+            a1 = fkk * (r1[0,0,0] - cl[0,0,-1] * a1[0,0,-1])
 
-    for k in range(1, n - 1):
-        for i in range(l):
-            fkk[i, 0, k] = 1.0 / (cm[i, 0, k] - cl[i, 0, k - 1] * au[i, 0, k - 1])
-            au[i, 0, k] = fkk[i, 0, k] * cu[i, 0, k]
-            a1[i, 0, k] = fkk[i, 0, k] * (
-                r1[i, 0, k] - cl[i, 0, k - 1] * a1[i, 0, k - 1]
-            )
+            for n1 in range(nt):
+                a2[0,0,0][n1] = fkk * (r2[0,0,0][n1] - cl[0,0,-1] * a2[0,0,-1][n1])
 
-    for kk in range(nt):
-        # is_ = kk * n
-        for k in range(1, n - 1):
-            for i in range(l):
-                a2[i, 0, k, kk] = fkk[i, 0, k] * (
-                    r2[i, 0, k, kk] - cl[i, 0, k - 1] * a2[i, 0, k-1, kk]
-                )
+        with interval(-1,None):
+            fk = 1.0 / (cm[0,0,0] - cl[0,0,-1] * au[0,0,-1])
+            a1 = fk * (r1[0,0,0] - cl[0,0,-1] * a1[0,0,-1])
 
-    for i in range(l):
-        fk[i, 0, 0] = 1 / (cm[i, 0, n - 1] - cl[i, 0, n - 2] * au[i, 0, n - 2])
-        a1[i, 0, n - 1] = fk[i, 0, 0] * (
-            r1[i, 0, n - 1] - cl[i, 0, n - 2] * a1[i, 0, n - 2]
-        )
+            for n2 in range(nt):
+                a2[0,0,0][n2] = fk * (r2[0,0,0][n2] - cl[0,0,-1] * a2[0,0,-1][n2])
 
-    for k in range(nt):
-        for i in range(l):
-            a2[i, 0, n-1, k] = fk[i, 0, 0] * (
-                r2[i, 0, n-1, k] - cl[i, 0, n - 2] * a2[i, 0, n-2, k]
-            )
+    with computation(BACKWARD):
+        with interval(0,-1):
+            a1 = a1[0,0,0] - au[0,0,0] * a1[0,0,1]
+            for n3 in range(nt):
+                a2[0,0,0][n3] = a2[0,0,0][n3] - au[0,0,0] * a2[0,0,1][n3]
 
-    for k in range(n - 2, -1, -1):
-        for i in range(l):
-            a1[i, 0, k] = a1[i, 0, k] - au[i, 0, k] * a1[i, 0, k + 1]
+    # for k in range(nt):
+    #     # is_ = k * n
+    #     for i in range(l):
+    #         a2[i, 0, 0, k] = fk[i, 0, 0] * r2[i, 0, 0, k]
 
-    for kk in range(nt):
-        for k in range(n - 2, -1, -1):
-            for i in range(l):
-                a2[i, 0, k, kk] = (
-                    a2[i, 0, k, kk] - au[i, 0, k] * a2[i, 0, k+1, kk]
-                )
+    # for k in range(1, n - 1):
+    #     for i in range(l):
+    #         fkk[i, 0, k] = 1.0 / (cm[i, 0, k] - cl[i, 0, k - 1] * au[i, 0, k - 1])
+    #         au[i, 0, k] = fkk[i, 0, k] * cu[i, 0, k]
+    #         a1[i, 0, k] = fkk[i, 0, k] * (
+    #             r1[i, 0, k] - cl[i, 0, k - 1] * a1[i, 0, k - 1]
+    #         )
 
-    return au, a1, a2
+    # for kk in range(nt):
+    #     # is_ = kk * n
+    #     for k in range(1, n - 1):
+    #         for i in range(l):
+    #             a2[i, 0, k, kk] = fkk[i, 0, k] * (
+    #                 r2[i, 0, k, kk] - cl[i, 0, k - 1] * a2[i, 0, k-1, kk]
+    #             )
+
+    # for i in range(l):
+    #     fk[i, 0, 0] = 1 / (cm[i, 0, n - 1] - cl[i, 0, n - 2] * au[i, 0, n - 2])
+    #     a1[i, 0, n - 1] = fk[i, 0, 0] * (
+    #         r1[i, 0, n - 1] - cl[i, 0, n - 2] * a1[i, 0, n - 2]
+    #     )
+
+    # for k in range(nt):
+    #     for i in range(l):
+    #         a2[i, 0, n-1, k] = fk[i, 0, 0] * (
+    #             r2[i, 0, n-1, k] - cl[i, 0, n - 2] * a2[i, 0, n-2, k]
+    #         )
+
+    # for k in range(n - 2, -1, -1):
+    #     for i in range(l):
+    #         a1[i, 0, k] = a1[i, 0, k] - au[i, 0, k] * a1[i, 0, k + 1]
+
+    # for kk in range(nt):
+    #     for k in range(n - 2, -1, -1):
+    #         for i in range(l):
+    #             a2[i, 0, k, kk] = (
+    #                 a2[i, 0, k, kk] - au[i, 0, k] * a2[i, 0, k+1, kk]
+    #             )
+
+    # return au, a1, a2
 
 
 @gtscript.stencil(backend=backend)
