@@ -16,8 +16,12 @@ from gt4py.gtscript import (
     __INLINED,
     BACKWARD,
     PARALLEL,
+    FORWARD,
     computation,
     interval,
+    exp,
+    floor,
+    sqrt,
 )
 
 backend = BACKEND
@@ -1118,6 +1122,33 @@ def satmedmfvdif_gt(
         zi=zi,
         domain=(im, 1, kmpbl),
     )
+
+    thvx_n = gt_storage.zeros(
+        backend=backend,
+        dtype=(DTYPE_FLT,(km+1,)),
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    zl_n = gt_storage.zeros(
+        backend=backend,
+        dtype=(DTYPE_FLT,(km+1,)),
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    gotvx_n = gt_storage.zeros(
+        backend=backend,
+        dtype=(DTYPE_FLT,(km+1,)),
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    for k in range(km+1):
+        for i in range(im):
+            thvx_n[i,0,k] = thvx[i,0,k]
+            gotvx_n[i,0,k] = gotvx[i,0,k]
+            zl_n[i,0,k] = zl[i,0,k]
 
     # Compute asymtotic mixing length
     for k in range(km1):
@@ -4281,22 +4312,49 @@ def mfscu(
     if totflg:
         return
 
-    for k in range(kmscu):
-        for i in range(im):
-            if cnvflg[i, 0]:
-                dz = zl[i, 0, k + 1] - zl[i, 0, k]
-                if (k >= mrad[i, 0]) and (k < krad[i, 0]):
-                    if mrad[i, 0] == 0:
-                        ptem = 1.0 / (zm[i, 0, k] + dz)
-                    else:
-                        ptem = 1.0 / (zm[i, 0, k] - zm[i, 0, mrad[i, 0] - 1] + dz)
+    zm_mrad = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
 
-                    xlamde[i, 0, k] = ce0 * (
-                        ptem + 1.0 / max(hrad[i, 0] - zm[i, 0, k] + dz, dz)
-                    )
-                else:
-                    xlamde[i, 0, k] = ce0 / dz
-                xlamdem[i, 0, k] = cm * xlamde[i, 0, k]
+    for i in range(im):
+        zm_mrad[i,0] = zm[i, 0, mrad[i,0]-1]
+
+    mfscu_s0c(
+              zl=zl,
+              mask=mask,
+              mrad=mrad,
+              krad=krad,
+              zm=zm,
+              zm_mrad=zm_mrad,
+              xlamde=xlamde,
+              xlamdem=xlamdem,
+              hrad=hrad,
+              cnvflg=cnvflg,
+              ce0=ce0,
+              cm=cm,
+              domain=(im,1,kmscu),
+    )
+
+    # for k in range(kmscu):
+    #     for i in range(im):
+    #         if cnvflg[i, 0]:
+    #             dz = zl[i, 0, k + 1] - zl[i, 0, k]
+    #             if (k >= mrad[i, 0]) and (k < krad[i, 0]):
+    #                 if mrad[i, 0] == 0:
+    #                     ptem = 1.0 / (zm[i, 0, k] + dz)
+    #                 else:
+    #                     # ptem = 1.0 / (zm[i, 0, k] - zm[i, 0, mrad[i, 0] - 1] + dz)
+    #                     ptem = 1.0 / (zm[i, 0, k] - zm_mrad[i, 0] + dz)
+
+    #                 xlamde[i, 0, k] = ce0 * (
+    #                     ptem + 1.0 / max(hrad[i, 0] - zm[i, 0, k] + dz, dz)
+    #                 )
+    #             else:
+    #                 xlamde[i, 0, k] = ce0 / dz
+    #             xlamdem[i, 0, k] = cm * xlamde[i, 0, k]
 
     mfscu_s1(
         buo=buo,
@@ -4361,21 +4419,44 @@ def mfscu(
     if totflg:
         return
 
-    for k in range(kmscu):
-        for i in range(im):
-            if cnvflg[i, 0] and mrady[i, 0] < mradx[i, 0]:
-                dz = zl[i, 0, k + 1] - zl[i, 0, k]
-                if (k >= mrad[i, 0]) and (k < krad[i, 0]):
-                    if mrad[i, 0] == 0:
-                        ptem = 1.0 / (zm[i, 0, k] + dz)
-                    else:
-                        ptem = 1.0 / (zm[i, 0, k] - zm[i, 0, mrad[i, 0] - 1] + dz)
-                    xlamde[i, 0, k] = ce0 * (
-                        ptem + (1.0 / max(hrad[i, 0] - zm[i, 0, k] + dz, dz))
-                    )
-                else:
-                    xlamde[i, 0, k] = ce0 / dz
-                xlamdem[i, 0, k] = cm * xlamde[i, 0, k]
+    for i in range(im):
+        zm_mrad[i,0] = zm[i, 0, mrad[i,0]-1]
+
+    mfscu_s0c2(
+              zl=zl,
+              mask=mask,
+              mrad=mrad,
+              krad=krad,
+              zm=zm,
+              zm_mrad=zm_mrad,
+              xlamde=xlamde,
+              xlamdem=xlamdem,
+              hrad=hrad,
+              cnvflg=cnvflg,
+              mrady=mrady,
+              mradx=mradx,
+              ce0=ce0,
+              cm=cm,
+              domain=(im,1,kmscu),
+    )
+
+    # for k in range(kmscu):
+    #     for i in range(im):
+    #         if cnvflg[i, 0] and mrady[i, 0] < mradx[i, 0]:
+    #             dz = zl[i, 0, k + 1] - zl[i, 0, k]
+    #             if (k >= mrad[i, 0]) and (k < krad[i, 0]):
+    #                 if mrad[i, 0] == 0:
+    #                     ptem = 1.0 / (zm[i, 0, k] + dz)
+    #                 else:
+    #                     ptem = 1.0 / (zm[i, 0, k] - zm[i, 0, mrad[i, 0] - 1] + dz)
+    #                 xlamde[i, 0, k] = ce0 * (
+    #                     ptem + 1.0 / max(hrad[i, 0] - zm[i, 0, k] + dz, dz)
+    #                 )
+    #             else:
+    #                 xlamde[i, 0, k] = ce0 / dz
+    #             xlamdem[i, 0, k] = cm * xlamde[i, 0, k]
+
+    
 
     mfscu_s3(
         cnvflg=cnvflg,
@@ -4473,6 +4554,70 @@ def mfscu(
                    )
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
+
+@gtscript.stencil(backend=backend)
+def mfscu_s0c(
+    zl : FIELD_FLT,
+    mask : FIELD_INT,
+    mrad : FIELD_INT_IJ,
+    krad : FIELD_INT_IJ,
+    zm : FIELD_FLT,
+    zm_mrad : FIELD_FLT_IJ,
+    xlamde : FIELD_FLT,
+    xlamdem : FIELD_FLT,
+    hrad : FIELD_FLT_IJ,
+    cnvflg: FIELD_BOOL_IJ,
+    ce0 : float,
+    cm : float,
+):
+    with computation(PARALLEL), interval(...):
+        if cnvflg[0,0]:
+            dz = zl[0,0,1] - zl[0,0,0]
+            if mask[0,0,0] >= mrad[0,0] and mask[0,0,0] < krad[0,0]:
+                if mrad[0,0] == 0:
+                    xlamde = ce0 * (
+                        (1.0/(zm[0,0,0] + dz)) + 1.0 / max(hrad[0,0] - zm[0,0,0] + dz, dz)
+                    )
+                else:
+                    xlamde = ce0 * (
+                        (1.0/(zm[0,0,0] - zm_mrad[0,0] + dz)) + 1.0 / max(hrad[0,0] - zm[0,0,0] + dz, dz)
+                    )
+            else:
+                xlamde = ce0 / dz
+            xlamdem = cm * xlamde[0,0,0]
+
+@gtscript.stencil(backend=backend)
+def mfscu_s0c2(
+    zl : FIELD_FLT,
+    mask : FIELD_INT,
+    mrad : FIELD_INT_IJ,
+    krad : FIELD_INT_IJ,
+    zm : FIELD_FLT,
+    zm_mrad : FIELD_FLT_IJ,
+    xlamde : FIELD_FLT,
+    xlamdem : FIELD_FLT,
+    hrad : FIELD_FLT_IJ,
+    cnvflg: FIELD_BOOL_IJ,
+    mrady : FIELD_INT_IJ,
+    mradx : FIELD_INT_IJ,
+    ce0 : float,
+    cm : float,
+):
+    with computation(PARALLEL), interval(...):
+        if cnvflg[0,0] and (mrady[0,0] < mradx[0,0]):
+            dz = zl[0,0,1] - zl[0,0,0]
+            if mask[0,0,0] >= mrad[0,0] and mask[0,0,0] < krad[0,0]:
+                if mrad[0,0] == 0:
+                    xlamde = ce0 * (
+                        (1.0/(zm[0,0,0] + dz)) + 1.0 / max(hrad[0,0] - zm[0,0,0] + dz, dz)
+                    )
+                else:
+                    xlamde = ce0 * (
+                        (1.0/(zm[0,0,0] - zm_mrad[0,0] + dz)) + 1.0 / max(hrad[0,0] - zm[0,0,0] + dz, dz)
+                    )
+            else:
+                xlamde = ce0 / dz
+            xlamdem = cm * xlamde[0,0,0]
 
 @gtscript.stencil(backend=backend)
 def mfscu_remainder(cnvflg : FIELD_BOOL_IJ,
@@ -5127,3 +5272,47 @@ def tridi2(
     with computation(BACKWARD), interval(0, -1):
         a1 = a1[0, 0, 0] - au[0, 0, 0] * a1[0, 0, 1]
         a2[0, 0, 0][0] = a2[0, 0, 0][0] - au[0, 0, 0] * a2[0, 0, 1][0]
+
+# @gtscript.stencil(backend=backend)
+# def comp_asym_mix_len(
+#     mask : FIELD_INT,
+#     gotvx : FIELD_FLT,
+#     thvx : FIELD_FLT,
+#     thvx_n : gtscript.Field[gtscript.IJ, (DTYPE_FLT,(80,))],
+#     tke : FIELD_FLT,
+#     zl_n : gtscript.Field[gtscript.IJ, (DTYPE_FLT,(80,))],
+#     tsea : FIELD_FLT_IJ,
+#     q1 : FIELD_FLT_8,
+#     gotvx_n : gtscript.Field[gtscript.IJ, (DTYPE_FLT,(80,))],
+#     zi : FIELD_FLT,
+#     rlam : FIELD_FLT,
+#     ele : FIELD_FLT,
+#     elmfac : float,
+#     elmx : float,
+#     rlmn : float,
+#     rlmx : float,
+#     qmin : float,
+#     zfmin : float,
+#     km1 : int,
+# ):  
+#     with computation(FORWARD), interval(...):
+#         zlup = 0.0
+#         bsum = 0.0
+#         mlenflg = True
+#         k_start = mask[0,0,0]
+#         for n in range(k_start, km1):
+#             if mlenflg:
+#                 dz = zl_n[0,0][n+1] - zl_n[0,0][n]
+#                 ptem = gotvx_n[0,0][n] * (thvx_n[0,0][n+1] - thvx[0,0,0]) * dz
+#                 bsum = bsum + ptem
+#                 zlup = zlup + dz
+#                 if bsum >= tke[0,0,0]:
+#                     tem2 = 0.0
+#                     if ptem >= 0.0:
+#                         tem2 = max(ptem, zfmin)
+#                     else:
+#                         tem2 = min(ptem, -zfmin)
+#                     ptem1 = (bsum - tke[0,0,0]) / tem2
+#                     zlup = zlup - ptem1 * dz
+#                     zlup = max(zlup, 0.0)
+#                     mlenflg = False
