@@ -1123,90 +1123,225 @@ def satmedmfvdif_gt(
         domain=(im, 1, kmpbl),
     )
 
-    thvx_n = gt_storage.zeros(
+    zlup_tmp = gt_storage.zeros(
         backend=backend,
-        dtype=(DTYPE_FLT,(km+1,)),
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    zldn_tmp = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
         shape=(im, 1),
         default_origin=(0, 0, 0),
     )
 
-    zl_n = gt_storage.zeros(
+    bsum_tmp = gt_storage.zeros(
         backend=backend,
-        dtype=(DTYPE_FLT,(km+1,)),
+        dtype=DTYPE_FLT,
         shape=(im, 1),
         default_origin=(0, 0, 0),
     )
 
-    gotvx_n = gt_storage.zeros(
+    mlenflg_tmp = gt_storage.zeros(
         backend=backend,
-        dtype=(DTYPE_FLT,(km+1,)),
+        dtype=DTYPE_BOOL,
         shape=(im, 1),
         default_origin=(0, 0, 0),
     )
 
-    for k in range(km+1):
-        for i in range(im):
-            thvx_n[i,0,k] = thvx[i,0,k]
-            gotvx_n[i,0,k] = gotvx[i,0,k]
-            zl_n[i,0,k] = zl[i,0,k]
+    thvx_k = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    tke_k = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
 
     # Compute asymtotic mixing length
+    # for k in range(km1):
+    #     for i in range(im):
+    #         zlup = 0.0
+    #         bsum = 0.0
+    #         mlenflg = True
+    #         for n in range(k, km1):
+    #             if mlenflg:
+    #                 dz = zl[i, 0, n + 1] - zl[i, 0, n]
+    #                 ptem = gotvx[i, 0, n] * (thvx[i, 0, n + 1] - thvx[i, 0, k]) * dz
+    #                 bsum = bsum + ptem
+    #                 zlup = zlup + dz
+    #                 if bsum >= tke[i, 0, k]:
+    #                     if ptem >= 0.0:
+    #                         tem2 = max(ptem, zfmin)
+    #                     else:
+    #                         tem2 = min(ptem, -zfmin)
+    #                     ptem1 = (bsum - tke[i, 0, k]) / tem2
+    #                     zlup = zlup - ptem1 * dz
+    #                     zlup = max(zlup, 0.0)
+    #                     mlenflg = False
+    #         zldn = 0.0
+    #         bsum = 0.0
+    #         mlenflg = True
+    #         for n in range(k, -1, -1):
+    #             if mlenflg:
+    #                 if n == 0:
+    #                     dz = zl[i, 0, 0]
+    #                     tem1 = tsea[i, 0] * (1.0 + fv * max(q1_gt[i, 0, 0, 0], qmin))
+    #                 else:
+    #                     dz = zl[i, 0, n] - zl[i, 0, n - 1]
+    #                     tem1 = thvx[i, 0, n - 1]
+    #                 ptem = gotvx[i, 0, n] * (thvx[i, 0, k] - tem1) * dz
+    #                 bsum = bsum + ptem
+    #                 zldn = zldn + dz
+    #                 if bsum >= tke[i, 0, k]:
+    #                     if ptem >= 0.0:
+    #                         tem2 = max(ptem, zfmin)
+    #                     else:
+    #                         tem2 = min(ptem, -zfmin)
+    #                     ptem1 = (bsum - tke[i, 0, k]) / tem2
+    #                     zldn = zldn - ptem1 * dz
+    #                     zldn = max(zldn, 0.0)
+    #                     mlenflg = False
+
+    #         tem = 0.5 * (zi[i, 0, k + 1] - zi[i, 0, k])
+    #         tem1 = min(tem, rlmn)
+
+    #         ptem2 = min(zlup, zldn)
+    #         rlam[i, 0, k] = elmfac * ptem2
+    #         rlam[i, 0, k] = max(rlam[i, 0, k], tem1)
+    #         rlam[i, 0, k] = min(rlam[i, 0, k], rlmx)
+
+    #         ptem2 = math.sqrt(zlup * zldn)
+    #         ele[i, 0, k] = elefac * ptem2
+    #         ele[i, 0, k] = max(ele[i, 0, k], tem1)
+    #         ele[i, 0, k] = min(ele[i, 0, k], elmx)
+
     for k in range(km1):
-        for i in range(im):
-            zlup = 0.0
-            bsum = 0.0
-            mlenflg = True
-            for n in range(k, km1):
-                if mlenflg:
-                    dz = zl[i, 0, n + 1] - zl[i, 0, n]
-                    ptem = gotvx[i, 0, n] * (thvx[i, 0, n + 1] - thvx[i, 0, k]) * dz
-                    bsum = bsum + ptem
-                    zlup = zlup + dz
-                    if bsum >= tke[i, 0, k]:
-                        if ptem >= 0.0:
-                            tem2 = max(ptem, zfmin)
-                        else:
-                            tem2 = min(ptem, -zfmin)
-                        ptem1 = (bsum - tke[i, 0, k]) / tem2
-                        zlup = zlup - ptem1 * dz
-                        zlup = max(zlup, 0.0)
-                        mlenflg = False
-            zldn = 0.0
-            bsum = 0.0
-            mlenflg = True
-            for n in range(k, -1, -1):
-                if mlenflg:
-                    if n == 0:
-                        dz = zl[i, 0, 0]
-                        tem1 = tsea[i, 0] * (1.0 + fv * max(q1_gt[i, 0, 0, 0], qmin))
-                    else:
-                        dz = zl[i, 0, n] - zl[i, 0, n - 1]
-                        tem1 = thvx[i, 0, n - 1]
-                    ptem = gotvx[i, 0, n] * (thvx[i, 0, k] - tem1) * dz
-                    bsum = bsum + ptem
-                    zldn = zldn + dz
-                    if bsum >= tke[i, 0, k]:
-                        if ptem >= 0.0:
-                            tem2 = max(ptem, zfmin)
-                        else:
-                            tem2 = min(ptem, -zfmin)
-                        ptem1 = (bsum - tke[i, 0, k]) / tem2
-                        zldn = zldn - ptem1 * dz
-                        zldn = max(zldn, 0.0)
-                        mlenflg = False
+        # for n in range(k,km1):            
+        #     for i in range(im):
+        #         if n == k:
+        #             mlenflg_tmp[i,0] = True
+        #             bsum_tmp[i,0] = 0.0
+        #             zlup_tmp[i,0] = 0.0
+        #             thvx_k[i,0] = thvx[i, 0 , n]
+        #             tke_k[i,0] = tke[i, 0, n]
+        #         if mlenflg_tmp[i,0] == True:
+        #             dz = zl[i, 0, n + 1] - zl[i, 0, n]
+        #             ptem = gotvx[i, 0, n] * (thvx[i, 0, n + 1] - thvx_k[i, 0]) * dz
+        #             bsum_tmp[i,0] = bsum_tmp[i,0] + ptem
+        #             zlup_tmp[i,0] = zlup_tmp[i,0] + dz
+        #             if bsum_tmp[i,0] >= tke_k[i, 0]:
+        #                 if ptem >= 0.0:
+        #                         tem2 = max(ptem, zfmin)
+        #                 else:
+        #                     tem2 = min(ptem, -zfmin)
+        #                 ptem1 = (bsum_tmp[i,0] - tke_k[i, 0]) / tem2
+        #                 zlup_tmp[i,0] = zlup_tmp[i,0] - ptem1 * dz
+        #                 zlup_tmp[i,0] = max(zlup_tmp[i,0], 0.0)
+        #                 mlenflg_tmp[i,0] = False
 
-            tem = 0.5 * (zi[i, 0, k + 1] - zi[i, 0, k])
-            tem1 = min(tem, rlmn)
+        comp_asym_mix_up(mask=mask,
+                         mlenflg_tmp=mlenflg_tmp,
+                         bsum_tmp=bsum_tmp,
+                         zlup_tmp=zlup_tmp,
+                         thvx_k=thvx_k,
+                         tke_k=tke_k,
+                         thvx=thvx,
+                         tke=tke,
+                         gotvx=gotvx,
+                         zl=zl,
+                         zfmin=zfmin,
+                         k=k,
+                         domain=(im,1,km1-k),
+                         origin=(0,0,k)
+                         )
 
-            ptem2 = min(zlup, zldn)
-            rlam[i, 0, k] = elmfac * ptem2
-            rlam[i, 0, k] = max(rlam[i, 0, k], tem1)
-            rlam[i, 0, k] = min(rlam[i, 0, k], rlmx)
+        # print("BREAK!")
 
-            ptem2 = math.sqrt(zlup * zldn)
-            ele[i, 0, k] = elefac * ptem2
-            ele[i, 0, k] = max(ele[i, 0, k], tem1)
-            ele[i, 0, k] = min(ele[i, 0, k], elmx)
+        # for n in range(k, -1, -1):
+        #     for i in range(im):
+        #         if n == k:
+        #             mlenflg_tmp[i,0] = True
+        #             bsum_tmp[i,0] = 0.0
+        #             zldn_tmp[i,0] = 0.0
+        #             thvx_k[i,0] = thvx[i, 0 , n]
+        #             tke_k[i,0] = tke[i, 0, n]
+
+        #         if mlenflg_tmp[i,0] == True:
+        #             if n == 0:
+        #                 dz = zl[i, 0, 0]
+        #                 tem1 = tsea[i, 0] * (1.0 + fv * max(q1_gt[i, 0, 0, 0], qmin))
+        #             else:
+        #                 dz = zl[i, 0, n] - zl[i, 0, n - 1]
+        #                 tem1 = thvx[i, 0, n - 1]
+        #             ptem = gotvx[i, 0, n] * (thvx_k[i, 0] - tem1) * dz
+        #             bsum_tmp[i,0] = bsum_tmp[i,0] + ptem
+        #             zldn_tmp[i,0] = zldn_tmp[i,0] + dz
+        #             if bsum_tmp[i,0] >= tke_k[i, 0]:
+        #                 if ptem >= 0.0:
+        #                     tem2 = max(ptem, zfmin)
+        #                 else:
+        #                     tem2 = min(ptem, -zfmin)
+        #                 ptem1 = (bsum_tmp[i,0] - tke_k[i, 0]) / tem2
+        #                 zldn_tmp[i,0] = zldn_tmp[i,0] - ptem1 * dz
+        #                 zldn_tmp[i,0] = max(zldn_tmp[i,0], 0.0)
+        #                 mlenflg_tmp[i,0] = False
+
+        comp_asym_mix_dn(mask=mask,
+                         mlenflg_tmp=mlenflg_tmp,
+                         bsum_tmp=bsum_tmp,
+                         zldn_tmp=zldn_tmp,
+                         thvx_k=thvx_k,
+                         tke_k=tke_k,
+                         thvx=thvx,
+                         tke=tke,
+                         gotvx=gotvx,
+                         zl=zl,
+                         tsea=tsea,
+                         q1_gt=q1_gt,
+                         zfmin=zfmin,
+                         fv=fv,
+                         k=k,
+                         domain=(im,1,k+1),
+                         origin=(0,0,0),
+                         )
+
+        # print("BREAK")
+
+        # for i in range(im):
+        #     tem = 0.5 * (zi[i, 0, k + 1] - zi[i, 0, k])
+        #     tem1 = min(tem, rlmn)
+
+        #     ptem2 = min(zlup_tmp[i,0], zldn_tmp[i,0])
+        #     rlam[i, 0, k] = elmfac * ptem2
+        #     rlam[i, 0, k] = max(rlam[i, 0, k], tem1)
+        #     rlam[i, 0, k] = min(rlam[i, 0, k], rlmx)
+
+        #     ptem2 = math.sqrt(zlup_tmp[i,0] * zldn_tmp[i,0])
+        #     ele[i, 0, k] = elefac * ptem2
+        #     ele[i, 0, k] = max(ele[i, 0, k], tem1)
+        #     ele[i, 0, k] = min(ele[i, 0, k], elmx)
+
+        comp_asym_rlam_ele(zi=zi,
+                           rlam=rlam,
+                           ele=ele,
+                           zlup_tmp=zlup_tmp,
+                           zldn_tmp=zldn_tmp,
+                           rlmn=rlmn,
+                           rlmx=rlmx,
+                           elmfac=elmfac,
+                           elmx=elmx,
+                           domain=(im,1,1),
+                           origin=(0,0,k),
+        )
+
+        # print("BREAK")
 
     part6(
         bf=bf,
@@ -5273,46 +5408,107 @@ def tridi2(
         a1 = a1[0, 0, 0] - au[0, 0, 0] * a1[0, 0, 1]
         a2[0, 0, 0][0] = a2[0, 0, 0][0] - au[0, 0, 0] * a2[0, 0, 1][0]
 
-# @gtscript.stencil(backend=backend)
-# def comp_asym_mix_len(
-#     mask : FIELD_INT,
-#     gotvx : FIELD_FLT,
-#     thvx : FIELD_FLT,
-#     thvx_n : gtscript.Field[gtscript.IJ, (DTYPE_FLT,(80,))],
-#     tke : FIELD_FLT,
-#     zl_n : gtscript.Field[gtscript.IJ, (DTYPE_FLT,(80,))],
-#     tsea : FIELD_FLT_IJ,
-#     q1 : FIELD_FLT_8,
-#     gotvx_n : gtscript.Field[gtscript.IJ, (DTYPE_FLT,(80,))],
-#     zi : FIELD_FLT,
-#     rlam : FIELD_FLT,
-#     ele : FIELD_FLT,
-#     elmfac : float,
-#     elmx : float,
-#     rlmn : float,
-#     rlmx : float,
-#     qmin : float,
-#     zfmin : float,
-#     km1 : int,
-# ):  
-#     with computation(FORWARD), interval(...):
-#         zlup = 0.0
-#         bsum = 0.0
-#         mlenflg = True
-#         k_start = mask[0,0,0]
-#         for n in range(k_start, km1):
-#             if mlenflg:
-#                 dz = zl_n[0,0][n+1] - zl_n[0,0][n]
-#                 ptem = gotvx_n[0,0][n] * (thvx_n[0,0][n+1] - thvx[0,0,0]) * dz
-#                 bsum = bsum + ptem
-#                 zlup = zlup + dz
-#                 if bsum >= tke[0,0,0]:
-#                     tem2 = 0.0
-#                     if ptem >= 0.0:
-#                         tem2 = max(ptem, zfmin)
-#                     else:
-#                         tem2 = min(ptem, -zfmin)
-#                     ptem1 = (bsum - tke[0,0,0]) / tem2
-#                     zlup = zlup - ptem1 * dz
-#                     zlup = max(zlup, 0.0)
-#                     mlenflg = False
+@gtscript.stencil(backend=backend)
+def comp_asym_mix_up(
+    mask : FIELD_INT,
+    mlenflg_tmp : FIELD_BOOL_IJ,
+    bsum_tmp : FIELD_FLT_IJ,
+    zlup_tmp : FIELD_FLT_IJ,
+    thvx_k : FIELD_FLT_IJ,
+    tke_k : FIELD_FLT_IJ,
+    thvx : FIELD_FLT,
+    tke : FIELD_FLT,
+    gotvx : FIELD_FLT,
+    zl : FIELD_FLT,
+    zfmin : float,
+    k : int,
+):  
+    with computation(FORWARD), interval(...):
+        if mask[0,0,0] == k:
+            mlenflg_tmp = True
+            zlup_tmp = 0.0
+            bsum_tmp = 0.0
+            thvx_k = thvx[0,0,0]
+            tke_k = tke[0,0,0]
+        if mlenflg_tmp[0,0] == True:
+            dz = zl[0,0,1] - zl[0,0,0]
+            ptem = gotvx[0,0,0] * (thvx[0,0,1] - thvx_k[0,0]) * dz
+            bsum_tmp = bsum_tmp[0,0] + ptem
+            zlup_tmp = zlup_tmp[0,0] + dz
+            if bsum_tmp[0,0] >= tke_k[0,0]:
+                if ptem >= 0.0:
+                    tem2 = max(ptem, zfmin)
+                else:
+                    tem2 = min(ptem, -zfmin)
+                ptem1 = (bsum_tmp[0,0] - tke_k[0,0]) / tem2
+                zlup_tmp = zlup_tmp[0,0] - ptem1 * dz
+                zlup_tmp = max(zlup_tmp[0,0], 0.0)
+                mlenflg_tmp = False
+
+@gtscript.stencil(backend=backend)
+def comp_asym_mix_dn(
+    mask : FIELD_INT,
+    mlenflg_tmp : FIELD_BOOL_IJ,
+    bsum_tmp : FIELD_FLT_IJ,
+    zldn_tmp : FIELD_FLT_IJ,
+    thvx_k : FIELD_FLT_IJ,
+    tke_k : FIELD_FLT_IJ,
+    thvx : FIELD_FLT,
+    tke : FIELD_FLT,
+    gotvx : FIELD_FLT,
+    zl : FIELD_FLT,
+    tsea : FIELD_FLT_IJ,
+    q1_gt : FIELD_FLT_8,
+    zfmin : float,
+    fv : float,
+    k : int,
+):
+    with computation(BACKWARD), interval(...):
+        if mask[0,0,0] == k:
+            mlenflg_tmp = True
+            bsum_tmp = 0.0
+            zldn_tmp = 0.0
+            thvx_k = thvx[0, 0 ,0]
+            tke_k = tke[0, 0, 0]
+        if mlenflg_tmp[0,0] == True:
+            if mask[0,0,0] == 0:
+                dz = zl[0,0,0]
+                tem1 = tsea[0,0] * (1.0 + fv * max(q1_gt[0,0,0][0], qmin))
+            else:
+                dz = zl[0,0,0] - zl[0,0,-1]
+                tem1 = thvx[0,0,-1]
+            ptem = gotvx[0,0,0] * (thvx_k[0,0] - tem1) * dz
+            bsum_tmp = bsum_tmp[0,0] + ptem
+            zldn_tmp = zldn_tmp[0,0] + dz
+            if bsum_tmp[0,0] >= tke_k[0,0]:
+                if ptem >= 0.0:
+                    tem2 = max(ptem,zfmin)
+                else:
+                    tem2 = min(ptem, -zfmin)
+                ptem1 = (bsum_tmp[0,0] - tke_k[0,0]) / tem2
+                zldn_tmp = zldn_tmp[0,0] - ptem1 * dz
+                zldn_tmp = max(zldn_tmp[0,0], 0.0)
+                mlenflg_tmp[0,0] = False
+
+@gtscript.stencil(backend=backend)
+def comp_asym_rlam_ele(
+    zi : FIELD_FLT,
+    rlam : FIELD_FLT,
+    ele : FIELD_FLT,
+    zlup_tmp : FIELD_FLT_IJ,
+    zldn_tmp : FIELD_FLT_IJ,
+    rlmn : float,
+    rlmx : float,
+    elmfac : float,
+    elmx : float,
+):
+    with computation(FORWARD), interval(...):
+        tem = 0.5 * (zi[0,0,1] - zi[0,0,0])
+        tem1 = min(tem, rlmn)
+
+        ptem2 = min(zlup_tmp[0,0], zldn_tmp[0,0])
+        rlam = min(max(elmfac*ptem2,tem1),rlmx)
+
+        ptem2 = sqrt(zlup_tmp[0,0] * zldn_tmp[0,0])
+        ele = min(max(elefac*ptem2,tem1),elmx)
+        
