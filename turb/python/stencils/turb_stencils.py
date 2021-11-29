@@ -94,22 +94,19 @@ def init(
     chz: FIELD_FLT,
     ckz: FIELD_FLT,
     garea: FIELD_FLT_IJ,
-    gdx: FIELD_FLT,
+    gdx: FIELD_FLT_IJ,
     tke: FIELD_FLT,
     q1: FIELD_FLT_8,
     rdzt: FIELD_FLT,
     prn: FIELD_FLT,
     kx1: FIELD_INT,
     prsi: FIELD_FLT,
-    xkzm_hx: FIELD_FLT,
-    xkzm_mx: FIELD_FLT,
     mask: FIELD_INT,
     kinver: FIELD_INT_IJ,
     tx1: FIELD_FLT_IJ,
     tx2: FIELD_FLT_IJ,
     xkzo: FIELD_FLT,
     xkzmo: FIELD_FLT,
-    z0: FIELD_FLT,
     kpblx: FIELD_INT_IJ,
     hpblx: FIELD_FLT_IJ,
     pblflg: FIELD_BOOL_IJ,
@@ -205,6 +202,7 @@ def init(
         sfcflg = 1
         if rbsoil[0, 0] > 0.0:
             sfcflg = 0
+        gdx = sqrt(garea[0, 0])
 
     with computation(PARALLEL), interval(...):
         zi = phii[0, 0, 0] * gravi
@@ -213,21 +211,20 @@ def init(
     with computation(PARALLEL), interval(0, -1):
         ckz = ck1
         chz = ch1
-        gdx = sqrt(garea[0, 0])
         prn = 1.0
         kx1 = 0.0
         zm = zi[0, 0, 1]
         rdzt = 1.0 / (zl[0, 0, 1] - zl[0, 0, 0])
 
-        if gdx[0, 0, 0] >= xkgdx:
+        if gdx[0, 0] >= xkgdx:
             xkzm_hx = xkzm_h
             xkzm_mx = xkzm_m
         else:
             xkzm_hx = 0.01 + ((xkzm_h - 0.01) * (1.0 / (xkgdx - 5.0))) * (
-                gdx[0, 0, 0] - 5.0
+                gdx[0, 0] - 5.0
             )
             xkzm_mx = 0.01 + ((xkzm_m - 0.01) * (1.0 / (xkgdx - 5.0))) * (
-                gdx[0, 0, 0] - 5.0
+                gdx[0, 0] - 5.0
             )
 
         # if mask[0, 0, 0] == kx1[0, 0, 0] and mask[0, 0, 0] > 0:
@@ -235,12 +232,12 @@ def init(
 
         if mask[0, 0, 0] < kinver[0, 0]:
             ptem = prsi[0, 0, 1] * tx1[0, 0]
-            xkzo = xkzm_hx[0, 0, 0] * min(
+            xkzo = xkzm_hx * min(
                 1.0, exp(-((1.0 - ptem) * (1.0 - ptem) * 10.0))
             )
 
             if ptem >= xkzm_s:
-                xkzmo = xkzm_mx[0, 0, 0]
+                xkzmo = xkzm_mx
                 kx1 = mask[0, 0, 0] + 1
             else:
                 tem1 = min(
@@ -253,9 +250,8 @@ def init(
                         )
                     ),
                 )
-                xkzmo = xkzm_mx[0, 0, 0] * tem1
+                xkzmo = xkzm_mx * tem1
 
-        z0 = 0.01 * zorl[0, 0]
         # dusfc = 0.0
         # dvsfc = 0.0
         # dtsfc = 0.0
@@ -347,7 +343,7 @@ def init(
             else:
                 tem1 = 1e-7 * (
                     max(sqrt(u10m[0, 0] ** 2 + v10m[0, 0] ** 2), 1.0)
-                    / (f0 * z0[0, 0, 0])
+                    / (f0 * 0.01 * zorl[0, 0])
                 )
                 thermal = tsea[0, 0] * (1.0 + fv * max(q1[0, 0, 0][0], qmin))
                 crb = max(min(0.16 * (tem1 ** (-0.18)), crbmax), crbmin)
@@ -451,8 +447,7 @@ def part3a1(
     thermal: FIELD_FLT_IJ,
     theta: FIELD_FLT,
     ustar: FIELD_FLT_IJ,
-    vpert: FIELD_FLT,
-    wscale: FIELD_FLT,
+    vpert: FIELD_FLT_IJ,
     zi: FIELD_FLT,
     zl: FIELD_FLT,
     zol: FIELD_FLT_IJ,
@@ -531,10 +526,10 @@ def part3a1(
         flg = 1
 
         if pcnvflg[0, 0]:
-            hgamt = heat[0, 0] / wscale[0, 0, 0]
-            hgamq = evap[0, 0] / wscale[0, 0, 0]
+            hgamt = heat[0, 0] / wscale
+            hgamq = evap[0, 0] / wscale
             vpert = max(hgamt + hgamq * fv * theta[0, 0, 0], 0.0)
-            thermal = thermal[0, 0] + min(cfac * vpert[0, 0, 0], gamcrt)
+            thermal = thermal[0, 0] + min(cfac * vpert[0, 0], gamcrt)
             flg = 0
             rbup = rbsoil[0, 0]
 
@@ -861,7 +856,7 @@ def part6(
     dkq: FIELD_FLT,
     ele: FIELD_FLT,
     elm: FIELD_FLT,
-    gdx: FIELD_FLT,
+    gdx: FIELD_FLT_IJ,
     gotvx: FIELD_FLT,
     kpbl: FIELD_INT_IJ,
     mask: FIELD_INT,
@@ -913,7 +908,7 @@ def part6(
 
             elm = zk * rlam[0, 0, 0] / (rlam[0, 0, 0] + zk)
             dz = zi[0, 0, 1] - zi[0, 0, 0]
-            tem = max(gdx[0, 0, 0], dz)
+            tem = max(gdx[0, 0], dz)
             elm = min(elm[0, 0, 0], tem)
             ele = min(ele[0, 0, 0], tem)
 
@@ -2118,7 +2113,7 @@ def mfpblt_s0(
     thlu: FIELD_FLT,
     thlx: FIELD_FLT,
     thvx: FIELD_FLT,
-    vpert: FIELD_FLT,
+    vpert: FIELD_FLT_IJ,
     wu2: FIELD_FLT,
     alp: float,
     g: float,
@@ -2133,7 +2128,7 @@ def mfpblt_s0(
 
     with computation(PARALLEL), interval(0, 1):
         if cnvflg[0, 0]:
-            ptem = min(alp * vpert[0, 0, 0], 3.0)
+            ptem = min(alp * vpert[0, 0], 3.0)
             thlu = thlx[0, 0, 0] + ptem
             qtu = qtx[0, 0, 0]
             buo = g * ptem / thvx[0, 0, 0]
@@ -2296,7 +2291,7 @@ def mfpblt_s1a(
 @gtscript.stencil(backend=backend)
 def mfpblt_s2(
     cnvflg: FIELD_BOOL_IJ,
-    gdx: FIELD_FLT,
+    gdx: FIELD_FLT_IJ,
     hpbl: FIELD_FLT_IJ,
     hpblx: FIELD_FLT_IJ,
     kpbl: FIELD_INT_IJ,
@@ -2392,7 +2387,7 @@ def mfpblt_s2(
             if cnvflg[0, 0]:
                 tem = 0.2 / xlamavg[0, 0]
                 sigma = min(
-                    max((3.14 * tem * tem) / (gdx[0, 0, 0] * gdx[0, 0, 0]), 0.001),
+                    max((3.14 * tem * tem) / (gdx[0, 0] * gdx[0, 0]), 0.001),
                     0.999,
                 )
 
@@ -3315,7 +3310,7 @@ def mfscu_s2(
 @gtscript.stencil(backend=backend)
 def mfscu_s3(
     cnvflg: FIELD_BOOL_IJ,
-    gdx: FIELD_FLT,
+    gdx: FIELD_FLT_IJ,
     krad: FIELD_INT_IJ,
     mask: FIELD_INT,
     mrad: FIELD_INT_IJ,
@@ -3377,7 +3372,7 @@ def mfscu_s3(
         with interval(0, 1):
             if cnvflg[0, 0]:
                 tem1 = (3.14 * (0.2 / xlamavg[0, 0]) * (0.2 / xlamavg[0, 0])) / (
-                    gdx[0, 0, 0] * gdx[0, 0, 0]
+                    gdx[0, 0] * gdx[0, 0]
                 )
                 sigma = min(max(tem1, 0.001), 0.999)
 
