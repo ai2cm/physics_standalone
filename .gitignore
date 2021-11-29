@@ -1081,3 +1081,4 @@ radiation/python/forcing/solarconstant_noaa_an.nc
 radiation/python/radlw/.dace.conf
 radiation/python/radsw/.dace.conf
 .gitignore
+_dacegraphs/invalid.sdfg
