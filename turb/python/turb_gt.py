@@ -578,6 +578,46 @@ class Turbulence:
             shape=(im, 1),
             default_origin=(0, 0, 0),
         )
+        self.zlup = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1),
+            default_origin=(0, 0, 0),
+        )
+        self.zldn = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1),
+            default_origin=(0, 0, 0),
+        )
+
+        self.bsum = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1),
+            default_origin=(0, 0, 0),
+        )
+
+        self.mlenflg = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_BOOL,
+            shape=(im, 1),
+            default_origin=(0, 0, 0),
+        )
+
+        self.thvx_k = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1),
+            default_origin=(0, 0, 0),
+        )
+
+        self.tke_k = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1),
+            default_origin=(0, 0, 0),
+        )
         # Mask/Index Array
         self.mask = gt_storage.zeros(
             backend=backend,
@@ -1126,6 +1166,55 @@ def satmedmfvdif_gt(
         default_origin=(0, 0, 0),
     )
 
+    wd2 = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+
+    thld = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+    qtd = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+    xlamdem = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+    wu2 = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+    qtu = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+    xlamuem = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
+    thlu = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1, km + 1),
+        default_origin=(0, 0, 0),
+    )
     # 1D GT storages extended into 3D
     gdx = gt_storage.zeros(
         backend=backend,
@@ -1145,7 +1234,19 @@ def satmedmfvdif_gt(
         shape=(im, 1),
         default_origin=(0, 0, 0),
     )
+    kpblx_mfp = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_INT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
     hpblx = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    hpblx_mfp = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
         shape=(im, 1),
@@ -1278,6 +1379,124 @@ def satmedmfvdif_gt(
         default_origin=(0, 0, 0),
     )
     radj = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    zlup = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    zldn = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    bsum = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    mlenflg = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_BOOL,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    thvx_k = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+
+    tke_k = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    hrad = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    krad1 = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_INT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    thlvd = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    ra1 = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    ra2 = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    mradx = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_INT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    mrady = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_INT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    sumx = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    xlamavg = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    scaldfunc = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_FLT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    kpbly = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_INT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    kpbly_mfp = gt_storage.zeros(
+        backend=backend,
+        dtype=DTYPE_INT,
+        shape=(im, 1),
+        default_origin=(0, 0, 0),
+    )
+    zm_mrad = gt_storage.zeros(
         backend=backend,
         dtype=DTYPE_FLT,
         shape=(im, 1),
@@ -1598,6 +1817,20 @@ def satmedmfvdif_gt(
         elocp,
         el2orc,
         mask,
+        qtx,
+        wu2,
+        qtu,
+        xlamuem,
+        thlu,
+        kpblx_mfp,
+        kpbly_mfp,
+        rbup,
+        rbdn,
+        flg,
+        hpblx_mfp,
+        xlamavg,
+        sumx,
+        scaldfunc,
     )
 
     radj, mrad, buod, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde = mfscu(
@@ -1638,6 +1871,23 @@ def satmedmfvdif_gt(
         elocp,
         el2orc,
         mask,
+        qtx,
+        wd2,
+        hrad,
+        krad1,
+        thld,
+        qtd,
+        thlvd,
+        ra1,
+        ra2,
+        flg,
+        xlamdem,
+        mradx,
+        mrady,
+        sumx,
+        xlamavg,
+        scaldfunc,
+        zm_mrad,
     )
 
     part5(
@@ -1652,47 +1902,6 @@ def satmedmfvdif_gt(
         prn=prn,
         zi=zi,
         domain=(im, 1, kmpbl),
-    )
-
-    zlup_tmp = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    zldn_tmp = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-
-    bsum_tmp = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-
-    mlenflg_tmp = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_BOOL,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-
-    thvx_k = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-
-    tke_k = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
     )
 
     # Compute asymtotic mixing length
@@ -1757,30 +1966,30 @@ def satmedmfvdif_gt(
         # for n in range(k,km1):            
         #     for i in range(im):
         #         if n == k:
-        #             mlenflg_tmp[i,0] = True
-        #             bsum_tmp[i,0] = 0.0
+        #             mlenflg[i,0] = True
+        #             bsum[i,0] = 0.0
         #             zlup_tmp[i,0] = 0.0
         #             thvx_k[i,0] = thvx[i, 0 , n]
         #             tke_k[i,0] = tke[i, 0, n]
-        #         if mlenflg_tmp[i,0] == True:
+        #         if mlenflg[i,0] == True:
         #             dz = zl[i, 0, n + 1] - zl[i, 0, n]
         #             ptem = gotvx[i, 0, n] * (thvx[i, 0, n + 1] - thvx_k[i, 0]) * dz
-        #             bsum_tmp[i,0] = bsum_tmp[i,0] + ptem
+        #             bsum[i,0] = bsum[i,0] + ptem
         #             zlup_tmp[i,0] = zlup_tmp[i,0] + dz
-        #             if bsum_tmp[i,0] >= tke_k[i, 0]:
+        #             if bsum[i,0] >= tke_k[i, 0]:
         #                 if ptem >= 0.0:
         #                         tem2 = max(ptem, zfmin)
         #                 else:
         #                     tem2 = min(ptem, -zfmin)
-        #                 ptem1 = (bsum_tmp[i,0] - tke_k[i, 0]) / tem2
+        #                 ptem1 = (bsum[i,0] - tke_k[i, 0]) / tem2
         #                 zlup_tmp[i,0] = zlup_tmp[i,0] - ptem1 * dz
         #                 zlup_tmp[i,0] = max(zlup_tmp[i,0], 0.0)
-        #                 mlenflg_tmp[i,0] = False
+        #                 mlenflg[i,0] = False
 
         comp_asym_mix_up(mask=mask,
-                         mlenflg_tmp=mlenflg_tmp,
-                         bsum_tmp=bsum_tmp,
-                         zlup_tmp=zlup_tmp,
+                         mlenflg=mlenflg,
+                         bsum=bsum,
+                         zlup=zlup,
                          thvx_k=thvx_k,
                          tke_k=tke_k,
                          thvx=thvx,
@@ -1798,13 +2007,13 @@ def satmedmfvdif_gt(
         # for n in range(k, -1, -1):
         #     for i in range(im):
         #         if n == k:
-        #             mlenflg_tmp[i,0] = True
-        #             bsum_tmp[i,0] = 0.0
-        #             zldn_tmp[i,0] = 0.0
+        #             mlenflg[i,0] = True
+        #             bsum[i,0] = 0.0
+        #             zldn[i,0] = 0.0
         #             thvx_k[i,0] = thvx[i, 0 , n]
         #             tke_k[i,0] = tke[i, 0, n]
 
-        #         if mlenflg_tmp[i,0] == True:
+        #         if mlenflg[i,0] == True:
         #             if n == 0:
         #                 dz = zl[i, 0, 0]
         #                 tem1 = tsea[i, 0] * (1.0 + fv * max(q1_gt[i, 0, 0, 0], qmin))
@@ -1812,22 +2021,22 @@ def satmedmfvdif_gt(
         #                 dz = zl[i, 0, n] - zl[i, 0, n - 1]
         #                 tem1 = thvx[i, 0, n - 1]
         #             ptem = gotvx[i, 0, n] * (thvx_k[i, 0] - tem1) * dz
-        #             bsum_tmp[i,0] = bsum_tmp[i,0] + ptem
-        #             zldn_tmp[i,0] = zldn_tmp[i,0] + dz
-        #             if bsum_tmp[i,0] >= tke_k[i, 0]:
+        #             bsum[i,0] = bsum[i,0] + ptem
+        #             zldn[i,0] = zldn[i,0] + dz
+        #             if bsum[i,0] >= tke_k[i, 0]:
         #                 if ptem >= 0.0:
         #                     tem2 = max(ptem, zfmin)
         #                 else:
         #                     tem2 = min(ptem, -zfmin)
-        #                 ptem1 = (bsum_tmp[i,0] - tke_k[i, 0]) / tem2
-        #                 zldn_tmp[i,0] = zldn_tmp[i,0] - ptem1 * dz
-        #                 zldn_tmp[i,0] = max(zldn_tmp[i,0], 0.0)
-        #                 mlenflg_tmp[i,0] = False
+        #                 ptem1 = (bsum[i,0] - tke_k[i, 0]) / tem2
+        #                 zldn[i,0] = zldn[i,0] - ptem1 * dz
+        #                 zldn[i,0] = max(zldn[i,0], 0.0)
+        #                 mlenflg[i,0] = False
 
         comp_asym_mix_dn(mask=mask,
-                         mlenflg_tmp=mlenflg_tmp,
-                         bsum_tmp=bsum_tmp,
-                         zldn_tmp=zldn_tmp,
+                         mlenflg=mlenflg,
+                         bsum=bsum,
+                         zldn=zldn,
                          thvx_k=thvx_k,
                          tke_k=tke_k,
                          thvx=thvx,
@@ -1849,12 +2058,12 @@ def satmedmfvdif_gt(
         #     tem = 0.5 * (zi[i, 0, k + 1] - zi[i, 0, k])
         #     tem1 = min(tem, rlmn)
 
-        #     ptem2 = min(zlup_tmp[i,0], zldn_tmp[i,0])
+        #     ptem2 = min(zlup_tmp[i,0], zldn[i,0])
         #     rlam[i, 0, k] = elmfac * ptem2
         #     rlam[i, 0, k] = max(rlam[i, 0, k], tem1)
         #     rlam[i, 0, k] = min(rlam[i, 0, k], rlmx)
 
-        #     ptem2 = math.sqrt(zlup_tmp[i,0] * zldn_tmp[i,0])
+        #     ptem2 = math.sqrt(zlup_tmp[i,0] * zldn[i,0])
         #     ele[i, 0, k] = elefac * ptem2
         #     ele[i, 0, k] = max(ele[i, 0, k], tem1)
         #     ele[i, 0, k] = min(ele[i, 0, k], elmx)
@@ -1862,8 +2071,8 @@ def satmedmfvdif_gt(
         comp_asym_rlam_ele(zi=zi,
                            rlam=rlam,
                            ele=ele,
-                           zlup_tmp=zlup_tmp,
-                           zldn_tmp=zldn_tmp,
+                           zlup=zlup,
+                           zldn=zldn,
                            rlmn=rlmn,
                            rlmx=rlmx,
                            elmfac=elmfac,

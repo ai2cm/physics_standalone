@@ -1788,6 +1788,20 @@ def mfpblt(
     elocp,
     el2orc,
     mask,
+    qtx,
+    wu2,
+    qtu,
+    xlamuem,
+    thlu,
+    kpblx,
+    kpbly,
+    rbup,
+    rbdn,
+    flg,
+    hpblx,
+    xlamavg,
+    sumx,
+    scaldfunc,
 ):
 
     ce0 = 0.4
@@ -1802,109 +1816,6 @@ def mfpblt(
     fv = 4.6150e2 / 2.8705e2 - 1.0
     eps = 2.8705e2 / 4.6150e2
     epsm1 = eps - 1.0
-
-    wu2 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qtu = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qtx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    xlamuem = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    thlu = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qtu = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    thlu = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    kpblx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_INT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    kpbly = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_INT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    rbup = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    rbdn = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    flg = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_BOOL,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    hpblx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    xlamavg = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    sumx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    # sigma = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    scaldfunc = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
 
     totflag = True
 
@@ -1929,6 +1840,13 @@ def mfpblt(
         thvx=thvx,
         vpert=vpert,
         wu2=wu2,
+        kpblx=kpblx,
+        kpbly=kpbly,
+        rbup=rbup,
+        rbdn=rbdn,
+        hpblx=hpblx,
+        xlamavg=xlamavg,
+        sumx=sumx,
         ntcw=ntcw-1,
     )
 
@@ -2115,6 +2033,13 @@ def mfpblt_s0(
     thvx: FIELD_FLT,
     vpert: FIELD_FLT_IJ,
     wu2: FIELD_FLT,
+    kpblx : FIELD_INT_IJ,
+    kpbly : FIELD_INT_IJ,
+    rbup : FIELD_FLT_IJ,
+    rbdn : FIELD_FLT_IJ,
+    hpblx : FIELD_FLT_IJ,
+    xlamavg : FIELD_FLT_IJ,
+    sumx : FIELD_FLT_IJ,
     alp: float,
     g: float,
     ntcw: int,
@@ -2126,7 +2051,14 @@ def mfpblt_s0(
             wu2 = 0.0
             qtx = q1[0, 0, 0][0] + q1[0, 0, 0][ntcw]
 
-    with computation(PARALLEL), interval(0, 1):
+    with computation(FORWARD), interval(0, 1):
+        kpblx = 0
+        kpbly = 0
+        rbup = 0.0
+        rbdn = 0.0
+        hpblx = 0.0
+        xlamavg = 0.0
+        sumx = 0.0
         if cnvflg[0, 0]:
             ptem = min(alp * vpert[0, 0], 3.0)
             thlu = thlx[0, 0, 0] + ptem
@@ -2495,6 +2427,23 @@ def mfscu(
     elocp,
     el2orc,
     mask,
+    qtx,
+    wd2,
+    hrad,
+    krad1,
+    thld,
+    qtd,
+    thlvd,
+    ra1,
+    ra2,
+    flg,
+    xlamdem,
+    mradx,
+    mrady,
+    sumx,
+    xlamavg,
+    scaldfunc,
+    zm_mrad,
 ):
 
     ce0 = 0.4
@@ -2515,115 +2464,6 @@ def mfscu(
     eps = 2.8705e2 / 4.6150e2
     epsm1 = eps - 1.0
     fv = 4.6150e2 / 2.8705e2 - 1.0
-
-    wd2 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qtx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    hrad = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    krad1 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_INT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    thld = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    qtd = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    thlvd = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    ra1 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    ra2 = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    flg = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_BOOL,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    xlamdem = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    mradx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_INT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    mrady = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_INT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    sumx = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    xlamavg = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
-    xmfd = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1, km + 1),
-        default_origin=(0, 0, 0),
-    )
-    # sigma = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1, km + 1),
-    #     default_origin=(0, 0, 0),
-    # )
-    scaldfunc = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
 
     totflg = True
 
@@ -2689,12 +2529,12 @@ def mfscu(
     if totflg:
         return
 
-    zm_mrad = gt_storage.zeros(
-        backend=backend,
-        dtype=DTYPE_FLT,
-        shape=(im, 1),
-        default_origin=(0, 0, 0),
-    )
+    # zm_mrad = gt_storage.zeros(
+    #     backend=backend,
+    #     dtype=DTYPE_FLT,
+    #     shape=(im, 1),
+    #     default_origin=(0, 0, 0),
+    # )
 
     for i in range(im):
         zm_mrad[i,0] = zm[i, 0, mrad[i,0]-1]
@@ -3331,6 +3171,10 @@ def mfscu_s3(
         # ra1 = ra1[0, 0, -1]
         # cnvflg = cnvflg[0, 0, -1]
 
+    with computation(FORWARD), interval(0, 1):
+        xlamavg = 0.0
+        sumx = 0.0
+
     with computation(BACKWARD):
         with interval(-1, None):
             if (
@@ -3653,9 +3497,9 @@ def tridi2(
 @gtscript.stencil(backend=backend)
 def comp_asym_mix_up(
     mask : FIELD_INT,
-    mlenflg_tmp : FIELD_BOOL_IJ,
-    bsum_tmp : FIELD_FLT_IJ,
-    zlup_tmp : FIELD_FLT_IJ,
+    mlenflg : FIELD_BOOL_IJ,
+    bsum : FIELD_FLT_IJ,
+    zlup : FIELD_FLT_IJ,
     thvx_k : FIELD_FLT_IJ,
     tke_k : FIELD_FLT_IJ,
     thvx : FIELD_FLT,
@@ -3667,32 +3511,32 @@ def comp_asym_mix_up(
 ):  
     with computation(FORWARD), interval(...):
         if mask[0,0,0] == k:
-            mlenflg_tmp = True
-            zlup_tmp = 0.0
-            bsum_tmp = 0.0
+            mlenflg = True
+            zlup = 0.0
+            bsum = 0.0
             thvx_k = thvx[0,0,0]
             tke_k = tke[0,0,0]
-        if mlenflg_tmp[0,0] == True:
+        if mlenflg[0,0] == True:
             dz = zl[0,0,1] - zl[0,0,0]
             ptem = gotvx[0,0,0] * (thvx[0,0,1] - thvx_k[0,0]) * dz
-            bsum_tmp = bsum_tmp[0,0] + ptem
-            zlup_tmp = zlup_tmp[0,0] + dz
-            if bsum_tmp[0,0] >= tke_k[0,0]:
+            bsum = bsum[0,0] + ptem
+            zlup = zlup[0,0] + dz
+            if bsum[0,0] >= tke_k[0,0]:
                 if ptem >= 0.0:
                     tem2 = max(ptem, zfmin)
                 else:
                     tem2 = min(ptem, -zfmin)
-                ptem1 = (bsum_tmp[0,0] - tke_k[0,0]) / tem2
-                zlup_tmp = zlup_tmp[0,0] - ptem1 * dz
-                zlup_tmp = max(zlup_tmp[0,0], 0.0)
-                mlenflg_tmp = False
+                ptem1 = (bsum[0,0] - tke_k[0,0]) / tem2
+                zlup = zlup[0,0] - ptem1 * dz
+                zlup = max(zlup[0,0], 0.0)
+                mlenflg = False
 
 @gtscript.stencil(backend=backend)
 def comp_asym_mix_dn(
     mask : FIELD_INT,
-    mlenflg_tmp : FIELD_BOOL_IJ,
-    bsum_tmp : FIELD_FLT_IJ,
-    zldn_tmp : FIELD_FLT_IJ,
+    mlenflg : FIELD_BOOL_IJ,
+    bsum : FIELD_FLT_IJ,
+    zldn : FIELD_FLT_IJ,
     thvx_k : FIELD_FLT_IJ,
     tke_k : FIELD_FLT_IJ,
     thvx : FIELD_FLT,
@@ -3707,12 +3551,12 @@ def comp_asym_mix_dn(
 ):
     with computation(BACKWARD), interval(...):
         if mask[0,0,0] == k:
-            mlenflg_tmp = True
-            bsum_tmp = 0.0
-            zldn_tmp = 0.0
+            mlenflg = True
+            bsum = 0.0
+            zldn = 0.0
             thvx_k = thvx[0, 0 ,0]
             tke_k = tke[0, 0, 0]
-        if mlenflg_tmp[0,0] == True:
+        if mlenflg[0,0] == True:
             if mask[0,0,0] == 0:
                 dz = zl[0,0,0]
                 tem1 = tsea[0,0] * (1.0 + fv * max(q1_gt[0,0,0][0], qmin))
@@ -3720,25 +3564,25 @@ def comp_asym_mix_dn(
                 dz = zl[0,0,0] - zl[0,0,-1]
                 tem1 = thvx[0,0,-1]
             ptem = gotvx[0,0,0] * (thvx_k[0,0] - tem1) * dz
-            bsum_tmp = bsum_tmp[0,0] + ptem
-            zldn_tmp = zldn_tmp[0,0] + dz
-            if bsum_tmp[0,0] >= tke_k[0,0]:
+            bsum = bsum[0,0] + ptem
+            zldn = zldn[0,0] + dz
+            if bsum[0,0] >= tke_k[0,0]:
                 if ptem >= 0.0:
                     tem2 = max(ptem,zfmin)
                 else:
                     tem2 = min(ptem, -zfmin)
-                ptem1 = (bsum_tmp[0,0] - tke_k[0,0]) / tem2
-                zldn_tmp = zldn_tmp[0,0] - ptem1 * dz
-                zldn_tmp = max(zldn_tmp[0,0], 0.0)
-                mlenflg_tmp[0,0] = False
+                ptem1 = (bsum[0,0] - tke_k[0,0]) / tem2
+                zldn = zldn[0,0] - ptem1 * dz
+                zldn = max(zldn[0,0], 0.0)
+                mlenflg[0,0] = False
 
 @gtscript.stencil(backend=backend)
 def comp_asym_rlam_ele(
     zi : FIELD_FLT,
     rlam : FIELD_FLT,
     ele : FIELD_FLT,
-    zlup_tmp : FIELD_FLT_IJ,
-    zldn_tmp : FIELD_FLT_IJ,
+    zlup : FIELD_FLT_IJ,
+    zldn : FIELD_FLT_IJ,
     rlmn : float,
     rlmx : float,
     elmfac : float,
@@ -3748,9 +3592,9 @@ def comp_asym_rlam_ele(
         tem = 0.5 * (zi[0,0,1] - zi[0,0,0])
         tem1 = min(tem, rlmn)
 
-        ptem2 = min(zlup_tmp[0,0], zldn_tmp[0,0])
+        ptem2 = min(zlup[0,0], zldn[0,0])
         rlam = min(max(elmfac*ptem2,tem1),rlmx)
 
-        ptem2 = sqrt(zlup_tmp[0,0] * zldn_tmp[0,0])
+        ptem2 = sqrt(zlup[0,0] * zldn[0,0])
         ele = min(max(elefac*ptem2,tem1),elmx)
         
