@@ -144,10 +144,7 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-            # in_data_custom = data_dict_from_var_list(IN_VARS2, serializer_custom, savepoints_custom[0])
-
-            # run Python version
-            # out_data = turb.run(in_data, in_data_custom)
+            # Initialize and test turbulence
             turb_obj = turb.Turbulence(in_data["im"], in_data["ix"], in_data["km"], in_data["ntrac"], 
                                        in_data["ntcw"], in_data["ntiw"], in_data["ntke"], in_data["delt"], 
                                        in_data["dspheat"], in_data["xkzm_m"], in_data["xkzm_h"], in_data["xkzm_s"])
@@ -174,7 +171,6 @@ for tile in range(6):
             out_data["dtsfc"] = dtsfc
             out_data["dqsfc"] = dqsfc
             out_data["hpbl"] = hpbl
-            # out_data = turb.run(in_data, {})
 
             isready = True
 
