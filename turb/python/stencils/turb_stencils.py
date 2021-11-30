@@ -331,7 +331,7 @@ def init(
 
 # Possible stencil name : mrf_pbl_scheme_part1
 @gtscript.stencil(backend=backend)
-def part3a(
+def mrf_pbl_scheme_part1(
     crb: FIELD_FLT_IJ,
     flg: FIELD_BOOL_IJ,
     kpblx: FIELD_INT_IJ,
@@ -375,7 +375,7 @@ def part3a(
 
 # Possible stencil name : mrf_pbl_2_thermal_1
 @gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
-def part3a1(
+def mrf_pbl_2_thermal_1(
     crb: FIELD_FLT_IJ,
     evap: FIELD_FLT_IJ,
     fh: FIELD_FLT_IJ,
@@ -471,7 +471,7 @@ def part3a1(
 
 # Possible stencil name : thermal_2
 @gtscript.stencil(backend=backend)
-def part3c(
+def thermal_2(
     crb: FIELD_FLT_IJ,
     flg: FIELD_BOOL_IJ,
     kpbl: FIELD_INT_IJ,
@@ -513,7 +513,7 @@ def part3c(
 
 # Possible stencil name : pbl_height_enhance
 @gtscript.stencil(backend=backend)
-def part3c1(
+def pbl_height_enhance(
     crb: FIELD_FLT_IJ,
     flg: FIELD_BOOL_IJ,
     hpbl: FIELD_FLT_IJ,
@@ -560,7 +560,7 @@ def part3c1(
 
 # Possible stencil name : stratocumulus
 @gtscript.stencil(backend=backend)
-def part3e(
+def stratocumulus(
     flg: FIELD_BOOL_IJ,
     kcld: FIELD_INT_IJ,
     krad: FIELD_INT_IJ,
@@ -630,7 +630,7 @@ def part3e(
 
 # Possible stencil name : mass_flux_comp_1
 @gtscript.stencil(backend=backend)
-def part4(
+def mass_flux_comp_1(
     pcnvflg: FIELD_BOOL_IJ,
     qcdo: FIELD_FLT,
     scuflg: FIELD_BOOL_IJ,
@@ -658,7 +658,7 @@ def part4(
 
 # # Possible stencil name : mass_flux_comp_2
 @gtscript.stencil(backend=backend)
-def part4a(
+def mass_flux_comp_2(
     pcnvflg: FIELD_BOOL_IJ,
     q1: FIELD_FLT_8,
     qcdo: FIELD_FLT_8,
@@ -677,7 +677,7 @@ def part4a(
 
 # Possible stencil name : prandtl_comp_exchg_coeff
 @gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
-def part5(
+def prandtl_comp_exchg_coeff(
     chz: FIELD_FLT,
     ckz: FIELD_FLT,
     hpbl: FIELD_FLT_IJ,
@@ -707,7 +707,7 @@ def part5(
 
 # Possible stencil name : compute_eddy_buoy_shear
 @gtscript.stencil(backend=backend)
-def part6(
+def compute_eddy_buoy_shear(
     bf: FIELD_FLT,
     buod: FIELD_FLT,
     buou: FIELD_FLT,
@@ -955,7 +955,14 @@ def part6(
 
 # Possible stencil name : predict_tke
 @gtscript.stencil(backend=backend)
-def part8(diss: FIELD_FLT, prod: FIELD_FLT, rle: FIELD_FLT, tke: FIELD_FLT, dtn: float, kk : int,):
+def predict_tke(
+    diss: FIELD_FLT, 
+    prod: FIELD_FLT, 
+    rle: FIELD_FLT, 
+    tke: FIELD_FLT, 
+    dtn: float, 
+    kk : int,
+):
     with computation(PARALLEL), interval(...):
         for n in range(kk):
             diss = max(
@@ -970,7 +977,7 @@ def part8(diss: FIELD_FLT, prod: FIELD_FLT, rle: FIELD_FLT, tke: FIELD_FLT, dtn:
 
 # Possible stencil name : tke_up_down_prop_1
 @gtscript.stencil(backend=backend)
-def part9(
+def tke_up_down_prop_1(
     pcnvflg: FIELD_BOOL_IJ,
     qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
@@ -987,7 +994,7 @@ def part9(
 
 # Possible stencil name : tke_up_down_prop_2
 @gtscript.stencil(backend=backend)
-def part10(
+def tke_up_down_prop_2(
     kpbl: FIELD_INT_IJ,
     mask: FIELD_INT,
     pcnvflg: FIELD_BOOL_IJ,
@@ -1007,7 +1014,7 @@ def part10(
 
 # Possible stencil name : tke_up_down_prop_3
 @gtscript.stencil(backend=backend)
-def part11(
+def tke_up_down_prop_3(
     ad: FIELD_FLT,
     f1: FIELD_FLT,
     krad: FIELD_INT_IJ,
@@ -1037,7 +1044,7 @@ def part11(
 
 # Possible stencil name : tke_tridiag_matrix_ele_comp
 @gtscript.stencil(backend=backend)
-def part12(
+def tke_tridiag_matrix_ele_comp(
     ad: FIELD_FLT,
     ad_p1: FIELD_FLT_IJ,
     al: FIELD_FLT,
@@ -1143,18 +1150,18 @@ def part12(
 
 @gtscript.stencil(backend=backend)
 def part12a(
-            rtg : FIELD_FLT_8,
-            f1 : FIELD_FLT,
-            q1 : FIELD_FLT_8,
-            ad : FIELD_FLT,
-            f2 : FIELD_FLT_8,
-            dtdz1 : FIELD_FLT,
-            evap : FIELD_FLT_IJ,
-            heat : FIELD_FLT_IJ,
-            t1 : FIELD_FLT,
-            rdt : float,
-            ntrac1 : int,
-            ntke : int,
+    rtg : FIELD_FLT_8,
+    f1 : FIELD_FLT,
+    q1 : FIELD_FLT_8,
+    ad : FIELD_FLT,
+    f2 : FIELD_FLT_8,
+    dtdz1 : FIELD_FLT,
+    evap : FIELD_FLT_IJ,
+    heat : FIELD_FLT_IJ,
+    t1 : FIELD_FLT,
+    rdt : float,
+    ntrac1 : int,
+    ntke : int,
 ):
     with computation(PARALLEL), interval(...):
         rtg[0,0,0][ntke-1] = (rtg[0,0,0][ntke-1] + (f1[0,0,0] - q1[0,0,0][ntke-1]) * rdt)
@@ -1173,7 +1180,7 @@ def part12a(
 
 # Possible stencil name : heat_moist_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
-def part13(
+def heat_moist_tridiag_mat_ele_comp(
     ad: FIELD_FLT,
     ad_p1: FIELD_FLT_IJ,
     al: FIELD_FLT,
@@ -1387,20 +1394,20 @@ def part13a(
 
 @gtscript.stencil(backend=backend)
 def part13b(
-            f1 : FIELD_FLT,
-            t1 : FIELD_FLT,
-            f2 : FIELD_FLT_8,
-            q1 : FIELD_FLT_8,
-            tdt : FIELD_FLT,
-            rtg : FIELD_FLT_8,
-            dtsfc : FIELD_FLT_IJ,
-            del_ : FIELD_FLT,
-            dqsfc : FIELD_FLT_IJ,
-            conq : float,
-            cont : float,
-            rdt : float,
-            ntrac1 : int,
-           ):
+    f1 : FIELD_FLT,
+    t1 : FIELD_FLT,
+    f2 : FIELD_FLT_8,
+    q1 : FIELD_FLT_8,
+    tdt : FIELD_FLT,
+    rtg : FIELD_FLT_8,
+    dtsfc : FIELD_FLT_IJ,
+    del_ : FIELD_FLT,
+    dqsfc : FIELD_FLT_IJ,
+    conq : float,
+    cont : float,
+    rdt : float,
+    ntrac1 : int,
+):
     with computation(PARALLEL), interval(...):
         ttend = (f1[0,0,0] - t1[0,0,0]) * rdt
         qtend = (f2[0,0,0][0] - q1[0,0,0][0]) * rdt
@@ -1418,7 +1425,7 @@ def part13b(
 
 # Possible stencil name : moment_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
-def part14(
+def moment_tridiag_mat_ele_comp(
     ad: FIELD_FLT,
     ad_p1: FIELD_FLT_IJ,
     al: FIELD_FLT,
@@ -1557,7 +1564,7 @@ def part14(
 
 # Possible stencil name : moment_recover
 @gtscript.stencil(backend=backend)
-def part15(
+def moment_recover(
     del_: FIELD_FLT,
     du: FIELD_FLT,
     dusfc: FIELD_FLT_IJ,
@@ -1773,34 +1780,36 @@ def mfpblt(
         domain=(im, 1, kmpbl),
     )
 
-    mfpblt_leftover(cnvflg = cnvflg,
-                kpbl = kpbl,
-                mask = mask,
-                xlamue = xlamue,
-                qcko = qcko,
-                q1_gt = q1_gt,
-                zl = zl,
-                kmpbl = kmpbl,
-                ntcw = ntcw,
-                ntrac1 = ntrac1,
-                domain=(im, 1, kmpbl)
+    mfpblt_s3(
+        cnvflg = cnvflg,
+        kpbl = kpbl,
+        mask = mask,
+        xlamue = xlamue,
+        qcko = qcko,
+        q1_gt = q1_gt,
+        zl = zl,
+        kmpbl = kmpbl,
+        ntcw = ntcw,
+        ntrac1 = ntrac1,
+        domain=(im, 1, kmpbl)
     )
 
     return kpbl, hpbl, buo, xmf, tcko, qcko, ucko, vcko, xlamue
 
 
 @gtscript.stencil(backend=backend)
-def mfpblt_leftover(cnvflg : FIELD_BOOL_IJ,
-                    kpbl : FIELD_INT_IJ,
-                    mask : FIELD_INT,
-                    xlamue : FIELD_FLT,
-                    qcko : FIELD_FLT_8,
-                    q1_gt : FIELD_FLT_8,
-                    zl : FIELD_FLT,
-                    kmpbl : int,
-                    ntcw  : int,
-                    ntrac1 : int,
-                   ):
+def mfpblt_s3(
+    cnvflg : FIELD_BOOL_IJ,
+    kpbl : FIELD_INT_IJ,
+    mask : FIELD_INT,
+    xlamue : FIELD_FLT,
+    qcko : FIELD_FLT_8,
+    q1_gt : FIELD_FLT_8,
+    zl : FIELD_FLT,
+    kmpbl : int,
+    ntcw  : int,
+    ntrac1 : int,
+):
     with computation(FORWARD), interval(1,None):
         if ntcw > 2:
             for n in range(ntcw, ntcw - 1):
@@ -2241,7 +2250,7 @@ def mfscu(
     if totflg:
         return
 
-    mfscu_s0a(
+    mfscu_s0(
         buo=buo,
         cnvflg=cnvflg,
         flg=flg,
@@ -2278,7 +2287,7 @@ def mfscu(
         domain=(im, 1, km),
     )
 
-    mfscu_s0b(
+    mfscu_s1(
         cnvflg=cnvflg,
         flg=flg,
         krad=krad,
@@ -2300,23 +2309,23 @@ def mfscu(
     for i in range(im):
         zm_mrad[i,0] = zm[i, 0, mrad[i,0]-1]
 
-    mfscu_s0c(
-              zl=zl,
-              mask=mask,
-              mrad=mrad,
-              krad=krad,
-              zm=zm,
-              zm_mrad=zm_mrad,
-              xlamde=xlamde,
-              xlamdem=xlamdem,
-              hrad=hrad,
-              cnvflg=cnvflg,
-              ce0=ce0,
-              cm=cm,
-              domain=(im,1,kmscu),
+    mfscu_s2(
+        zl=zl,
+        mask=mask,
+        mrad=mrad,
+        krad=krad,
+        zm=zm,
+        zm_mrad=zm_mrad,
+        xlamde=xlamde,
+        xlamdem=xlamdem,
+        hrad=hrad,
+        cnvflg=cnvflg,
+        ce0=ce0,
+        cm=cm,
+        domain=(im,1,kmscu),
     )
 
-    mfscu_s1(
+    mfscu_s3(
         buo=buo,
         cnvflg=cnvflg,
         el2orc=el2orc,
@@ -2342,7 +2351,7 @@ def mfscu(
     bb1 = 2.0
     bb2 = 4.0
 
-    mfscu_s1a(
+    mfscu_s4(
         buo=buo,
         cnvflg=cnvflg,
         krad1=krad1,
@@ -2355,7 +2364,7 @@ def mfscu(
         domain=(im, 1, km),
     )
 
-    mfscu_s2(
+    mfscu_s5(
         buo=buo,
         cnvflg=cnvflg,
         flg=flg,
@@ -2382,25 +2391,25 @@ def mfscu(
     for i in range(im):
         zm_mrad[i,0] = zm[i, 0, mrad[i,0]-1]
 
-    mfscu_s0c2(
-              zl=zl,
-              mask=mask,
-              mrad=mrad,
-              krad=krad,
-              zm=zm,
-              zm_mrad=zm_mrad,
-              xlamde=xlamde,
-              xlamdem=xlamdem,
-              hrad=hrad,
-              cnvflg=cnvflg,
-              mrady=mrady,
-              mradx=mradx,
-              ce0=ce0,
-              cm=cm,
-              domain=(im,1,kmscu),
+    mfscu_s6(
+        zl=zl,
+        mask=mask,
+        mrad=mrad,
+        krad=krad,
+        zm=zm,
+        zm_mrad=zm_mrad,
+        xlamde=xlamde,
+        xlamdem=xlamdem,
+        hrad=hrad,
+        cnvflg=cnvflg,
+        mrady=mrady,
+        mradx=mradx,
+        ce0=ce0,
+        cm=cm,
+        domain=(im,1,kmscu),
     )
 
-    mfscu_s3(
+    mfscu_s7(
         cnvflg=cnvflg,
         dt2=delt,
         gdx=gdx,
@@ -2418,11 +2427,16 @@ def mfscu(
         domain=(im, 1, kmscu),
     )
 
-    mfscu_s3a(
-        cnvflg=cnvflg, krad=krad, mask=mask, thld=thld, thlx=thlx, domain=(im, 1, km)
+    mfscu_s8(
+        cnvflg=cnvflg, 
+        krad=krad,
+        mask=mask,
+        thld=thld,
+        thlx=thlx,
+        domain=(im, 1, km)
     )
 
-    mfscu_s4(
+    mfscu_s9(
         cnvflg=cnvflg,
         el2orc=el2orc,
         elocp=elocp,
@@ -2451,24 +2465,25 @@ def mfscu(
         domain=(im, 1, kmscu),
     )
 
-    mfscu_remainder(cnvflg = cnvflg,
-                    krad = krad,
-                    mrad = mrad,
-                    mask = mask,
-                    zl = zl,
-                    xlamde = xlamde,
-                    qcdo = qcdo,
-                    q1 = q1,
-                    ntcw = ntcw,
-                    kmscu = kmscu,
-                    ntrac1 = ntrac1,
-                    domain = (im, 1, kmscu),
-                   )
+    mfscu_10(
+        cnvflg = cnvflg,
+        krad = krad,
+        mrad = mrad,
+        mask = mask,
+        zl = zl,
+        xlamde = xlamde,
+        qcdo = qcdo,
+        q1 = q1,
+        ntcw = ntcw,
+        kmscu = kmscu,
+        ntrac1 = ntrac1,
+        domain = (im, 1, kmscu),
+    )
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
 
 @gtscript.stencil(backend=backend)
-def mfscu_s0c(
+def mfscu_s2(
     zl : FIELD_FLT,
     mask : FIELD_INT,
     mrad : FIELD_INT_IJ,
@@ -2499,7 +2514,7 @@ def mfscu_s0c(
             xlamdem = cm * xlamde[0,0,0]
 
 @gtscript.stencil(backend=backend)
-def mfscu_s0c2(
+def mfscu_s6(
     zl : FIELD_FLT,
     mask : FIELD_INT,
     mrad : FIELD_INT_IJ,
@@ -2532,19 +2547,19 @@ def mfscu_s0c2(
             xlamdem = cm * xlamde[0,0,0]
 
 @gtscript.stencil(backend=backend)
-def mfscu_remainder(cnvflg : FIELD_BOOL_IJ,
-                    krad   : FIELD_INT_IJ,
-                    mrad   : FIELD_INT_IJ,
-                    mask   : FIELD_INT,
-                    zl     : FIELD_FLT,
-                    xlamde : FIELD_FLT,
-                    qcdo   : FIELD_FLT_8,
-                    q1     : FIELD_FLT_8,
-                    ntcw   : int,
-                    kmscu  : int,
-                    ntrac1 : int,
-
-                   ):
+def mfscu_10(
+    cnvflg : FIELD_BOOL_IJ,
+    krad   : FIELD_INT_IJ,
+    mrad   : FIELD_INT_IJ,
+    mask   : FIELD_INT,
+    zl     : FIELD_FLT,
+    xlamde : FIELD_FLT,
+    qcdo   : FIELD_FLT_8,
+    q1     : FIELD_FLT_8,
+    ntcw   : int,
+    kmscu  : int,
+    ntrac1 : int,
+):
     with computation(BACKWARD), interval(...):
         if ntcw > 2:
             for n in range(1, ntcw-1):
@@ -2572,7 +2587,7 @@ def mfscu_remainder(cnvflg : FIELD_BOOL_IJ,
                     ) / factor
 
 @gtscript.stencil(backend=backend)
-def mfscu_s0a(
+def mfscu_s0(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL_IJ,
     flg: FIELD_BOOL_IJ,
@@ -2646,7 +2661,7 @@ def mfscu_s0a(
 
 
 @gtscript.stencil(backend=backend)
-def mfscu_s0b(
+def mfscu_s1(
     cnvflg: FIELD_BOOL_IJ,
     flg: FIELD_BOOL_IJ,
     krad: FIELD_INT_IJ,
@@ -2678,7 +2693,7 @@ def mfscu_s0b(
 
 
 @gtscript.stencil(backend=backend)
-def mfscu_s1(
+def mfscu_s3(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL_IJ,
     krad: FIELD_INT_IJ,
@@ -2730,7 +2745,7 @@ def mfscu_s1(
 
 
 @gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
-def mfscu_s1a(
+def mfscu_s4(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL_IJ,
     krad1: FIELD_INT_IJ,
@@ -2752,7 +2767,7 @@ def mfscu_s1a(
 
 
 @gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
-def mfscu_s2(
+def mfscu_s5(
     buo: FIELD_FLT,
     cnvflg: FIELD_BOOL_IJ,
     flg: FIELD_BOOL_IJ,
@@ -2803,7 +2818,7 @@ def mfscu_s2(
 
 
 @gtscript.stencil(backend=backend)
-def mfscu_s3(
+def mfscu_s7(
     cnvflg: FIELD_BOOL_IJ,
     gdx: FIELD_FLT_IJ,
     krad: FIELD_INT_IJ,
@@ -2884,7 +2899,7 @@ def mfscu_s3(
 
 
 @gtscript.stencil(backend=backend)
-def mfscu_s3a(
+def mfscu_s8(
     cnvflg: FIELD_BOOL_IJ,
     krad: FIELD_INT_IJ,
     mask: FIELD_INT,
@@ -2899,7 +2914,7 @@ def mfscu_s3a(
 
 
 @gtscript.stencil(backend=backend)
-def mfscu_s4(
+def mfscu_s9(
     cnvflg: FIELD_BOOL_IJ,
     krad: FIELD_INT_IJ,
     mask: FIELD_INT,
@@ -3009,16 +3024,16 @@ def tridit(
 
 @gtscript.stencil(backend=backend)
 def tridin(
-           cl : FIELD_FLT, 
-           cm : FIELD_FLT,
-           cu : FIELD_FLT, 
-           r1 : FIELD_FLT, 
-           r2 : FIELD_FLT_7, 
-           au : FIELD_FLT, 
-           a1 : FIELD_FLT, 
-           a2 : FIELD_FLT_7,
-           nt : int,
-           ):
+    cl : FIELD_FLT, 
+    cm : FIELD_FLT,
+    cu : FIELD_FLT, 
+    r1 : FIELD_FLT, 
+    r2 : FIELD_FLT_7, 
+    au : FIELD_FLT, 
+    a1 : FIELD_FLT, 
+    a2 : FIELD_FLT_7,
+    nt : int,
+):
     with computation(FORWARD):
         with interval(0,1):
             fk = 1.0 / cm[0,0,0]

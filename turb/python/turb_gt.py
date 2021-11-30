@@ -978,7 +978,7 @@ class Turbulence:
             domain=(self._im, 1, self._km + 1),
         )
 
-        part3a(
+        mrf_pbl_scheme_part1(
             crb=self._crb,
             flg=self._flg,
             g=self._g,
@@ -995,7 +995,7 @@ class Turbulence:
             domain=(self._im, 1, self._kmpbl),
         )
 
-        part3a1(
+        mrf_pbl_2_thermal_1(
             crb=self._crb,
             evap=self._evap,
             fh=self._fh,
@@ -1028,7 +1028,7 @@ class Turbulence:
             domain=(self._im, 1, self._km),
         )
 
-        part3c(
+        thermal_2(
             crb=self._crb,
             flg=self._flg,
             g=self._g,
@@ -1045,7 +1045,7 @@ class Turbulence:
             domain=(self._im, 1, self._kmpbl),
         )
 
-        part3c1(
+        pbl_height_enhance(
             crb=self._crb,
             flg=self._flg,
             hpbl=self._hpbl,
@@ -1062,7 +1062,7 @@ class Turbulence:
             domain=(self._im, 1, self._km),
         )
 
-        part3e(
+        stratocumulus(
             flg=self._flg,
             kcld=self._kcld,
             krad=self._krad,
@@ -1076,7 +1076,7 @@ class Turbulence:
             domain=(self._im, 1, self._kmscu),
         )
 
-        part4(
+        mass_flux_comp_1(
             pcnvflg=self._pcnvflg,
             scuflg=self._scuflg,
             t1=self._t1,
@@ -1091,7 +1091,7 @@ class Turbulence:
             qcdo=self._qcdo,
         )
 
-        part4a(
+        mass_flux_comp_2(
             pcnvflg=self._pcnvflg,
             q1=self._q1_gt,
             qcdo=self._qcdo,
@@ -1211,7 +1211,7 @@ class Turbulence:
             self._zm_mrad,
         )
 
-        part5(
+        prandtl_comp_exchg_coeff(
             chz=self._chz,
             ckz=self._ckz,
             hpbl=self._hpbl,
@@ -1275,7 +1275,7 @@ class Turbulence:
                 origin=(0,0,k),
             )
 
-        part6(
+        compute_eddy_buoy_shear(
             bf=self._bf,
             buod=self._buod,
             buou=self._buou,
@@ -1326,7 +1326,7 @@ class Turbulence:
         kk = max(round(self._dt2 / self._cdtn), 1)
         dtn = self._dt2 / kk
 
-        part8(diss=self._diss, 
+        predict_tke(diss=self._diss, 
               prod=self._prod, 
               rle=self._rle, 
               tke=self._tke, 
@@ -1334,7 +1334,7 @@ class Turbulence:
               kk=kk, 
               domain=(self._im, 1, self._km1))
 
-        part9(
+        tke_up_down_prop_1(
             pcnvflg=self._pcnvflg,
             qcdo=self._qcdo,
             qcko=self._qcko,
@@ -1343,7 +1343,7 @@ class Turbulence:
             domain=(self._im, 1, self._km),
         )
 
-        part10(
+        tke_up_down_prop_2(
             kpbl=self._kpbl,
             mask=self._mask,
             pcnvflg=self._pcnvflg,
@@ -1354,7 +1354,7 @@ class Turbulence:
             domain=(self._im, 1, self._kmpbl),
         )
 
-        part11(
+        tke_up_down_prop_3(
             ad=self._ad,
             f1=self._f1,
             krad=self._krad,
@@ -1368,7 +1368,7 @@ class Turbulence:
             domain=(self._im, 1, self._kmscu),
         )
 
-        part12(
+        tke_tridiag_matrix_ele_comp(
             ad=self._ad,
             ad_p1=self._ad_p1,
             al=self._al,
@@ -1416,7 +1416,7 @@ class Turbulence:
             domain=(self._im, 1, self._km),
         )
 
-        part13(
+        heat_moist_tridiag_mat_ele_comp(
             ad=self._ad,
             ad_p1=self._ad_p1,
             al=self._al,
@@ -1497,7 +1497,7 @@ class Turbulence:
             domain=(self._im,1,self._km)
         )
 
-        part14(
+        moment_tridiag_mat_ele_comp(
             ad=self._ad,
             ad_p1=self._ad_p1,
             al=self._al,
@@ -1546,7 +1546,7 @@ class Turbulence:
             domain=(self._im, 1, self._km)
         )
 
-        part15(
+        moment_recover(
             del_=self._del_,
             du=self._du,
             dusfc=self._dusfc,
