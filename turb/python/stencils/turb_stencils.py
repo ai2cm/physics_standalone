@@ -19,15 +19,6 @@ backend=BACKEND
 
 @gtscript.function
 def fpvsx(t):
-    con_ttp = 2.7316e2
-    con_cvap = 1.8460e3
-    con_cliq = 4.1855e3
-    con_hvap = 2.5000e6
-    con_rv = 4.6150e2
-    con_csol = 2.1060e3
-    con_hfus = 3.3358e5
-    con_psat = 6.1078e2
-
     tliq = con_ttp
     tice = con_ttp - 20.0
     dldtl = con_cvap - con_cliq
@@ -227,9 +218,6 @@ def init(
                 gdx[0, 0] - 5.0
             )
 
-        # if mask[0, 0, 0] == kx1[0, 0, 0] and mask[0, 0, 0] > 0:
-        #     tx2 = 1.0 / prsi[0, 0, 0]
-
         if mask[0, 0, 0] < kinver[0, 0]:
             ptem = prsi[0, 0, 1] * tx1[0, 0]
             xkzo = xkzm_hx * min(
@@ -251,26 +239,6 @@ def init(
                     ),
                 )
                 xkzmo = xkzm_mx * tem1
-
-        # dusfc = 0.0
-        # dvsfc = 0.0
-        # dtsfc = 0.0
-        # dqsfc = 0.0
-        # kpbl = 1
-        # hpbl = 0.0
-        # kpblx = 1
-        # hpblx = 0.0
-        # pblflg = 1
-        # sfcflg = 1
-        # if rbsoil[0, 0] > 0.0:
-        #     sfcflg = 0
-        # pcnvflg = 0
-        # scuflg = 1
-        # radmin = 0.0
-        # mrad = km1
-        # krad = 0
-        # lcld = km1 - 1
-        # kcld = km1 - 1
 
         pix = psk[0, 0] / prslk[0, 0, 0]
         theta = t1[0, 0, 0] * pix[0, 0, 0]
@@ -394,10 +362,6 @@ def part3a(
                 flg = rbup[0, 0] > crb[0, 0]
 
         with interval(1, None):
-            # thlvx_0 = thlvx_0[0, 0, -1]
-            # crb = crb[0, 0, -1]
-            # thermal = thermal[0, 0, -1]
-
             if flg[0, 0] == 0:
                 rbdn = rbup[0, 0]
                 rbup = (
@@ -407,17 +371,6 @@ def part3a(
                 )
                 kpblx = mask[0, 0, 0]
                 flg = rbup[0, 0] > crb[0, 0]
-            # else:
-                # rbdn = rbdn[0, 0, -1]
-                # rbup = rbup[0, 0, -1]
-                # kpblx = kpblx[0, 0, -1]
-                # flg = flg[0, 0, -1]
-
-    # with computation(BACKWARD), interval(0, -1):
-        # rbdn = rbdn[0, 0, 1]
-        # rbup = rbup[0, 0, 1]
-        # kpblx = kpblx[0, 0, 1]
-        # flg = flg[0, 0, 1]
 
 
 # Possible stencil name : mrf_pbl_2_thermal_1
@@ -455,17 +408,6 @@ def part3a1(
 ):
 
     with computation(FORWARD), interval(...):
-        # if mask[0, 0, 0] > 0:
-            # kpblx = kpblx[0, 0, -1]
-            # hpblx = hpblx[0, 0, -1]
-            # zl_0 = zl_0[0, 0, -1]
-            # kpbl = kpbl[0, 0, -1]
-            # hpbl = hpbl[0, 0, -1]
-            # pblflg = pblflg[0, 0, -1]
-            # crb = crb[0, 0, -1]
-            # rbup = rbup[0, 0, -1]
-            # rbdn = rbdn[0, 0, -1]
-
         if mask[0, 0, 0] == kpblx[0, 0]:
             if kpblx[0, 0] > 0:
                 if rbdn[0, 0] >= crb[0, 0]:
@@ -489,13 +431,6 @@ def part3a1(
 
             if kpbl[0, 0] <= 0:
                 pblflg = 0
-
-    # with computation(BACKWARD), interval(0, -1):
-        # kpblx = kpblx[0, 0, 1]
-        # hpblx = hpblx[0, 0, 1]
-        # kpbl = kpbl[0, 0, 1]
-        # hpbl = hpbl[0, 0, 1]
-        # pblflg = pblflg[0, 0, 1]
 
     with computation(FORWARD), interval(0, 1):
         zol = max(rbsoil[0, 0] * fm[0, 0] * fm[0, 0] / fh[0, 0], rimin)
@@ -553,17 +488,8 @@ def part3c(
 ):
 
     with computation(FORWARD):
-        # with interval(0, 1):
-        #     thlvx_0 = thlvx[0, 0, 0]
-
         with interval(1, 2):
             thlvx_0 = thlvx[0,0,-1]
-            # thlvx_0 = thlvx_0[0, 0, -1]
-            # crb = crb[0, 0, -1]
-            # thermal = thermal[0, 0, -1]
-            # rbup = rbup[0, 0, -1]
-            # flg = flg[0, 0, -1]
-            # kpblx = kpblx[0, 0, -1]
             if flg[0, 0] == 0:
                 rbdn = rbup[0, 0]
                 rbup = (
@@ -575,12 +501,6 @@ def part3c(
                 flg = rbup[0, 0] > crb[0, 0]
 
         with interval(2, None):
-            # thlvx_0 = thlvx_0[0, 0, -1]
-            # crb = crb[0, 0, -1]
-            # thermal = thermal[0, 0, -1]
-            # rbup = rbup[0, 0, -1]
-            # flg = flg[0, 0, -1]
-            # kpblx = kpblx[0, 0, -1]
             if flg[0, 0] == 0:
                 rbdn = rbup[0, 0]
                 rbup = (
@@ -590,18 +510,6 @@ def part3c(
                 )
                 kpbl = mask[0, 0, 0]
                 flg = rbup[0, 0] > crb[0, 0]
-            # else:
-                # rbdn = rbdn[0, 0, -1]
-                # rbup = rbup[0, 0, -1]
-                # kpblx = kpblx[0, 0, -1]
-                # flg = flg[0, 0, -1]
-
-    # with computation(BACKWARD), interval(0, -1):
-        # rbdn = rbdn[0, 0, 1]
-        # rbup = rbup[0, 0, 1]
-        # kpblx = kpblx[0, 0, 1]
-        # flg = flg[0, 0, 1]
-
 
 # Possible stencil name : pbl_height_enhance
 @gtscript.stencil(backend=backend)
@@ -622,15 +530,6 @@ def part3c1(
 ):
 
     with computation(FORWARD), interval(...):
-        # if mask[0, 0, 0] > 0:
-            # crb = crb[0, 0, -1]
-            # hpbl = hpbl[0, 0, -1]
-            # kpbl = kpbl[0, 0, -1]
-            # pblflg = pblflg[0, 0, -1]
-            # pcnvflg = pcnvflg[0, 0, -1]
-            # rbdn = rbdn[0, 0, -1]
-            # rbup = rbup[0, 0, -1]
-
         if pcnvflg[0, 0] and kpbl[0, 0] == mask[0, 0, 0]:
             if rbdn[0, 0] >= crb[0, 0]:
                 rbint = 0.0
@@ -648,12 +547,6 @@ def part3c1(
                 pblflg[0, 0] = 0
                 pcnvflg[0, 0] = 0
 
-    # with computation(BACKWARD), interval(0, -1):
-        # hpbl = hpbl[0, 0, 1]
-        # kpbl = kpbl[0, 0, 1]
-        # pblflg = pblflg[0, 0, 1]
-        # pcnvflg = pcnvflg[0, 0, 1]
-
     with computation(FORWARD):
         with interval(0, 1):
             flg = scuflg[0, 0]
@@ -661,16 +554,9 @@ def part3c1(
                 lcld = mask[0, 0, 0]
                 flg = 0
         with interval(1, -1):
-            # lcld = lcld[0, 0, -1]
-            # flg = flg[0, 0, -1]
             if flg[0, 0] and (zl[0, 0, 0] >= zstblmax):
                 lcld = mask[0, 0, 0]
                 flg = 0
-
-    # with computation(BACKWARD), interval(0, -2):
-        # lcld = lcld[0, 0, 1]
-        # flg = flg[0, 0, 1]
-
 
 # Possible stencil name : stratocumulus
 @gtscript.stencil(backend=backend)
@@ -690,9 +576,6 @@ def part3e(
     with computation(FORWARD):
         with interval(0, 1):
             flg = scuflg[0, 0]
-        # with interval(1, None):
-            # flg = flg[0, 0, -1]
-            # lcld = lcld[0, 0, -1]
 
     with computation(BACKWARD):
         with interval(-1, None):
@@ -705,8 +588,6 @@ def part3e(
                 flg = 0
 
         with interval(0, -1):
-            # kcld[0, 0, 0] = kcld[0, 0, 1]
-            # flg[0, 0, 0] = flg[0, 0, 1]
             if (
                 flg[0, 0]
                 and (mask[0, 0, 0] <= lcld[0, 0])
@@ -721,10 +602,6 @@ def part3e(
                 scuflg = 0
             flg = scuflg[0, 0]
 
-        # with interval(1, None):
-            # flg = flg[0, 0, -1]
-            # kcld = kcld[0, 0, -1]
-
     with computation(BACKWARD):
         with interval(-1, None):
             if flg[0, 0] and (mask[0, 0, 0] <= kcld[0, 0]):
@@ -736,9 +613,6 @@ def part3e(
                     flg = 0
 
         with interval(0, -1):
-            # flg = flg[0, 0, 1]
-            # radmin = radmin[0, 0, 1]
-            # krad = krad[0, 0, 1]
             if flg[0, 0] and (mask[0, 0, 0] <= kcld[0, 0]):
                 if qlx[0, 0, 0] >= qlcr:
                     if radx[0, 0, 0] < radmin[0, 0]:
@@ -771,10 +645,6 @@ def part4(
     vcko: FIELD_FLT,
 ):
 
-    # with computation(FORWARD), interval(1, None):
-    #     pcnvflg = pcnvflg[0, 0, -1]
-    #     scuflg = scuflg[0, 0, -1]
-
     with computation(PARALLEL), interval(...):
         if pcnvflg[0, 0]:
             tcko = t1[0, 0, 0]
@@ -795,10 +665,6 @@ def part4a(
     qcko: FIELD_FLT_8,
     scuflg: FIELD_BOOL_IJ,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-    #     pcnvflg_v2 = pcnvflg_v2[0, 0, -1]
-    #     scuflg_v2 = scuflg_v2[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         if pcnvflg[0, 0]:
@@ -823,10 +689,6 @@ def part5(
     prn: FIELD_FLT,
     zi: FIELD_FLT,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-        # phih = phih[0, 0, -1]
-        # phim = phim[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         tem1 = max(zi[0, 0, 1] - sfcfrac * hpbl[0, 0], 0.0)
@@ -891,11 +753,6 @@ def part6(
     zl: FIELD_FLT,
     zol: FIELD_FLT_IJ,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-        # zol = zol[0, 0, -1]
-        # pblflg = pblflg[0, 0, -1]
-        # scuflg = scuflg[0, 0, -1]
 
     with computation(FORWARD):
         with interval(0, -1):
@@ -966,17 +823,6 @@ def part6(
                 dkt = dkt[0, 0, 0] + ptem
                 dku = dku[0, 0, 0] + ptem
                 dkq = dkq[0, 0, 0] + ptem
-
-    # with computation(FORWARD), interval(1, -1):
-        # sflux = sflux[0, 0, -1]
-        # ustar = ustar[0, 0, -1]
-        # phim = phim[0, 0, -1]
-        # kpbl = kpbl[0, 0, -1]
-        # scuflg = scuflg[0, 0, -1]
-        # pcnvflg = pcnvflg[0, 0, -1]
-        # stress = stress[0, 0, -1]
-        # mrad = mrad[0, 0, -1]
-        # krad = krad[0, 0, -1]
 
     with computation(PARALLEL):
         with interval(0, 1):
@@ -1131,10 +977,6 @@ def part9(
     scuflg: FIELD_BOOL_IJ,
     tke: FIELD_FLT,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-    #     scuflg = scuflg[0, 0, -1]
-    #     pcnvflg = pcnvflg[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         if pcnvflg[0, 0]:
@@ -1406,7 +1248,6 @@ def part13(
                 f2[0,0,0][0] = f2[0, 0, 0][0] + tem * ptem1
                 f2_p1 = f2_p1[0, 0] - tem * ptem2
         with interval(1, -1):
-            # if mask[0, 0, 0] > 0:
             f1 = f1_p1[0, 0]
             f2[0,0,0][0] = f2_p1[0, 0]
             ad = ad_p1[0, 0]
@@ -1665,7 +1506,6 @@ def part14(
                 f2[0, 0, 0][0] = f2[0, 0, 0][0] + tem * ptem1
                 f2_p1 = f2_p1[0, 0] - tem * ptem2
         with interval(1, -1):
-            # if mask[0, 0, 0] > 0:
             f1 = f1_p1[0, 0]
             f2[0,0,0][0] = f2_p1[0, 0]
             ad = ad_p1[0, 0]
@@ -1743,10 +1583,6 @@ def part15(
         dv = dv[0, 0, 0] + vtend
         dusfc = dusfc[0, 0] + conw * del_[0, 0, 0] * utend
         dvsfc = dvsfc[0, 0] + conw * del_[0, 0, 0] * vtend
-
-    # with computation(BACKWARD), interval(0, -1):
-    #     dusfc = dusfc[0, 0, 0] + dusfc[0, 0, 1]
-    #     dvsfc = dvsfc[0, 0, 0] + dvsfc[0, 0, 1]
 
     with computation(FORWARD), interval(0, 1):
         hpbl = hpblx[0, 0]
@@ -1919,7 +1755,6 @@ def mfpblt(
         qtu=qtu,
         qtx=qtx,
         scaldfunc=scaldfunc,
-        # sigma=sigma,
         sumx=sumx,
         tcko=tcko,
         thlu=thlu,
@@ -1937,34 +1772,6 @@ def mfpblt(
         zm=zm,
         domain=(im, 1, kmpbl),
     )
-
-    # if ntcw > 2:
-    #     for n in range(1, ntcw - 1):
-    #         for k in range(1, kmpbl):
-    #             for i in range(im):
-    #                 if cnvflg[i, 0] and k <= kpbl[i, 0]:
-    #                     dz = zl[i, 0, k] - zl[i, 0, k - 1]
-    #                     tem = 0.5 * xlamue[i, 0, k - 1] * dz
-    #                     factor = 1.0 + tem
-    #                     qcko[i, 0, k, n] = (
-    #                         (1.0 - tem) * qcko[i, 0, k - 1, n]
-    #                         + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
-    #                     ) / factor
-    # ndc = ntrac1 - ntcw
-
-    # if ndc > 0:
-    #     for n in range(ntcw, ntrac1):
-    #         for k in range(1, kmpbl):
-    #             for i in range(im):
-    #                 if cnvflg[i, 0] and k <= kpbl[i, 0]:
-    #                     dz = zl[i, 0, k] - zl[i, 0, k - 1]
-    #                     tem = 0.5 * xlamue[i, 0, k - 1] * dz
-    #                     factor = 1.0 + tem
-
-    #                     qcko[i, 0, k, n] = (
-    #                         (1.0 - tem) * qcko[i, 0, k - 1, n]
-    #                         + tem * (q1_gt[i, 0, k, n] + q1_gt[i, 0, k - 1, n])
-    #                     ) / factor
 
     mfpblt_leftover(cnvflg = cnvflg,
                 kpbl = kpbl,
@@ -2065,13 +1872,6 @@ def mfpblt_s0(
             qtu = qtx[0, 0, 0]
             buo = g * ptem / thvx[0, 0, 0]
 
-    # CK : This may not be needed later if stencils previous to this one update
-    #       hpbl and kpbl over its entire range
-    # with computation(FORWARD), interval(1, None):
-    #     hpbl = hpbl[0, 0, -1]
-    #     kpbl = kpbl[0, 0, -1]
-
-
 @gtscript.stencil(backend=backend)
 def mfpblt_s1(
     buo: FIELD_FLT,
@@ -2168,21 +1968,11 @@ def mfpblt_s1(
             rbup = wu2[0, 0, 0]
 
     with computation(FORWARD), interval(1, None):
-        # kpblx = kpblx[0, 0, -1]
-        # flg = flg[0, 0, -1]
-        # rbup = rbup[0, 0, -1]
-        # rbdn = rbdn[0, 0, -1]
         if flg[0, 0] == False:
             rbdn = rbup[0, 0]
             rbup = wu2[0, 0, 0]
             kpblx = mask[0, 0, 0]
             flg = rbup[0, 0] <= 0.0
-
-    # with computation(BACKWARD), interval(0, -1):
-        # rbup = rbup[0, 0, 1]
-        # rbdn = rbdn[0, 0, 1]
-        # kpblx = kpblx[0, 0, 1]
-        # flg = flg[0, 0, 1]
 
 
 @gtscript.stencil(backend=backend)
@@ -2197,12 +1987,6 @@ def mfpblt_s1a(
 ):
 
     with computation(FORWARD), interval(...):
-        # if mask[0, 0, 0] > 0:
-            # hpblx = hpblx[0, 0, -1]
-            # rbdn = rbdn[0, 0, -1]
-            # rbup = rbup[0, 0, -1]
-            # cnvflg = cnvflg[0, 0, -1]
-
         rbint = 0.0
 
         if mask[0, 0, 0] == kpblx[0, 0]:
@@ -2215,9 +1999,6 @@ def mfpblt_s1a(
                     rbint = rbdn[0, 0] / (rbdn[0, 0] - rbup[0, 0])
 
                 hpblx = zm[0, 0, -1] + rbint * (zm[0, 0, 0] - zm[0, 0, -1])
-
-    # with computation(BACKWARD), interval(0, -1):
-    #     hpblx = hpblx[0, 0, 1]
 
 
 @gtscript.stencil(backend=backend)
@@ -2236,7 +2017,6 @@ def mfpblt_s2(
     qtu: FIELD_FLT,
     qtx: FIELD_FLT,
     scaldfunc: FIELD_FLT_IJ,
-    # sigma: FIELD_FLT,
     sumx: FIELD_FLT_IJ,
     tcko: FIELD_FLT,
     thlu: FIELD_FLT,
@@ -2269,10 +2049,6 @@ def mfpblt_s2(
                 if kpbl[0, 0] > kpblx[0, 0]:
                     kpbl = kpblx[0, 0]
                     hpbl = hpblx[0, 0]
-        # with interval(1, None):
-            # kpbly = kpbly[0, 0, -1]
-            # kpbl = kpbl[0, 0, -1]
-            # hpbl = hpbl[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         if cnvflg[0, 0] and (kpbly[0, 0] > kpblx[0, 0]):
@@ -2292,16 +2068,10 @@ def mfpblt_s2(
                 xlamavg = xlamavg[0, 0] + xlamue[0, 0, 0] * dz
                 sumx = sumx[0, 0] + dz
         with interval(1, None):
-            # xlamavg = xlamavg[0, 0, -1]
-            # sumx = sumx[0, 0, -1]
             dz = zl[0, 0, 1] - zl[0, 0, 0]
             if cnvflg[0, 0] and (mask[0, 0, 0] < kpbl[0, 0]):
                 xlamavg = xlamavg[0, 0] + xlamue[0, 0, 0] * dz
                 sumx = sumx[0, 0] + dz
-
-    # with computation(BACKWARD), interval(0, -1):
-        # xlamavg = xlamavg[0, 0, 1]
-        # sumx = sumx[0, 0, 1]
 
     with computation(FORWARD), interval(0, 1):
         if cnvflg[0, 0]:
@@ -2329,8 +2099,6 @@ def mfpblt_s2(
                     )
                 else:
                     scaldfunc = 1.0
-        # with interval(1, None):
-        #     scaldfunc = scaldfunc[0, 0, -1]
 
     with computation(PARALLEL), interval(...):
         xmmx = (zl[0, 0, 1] - zl[0, 0, 0]) / dt2
@@ -2529,13 +2297,6 @@ def mfscu(
     if totflg:
         return
 
-    # zm_mrad = gt_storage.zeros(
-    #     backend=backend,
-    #     dtype=DTYPE_FLT,
-    #     shape=(im, 1),
-    #     default_origin=(0, 0, 0),
-    # )
-
     for i in range(im):
         zm_mrad[i,0] = zm[i, 0, mrad[i,0]-1]
 
@@ -2554,24 +2315,6 @@ def mfscu(
               cm=cm,
               domain=(im,1,kmscu),
     )
-
-    # for k in range(kmscu):
-    #     for i in range(im):
-    #         if cnvflg[i, 0]:
-    #             dz = zl[i, 0, k + 1] - zl[i, 0, k]
-    #             if (k >= mrad[i, 0]) and (k < krad[i, 0]):
-    #                 if mrad[i, 0] == 0:
-    #                     ptem = 1.0 / (zm[i, 0, k] + dz)
-    #                 else:
-    #                     # ptem = 1.0 / (zm[i, 0, k] - zm[i, 0, mrad[i, 0] - 1] + dz)
-    #                     ptem = 1.0 / (zm[i, 0, k] - zm_mrad[i, 0] + dz)
-
-    #                 xlamde[i, 0, k] = ce0 * (
-    #                     ptem + 1.0 / max(hrad[i, 0] - zm[i, 0, k] + dz, dz)
-    #                 )
-    #             else:
-    #                 xlamde[i, 0, k] = ce0 / dz
-    #             xlamdem[i, 0, k] = cm * xlamde[i, 0, k]
 
     mfscu_s1(
         buo=buo,
@@ -2657,24 +2400,6 @@ def mfscu(
               domain=(im,1,kmscu),
     )
 
-    # for k in range(kmscu):
-    #     for i in range(im):
-    #         if cnvflg[i, 0] and mrady[i, 0] < mradx[i, 0]:
-    #             dz = zl[i, 0, k + 1] - zl[i, 0, k]
-    #             if (k >= mrad[i, 0]) and (k < krad[i, 0]):
-    #                 if mrad[i, 0] == 0:
-    #                     ptem = 1.0 / (zm[i, 0, k] + dz)
-    #                 else:
-    #                     ptem = 1.0 / (zm[i, 0, k] - zm[i, 0, mrad[i, 0] - 1] + dz)
-    #                 xlamde[i, 0, k] = ce0 * (
-    #                     ptem + 1.0 / max(hrad[i, 0] - zm[i, 0, k] + dz, dz)
-    #                 )
-    #             else:
-    #                 xlamde[i, 0, k] = ce0 / dz
-    #             xlamdem[i, 0, k] = cm * xlamde[i, 0, k]
-
-    
-
     mfscu_s3(
         cnvflg=cnvflg,
         dt2=delt,
@@ -2683,7 +2408,6 @@ def mfscu(
         mask=mask,
         mrad=mrad,
         ra1=ra1,
-        # sigma=sigma,
         scaldfunc=scaldfunc,
         sumx=sumx,
         wd2=wd2,
@@ -2726,35 +2450,6 @@ def mfscu(
         ntcw=ntcw,
         domain=(im, 1, kmscu),
     )
-
-    # if ntcw > 2:
-    #     for n in range(1, ntcw - 1):
-    #         for k in range(kmscu - 1, -1, -1):
-    #             for i in range(im):
-    #                 if cnvflg[i, 0] and k < krad[i, 0] and k >= mrad[i, 0]:
-    #                     dz = zl[i, 0, k + 1] - zl[i, 0, k]
-    #                     tem = 0.5 * xlamde[i, 0, k] * dz
-    #                     factor = 1.0 + tem
-    #                     qcdo[i, 0, k, n] = (
-    #                         (1.0 - tem) * qcdo[i, 0, k + 1, n]
-    #                         + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
-    #                     ) / factor
-
-    # ndc = ntrac1 - ntcw
-
-    # if ndc > 0:
-    #     for n in range(ntcw, ntrac1):
-    #         for k in range(kmscu - 1, -1, -1):
-    #             for i in range(im):
-    #                 if cnvflg[i, 0] and k < krad[i, 0] and k >= mrad[i, 0]:
-    #                     dz = zl[i, 0, k + 1] - zl[i, 0, k]
-    #                     tem = 0.5 * xlamde[i, 0, k] * dz
-    #                     factor = 1.0 + tem
-
-    #                     qcdo[i, 0, k, n] = (
-    #                         (1.0 - tem) * qcdo[i, 0, k + 1, n]
-    #                         + tem * (q1[i, 0, k, n] + q1[i, 0, k + 1, n])
-    #                     ) / factor
 
     mfscu_remainder(cnvflg = cnvflg,
                     krad = krad,
@@ -2920,17 +2615,6 @@ def mfscu_s0a(
             qtx = q1[0, 0, 0][0] + q1[0, 0, 0][ntcw-1]
 
     with computation(FORWARD), interval(...):
-    #     if mask[0, 0, 0] > 0:
-            # hrad = hrad[0, 0, -1]
-            # krad = krad[0, 0, -1]
-            # krad1 = krad1[0, 0, -1]
-            # ra1 = ra1[0, 0, -1]
-            # ra2 = ra2[0, 0, -1]
-            # radj = radj[0, 0, -1]
-            # cnvflg = cnvflg[0, 0, -1]
-            # radmin = radmin[0, 0, -1]
-            # thlvd = thlvd[0, 0, -1]
-
         if krad[0, 0] == mask[0, 0, 0]:
             if cnvflg[0, 0]:
                 hrad = zm[0, 0, 0]
@@ -2960,14 +2644,6 @@ def mfscu_s0a(
         flg = cnvflg[0, 0]
         mrad = krad[0, 0]
 
-    # with computation(BACKWARD), interval(0, -1):
-        # thlvd = thlvd[0, 0, 1]
-        # radj = radj[0, 0, 1]
-        # ra1 = ra1[0, 0, 1]
-        # ra2 = ra2[0, 0, 1]
-        # krad1 = krad1[0, 0, 1]
-        # hrad = hrad[0, 0, 1]
-
 
 @gtscript.stencil(backend=backend)
 def mfscu_s0b(
@@ -2980,10 +2656,6 @@ def mfscu_s0b(
     thlvx: FIELD_FLT,
 ):
 
-    # with computation(FORWARD), interval(1, None):
-    #     flg = flg[0, 0, -1]
-    #     mrad = mrad[0, 0, -1]
-
     with computation(BACKWARD):
         with interval(-1, None):
             if flg[0, 0] and mask[0, 0, 0] < krad[0, 0]:
@@ -2992,9 +2664,6 @@ def mfscu_s0b(
                 else:
                     flg[0, 0] = 0
         with interval(0, -1):
-            # mrad = mrad[0, 0, 1]
-            # flg = flg[0, 0, 1]
-
             if flg[0, 0] and mask[0, 0, 0] < krad[0, 0]:
                 if thlvd[0, 0] <= thlvx[0, 0, 0]:
                     mrad[0, 0] = mask[0, 0, 0]
@@ -3030,9 +2699,6 @@ def mfscu_s1(
     fv: float,
     g: float,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-    #     cnvflg = cnvflg[0, 0, -1]
 
     with computation(BACKWARD), interval(...):
         dz = zl[0, 0, 1] - zl[0, 0, 0]
@@ -3100,12 +2766,6 @@ def mfscu_s2(
     wd2: FIELD_FLT,
     zm: FIELD_FLT,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-        # krad1 = krad1[0, 0, -1]
-        # mrad = mrad[0, 0, -1]
-        # krad = krad[0, 0, -1]
-
     with computation(BACKWARD), interval(...):
         dz = zm[0, 0, 1] - zm[0, 0, 0]
         tem = 0.25 * 2.0 * (xlamde[0, 0, 0] + xlamde[0, 0, 1]) * dz
@@ -3119,9 +2779,6 @@ def mfscu_s2(
             mrady = mrad[0, 0]
             if flg[0, 0]:
                 mradx = krad[0, 0]
-        # with interval(1, None):
-            # flg = flg[0, 0, -1]
-            # mradx = mradx[0, 0, -1]
 
     with computation(BACKWARD):
         with interval(-1, None):
@@ -3131,8 +2788,6 @@ def mfscu_s2(
                 else:
                     flg = 0
         with interval(0, -1):
-            # flg = flg[0, 0, 1]
-            # mradx = mradx[0, 0, 1]
             if flg[0, 0] and mask[0, 0, 0] < krad[0, 0]:
                 if wd2[0, 0, 0] > 0.0:
                     mradx = mask[0, 0, 0]
@@ -3156,7 +2811,6 @@ def mfscu_s3(
     mrad: FIELD_INT_IJ,
     ra1: FIELD_FLT_IJ,
     scaldfunc: FIELD_FLT_IJ,
-    # sigma: FIELD_FLT,
     sumx: FIELD_FLT_IJ,
     wd2: FIELD_FLT,
     xlamde: FIELD_FLT,
@@ -3165,12 +2819,6 @@ def mfscu_s3(
     zl: FIELD_FLT,
     dt2: float,
 ):
-
-    # with computation(FORWARD), interval(1, None):
-        # mrad = mrad[0, 0, -1]
-        # ra1 = ra1[0, 0, -1]
-        # cnvflg = cnvflg[0, 0, -1]
-
     with computation(FORWARD), interval(0, 1):
         xlamavg = 0.0
         sumx = 0.0
@@ -3185,9 +2833,6 @@ def mfscu_s3(
                 dz = zl[0, 0, 1] - zl[0, 0, 0]
                 xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
                 sumx = sumx[0, 0] + dz
-        # with interval(0, -1):
-        #     xlamavg = xlamavg[0, 0, 1]
-        #     sumx = sumx[0, 0, 1]
             if (
                 cnvflg[0, 0]
                 and mask[0, 0, 0] >= mrad[0, 0]
@@ -3227,8 +2872,6 @@ def mfscu_s3(
                     )
                 else:
                     scaldfunc = 1.0
-        # with interval(1, None):
-        #     scaldfunc = scaldfunc[0, 0, -1]
 
     with computation(BACKWARD), interval(...):
         if (
@@ -3364,7 +3007,6 @@ def tridit(
             f1 = f1[0, 0, 0] - au[0, 0, 0] * f1[0, 0, 1]
 
 
-# def tridin(l, n, nt, cl, cm, cu, r1, r2, au, a1, a2):
 @gtscript.stencil(backend=backend)
 def tridin(
            cl : FIELD_FLT, 
@@ -3377,14 +3019,6 @@ def tridin(
            a2 : FIELD_FLT_7,
            nt : int,
            ):
-    # fk = gt_storage.zeros(
-    #     backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
-    # )
-    # fkk = gt_storage.zeros(
-    #     backend=backend, dtype=DTYPE_FLT, shape=(l, 1, n + 1), default_origin=(0, 0, 0)
-    # )
-
-    # for i in range(l):
     with computation(FORWARD):
         with interval(0,1):
             fk = 1.0 / cm[0,0,0]
@@ -3413,53 +3047,6 @@ def tridin(
             a1 = a1[0,0,0] - au[0,0,0] * a1[0,0,1]
             for n3 in range(nt):
                 a2[0,0,0][n3] = a2[0,0,0][n3] - au[0,0,0] * a2[0,0,1][n3]
-
-    # for k in range(nt):
-    #     # is_ = k * n
-    #     for i in range(l):
-    #         a2[i, 0, 0, k] = fk[i, 0, 0] * r2[i, 0, 0, k]
-
-    # for k in range(1, n - 1):
-    #     for i in range(l):
-    #         fkk[i, 0, k] = 1.0 / (cm[i, 0, k] - cl[i, 0, k - 1] * au[i, 0, k - 1])
-    #         au[i, 0, k] = fkk[i, 0, k] * cu[i, 0, k]
-    #         a1[i, 0, k] = fkk[i, 0, k] * (
-    #             r1[i, 0, k] - cl[i, 0, k - 1] * a1[i, 0, k - 1]
-    #         )
-
-    # for kk in range(nt):
-    #     # is_ = kk * n
-    #     for k in range(1, n - 1):
-    #         for i in range(l):
-    #             a2[i, 0, k, kk] = fkk[i, 0, k] * (
-    #                 r2[i, 0, k, kk] - cl[i, 0, k - 1] * a2[i, 0, k-1, kk]
-    #             )
-
-    # for i in range(l):
-    #     fk[i, 0, 0] = 1 / (cm[i, 0, n - 1] - cl[i, 0, n - 2] * au[i, 0, n - 2])
-    #     a1[i, 0, n - 1] = fk[i, 0, 0] * (
-    #         r1[i, 0, n - 1] - cl[i, 0, n - 2] * a1[i, 0, n - 2]
-    #     )
-
-    # for k in range(nt):
-    #     for i in range(l):
-    #         a2[i, 0, n-1, k] = fk[i, 0, 0] * (
-    #             r2[i, 0, n-1, k] - cl[i, 0, n - 2] * a2[i, 0, n-2, k]
-    #         )
-
-    # for k in range(n - 2, -1, -1):
-    #     for i in range(l):
-    #         a1[i, 0, k] = a1[i, 0, k] - au[i, 0, k] * a1[i, 0, k + 1]
-
-    # for kk in range(nt):
-    #     for k in range(n - 2, -1, -1):
-    #         for i in range(l):
-    #             a2[i, 0, k, kk] = (
-    #                 a2[i, 0, k, kk] - au[i, 0, k] * a2[i, 0, k+1, kk]
-    #             )
-
-    # return au, a1, a2
-
 
 @gtscript.stencil(backend=backend)
 def tridi2(
