@@ -16,7 +16,7 @@ backend = BACKEND
 
 class Turbulence:
     """
-    Object for Turbulence Physics calcuations
+    Object for Turbulence Physics calculations
     """
 
     def __init__(
