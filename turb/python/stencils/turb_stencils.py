@@ -627,12 +627,12 @@ def stratocumulus(
         if scuflg[0, 0] and radmin[0, 0] >= 0.0:
             scuflg = 0
 
-
-# Possible stencil name : mass_flux_comp_1
 @gtscript.stencil(backend=backend)
-def mass_flux_comp_1(
+def mass_flux_comp(
     pcnvflg: FIELD_BOOL_IJ,
-    qcdo: FIELD_FLT,
+    q1: FIELD_FLT_8,
+    qcdo: FIELD_FLT_8,
+    qcko: FIELD_FLT_8,
     scuflg: FIELD_BOOL_IJ,
     t1: FIELD_FLT,
     tcdo: FIELD_FLT,
@@ -644,36 +644,19 @@ def mass_flux_comp_1(
     vcdo: FIELD_FLT,
     vcko: FIELD_FLT,
 ):
-
     with computation(PARALLEL), interval(...):
         if pcnvflg[0, 0]:
             tcko = t1[0, 0, 0]
             ucko = u1[0, 0, 0]
             vcko = v1[0, 0, 0]
+            for ii in range(8): 
+                qcko[0, 0, 0][ii] = q1[0, 0, 0][ii]
         if scuflg[0, 0]:
             tcdo = t1[0, 0, 0]
             ucdo = u1[0, 0, 0]
             vcdo = v1[0, 0, 0]
-
-
-# # Possible stencil name : mass_flux_comp_2
-@gtscript.stencil(backend=backend)
-def mass_flux_comp_2(
-    pcnvflg: FIELD_BOOL_IJ,
-    q1: FIELD_FLT_8,
-    qcdo: FIELD_FLT_8,
-    qcko: FIELD_FLT_8,
-    scuflg: FIELD_BOOL_IJ,
-):
-
-    with computation(PARALLEL), interval(...):
-        if pcnvflg[0, 0]:
-            for ii in range(8): 
-                qcko[0, 0, 0][ii] = q1[0, 0, 0][ii]
-        if scuflg[0, 0]:
             for i2 in range(8):
                 qcdo[0, 0, 0][i2] = q1[0, 0, 0][i2]
-
 
 # Possible stencil name : prandtl_comp_exchg_coeff
 @gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions"])
@@ -828,14 +811,6 @@ def compute_eddy_buoy_shear(
         with interval(0, 1):
             if scuflg[0, 0] and mrad[0, 0] == 0:
                 ptem = xmfd[0, 0, 0] * buod[0, 0, 0]
-            else:
-                ptem = 0.0
-
-            buop = 0.5 * (
-                gotvx[0, 0, 0] * sflux[0, 0] + (-dkt[0, 0, 0] * bf[0, 0, 0] + ptem)
-            )
-
-            if scuflg[0, 0] and mrad[0, 0] == 0:
                 ptem1 = (
                     0.5
                     * (u1[0, 0, 1] - u1[0, 0, 0])
@@ -843,10 +818,6 @@ def compute_eddy_buoy_shear(
                     * xmfd[0, 0, 0]
                     * (ucdo[0, 0, 0] + ucdo[0, 0, 1] - u1[0, 0, 0] - u1[0, 0, 1])
                 )
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0] and mrad[0, 0] == 0:
                 ptem2 = (
                     0.5
                     * (v1[0, 0, 1] - v1[0, 0, 0])
@@ -855,7 +826,13 @@ def compute_eddy_buoy_shear(
                     * (vcdo[0, 0, 0] + vcdo[0, 0, 1] - v1[0, 0, 0] - v1[0, 0, 1])
                 )
             else:
+                ptem = 0.0
+                ptem1 = 0.0
                 ptem2 = 0.0
+
+            buop = 0.5 * (
+                gotvx[0, 0, 0] * sflux[0, 0] + (-dkt[0, 0, 0] * bf[0, 0, 0] + ptem)
+            )
 
             shrp = 0.5 * (
                 dku[0, 0, 0] * shr2[0, 0, 0]
@@ -872,80 +849,62 @@ def compute_eddy_buoy_shear(
             prod = buop + shrp
 
         with interval(1, -1):
+            tem1_1 = (u1[0, 0, 1] - u1[0, 0, 0]) * rdzt[0, 0, 0]
+            tem2_1 = (u1[0, 0, 0] - u1[0, 0, -1]) * rdzt[0, 0, -1]
+            tem1_2 = (v1[0, 0, 1] - v1[0, 0, 0]) * rdzt[0, 0, 0]
+            tem2_2 = (v1[0, 0, 0] - v1[0, 0, -1]) * rdzt[0, 0, -1]
+
             if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
-                ptem1 = 0.5 * (xmf[0, 0, -1] + xmf[0, 0, 0]) * buou[0, 0, 0]
+                ptem1_0 = 0.5 * (xmf[0, 0, -1] + xmf[0, 0, 0]) * buou[0, 0, 0]
+                ptem1_1 = (
+                    0.5
+                    * (xmf[0, 0, 0] * tem1_1 + xmf[0, 0, -1] * tem2_1)
+                    * (u1[0, 0, 0] - ucko[0, 0, 0])
+                )
+                ptem1_2 = (
+                    0.5
+                    * (xmf[0, 0, 0] * tem1_2 + xmf[0, 0, -1] * tem2_2)
+                    * (v1[0, 0, 0] - vcko[0, 0, 0])
+                )
             else:
-                ptem1 = 0.0
+                ptem1_0 = 0.0
+                ptem1_1 = 0.0
+                ptem1_2 = 0.0
 
             if scuflg[0, 0]:
                 if mask[0, 0, 0] >= mrad[0, 0] and mask[0, 0, 0] < krad[0, 0]:
-                    ptem2 = 0.5 * (xmfd[0, 0, -1] + xmfd[0, 0, 0]) * buod[0, 0, 0]
+                    ptem2_0 = 0.5 * (xmfd[0, 0, -1] + xmfd[0, 0, 0]) * buod[0, 0, 0]
+                    ptem2_1 = (
+                        0.5
+                        * (xmfd[0, 0, 0] * tem1_1 + xmfd[0, 0, -1] * tem2_1)
+                        * (ucdo[0, 0, 0] - u1[0, 0, 0])
+                    )
+                    ptem2_2 = (
+                        0.5
+                        * (xmfd[0, 0, 0] * tem1_2 + xmfd[0, 0, -1] * tem2_2)
+                        * (vcdo[0, 0, 0] - v1[0, 0, 0])
+                    )
                 else:
-                    ptem2 = 0.0
+                    ptem2_0 = 0.0
+                    ptem2_1 = 0.0
+                    ptem2_2 = 0.0
             else:
-                ptem2 = 0.0
+                ptem2_0 = 0.0
+                ptem2_1 = 0.0
+                ptem2_2 = 0.0
 
             buop = (
                 0.5 * ((-dkt[0, 0, -1] * bf[0, 0, -1]) + (-dkt[0, 0, 0] * bf[0, 0, 0]))
-                + ptem1
-                + ptem2
+                + ptem1_0
+                + ptem2_0
             )
-
-            tem1 = (u1[0, 0, 1] - u1[0, 0, 0]) * rdzt[0, 0, 0]
-            tem2 = (u1[0, 0, 0] - u1[0, 0, -1]) * rdzt[0, 0, -1]
-
-            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
-                ptem1 = (
-                    0.5
-                    * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
-                    * (u1[0, 0, 0] - ucko[0, 0, 0])
-                )
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0]:
-                if mask[0, 0, 0] >= mrad[0, 0] and mask[0, 0, 0] < krad[0, 0]:
-                    ptem2 = (
-                        0.5
-                        * (xmfd[0, 0, 0] * tem1 + xmfd[0, 0, -1] * tem2)
-                        * (ucdo[0, 0, 0] - u1[0, 0, 0])
-                    )
-                else:
-                    ptem2 = 0.0
-            else:
-                ptem2 = 0.0
 
             shrp = (
                 0.5
                 * ((dku[0, 0, -1] * shr2[0, 0, -1]) + (dku[0, 0, 0] * shr2[0, 0, 0]))
-                + ptem1
-                + ptem2
-            )
-            tem1 = (v1[0, 0, 1] - v1[0, 0, 0]) * rdzt[0, 0, 0]
-            tem2 = (v1[0, 0, 0] - v1[0, 0, -1]) * rdzt[0, 0, -1]
-
-            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
-                ptem1 = (
-                    0.5
-                    * (xmf[0, 0, 0] * tem1 + xmf[0, 0, -1] * tem2)
-                    * (v1[0, 0, 0] - vcko[0, 0, 0])
-                )
-            else:
-                ptem1 = 0.0
-
-            if scuflg[0, 0]:
-                if mask[0, 0, 0] >= mrad[0, 0] and mask[0, 0, 0] < krad[0, 0]:
-                    ptem2 = (
-                        0.5
-                        * (xmfd[0, 0, 0] * tem1 + xmfd[0, 0, -1] * tem2)
-                        * (vcdo[0, 0, 0] - v1[0, 0, 0])
-                    )
-                else:
-                    ptem2 = 0.0
-            else:
-                ptem2 = 0.0
-
-            shrp = shrp + ptem1 + ptem2
+                + ptem1_1
+                + ptem2_1
+            ) + ptem1_2 + ptem2_2
 
             prod = buop + shrp
 
@@ -977,12 +936,23 @@ def predict_tke(
 
 # Possible stencil name : tke_up_down_prop_1
 @gtscript.stencil(backend=backend)
-def tke_up_down_prop_1(
+def tke_up_down_prop(
     pcnvflg: FIELD_BOOL_IJ,
     qcdo: FIELD_FLT_8,
     qcko: FIELD_FLT_8,
     scuflg: FIELD_BOOL_IJ,
     tke: FIELD_FLT,
+    kpbl: FIELD_INT_IJ,
+    mask: FIELD_INT,
+    xlamue: FIELD_FLT,
+    zl: FIELD_FLT,
+    ad: FIELD_FLT,
+    f1: FIELD_FLT,
+    krad: FIELD_INT_IJ,
+    mrad: FIELD_INT_IJ,
+    xlamde: FIELD_FLT,
+    kmpbl: int,
+    kmscu: int,
 ):
 
     with computation(PARALLEL), interval(...):
@@ -991,56 +961,30 @@ def tke_up_down_prop_1(
         if scuflg[0, 0]:
             qcdo[0,0,0][7] = tke[0, 0, 0]
 
-
-# Possible stencil name : tke_up_down_prop_2
-@gtscript.stencil(backend=backend)
-def tke_up_down_prop_2(
-    kpbl: FIELD_INT_IJ,
-    mask: FIELD_INT,
-    pcnvflg: FIELD_BOOL_IJ,
-    qcko: FIELD_FLT_8,
-    tke: FIELD_FLT,
-    xlamue: FIELD_FLT,
-    zl: FIELD_FLT,
-):
-
     with computation(FORWARD), interval(1, None):
-        tem = 0.5 * xlamue[0, 0, -1] * (zl[0, 0, 0] - zl[0, 0, -1])
-        if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
-            qcko[0,0,0][7] = (
-                (1.0 - tem) * qcko[0, 0, -1][7] + tem * (tke[0, 0, 0] + tke[0, 0, -1])
-            ) / (1.0 + tem)
+        if mask[0,0,0] < kmpbl:
+            tem = 0.5 * xlamue[0, 0, -1] * (zl[0, 0, 0] - zl[0, 0, -1])
+            if pcnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
+                qcko[0,0,0][7] = (
+                    (1.0 - tem) * qcko[0, 0, -1][7] + tem * (tke[0, 0, 0] + tke[0, 0, -1])
+                ) / (1.0 + tem)
 
-
-# Possible stencil name : tke_up_down_prop_3
-@gtscript.stencil(backend=backend)
-def tke_up_down_prop_3(
-    ad: FIELD_FLT,
-    f1: FIELD_FLT,
-    krad: FIELD_INT_IJ,
-    mask: FIELD_INT,
-    mrad: FIELD_INT_IJ,
-    qcdo: FIELD_FLT_8,
-    scuflg: FIELD_BOOL_IJ,
-    tke: FIELD_FLT,
-    xlamde: FIELD_FLT,
-    zl: FIELD_FLT,
-):
     with computation(BACKWARD), interval(...):
-        tem = 0.5 * xlamde[0, 0, 0] * (zl[0, 0, 1] - zl[0, 0, 0])
-        if (
-            scuflg[0, 0]
-            and mask[0, 0, 0] < krad[0, 0]
-            and mask[0, 0, 0] >= mrad[0, 0]
-        ):
-            qcdo[0,0,0][7] = (
-                (1.0 - tem) * qcdo[0, 0, 1][7] + tem * (tke[0, 0, 0] + tke[0, 0, 1])
-            ) / (1.0 + tem)
+        if mask[0,0,0] < kmscu:
+            tem = 0.5 * xlamde[0, 0, 0] * (zl[0, 0, 1] - zl[0, 0, 0])
+            if (
+                scuflg[0, 0]
+                and mask[0, 0, 0] < krad[0, 0]
+                and mask[0, 0, 0] >= mrad[0, 0]
+            ):
+                qcdo[0,0,0][7] = (
+                    (1.0 - tem) * qcdo[0, 0, 1][7] + tem * (tke[0, 0, 0] + tke[0, 0, 1])
+                ) / (1.0 + tem)
 
     with computation(PARALLEL), interval(0, 1):
-        ad = 1.0
-        f1 = tke[0, 0, 0]
-
+        if mask[0,0,0] < kmscu:
+            ad = 1.0
+            f1 = tke[0, 0, 0]
 
 # Possible stencil name : tke_tridiag_matrix_ele_comp
 @gtscript.stencil(backend=backend)
@@ -1171,7 +1115,6 @@ def part12a(
         f1 = t1[0,0,0] + dtdz1[0,0,0] * heat[0,0]
         f2[0,0,0][0] = q1[0,0,0][0] + dtdz1[0,0,0] * evap[0,0]
     
-    with computation(FORWARD), interval(0,1):
         if ntrac1 >= 2:
             for kk in range(1,ntrac1):
                 f2[0,0,0][kk] = q1[0,0,0][kk]
@@ -1414,14 +1357,13 @@ def part13b(
         tdt = tdt[0,0,0] + ttend
         rtg[0,0,0][0] = rtg[0,0,0][0] + qtend
 
-    with computation(FORWARD), interval(...):
-        dtsfc = dtsfc[0,0] + cont * del_[0,0,0] * ((f1[0,0,0] - t1[0,0,0]) * rdt)
-        dqsfc = dqsfc[0,0] + conq * del_[0,0,0] * ((f2[0,0,0][0] - q1[0,0,0][0]) * rdt)
-
-    with computation(PARALLEL), interval(...):
         if ntrac1 >= 2:
             for kk in range(1, ntrac1):
                 rtg[0,0,0][kk] = rtg[0,0,0][kk] + ((f2[0,0,0][kk] - q1[0,0,0][kk]) * rdt)
+
+    with computation(FORWARD), interval(...):
+        dtsfc = dtsfc[0,0] + cont * del_[0,0,0] * ((f1[0,0,0] - t1[0,0,0]) * rdt)
+        dqsfc = dqsfc[0,0] + conq * del_[0,0,0] * ((f2[0,0,0][0] - q1[0,0,0][0]) * rdt)
 
 # Possible stencil name : moment_tridiag_mat_ele_comp
 @gtscript.stencil(backend=backend)
@@ -1461,13 +1403,11 @@ def moment_tridiag_mat_ele_comp(
     dt2: float,
 ):
 
-    with computation(PARALLEL):
-        with interval(0, -1):
+    with computation(PARALLEL), interval(0, -1):
             if dspheat:
                 tdt = tdt[0, 0, 0] + dspfac * (diss[0, 0, 0] / cp)
 
-    with computation(PARALLEL):
-        with interval(0, 1):
+    with computation(PARALLEL), interval(0, 1):
             ad = 1.0 + dtdz1[0, 0, 0] * stress[0, 0] / spd1[0, 0]
             f1 = u1[0, 0, 0]
             f2[0,0,0][0] = v1[0, 0, 0]
@@ -1584,17 +1524,15 @@ def moment_recover(
 ):
 
     with computation(FORWARD), interval(...):
+        if mask[0,0,0] < 1:
+            hpbl = hpblx[0, 0]
+            kpbl = kpblx[0, 0]
         utend = (f1[0, 0, 0] - u1[0, 0, 0]) * rdt
         vtend = (f2[0, 0, 0][0] - v1[0, 0, 0]) * rdt
         du = du[0, 0, 0] + utend
         dv = dv[0, 0, 0] + vtend
         dusfc = dusfc[0, 0] + conw * del_[0, 0, 0] * utend
         dvsfc = dvsfc[0, 0] + conw * del_[0, 0, 0] * vtend
-
-    with computation(FORWARD), interval(0, 1):
-        hpbl = hpblx[0, 0]
-        kpbl = kpblx[0, 0]
-
 
 def mfpblt(
     im,
@@ -1645,21 +1583,19 @@ def mfpblt(
     xlamavg,
     sumx,
     scaldfunc,
+    ce0,
+    cm,
+    qmin,
+    qlmin,
+    alp,
+    pgcon,
+    a1,
+    b1,
+    f1,
+    fv,
+    eps,
+    epsm1,
 ):
-
-    ce0 = 0.4
-    cm = 1.0
-    qmin = 1e-8
-    qlmin = 1e-12
-    alp = 1.0
-    pgcon = 0.55
-    a1 = 0.13
-    b1 = 0.5
-    f1 = 0.15
-    fv = 4.6150e2 / 2.8705e2 - 1.0
-    eps = 2.8705e2 / 4.6150e2
-    epsm1 = eps - 1.0
-
     totflag = True
 
     for i in range(im):
@@ -1788,7 +1724,6 @@ def mfpblt(
         qcko = qcko,
         q1_gt = q1_gt,
         zl = zl,
-        kmpbl = kmpbl,
         ntcw = ntcw,
         ntrac1 = ntrac1,
         domain=(im, 1, kmpbl)
@@ -1806,7 +1741,6 @@ def mfpblt_s3(
     qcko : FIELD_FLT_8,
     q1_gt : FIELD_FLT_8,
     zl : FIELD_FLT,
-    kmpbl : int,
     ntcw  : int,
     ntrac1 : int,
 ):
@@ -1822,7 +1756,6 @@ def mfpblt_s3(
                         + tem * (q1_gt[0,0,0][n] + q1_gt[0,0,-1][n])
                     ) / factor
 
-    with computation(FORWARD), interval(1,None):
         ndc = ntrac1 - ntcw
         if ndc > 0:
             for n2 in range(ntcw, ntrac1):
@@ -1969,19 +1902,20 @@ def mfpblt_s1(
                     1.0 + tem
                 )
 
-    with computation(FORWARD), interval(0, 1):
-        flg = True
-        kpbly = kpbl[0, 0]
-        if cnvflg[0, 0]:
-            flg = False
-            rbup = wu2[0, 0, 0]
+    with computation(FORWARD):
+        with interval(0, 1):
+            flg = True
+            kpbly = kpbl[0, 0]
+            if cnvflg[0, 0]:
+                flg = False
+                rbup = wu2[0, 0, 0]
 
-    with computation(FORWARD), interval(1, None):
-        if flg[0, 0] == False:
-            rbdn = rbup[0, 0]
-            rbup = wu2[0, 0, 0]
-            kpblx = mask[0, 0, 0]
-            flg = rbup[0, 0] <= 0.0
+        with interval(1, None):
+            if flg[0, 0] == False:
+                rbdn = rbup[0, 0]
+                rbup = wu2[0, 0, 0]
+                kpblx = mask[0, 0, 0]
+                flg = rbup[0, 0] <= 0.0
 
 
 @gtscript.stencil(backend=backend)
@@ -2221,26 +2155,25 @@ def mfscu(
     xlamavg,
     scaldfunc,
     zm_mrad,
+    ce0,
+    cm,
+    pgcon,
+    qmin,
+    qlmin,
+    b1,
+    f1,
+    a1,
+    a2,
+    a11,
+    a22,
+    cldtime,
+    actei,
+    hvap,
+    cp,
+    eps,
+    epsm1,
+    fv,
 ):
-
-    ce0 = 0.4
-    cm = 1.0
-    pgcon = 0.55
-    qmin = 1e-8
-    qlmin = 1e-12
-    b1 = 0.45
-    f1 = 0.15
-    a1 = 0.12
-    a2 = 0.50
-    a11 = 0.2
-    a22 = 1.0
-    cldtime = 500.0
-    actei = 0.7
-    hvap = 2.5000e6
-    cp = 1.0046e3
-    eps = 2.8705e2 / 4.6150e2
-    epsm1 = eps - 1.0
-    fv = 4.6150e2 / 2.8705e2 - 1.0
 
     totflg = True
 
@@ -2475,7 +2408,6 @@ def mfscu(
         qcdo = qcdo,
         q1 = q1,
         ntcw = ntcw,
-        kmscu = kmscu,
         ntrac1 = ntrac1,
         domain = (im, 1, kmscu),
     )
@@ -2557,7 +2489,6 @@ def mfscu_10(
     qcdo   : FIELD_FLT_8,
     q1     : FIELD_FLT_8,
     ntcw   : int,
-    kmscu  : int,
     ntrac1 : int,
 ):
     with computation(BACKWARD), interval(...):
@@ -2572,8 +2503,6 @@ def mfscu_10(
                         + tem * (q1[0,0,0][n] + q1[0,0,1][n])
                     ) / factor
             
-
-    with computation(BACKWARD), interval(...):
         ndc = ntrac1 - ntcw
         if ndc > 0:
             for n1 in range(ntcw, ntrac1):
@@ -2788,12 +2717,11 @@ def mfscu_s5(
         if cnvflg[0, 0] and mask[0, 0, 0] < krad1[0, 0]:
             wd2 = (((1.0 - tem) * wd2[0, 0, 1]) + (4.0 * buo[0, 0, 1] * dz)) / ptem1
 
-    with computation(FORWARD):
-        with interval(0, 1):
-            flg = cnvflg[0, 0]
-            mrady = mrad[0, 0]
-            if flg[0, 0]:
-                mradx = krad[0, 0]
+    with computation(FORWARD), interval(0, 1):
+        flg = cnvflg[0, 0]
+        mrady = mrad[0, 0]
+        if flg[0, 0]:
+            mradx = krad[0, 0]
 
     with computation(BACKWARD):
         with interval(-1, None):
@@ -2838,24 +2766,23 @@ def mfscu_s7(
         xlamavg = 0.0
         sumx = 0.0
 
-    with computation(BACKWARD):
-        with interval(-1, None):
-            if (
-                cnvflg[0, 0]
-                and mask[0, 0, 0] >= mrad[0, 0]
-                and mask[0, 0, 0] < krad[0, 0]
-            ):
-                dz = zl[0, 0, 1] - zl[0, 0, 0]
-                xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
-                sumx = sumx[0, 0] + dz
-            if (
-                cnvflg[0, 0]
-                and mask[0, 0, 0] >= mrad[0, 0]
-                and mask[0, 0, 0] < krad[0, 0]
-            ):
-                dz = zl[0, 0, 1] - zl[0, 0, 0]
-                xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
-                sumx = sumx[0, 0] + dz
+    with computation(BACKWARD), interval(-1, None):
+        if (
+            cnvflg[0, 0]
+            and mask[0, 0, 0] >= mrad[0, 0]
+            and mask[0, 0, 0] < krad[0, 0]
+        ):
+            dz = zl[0, 0, 1] - zl[0, 0, 0]
+            xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
+            sumx = sumx[0, 0] + dz
+        if (
+            cnvflg[0, 0]
+            and mask[0, 0, 0] >= mrad[0, 0]
+            and mask[0, 0, 0] < krad[0, 0]
+        ):
+            dz = zl[0, 0, 1] - zl[0, 0, 0]
+            xlamavg = xlamavg[0, 0] + xlamde[0, 0, 0] * dz
+            sumx = sumx[0, 0] + dz
 
     with computation(FORWARD), interval(0, 1):
         if cnvflg[0, 0]:
@@ -2907,7 +2834,7 @@ def mfscu_s8(
     thlx: FIELD_FLT,
 ):
 
-    with computation(FORWARD), interval(...):
+    with computation(PARALLEL), interval(...):
         if krad[0, 0] == mask[0, 0, 0]:
             if cnvflg[0, 0]:
                 thld = thlx[0, 0, 0]

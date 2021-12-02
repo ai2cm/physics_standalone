@@ -54,7 +54,7 @@ class Turbulence:
             shape=(im, 1, km),
             default_origin=(0, 0, 0),
         )
-        self._q1_gt = gt_storage.zeros(
+        self._q1 = gt_storage.zeros(
             backend=backend,
             dtype=(DTYPE_FLT,(ntrac,)),
             shape=(im, 1, km + 1),
@@ -789,6 +789,31 @@ class Turbulence:
         self._elmx = elmx
         self._cdtn = cdtn
 
+        self._kk = max(round(self._dt2 / self._cdtn), 1)
+        self._dtn = self._dt2 / self._kk
+
+        self._ce0 = ce0
+        self._cm = 1.0
+        self._qmin = qmin
+        self._qlmin = qlmin
+        self._alp = 1.0
+        self._pgcon = 0.55
+
+        self._a1_mfpblt = 0.13
+        self._a1_mfscu = 0.12
+
+        self._b1_mfpblt = 0.5
+        self._b1_mfscu = 0.45
+
+        self._a2 = 0.50
+        self._a11 = 0.2
+        self._a22 = 1.0
+        self._cldtime = 500.0
+        self._actei = 0.7
+        self._hvap = hvap
+        self._cp = cp
+        self._f1_const = 0.15
+
     def turbInit(
         self,
         garea,
@@ -873,7 +898,7 @@ class Turbulence:
         self._prsl = numpy_to_gt4py_storage_2D(prsl, backend, self._km + 1)
 
         for I in range(self._ntrac):
-            self._q1_gt[:, 0, :-1, I] = q1[:, :, I]
+            self._q1[:, 0, :-1, I] = q1[:, :, I]
             self._rtg_gt[:,0,:-1, I] = rtg[:,:,I]
 
         
@@ -927,7 +952,7 @@ class Turbulence:
             prsl=self._prsl,
             prslk=self._prslk,
             psk=self._psk,
-            q1=self._q1_gt,
+            q1=self._q1,
             qlx=self._qlx,
             qstl=self._qstl,
             qtx=self._qtx,
@@ -1076,8 +1101,9 @@ class Turbulence:
             domain=(self._im, 1, self._kmscu),
         )
 
-        mass_flux_comp_1(
+        mass_flux_comp(
             pcnvflg=self._pcnvflg,
+            q1=self._q1,
             scuflg=self._scuflg,
             t1=self._t1,
             tcdo=self._tcdo,
@@ -1089,15 +1115,7 @@ class Turbulence:
             vcdo=self._vcdo,
             vcko=self._vcko,
             qcdo=self._qcdo,
-        )
-
-        mass_flux_comp_2(
-            pcnvflg=self._pcnvflg,
-            q1=self._q1_gt,
-            qcdo=self._qcdo,
             qcko=self._qcko,
-            scuflg=self._scuflg,
-            domain=(self._im, 1, self._km),
         )
 
         self._kpbl, self._hpbl, self._buou, self._xmf, \
@@ -1113,7 +1131,7 @@ class Turbulence:
             self._pcnvflg,
             self._zl,
             self._zm,
-            self._q1_gt,
+            self._q1,
             self._t1,
             self._u1,
             self._v1,
@@ -1151,6 +1169,18 @@ class Turbulence:
             self._xlamavg,
             self._sumx,
             self._scaldfunc,
+            self._ce0,
+            self._cm,
+            self._qmin,
+            self._qlmin,
+            self._alp,
+            self._pgcon,
+            self._a1_mfpblt,
+            self._b1_mfpblt,
+            self._f1_const,
+            self._fv,
+            self._eps,
+            self._epsm1,
         )
 
         self._radj, self._mrad, self._buod, self._xmfd, \
@@ -1165,7 +1195,7 @@ class Turbulence:
             self._scuflg,
             self._zl,
             self._zm,
-            self._q1_gt,
+            self._q1,
             self._t1,
             self._u1,
             self._v1,
@@ -1209,6 +1239,24 @@ class Turbulence:
             self._xlamavg,
             self._scaldfunc,
             self._zm_mrad,
+            self._ce0,
+            self._cm,
+            self._pgcon,
+            self._qmin,
+            self._qlmin,
+            self._b1_mfscu,
+            self._f1_const,
+            self._a1_mfscu,
+            self._a2,
+            self._a11,
+            self._a22,
+            self._cldtime,
+            self._actei,
+            self._hvap,
+            self._cp,
+            self._eps,
+            self._epsm1,
+            self._fv,
         )
 
         prandtl_comp_exchg_coeff(
@@ -1254,7 +1302,7 @@ class Turbulence:
                 gotvx=self._gotvx,
                 zl=self._zl,
                 tsea=self._tsea,
-                q1_gt=self._q1_gt,
+                q1_gt=self._q1,
                 zfmin=self._zfmin,
                 fv=self._fv,
                 k=k,
@@ -1323,49 +1371,32 @@ class Turbulence:
             domain=(self._im, 1, self._km),
         )
 
-        kk = max(round(self._dt2 / self._cdtn), 1)
-        dtn = self._dt2 / kk
-
         predict_tke(diss=self._diss, 
               prod=self._prod, 
               rle=self._rle, 
               tke=self._tke, 
-              dtn=dtn, 
-              kk=kk, 
+              dtn=self._dtn, 
+              kk=self._kk, 
               domain=(self._im, 1, self._km1))
 
-        tke_up_down_prop_1(
+        tke_up_down_prop(
             pcnvflg=self._pcnvflg,
             qcdo=self._qcdo,
             qcko=self._qcko,
             scuflg=self._scuflg,
             tke=self._tke,
-            domain=(self._im, 1, self._km),
-        )
-
-        tke_up_down_prop_2(
             kpbl=self._kpbl,
             mask=self._mask,
-            pcnvflg=self._pcnvflg,
-            qcko=self._qcko,
-            tke=self._tke,
             xlamue=self._xlamue,
             zl=self._zl,
-            domain=(self._im, 1, self._kmpbl),
-        )
-
-        tke_up_down_prop_3(
             ad=self._ad,
             f1=self._f1,
             krad=self._krad,
-            mask=self._mask,
             mrad=self._mrad,
-            qcdo=self._qcdo,
-            scuflg=self._scuflg,
-            tke=self._tke,
             xlamde=self._xlamde,
-            zl=self._zl,
-            domain=(self._im, 1, self._kmscu),
+            kmpbl=self._kmpbl,
+            kmscu=self._kmscu,
+            domain=(self._im, 1, self._km),
         )
 
         tke_tridiag_matrix_ele_comp(
@@ -1403,7 +1434,7 @@ class Turbulence:
         part12a(
             rtg=self._rtg_gt,
             f1=self._f1,
-            q1=self._q1_gt,
+            q1=self._q1,
             ad=self._ad,
             f2=self._f2,
             dtdz1=self._dtdz1,
@@ -1433,7 +1464,7 @@ class Turbulence:
             mrad=self._mrad,
             pcnvflg=self._pcnvflg,
             prsl=self._prsl,
-            q1=self._q1_gt,
+            q1=self._q1,
             qcdo=self._qcdo,
             qcko=self._qcko,
             rdzt=self._rdzt,
@@ -1458,7 +1489,7 @@ class Turbulence:
                 rdzt=self._rdzt,
                 xmf=self._xmf,
                 qcko=self._qcko,
-                q1=self._q1_gt,
+                q1=self._q1,
                 f2=self._f2,
                 scuflg=self._scuflg,
                 mrad=self._mrad,
@@ -1484,7 +1515,7 @@ class Turbulence:
             f1=self._f1,
             t1=self._t1,
             f2=self._f2,
-            q1=self._q1_gt,
+            q1=self._q1,
             tdt=self._tdt,
             rtg=self._rtg_gt,
             dtsfc=self._dtsfc,
