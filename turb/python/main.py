@@ -114,7 +114,7 @@ for tile in range(6):
             continue
 
     serializer = ser.Serializer(
-        ser.OpenModeKind.Read, "../data", "Generator_rank" + str(tile)
+        ser.OpenModeKind.Read, "./turb/data", "Generator_rank" + str(tile)
     )
 
     # serializer_custom = ser.Serializer(
@@ -144,11 +144,33 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-            # in_data_custom = data_dict_from_var_list(IN_VARS2, serializer_custom, savepoints_custom[0])
+            # Initialize and test turbulence
+            turb_obj = turb.Turbulence(in_data["im"], in_data["ix"], in_data["km"], in_data["ntrac"], 
+                                       in_data["ntcw"], in_data["ntiw"], in_data["ntke"], in_data["delt"], 
+                                       in_data["dspheat"], in_data["xkzm_m"], in_data["xkzm_h"], in_data["xkzm_s"])
 
-            # run Python version
-            # out_data = turb.run(in_data, in_data_custom)
-            out_data = turb.run(in_data, {})
+            turb_obj.turbInit(in_data["garea"], in_data["prsi"], in_data["kinver"], in_data["zorl"], in_data["dusfc"], in_data["dvsfc"],
+            in_data["dtsfc"], in_data["dqsfc"], in_data["kpbl"], in_data["hpbl"], in_data["rbsoil"], in_data["evap"], in_data["heat"], in_data["psk"],
+            in_data["xmu"], in_data["tsea"], in_data["u10m"], in_data["v10m"], in_data["stress"], in_data["fm"], in_data["fh"], in_data["spd1"], in_data["phii"],
+            in_data["phil"],in_data["swh"], in_data["hlw"], in_data["u1"], in_data["v1"], in_data["del"], in_data["du"], in_data["dv"], in_data["tdt"],
+            in_data["prslk"], in_data["t1"], in_data["prsl"], in_data["q1"], in_data["rtg"])
+
+            dv, du, tdt, rtg, kpbl, dusfc, dvsfc, dtsfc, dqsfc, hpbl = turb_obj.run_turb()
+
+            out_data = {}
+            for key in OUT_VARS:
+                out_data[key] = np.zeros(1, dtype=np.float64)
+
+            out_data["dv"] = dv
+            out_data["du"] = du
+            out_data["tdt"] = tdt
+            out_data["rtg"] = rtg
+            out_data["kpbl"] = kpbl
+            out_data["dusfc"] = dusfc
+            out_data["dvsfc"] = dvsfc
+            out_data["dtsfc"] = dtsfc
+            out_data["dqsfc"] = dqsfc
+            out_data["hpbl"] = hpbl
 
             isready = True
 

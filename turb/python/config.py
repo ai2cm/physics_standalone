@@ -3,7 +3,7 @@ import numpy as np
 from gt4py import gtscript
 
 prefix = "satmedmfvdif"
-BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "numpy"
+BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "gtc:gt:cpu_ifirst"
 REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else False
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else False
 
@@ -13,7 +13,13 @@ DTYPE_BOOL = bool
 FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLT = gtscript.Field[DTYPE_FLT]
 FIELD_FLT_IJ = gtscript.Field[gtscript.IJ, DTYPE_FLT]
+FIELD_BOOL_IJ = gtscript.Field[gtscript.IJ, DTYPE_BOOL]
+FIELD_INT_IJ = gtscript.Field[gtscript.IJ, DTYPE_INT]
 FIELD_BOOL = gtscript.Field[DTYPE_BOOL]
+
+FIELD_BOOL_8 = gtscript.Field[(DTYPE_BOOL, (8,))]
+FIELD_FLT_8 = gtscript.Field[(DTYPE_FLT, (8,))]
+FIELD_FLT_7 = gtscript.Field[(DTYPE_FLT, (7,))]
 # Path of serialbox directory
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"
