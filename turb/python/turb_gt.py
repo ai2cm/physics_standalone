@@ -7,6 +7,7 @@
 import numpy as np
 import gt4py
 import gt4py.storage as gt_storage
+import time
 import timeit
 
 from config import *
@@ -51,7 +52,7 @@ class Turbulence:
         self._f2 = gt_storage.zeros(
             backend=backend,
             dtype=(DTYPE_FLT,(ntrac-1,)),
-            shape=(im, 1, km),
+            shape=(im, 1, km + 1),
             default_origin=(0, 0, 0),
         )
         self._q1 = gt_storage.zeros(
@@ -1681,3 +1682,42 @@ def storage_to_numpy_and_assert_equal(gt_storage, numpy_array):
         temp2[:, :, :] = temp
         # np.testing.assert_allclose(temp2,numpy_array,rtol=1e-13,atol=0)
         np.testing.assert_array_equal(temp2, numpy_array)
+
+def run(in_data, timings):
+
+    turb_obj = Turbulence(in_data["im"], in_data["ix"], in_data["km"], in_data["ntrac"], 
+                                       in_data["ntcw"], in_data["ntiw"], in_data["ntke"], in_data["delt"], 
+                                       in_data["dspheat"], in_data["xkzm_m"], in_data["xkzm_h"], in_data["xkzm_s"])
+
+    turb_obj.turbInit(in_data["garea"], in_data["prsi"], in_data["kinver"], in_data["zorl"], in_data["dusfc"], in_data["dvsfc"],
+    in_data["dtsfc"], in_data["dqsfc"], in_data["kpbl"], in_data["hpbl"], in_data["rbsoil"], in_data["evap"], in_data["heat"], in_data["psk"],
+    in_data["xmu"], in_data["tsea"], in_data["u10m"], in_data["v10m"], in_data["stress"], in_data["fm"], in_data["fh"], in_data["spd1"], in_data["phii"],
+    in_data["phil"],in_data["swh"], in_data["hlw"], in_data["u1"], in_data["v1"], in_data["del"], in_data["du"], in_data["dv"], in_data["tdt"],
+    in_data["prslk"], in_data["t1"], in_data["prsl"], in_data["q1"], in_data["rtg"])
+
+    tic = timeit.default_timer()
+
+    dv, du, tdt, rtg, kpbl, dusfc, dvsfc, dtsfc, dqsfc, hpbl = turb_obj.run_turb()
+
+    toc = timeit.default_timer()
+
+    # exec_info = {}
+    timings["elapsed_time"] += toc - tic
+    # timings["run_time"] += exec_info["run_end_time"] - exec_info["run_start_time"]
+
+    out_data = {}
+    for key in OUT_VARS:
+        out_data[key] = np.zeros(1, dtype=np.float64)
+
+    out_data["dv"] = dv
+    out_data["du"] = du
+    out_data["tdt"] = tdt
+    out_data["rtg"] = rtg
+    out_data["kpbl"] = kpbl
+    out_data["dusfc"] = dusfc
+    out_data["dvsfc"] = dvsfc
+    out_data["dtsfc"] = dtsfc
+    out_data["dqsfc"] = dqsfc
+    out_data["hpbl"] = hpbl
+
+    return out_data
