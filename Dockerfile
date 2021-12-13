@@ -9,7 +9,7 @@ RUN apt-get update &&\
 RUN add-apt-repository ppa:deadsnakes/ppa 
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends\
+    && apt-get install -y --no-install-recommends\
     apt-utils \
     sudo \
     build-essential \
@@ -26,18 +26,18 @@ RUN apt-get update \
     make \
     cmake \
     cmake-curses-gui \
-    python3.9-dev \
-    python3.9-distutils \
+    python3.8-dev \
+    python3.8-distutils \
     libssl-dev \
     libboost-all-dev \
     libnetcdf-dev \
     libnetcdff-dev
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-RUN python3.9 get-pip.py
+RUN python3.8 get-pip.py
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 10 && \
-    update-alternatives  --set python /usr/bin/python3.9
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 10 && \
+    update-alternatives  --set python /usr/bin/python3.8
 
 # download and install NCEP libraries
 RUN git config --global http.sslverify false && \
@@ -58,8 +58,8 @@ RUN cd /serialbox && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local/serialbox -DCMAKE_BUILD_TYPE=Debug \
-          -DSERIALBOX_USE_NETCDF=ON -DSERIALBOX_ENABLE_FORTRAN=ON \
-          -DSERIALBOX_TESTING=ON  ../ && \
+    -DSERIALBOX_USE_NETCDF=ON -DSERIALBOX_ENABLE_FORTRAN=ON \
+    -DSERIALBOX_TESTING=ON  ../ && \
     make -j4 && \
     make test && \
     make install && \
@@ -78,7 +78,7 @@ RUN pip install numpy xarray[complete]
 ARG USER=user
 ENV USER ${USER}
 RUN useradd -ms /bin/bash ${USER} \
-      && echo "${USER}   ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    && echo "${USER}   ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 ENV USER_HOME /home/${USER}
 RUN chown -R ${USER}:${USER} ${USER_HOME}
 
