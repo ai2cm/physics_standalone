@@ -1352,10 +1352,8 @@ def part13b(
     ntrac1 : int,
 ):
     with computation(PARALLEL), interval(...):
-        ttend = (f1[0,0,0] - t1[0,0,0]) * rdt
-        qtend = (f2[0,0,0][0] - q1[0,0,0][0]) * rdt
-        tdt = tdt[0,0,0] + ttend
-        rtg[0,0,0][0] = rtg[0,0,0][0] + qtend
+        tdt = tdt[0,0,0] + (f1[0,0,0] - t1[0,0,0]) * rdt
+        rtg[0,0,0][0] = rtg[0,0,0][0] + (f2[0,0,0][0] - q1[0,0,0][0]) * rdt
 
         if ntrac1 >= 2:
             for kk in range(1, ntrac1):
@@ -1716,6 +1714,87 @@ def mfpblt(
         domain=(im, 1, kmpbl),
     )
 
+    # if BACKEND=="gtc:gt:cpu_ifirst":
+    #     file = open("qcko.out","wb")
+    #     np.save(file,qcko)
+    #     file.close()
+
+    #     file = open("zl.out","wb")
+    #     np.save(file,zl)
+    #     file.close()
+
+    #     file = open("q1.out","wb")
+    #     np.save(file,q1_gt)
+    #     file.close()
+
+    #     file = open("cnvflg.out","wb")
+    #     np.save(file,cnvflg)
+    #     file.close()
+
+    #     file = open("kpbl.out","wb")
+    #     np.save(file,kpbl)
+    #     file.close()
+
+    #     file = open("xlamue.out","wb")
+    #     np.save(file,xlamue)
+    #     file.close()
+
+    # if BACKEND == "gtc:gt:gpu":
+    #     file = open("qcko.out","rb")
+    #     qcko_cpu = np.load(file)
+    #     file.close()
+
+    #     qcko_gpu = np.zeros((qcko.shape))
+    #     qcko_gpu[:,:,:,:] = qcko[:,:,:,:]
+
+    #     np.testing.assert_allclose(qcko_cpu, qcko_gpu, equal_nan=True)
+
+
+    #     file = open("zl.out","rb")
+    #     zl_cpu = np.load(file)
+    #     file.close()
+
+    #     zl_gpu = np.zeros((zl.shape))
+    #     zl_gpu[:,:,:] = zl[:,:,:]
+
+    #     np.testing.assert_allclose(zl_cpu, zl_gpu, equal_nan=True)
+
+    #     file = open("q1.out","rb")
+    #     q1_cpu = np.load(file)
+    #     file.close()
+
+    #     q1_gpu = np.zeros((q1_gt.shape))
+    #     q1_gpu[:,:,:,:] = q1_gt[:,:,:,:]
+
+    #     np.testing.assert_allclose(q1_cpu, q1_gpu, equal_nan=True)
+
+    #     file = open("cnvflg.out","rb")
+    #     cnvflg_cpu = np.load(file)
+    #     file.close()
+
+    #     cnvflg_gpu = np.zeros((cnvflg.shape),dtype=bool)
+    #     cnvflg_gpu[:,:] = cnvflg[:,:]
+
+    #     np.testing.assert_allclose(cnvflg_cpu, cnvflg_gpu, equal_nan=True)
+
+    #     file = open("kpbl.out","rb")
+    #     kpbl_cpu = np.load(file)
+    #     file.close()
+
+    #     kpbl_gpu = np.zeros((kpbl.shape),dtype=int)
+    #     kpbl_gpu[:,:] = kpbl[:,:]
+
+    #     np.testing.assert_allclose(kpbl_cpu, kpbl_gpu, equal_nan=True)
+
+    #     file = open("xlamue.out","rb")
+    #     xlamue_cpu = np.load(file)
+    #     file.close()
+
+    #     xlamue_gpu = np.zeros(xlamue.shape)
+    #     xlamue_gpu[:,:,:] = xlamue[:,:,:]
+
+    #     np.testing.assert_allclose(xlamue_cpu, xlamue_gpu, equal_nan=True)
+
     mfpblt_s3(
         cnvflg = cnvflg,
         kpbl = kpbl,
@@ -1729,10 +1808,27 @@ def mfpblt(
         domain=(im, 1, kmpbl)
     )
 
+    # if BACKEND=="gtc:gt:cpu_ifirst":
+    #     file = open("qcko.out","wb")
+    #     np.save(file,qcko)
+    #     file.close()
+
+
+    # if BACKEND=="gtc:gt:gpu":
+    #     file = open("qcko.out","rb")
+    #     qcko_cpu = np.load(file)
+    #     file.close()
+
+    #     qcko_gpu = np.zeros((qcko.shape))
+    #     qcko_gpu[:,:,:,:] = qcko[:,:,:,:]
+
+    #     np.testing.assert_allclose(qcko_cpu, qcko_gpu, equal_nan=True)
+
+
     return kpbl, hpbl, buo, xmf, tcko, qcko, ucko, vcko, xlamue
 
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions","GreedyMerging"])#,,"KCacheDetection", "FillFlushToLocalKCaches","IJCacheDetection","PruneKCacheFills","PruneKCacheFlushes", "OnTheFlyMerging","MaskInlining","MaskStmtMerging","NoFieldAccessPruning","RemoveUnexecutedRegions","LocalTemporariesToScalars","WriteBeforeReadTemporariesToScalars","AdjacentLoopMerging"])
 def mfpblt_s3(
     cnvflg : FIELD_BOOL_IJ,
     kpbl : FIELD_INT_IJ,
@@ -1746,7 +1842,7 @@ def mfpblt_s3(
 ):
     with computation(FORWARD), interval(1,None):
         if ntcw > 2:
-            for n in range(ntcw, ntcw - 1):
+            for n in range(1, ntcw):
                 if cnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
                     dz = zl[0, 0, 0] - zl[0, 0, -1]
                     tem = 0.5 * xlamue[0, 0, -1] * dz
@@ -1766,7 +1862,7 @@ def mfpblt_s3(
                     qcko[0,0,0][n2] = (
                         (1.0 - tem) * qcko[0,0,-1][n2]
                         + tem * (q1_gt[0,0,0][n2] + q1_gt[0,0,-1][n2])
-                    ) / factor
+                     ) / factor
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s0(
@@ -2398,6 +2494,21 @@ def mfscu(
         domain=(im, 1, kmscu),
     )
 
+    # if BACKEND=="gtc:gt:cpu_ifirst":
+    #     file = open("qcdo.out","wb")
+    #     np.save(file,qcdo)
+    #     file.close()
+
+    # if BACKEND=="gtc:gt:gpu":
+    #     file = open("qcdo.out","rb")
+    #     qcdo_cpu = np.load(file)
+    #     file.close()
+
+    #     qcdo_gpu = np.zeros(qcdo.shape)
+    #     qcdo_gpu[:,:,:,:] = qcdo[:,:,:,:]
+
+    #     np.testing.assert_allclose(qcdo_cpu, qcdo_gpu, equal_nan=True)
+
     mfscu_10(
         cnvflg = cnvflg,
         krad = krad,
@@ -2411,6 +2522,21 @@ def mfscu(
         ntrac1 = ntrac1,
         domain = (im, 1, kmscu),
     )
+
+    # if BACKEND=="gtc:gt:cpu_ifirst":
+    #     file = open("qcdo.out","wb")
+    #     np.save(file,qcdo)
+    #     file.close()
+
+    # if BACKEND=="gtc:gt:gpu":
+    #     file = open("qcdo.out","rb")
+    #     qcdo_cpu = np.load(file)
+    #     file.close()
+
+    #     qcdo_gpu = np.zeros(qcdo.shape)
+    #     qcdo_gpu[:,:,:,:] = qcdo[:,:,:,:]
+
+    #     np.testing.assert_allclose(qcdo_cpu, qcdo_gpu, equal_nan=True) 
 
     return radj, mrad, buo, xmfd, tcdo, qcdo, ucdo, vcdo, xlamde
 
@@ -2478,7 +2604,7 @@ def mfscu_s6(
                 xlamde = ce0 / dz
             xlamdem = cm * xlamde[0,0,0]
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions","GreedyMerging"])
 def mfscu_10(
     cnvflg : FIELD_BOOL_IJ,
     krad   : FIELD_INT_IJ,
@@ -2949,7 +3075,7 @@ def tridit(
             f1 = f1[0, 0, 0] - au[0, 0, 0] * f1[0, 0, 1]
 
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions","GreedyMerging"])
 def tridin(
     cl : FIELD_FLT, 
     cm : FIELD_FLT,
