@@ -7,7 +7,7 @@ sys.path.insert(0, "..")
 from radphysparam import co2cyc_file, co2gbl_file, co2dat_file
 from phys_const import con_pi
 from config import *
-
+from stencils_radiation_driver import getgases_stencil
 
 class GasClass:
     VTAGGAS = "NCEP-Radiation_gases     v5.1  Nov 2012"
@@ -426,22 +426,26 @@ class GasClass:
         #  ===================================================================  !
         #
 
-        gasdat = np.zeros((IMAX, LMAX, 10))
+        # gasdat = np.zeros((IMAX, LMAX, 10))
+        gasdat = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IMAX, 1, LMAX + 1),
+                                   dtype=(DTYPE_FLT,(10,)))
 
         #  --- ...  assign default values
-
-        for k in range(LMAX):
-            for i in range(IMAX):
-                gasdat[i, k, 0] = self.co2vmr_def
-                gasdat[i, k, 1] = self.n2ovmr_def
-                gasdat[i, k, 2] = self.ch4vmr_def
-                gasdat[i, k, 3] = self.o2vmr_def
-                gasdat[i, k, 4] = self.covmr_def
-                gasdat[i, k, 5] = self.f11vmr_def
-                gasdat[i, k, 6] = self.f12vmr_def
-                gasdat[i, k, 7] = self.f22vmr_def
-                gasdat[i, k, 8] = self.cl4vmr_def
-                gasdat[i, k, 9] = self.f113vmr_def
+        getgases_stencil(gasdat,
+                         self.co2vmr_def,
+                         self.n2ovmr_def,
+                         self.ch4vmr_def,
+                         self.o2vmr_def,
+                         self.covmr_def,
+                         self.f11vmr_def,
+                         self.f12vmr_def,
+                         self.f22vmr_def,
+                         self.cl4vmr_def,
+                         self.f113vmr_def,
+                         domain=shape_nlp1,
+                         origin=default_origin)
 
         #  --- ...  co2 section
 
@@ -450,7 +454,7 @@ class GasClass:
 
             for k in range(LMAX):
                 for i in range(IMAX):
-                    gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav - 1]
+                    gasdat[i, 0, k+1, 0] = self.co2_glb + self.gco2cyc[self.kmonsav - 1]
 
         elif self.ico2flg == 2:
             #  ---  use obs co2 monthly data with 2-d variation at lower atmos
@@ -468,9 +472,9 @@ class GasClass:
                 ilat = min(self.JMXCO2, int(xlat1 * tmp + 1)) - 1
 
                 for k in range(LMAX):
-                    if plvl[i, k + 1] >= self.prsco2:
-                        gasdat[i, k, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav - 1]
+                    if plvl[i, 0, k + 1] >= self.prsco2:
+                        gasdat[i, 0, k+1, 0] = self.co2vmr_sav[ilon, ilat, self.kmonsav - 1]
                     else:
-                        gasdat[i, k, 0] = self.co2_glb + self.gco2cyc[self.kmonsav - 1]
+                        gasdat[i, 0, k+1, 0] = self.co2_glb + self.gco2cyc[self.kmonsav - 1]
 
         return gasdat

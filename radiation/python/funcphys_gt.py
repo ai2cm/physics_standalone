@@ -1,61 +1,13 @@
-import numpy as np
 from phys_const import *
+from gt4py.gtscript import (
+    function,
+    floor,
+    min,
+    max,
+    exp,
+)
 
-
-def fpvs(t):
-    # $$$     Subprogram Documentation Block
-    #
-    # Subprogram: fpvs         Compute saturation vapor pressure
-    #   Author: N Phillips            w/NMC2X2   Date: 30 dec 82
-    #
-    # Abstract: Compute saturation vapor pressure from the temperature.
-    #   A linear interpolation is done between values in a lookup table
-    #   computed in gpvs. See documentation for fpvsx for details.
-    #   Input values outside table range are reset to table extrema.
-    #   The interpolation accuracy is almost 6 decimal places.
-    #   On the Cray, fpvs is about 4 times faster than exact calculation.
-    #   This function should be expanded inline in the calling routine.
-    #
-    # Program History Log:
-    #   91-05-07  Iredell             made into inlinable function
-    #   94-12-30  Iredell             expand table
-    # 1999-03-01  Iredell             f90 module
-    # 2001-02-26  Iredell             ice phase
-    #
-    # Usage:   pvs=fpvs(t)
-    #
-    #   Input argument list:
-    #     t          Real(krealfp) temperature in Kelvin
-    #
-    #   Output argument list:
-    #     fpvs       Real(krealfp) saturation vapor pressure in Pascals
-    #
-    # Attributes:
-    #   Language: Fortran 90.
-    #
-    # $$$
-
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    xmin = 180.0
-    xmax = 330.0
-    nxpvs = 7501
-    tbpvs = np.zeros(nxpvs)
-
-    xinc = (xmax - xmin) / (nxpvs - 1)
-    c2xpvs = 1.0 / xinc
-    c1xpvs = 1.0 - xmin * c2xpvs
-
-    xj = min(max(c1xpvs + c2xpvs * t, 1.0), nxpvs)
-    jx = int(min(xj, nxpvs - 1))
-
-    tbpvs_jxm1 = fpvsx(xmin+(jx-1)*xinc)
-    tbpvs_jx   = fpvsx(xmin + jx * xinc)
-
-    fpvs = tbpvs_jxm1 + (xj - jx) * (tbpvs_jx - tbpvs_jxm1)
-
-    return fpvs
-
-
+@function
 def fpvsx(t):
     # $$$     Subprogram Documentation Block
     #
@@ -109,15 +61,69 @@ def fpvsx(t):
     xponbi = -dldti / con_rv + heati / (con_rv * con_ttp)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    tr = con_ttp / t
-    if t >= tliq:
-        fpvsx = con_psat * (tr ** xponal) * np.exp(xponbl * (1.0 - tr))
-    elif t < tice:
-        fpvsx = con_psat * (tr ** xponai) * np.exp(xponbi * (1.0 - tr))
+    tr = con_ttp / t[0,0,0]
+    if t[0,0,0] >= tliq:
+        fpvsx = con_psat * (tr ** xponal) * exp(xponbl * (1.0 - tr))
+    elif t[0,0,0] < tice:
+        fpvsx = con_psat * (tr ** xponai) * exp(xponbi * (1.0 - tr))
     else:
-        w = (t - tice) / (tliq - tice)
-        pvl = con_psat * (tr ** xponal) * np.exp(xponbl * (1.0 - tr))
-        pvi = con_psat * (tr ** xponai) * np.exp(xponbi * (1.0 - tr))
+        w = (t[0,0,0] - tice) / (tliq - tice)
+        pvl = con_psat * (tr ** xponal) * exp(xponbl * (1.0 - tr))
+        pvi = con_psat * (tr ** xponai) * exp(xponbi * (1.0 - tr))
         fpvsx = w * pvl + (1.0 - w) * pvi
 
     return fpvsx
+
+
+@function
+def fpvs(t):
+    # $$$     Subprogram Documentation Block
+    #
+    # Subprogram: fpvs         Compute saturation vapor pressure
+    #   Author: N Phillips            w/NMC2X2   Date: 30 dec 82
+    #
+    # Abstract: Compute saturation vapor pressure from the temperature.
+    #   A linear interpolation is done between values in a lookup table
+    #   computed in gpvs. See documentation for fpvsx for details.
+    #   Input values outside table range are reset to table extrema.
+    #   The interpolation accuracy is almost 6 decimal places.
+    #   On the Cray, fpvs is about 4 times faster than exact calculation.
+    #   This function should be expanded inline in the calling routine.
+    #
+    # Program History Log:
+    #   91-05-07  Iredell             made into inlinable function
+    #   94-12-30  Iredell             expand table
+    # 1999-03-01  Iredell             f90 module
+    # 2001-02-26  Iredell             ice phase
+    #
+    # Usage:   pvs=fpvs(t)
+    #
+    #   Input argument list:
+    #     t          Real(krealfp) temperature in Kelvin
+    #
+    #   Output argument list:
+    #     fpvs       Real(krealfp) saturation vapor pressure in Pascals
+    #
+    # Attributes:
+    #   Language: Fortran 90.
+    #
+    # $$$
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    xmin = 180.0
+    xmax = 330.0
+    nxpvs = 7501
+
+    xinc = (xmax - xmin) / (nxpvs - 1)
+    c2xpvs = 1.0 / xinc
+    c1xpvs = 1.0 - xmin * c2xpvs
+
+    xj = min(max(c1xpvs + c2xpvs * t[0,0,0], 1.0), nxpvs)
+    jx = floor(min(xj, nxpvs - 1))
+
+    tbpvs_jxm1 = fpvsx(xmin+(jx-1)*xinc)
+    tbpvs_jx   = fpvsx(xmin + jx * xinc)
+
+    fpvs = tbpvs_jxm1 + (xj - jx) * (tbpvs_jx - tbpvs_jxm1)
+
+    return fpvs

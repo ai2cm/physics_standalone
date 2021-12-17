@@ -1,3 +1,4 @@
+import gt4py
 import numpy as np
 import os
 import sys
@@ -5,7 +6,8 @@ import sys
 sys.path.insert(0, "..")
 from phys_const import con_ttp, con_pi, con_g, con_rd, con_t0c, con_thgni
 from radphysparam import lcrick, lcnorm, lnoprec
-
+from config import *
+from stencils_radiation_driver import prognostic_cloud_gfdl_microphysics
 
 class CloudClass:
     VTAGCLD = "NCEP-Radiation_clouds    v5.1  Nov 2012 "
@@ -1116,130 +1118,77 @@ class CloudClass:
         #
 
         cldcnv = np.zeros((IX, NLAY))
-        cwp = np.zeros((IX, NLAY))
-        cip = np.zeros((IX, NLAY))
-        crp = np.zeros((IX, NLAY))
-        csp = np.zeros((IX, NLAY))
-        rew = np.zeros((IX, NLAY))
-        rei = np.zeros((IX, NLAY))
-        res = np.zeros((IX, NLAY))
-        rer = np.zeros((IX, NLAY))
-        tem2d = np.zeros((IX, NLAY))
-        clwf = np.zeros((IX, NLAY))
+        
+        cwp = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
+        
+        cip = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
 
-        ptop1 = np.zeros((IX, self.NK_CLDS + 1))
-        rxlat = np.zeros(IX)
+        rew = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
+        
+        rei = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
+        
+        res = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
+        
+        rer = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
+        
+        tem2d = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
+        
+        clwf = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1, NLAY+1),
+                                  dtype=DTYPE_FLT)
 
-        clouds = np.zeros((IX, NLAY, self.NF_CLDS))
-        de_lgth = np.zeros(IX)
+        
+        ptop1 = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX,1),
+                                  dtype=(DTYPE_FLT,(self.NK_CLDS + 1,)))
+        
+        rxlat = gt4py.storage.zeros(backend=backend, 
+                                  default_origin=default_origin,
+                                  shape=(IX, 1),
+                                  dtype=DTYPE_FLT)
 
-        for k in range(NLAY):
-            for i in range(IX):
-                rew[i, k] = self.reliq_def  # default liq radius to 10 micron
-                rei[i, k] = self.reice_def  # default ice radius to 50 micron
-                rer[i, k] = self.rrain_def  # default rain radius to 1000 micron
-                res[i, k] = self.rsnow_def  # default snow radius to 250 micron
-                tem2d[i, k] = min(1.0, max(0.0, (con_ttp - tlyr[i, k]) * 0.05))
-                clwf[i, k] = 0.0
+        
+        clouds = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IX, 1, NLAY + 1),
+                                   dtype=(DTYPE_FLT,(self.NF_CLDS,)))
+        
+        de_lgth = gt4py.storage.zeros(backend=backend, 
+                                   default_origin=default_origin,
+                                   shape=(IX, 1),
+                                   dtype=DTYPE_FLT)
 
-        if lcrick:
-            for i in range(IX):
-                clwf[i, 0] = 0.75 * clw[i, 0] + 0.25 * clw[i, 1]
-                clwf[i, NLAY - 1] = 0.75 * clw[i, NLAY - 1] + 0.25 * clw[i, NLAY - 2]
-            for k in range(1, NLAY - 1):
-                for i in range(IX):
-                    clwf[i, k] = (
-                        0.25 * clw[i, k - 1] + 0.5 * clw[i, k] + 0.25 * clw[i, k + 1]
-                    )
-        else:
-            for k in range(NLAY):
-                for i in range(IX):
-                    clwf[i, k] = clw[i, k]
-
-        #  ---  find top pressure for each cloud domain for given latitude
-        #       ptopc(k,i): top presure of each cld domain (k=1-4 are sfc,L,m,h;
-        #  ---  i=1,2 are low-lat (<45 degree) and pole regions)
-
-        for i in range(IX):
-            rxlat[i] = abs(xlat[i] / con_pi)  # if xlat in pi/2 -> -pi/2 range
-
-        for id in range(4):
-            tem1 = self.ptopc[id, 1] - self.ptopc[id, 0]
-
-            for i in range(IX):
-                ptop1[i, id] = self.ptopc[id, 0] + tem1 * max(0.0, 4.0 * rxlat[i] - 1.0)
-
-        #  ---  compute liquid/ice condensate path in g/m**2
-
-        for k in range(NLAY):
-            for i in range(IX):
-                clwt = max(0.0, (clwf[i, k] + cnvw[i, k])) * self.gfac * delp[i, k]
-                cip[i, k] = clwt * tem2d[i, k]
-                cwp[i, k] = clwt - cip[i, k]
-
-        #  ---  effective liquid cloud droplet radius over land
-
-        for i in range(IX):
-            if round(slmsk[i]) == 1:
-                for k in range(NLAY):
-                    rew[i, k] = 5.0 + 5.0 * tem2d[i, k]
-
-        for k in range(NLAY):
-            for i in range(IX):
-                if cldtot[i, k] < self.climit:
-                    cwp[i, k] = 0.0
-                    cip[i, k] = 0.0
-                    crp[i, k] = 0.0
-                    csp[i, k] = 0.0
-
-        if lcnorm:
-            for k in range(NLAY):
-                for i in range(IX):
-                    if cldtot[i, k] >= self.climit:
-                        tem1 = 1.0 / max(self.climit2, cldtot[i, k])
-                        cwp[i, k] = cwp[i, k] * tem1
-                        cip[i, k] = cip[i, k] * tem1
-                        crp[i, k] = crp[i, k] * tem1
-                        csp[i, k] = csp[i, k] * tem1
-
-        # ---  effective ice cloud droplet radius
-
-        for k in range(NLAY):
-            for i in range(IX):
-                tem2 = tlyr[i, k] - con_ttp
-
-                if cip[i, k] > 0.0:
-                    tem3 = (
-                        self.gord * cip[i, k] * plyr[i, k] / (delp[i, k] * tvly[i, k])
-                    )
-
-                    if tem2 < -50.0:
-                        rei[i, k] = (1250.0 / 9.917) * tem3 ** 0.109
-                    elif tem2 < -40.0:
-                        rei[i, k] = (1250.0 / 9.337) * tem3 ** 0.08
-                    elif tem2 < -30.0:
-                        rei[i, k] = (1250.0 / 9.208) * tem3 ** 0.055
-                    else:
-                        rei[i, k] = (1250.0 / 9.387) * tem3 ** 0.031
-
-                    rei[i, k] = max(10.0, min(rei[i, k], 150.0))
-
-        for k in range(NLAY):
-            for i in range(IX):
-                clouds[i, k, 0] = cldtot[i, k]
-                clouds[i, k, 1] = cwp[i, k]
-                clouds[i, k, 2] = rew[i, k]
-                clouds[i, k, 3] = cip[i, k]
-                clouds[i, k, 4] = rei[i, k]
-                clouds[i, k, 6] = rer[i, k]
-                clouds[i, k, 8] = res[i, k]
-
-        #  --- ...  estimate clouds decorrelation length in km
-        #           this is only a tentative test, need to consider change later
-
-        if self.iovr == 3:
-            for i in range(IX):
-                de_lgth[i] = max(0.6, 2.78 - 4.6 * rxlat[i])
+        prognostic_cloud_gfdl_microphysics(rew, rei, rer, res, tem2d, clwf, clw, ptop1, clouds, tlyr, rxlat, xlat,
+                         cnvw, delp, cip, cwp, slmsk, cldtot, plyr, tvly, de_lgth, self.gord,
+                         self.climit, self.climit2, self.gfac, self.iovr,
+                         self.reliq_def, self.reice_def, self.rrain_def, self.rsnow_def,
+                         self.ptopc[0, 0], self.ptopc[0, 1], self.ptopc[1, 0], self.ptopc[1, 1],
+                         self.ptopc[2, 0], self.ptopc[2, 1], self.ptopc[3, 0], self.ptopc[3, 1],
+                         lcrick, lcnorm,
+                         domain=shape_nlp1, origin=default_origin)
 
         #  ---  compute low, mid, high, total, and boundary layer cloud fractions
         #       and clouds top/bottom layer indices for low, mid, and high clouds.
@@ -1248,7 +1197,7 @@ class CloudClass:
         #       be different for lw and sw radiation programs.
 
         clds, mtop, mbot = self.gethml(
-            plyr, ptop1, cldtot, cldcnv, dz, de_lgth, IX, NLAY
+            plyr, ptop1[:,0][:], cldtot, cldcnv, dz, de_lgth, IX, NLAY
         )
 
         return clouds, clds, mtop, mbot, de_lgth
@@ -1873,7 +1822,7 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:
                         cl1[i] = cl1[i] * (1.0 - ccur)
 
@@ -1888,7 +1837,7 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:  # cloudy layer
                         cl2[i] = min(cl2[i], (1.0 - ccur))
                     else:  # clear layer
@@ -1908,7 +1857,7 @@ class CloudClass:
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:
                         cl1[i] = max(cl1[i], ccur)
 
@@ -1922,14 +1871,14 @@ class CloudClass:
         elif self.iovr == 3:  # random if clear-layer divided,
             # otherwise de-corrlength method
             for i in range(IX):
-                dz1[i] = -dz[i, kstr]
+                dz1[i] = -dz[i, 0, kstr+1]
 
             for k in range(kstr - 1, kend, kinc):
                 for i in range(IX):
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
                     if ccur >= self.climit:  # cloudy layer
-                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, k]) / de_lgth[i])
-                        dz1[i] = dz[i, k]
+                        alfa = np.exp(-0.5 * (dz1[i] + dz[i, 0, k+1]) / de_lgth[i,0])
+                        dz1[i] = dz[i, 0, k+1]
                         cl2[i] = alfa * min(cl2[i], (1.0 - ccur)) + (1.0 - alfa) * (
                             cl2(i) * (1.0 - ccur)
                         )  # random part
@@ -1937,7 +1886,7 @@ class CloudClass:
                         cl1[i] = cl1[i] * cl2[i]
                         cl2[i] = 1.0
                         if k != kend - 1:
-                            dz1[i] = -dz[i, k + kinc]
+                            dz1[i] = -dz[i, 0, k + kinc+1]
 
                 if k == self.llyr - 1:
                     for i in range(IX):
@@ -1974,12 +1923,12 @@ class CloudClass:
                     id = idom[i] - 1
                     id1 = id + 1
 
-                    pcur = plyr[i, k]
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    pcur = plyr[i, 0, k]
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
 
                     if k > 1:
-                        pnxt = plyr[i, k - 1]
-                        cnxt = min(self.ovcst, max(cldtot[i, k - 1], cldcnv[i, k - 1]))
+                        pnxt = plyr[i, 0, k - 1 + 1]
+                        cnxt = min(self.ovcst, max(cldtot[i, 0, k - 1+1], cldcnv[i, k - 1]))
                     else:
                         pnxt = -1.0
                         cnxt = 0.0
@@ -2050,12 +1999,12 @@ class CloudClass:
                     id = idom[i]
                     id1 = id + 1
 
-                    pcur = plyr[i, k]
-                    ccur = min(self.ovcst, max(cldtot[i, k], cldcnv[i, k]))
+                    pcur = plyr[i, 0, k + 1]
+                    ccur = min(self.ovcst, max(cldtot[i, 0, k+1], cldcnv[i, k]))
 
                     if k < NLAY - 1:
-                        pnxt = plyr[i, k + 1]
-                        cnxt = min(self.ovcst, max(cldtot[i, k + 1], cldcnv[i, k + 1]))
+                        pnxt = plyr[i, 0, k + 1 + 1]
+                        cnxt = min(self.ovcst, max(cldtot[i, 0, k + 1+1], cldcnv[i, k + 1]))
                     else:
                         pnxt = -1.0
                         cnxt = 0.0

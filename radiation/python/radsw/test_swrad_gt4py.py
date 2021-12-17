@@ -8,6 +8,8 @@ if IS_TEST:
 else:
     sys.path.insert(0, "/work/radiation/python")
 
+sys.path.insert(0,"/home/chris/Documents/Code/physics_standalone/radiation/python")
+
 from radsw.radsw_main_gt4py import RadSWClass
 from radphysparam import icldflg
 from config import *

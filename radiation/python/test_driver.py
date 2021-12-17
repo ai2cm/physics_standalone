@@ -3,7 +3,7 @@ import numpy as np
 from config import *
 from util import compare_data
 import serialbox as ser
-from radiation_driver import RadiationDriver
+from radiation_driver_gt import RadiationDriver
 
 rank = 0
 driver = RadiationDriver()
@@ -88,7 +88,8 @@ slag, sdec, cdec, solcon = driver.radupdate(
 for rank in range(6):
     serializer = ser.Serializer(
         ser.OpenModeKind.Read,
-        os.path.join(FORTRANDATA_DIR, "LW"),
+        # os.path.join(FORTRANDATA_DIR, "LW"),
+        '/home/ckung/Documents/Code/fv3gfs-fortran/rundir/data',
         "Generator_rank" + str(rank),
     )
 
@@ -251,6 +252,60 @@ for rank in range(6):
 
         return indict
 
+    def storage_convert(indict, oneDToTwoD=False):
+        for var in indict.keys():
+            if len(indict[var]) > 0:
+                if len(indict[var].shape) == 1:
+                    if oneDToTwoD == False:
+                        if type(indict[var][0]) == np.int32 or type(indict[var][0]) == np.int64:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,),
+                                            dtype=DTYPE_INT)
+                        else:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,),
+                                            dtype=DTYPE_FLT)
+                        tempStorage[:] = indict[var][:]
+                    else:
+                        if type(indict[var][0]) == np.int32 or type(indict[var][0]) == np.int64:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,1),
+                                            dtype=DTYPE_INT)
+                        else:
+                            tempStorage = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=(npts,1),
+                                            dtype=DTYPE_FLT)
+                        tempStorage[:,0] = indict[var][:]
+
+                elif len(indict[var].shape) == 2:
+                    tempStorage = gt4py.storage.zeros(backend=backend, 
+                                    default_origin=default_origin,
+                                    shape=(npts, 1, nlp1),
+                                    dtype=DTYPE_FLT)
+                    if indict[var].shape[1] == nlay:
+                        tempStorage[:, 0, 1:] = indict[var][:,:]
+                    elif indict[var].shape[1] == nlp1:
+                        tempStorage[:, 0, :] = indict[var][:,:]
+                    
+
+                elif len(indict[var].shape) == 3:
+                    tempStorage = gt4py.storage.zeros(backend=backend, 
+                                    default_origin=default_origin,
+                                    shape=(npts, 1, nlp1),
+                                    dtype=(DTYPE_FLT,(indict[var].shape[2],)))
+                    if indict[var].shape[1] == nlay:
+                        tempStorage[:, 0, 1:, :] = indict[var][:,:,:]
+                    elif indict[var].shape[1] == nlp1:
+                        tempStorage[:, 0, :, :] = indict[var][:,:,:]
+
+                indict[var] = tempStorage
+
+        return indict
+
     Model = getscalars(Model)
     Statein = getscalars(Statein)
     Sfcprop = getscalars(Sfcprop)
@@ -260,8 +315,21 @@ for rank in range(6):
     Radtend = getscalars(Radtend)
     Diag = getscalars(Diag)
 
+    Statein = storage_convert(Statein)
+    Sfcprop = storage_convert(Sfcprop)
+    Coupling = storage_convert(Coupling, True)
+    Grid = storage_convert(Grid)
+    Tbd = storage_convert(Tbd,True)
+    Radtend = storage_convert(Radtend,True)
+
+    Diag['fluxr'] = gt4py.storage.zeros(backend=backend, 
+                                            default_origin=default_origin,
+                                            shape=Diag['fluxr'].shape,
+                                            dtype=DTYPE_FLT)
+
     Radtendout, Diagout = driver.GFS_radiation_driver(
-        Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag
+        Model, Statein, Sfcprop, Coupling, Grid, Tbd, Radtend, Diag,
+        rank
     )
 
     radtend_vars_out = [
@@ -318,4 +386,4 @@ for rank in range(6):
         else:
             outdict[var] = Diagout[var]
 
-    compare_data(valdict, outdict)
+    compare_data(outdict, valdict)

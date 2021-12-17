@@ -272,7 +272,28 @@ def compare_data(data, ref_data, explicit=True, blocking=True):
 
     for var in data:
 
-        if not np.allclose(
+        if len(data[var].shape) == 3:
+            if not np.allclose(
+            data[var][:,0,1:], ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
+            ):
+
+                wrong.append(var)
+                flag = False
+            else:
+                if explicit:
+                    print(f"Successfully validated {var}!")
+        elif len(data[var].shape) == 2 and data[var].shape[1] == 1:
+            if not np.allclose(
+            data[var][:,0], ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
+            ):
+
+                wrong.append(var)
+                flag = False
+            else:
+                if explicit:
+                    print(f"Successfully validated {var}!")
+
+        elif not np.allclose(
             data[var], ref_data[var], rtol=1e-11, atol=1.0e-13, equal_nan=True
         ):
 
@@ -384,7 +405,7 @@ def loadlookupdata(name, scheme):
         else:
             lookupdict_gt4py[var] = float(ds[var].data)
 
-    ds2 = xr.open_dataset("../lookupdata/radlw_ref_data.nc")
+    ds2 = xr.open_dataset("./lookupdata/radlw_ref_data.nc")
     tmp = np.tile(ds2["chi_mls"].data[None, None, None, :, :], (npts, 1, nlp1, 1, 1))
 
     lookupdict_gt4py["chi_mls"] = create_storage_from_array(
