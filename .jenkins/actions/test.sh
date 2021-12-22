@@ -91,7 +91,7 @@ else
     sed -i -e "s|<PARAMETERIZATION>|${parameterization}|g" ${scheduler_script}
     sed -i -e "s|<OPTIONS>|--data_dir=/project/s1053/physics_standalone_serialized_test_data/c48/${parameterization}|g" ${scheduler_script}
     if [ "${parameterization}" == 'turb' ] ; then
-        sed -i -e "s|00:30:00|00:45:00|g" ${scheduler_script}
+        sed -i -e "s|00:30:00|01:30:00|g" ${scheduler_script}
     fi
     if [ "${parameterization}" == 'turb' ] && [ "${backend}" == 'gtcuda' ] ; then
         sed -i -e "s|00:30:00|02:15:00|g" ${scheduler_script}
