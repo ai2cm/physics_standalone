@@ -1352,10 +1352,8 @@ def part13b(
     ntrac1 : int,
 ):
     with computation(PARALLEL), interval(...):
-        ttend = (f1[0,0,0] - t1[0,0,0]) * rdt
-        qtend = (f2[0,0,0][0] - q1[0,0,0][0]) * rdt
-        tdt = tdt[0,0,0] + ttend
-        rtg[0,0,0][0] = rtg[0,0,0][0] + qtend
+        tdt = tdt[0,0,0] + (f1[0,0,0] - t1[0,0,0]) * rdt
+        rtg[0,0,0][0] = rtg[0,0,0][0] + (f2[0,0,0][0] - q1[0,0,0][0]) * rdt
 
         if ntrac1 >= 2:
             for kk in range(1, ntrac1):
@@ -1732,7 +1730,7 @@ def mfpblt(
     return kpbl, hpbl, buo, xmf, tcko, qcko, ucko, vcko, xlamue
 
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions","GreedyMerging"])
 def mfpblt_s3(
     cnvflg : FIELD_BOOL_IJ,
     kpbl : FIELD_INT_IJ,
@@ -1746,7 +1744,7 @@ def mfpblt_s3(
 ):
     with computation(FORWARD), interval(1,None):
         if ntcw > 2:
-            for n in range(ntcw, ntcw - 1):
+            for n in range(1, ntcw):
                 if cnvflg[0, 0] and mask[0, 0, 0] <= kpbl[0, 0]:
                     dz = zl[0, 0, 0] - zl[0, 0, -1]
                     tem = 0.5 * xlamue[0, 0, -1] * dz
@@ -1766,7 +1764,7 @@ def mfpblt_s3(
                     qcko[0,0,0][n2] = (
                         (1.0 - tem) * qcko[0,0,-1][n2]
                         + tem * (q1_gt[0,0,0][n2] + q1_gt[0,0,-1][n2])
-                    ) / factor
+                     ) / factor
 
 @gtscript.stencil(backend=backend)
 def mfpblt_s0(
@@ -2478,7 +2476,7 @@ def mfscu_s6(
                 xlamde = ce0 / dz
             xlamdem = cm * xlamde[0,0,0]
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions","GreedyMerging"])
 def mfscu_10(
     cnvflg : FIELD_BOOL_IJ,
     krad   : FIELD_INT_IJ,
@@ -2949,7 +2947,7 @@ def tridit(
             f1 = f1[0, 0, 0] - au[0, 0, 0] * f1[0, 0, 1]
 
 
-@gtscript.stencil(backend=backend)
+@gtscript.stencil(backend=backend,skip_passes=["graph_merge_horizontal_executions","GreedyMerging"])
 def tridin(
     cl : FIELD_FLT, 
     cm : FIELD_FLT,
