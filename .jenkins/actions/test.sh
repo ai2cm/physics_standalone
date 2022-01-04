@@ -23,6 +23,17 @@ if [ -z "${backend}" ] ; then
     exit 1
 fi
 
+# GTC backend name fix: passed as gtc_gt_* but their real name are gtc:gt:*
+#                       OR gtc_* but their real name is gtc:*
+if [[ $backend = gtc_gt_* ]] ; then
+    # sed explained: replace _ with :, two times
+    backend=`echo $backend | sed 's/_/:/;s/_/:/'`
+fi
+if [[ $backend = gtc_* ]] ; then
+    # sed explained: replace _ with :
+    backend=`echo $backend | sed 's/_/:/'`
+fi
+
 echo "Information:"
 echo "  JOB_NAME=${JOB_NAME}"
 echo "  BUILD_NUMBER=${BUILD_NUMBER}"
@@ -79,8 +90,8 @@ else
     sed -i -e "s|<BACKEND>|${backend}|g" ${scheduler_script}
     sed -i -e "s|<PARAMETERIZATION>|${parameterization}|g" ${scheduler_script}
     sed -i -e "s|<OPTIONS>|--data_dir=/project/s1053/physics_standalone_serialized_test_data/c48/${parameterization}|g" ${scheduler_script}
-    if [ "${parameterization}" == 'turb' ] && [ "${backend}" == 'gtx86' ] ; then
-        sed -i -e "s|00:30:00|00:45:00|g" ${scheduler_script}
+    if [ "${parameterization}" == 'turb' ] ; then
+        sed -i -e "s|00:30:00|01:30:00|g" ${scheduler_script}
     fi
     if [ "${parameterization}" == 'turb' ] && [ "${backend}" == 'gtcuda' ] ; then
         sed -i -e "s|00:30:00|02:15:00|g" ${scheduler_script}
