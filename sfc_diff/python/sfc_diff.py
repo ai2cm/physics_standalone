@@ -47,9 +47,9 @@ def stability(z1, snwdph, thv1, wind, z0max, ztmax, tvs,
     dtv = thv1 - tvs
     adtv = max(abs(dtv), 0.001)
     if dtv >= 0.0:
-        dtv = adtv
+        dtv = abs(adtv)
     else:
-        dtv = -adtv
+        dtv = -abs(adtv)
     rb = max(-5000.0, (GRAV+GRAV) * dtv * z1 / ((thv1 + tvs) * wind * wind))
     tem1 = 1.0 / z0max
     tem2 = 1.0 / ztmax
@@ -69,7 +69,7 @@ def stability(z1, snwdph, thv1, wind, z0max, ztmax, tvs,
             aa = math.sqrt(1.0 + alpha4 * hlinf)
             aa0 = math.sqrt(1.0 + alpha4 * hl0inf)
             bb = aa
-            bb0 = math.sqrt(1.0 + alpha4 * hl0inf)
+            bb0 = math.sqrt(1.0 + alpha4 * hltinf)
             pm = aa0 - aa + math.log((aa+1.0)/(aa0+1.0))
             ph = bb0 - bb + math.log((bb+1.0)/(bb0+1.0))
             fms = fm - pm
