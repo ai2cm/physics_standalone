@@ -3,7 +3,7 @@
 # Stack:
 #   - based on ubuntu20.04
 #   - gcc-3.9.0
-#   - python-3.9
+#   - python-3.8
 #   - NCEP
 #   - serialbox-2.6.1
 #   - GT4Py (and GT v1)
@@ -37,18 +37,18 @@ RUN apt-get update \
     make \
     cmake \
     cmake-curses-gui \
-    python3.9-dev \
-    python3.9-distutils \
+    python3.8-dev \
+    python3.8-distutils \
     libssl-dev \
     libboost-all-dev \
     libnetcdf-dev \
     libnetcdff-dev
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-RUN python3.9 get-pip.py
+RUN python3.8 get-pip.py
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 10 && \
-    update-alternatives  --set python /usr/bin/python3.9
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 10 && \
+    update-alternatives  --set python /usr/bin/python3.8
 
 # set TZ
 ENV TZ=US/Pacific
@@ -74,8 +74,8 @@ ENV PYTHONPATH=/usr/local/serialbox/python
 
 # install gt4py
 RUN cd /
-RUN git clone https://github.com/VulcanClimateModeling/gt4py.git
-RUN pip install -e ./gt4py && \
+RUN git clone -b v36 https://github.com/ai2cm/gt4py.git
+RUN pip install ./gt4py && \
     python -m gt4py.gt_src_manager install -m 1
 
 # install some python packages
