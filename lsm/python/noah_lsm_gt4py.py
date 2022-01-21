@@ -84,13 +84,12 @@ IN_VARS = [
     "bexppert",
     "xlaipert",
     "vegfpert",
-    "pertvegf",
 ]
 
 SCALAR_VARS = ["delt", "lheatstrg", "ivegsrc"]
 
 SOIL_VARS = [bb, satdk, satdw, f11, satpsi, qtz, drysmc, maxsmc, refsmc, wltsmc]
-VEG_VARS = [nroot_data, snupx, rsmtbl, rgltbl, hstbl, lai_data]
+VEG_VARS = [np.float64(nroot_data), snupx, rsmtbl, rgltbl, hstbl, lai_data]
 SOIL_VARS_NAMES = [
     "bexp",
     "dksat",
@@ -171,6 +170,13 @@ def run(in_dict, timings):
     fpvs = fpvs_fn(
         in_dict["c1xpvs"], in_dict["c2xpvs"], in_dict["tbpvs"], in_dict["t1"]
     )
+    in_dict["land"] = np.float64(in_dict["land"])
+    in_dict["flag_guess"] = np.float64(in_dict["flag_guess"])
+    in_dict["flag_iter"] = np.float64(in_dict["flag_iter"])
+
+    in_dict["soiltyp"] = np.float64(in_dict["soiltyp"])
+    in_dict["vegtype"] = np.float64(in_dict["vegtype"])
+    in_dict["slopetyp"] = np.float64(in_dict["slopetyp"])
 
     # setup storages
     table_dict = {
@@ -3406,13 +3412,13 @@ def sflx(
     )
 
 
-@gtscript.stencil(backend=BACKEND)
+@gtscript.stencil(backend=BACKEND, skip_passes=["graph_merge_horizontal_executions"])
 def sfc_drv_defs(
     ps: DT_F,
     t1: DT_F,
     q1: DT_F,
-    soiltyp: DT_I,
-    vegtype: DT_I,
+    soiltyp: DT_F,
+    vegtype: DT_F,
     sigmaf: DT_F,
     sfcemis: DT_F,
     dlwflx: DT_F,
@@ -3424,19 +3430,18 @@ def sfc_drv_defs(
     prsl1: DT_F,
     prslki: DT_F,
     zf: DT_F,
-    land: DT_I,
+    land: DT_F,
     wind: DT_F,
-    slopetyp: DT_I,
+    slopetyp: DT_F,
     shdmin: DT_F,
     shdmax: DT_F,
     snoalb: DT_F,
     sfalb: DT_F,
-    flag_iter: DT_I,
-    flag_guess: DT_I,
+    flag_iter: DT_F,
+    flag_guess: DT_F,
     bexppert: DT_F,
     xlaipert: DT_F,
     vegfpert: DT_F,
-    pertvegf: DT_F,
     fpvs: DT_F,
     weasd: DT_F,
     snwdph: DT_F,
@@ -3491,7 +3496,7 @@ def sfc_drv_defs(
     smcmax: DT_F,
     smcref: DT_F,
     smcwlt: DT_F,
-    nroot: DT_I,
+    nroot: DT_F,
     snup: DT_F,
     rsmin: DT_F,
     rgl: DT_F,
@@ -3518,7 +3523,7 @@ def sfc_drv_defs(
         zsoil_noah3 = -2.0
 
         # save land-related prognostic fields for guess run
-        if land and flag_guess:
+        if land == 1.0 and flag_guess == 1.0:
             weasd_old = weasd
             snwdph_old = snwdph
             tskin_old = tskin
@@ -3538,7 +3543,7 @@ def sfc_drv_defs(
             slc_old2 = slc2
             slc_old3 = slc3
 
-        if flag_iter and land:
+        if flag_iter == 1.0 and land == 1.0:
             # initialization block
             ep = 0.0
             evap = 0.0
@@ -3755,7 +3760,7 @@ def sfc_drv_defs(
             evap = evap * tem * hvapi
 
         # restore land-related prognostic fields for guess run
-        if land and flag_guess:
+        if land == 1.0 and flag_guess == 1.0:
             weasd = weasd_old
             snwdph = snwdph_old
             tskin = tskin_old
@@ -3774,5 +3779,5 @@ def sfc_drv_defs(
             slc1 = slc_old1
             slc2 = slc_old2
             slc3 = slc_old3
-        elif land:
+        elif land == 1.0:
             tskin = tsurf
