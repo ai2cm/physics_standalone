@@ -85,8 +85,6 @@ RD = 2.8705e2  #  gas constant air (J/kg/K)
 def numpy_to_gt4py_storage(arr, backend):
     """convert numpy storage to gt4py storage"""
     data = np.reshape(arr, (arr.shape[0], 1, 1))
-    if data.dtype == "bool":
-        data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
 
@@ -110,7 +108,7 @@ def run(in_dict, timings):
     stc = in_dict.pop("stc")
     in_dict["stc0"] = stc[:, 0]
     in_dict["stc1"] = stc[:, 1]
-    in_dict["flag_iter"] = np.float64(in_dict["flag_iter"])
+    in_dict["flag_iter"] = np.bool_(in_dict["flag_iter"])
     # setup storages
     scalar_dict = {k: in_dict[k] for k in SCALAR_VARS}
     out_dict = {
@@ -424,7 +422,7 @@ def sfc_sice_defs(
     prslki: FIELD_FLT,
     islimsk: FIELD_INT,
     wind: FIELD_FLT,
-    flag_iter: FIELD_FLT,
+    flag_iter: FIELD_BOL,
     hice: FIELD_FLT,
     fice: FIELD_FLT,
     tice: FIELD_FLT,
@@ -535,9 +533,9 @@ def sfc_sice_defs(
         DSI = 1.0 / 0.33
 
         #  --- ...  set flag for sea-ice
-        flag = (islimsk == 2) and (flag_iter == 1.0)
+        flag = (islimsk == 2) and flag_iter
 
-        if (flag_iter == 1.0) and (islimsk < 2):
+        if flag_iter and (islimsk < 2):
             hice = 0.0
             fice = 0.0
 
