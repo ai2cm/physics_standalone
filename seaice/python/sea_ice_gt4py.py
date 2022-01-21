@@ -9,6 +9,9 @@ from gt4py import gtscript
 from gt4py.gtscript import PARALLEL, BACKWARD, FORWARD, computation, interval
 from config import *
 
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
 SCALAR_VARS = ["delt", "cimin"]
 
 IN_VARS = [
@@ -404,9 +407,7 @@ def ice3lay(
     return snowd, hice, stc0, stc1, tice, snof, snowmt, gflux
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def sfc_sice_defs(
     ps: FIELD_FLT,
     t1: FIELD_FLT,

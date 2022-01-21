@@ -12,10 +12,12 @@ from shalconv.physcons import (
     con_epsm1 as epsm1,
 )
 
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+
+@gtscript.stencil(**STENCIL_OPTS)
 def pa_to_cb(
     psp: FIELD_FLOAT,
     prslp: FIELD_FLOAT,
@@ -33,9 +35,7 @@ def pa_to_cb(
         del0 = delp * 0.001
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def init_col_arr(
     kcnv: FIELD_INT,
     cnvflg: FIELD_BOOL,
@@ -67,9 +67,7 @@ def init_col_arr(
         gdx = sqrt(garea)
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def init_par_and_arr(
     islimsk: FIELD_INT,
     c0: FIELD_FLOAT,
@@ -111,9 +109,7 @@ def init_par_and_arr(
         dt_mf = 0.0
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def init_kbm_kmax(
     kbm: FIELD_INT,
     k_idx: FIELD_INT,
@@ -186,9 +182,7 @@ def init_kbm_kmax(
             kbm = min(kbm, kmax)
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def init_final(
     kbm: FIELD_INT,
     k_idx: FIELD_INT,
@@ -321,9 +315,7 @@ def init_final(
             heso = tem + hvap * qeso
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def init_tracers(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,

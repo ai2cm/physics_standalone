@@ -62,10 +62,12 @@ w4s = -2.0e-5
 
 externals = {"fpvs": fpvs}
 
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static0(
     cnvflg: FIELD_BOOL,
     hmax: FIELD_FLOAT,
@@ -165,9 +167,7 @@ def stencil_static0(
 
 
 ## ntr stencil put at last
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+@gtscript.stencil(**STENCIL_OPTS,)
 def stencil_ntrstatic0(
     cnvflg: FIELD_BOOL, k_idx: FIELD_INT, kmax: FIELD_INT, ctro: FIELD_FLOAT
 ):
@@ -178,9 +178,7 @@ def stencil_ntrstatic0(
             ctro = 0.5 * (ctro + ctro[0, 0, 1])
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static1(
     cnvflg: FIELD_BOOL,
     flg: FIELD_BOOL,
@@ -223,9 +221,7 @@ def stencil_static1(
 
 
 ## Judge LFC and return 553-558
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static2(
     cnvflg: FIELD_BOOL,
     pdot: FIELD_FLOAT,
@@ -282,9 +278,7 @@ def stencil_static2(
 
 ## Do totflg judgement and return
 ## if ntk > 0 : also need to define ntk dimension to 1
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static3(
     sumx: FIELD_FLOAT,
     tkemean: FIELD_FLOAT,
@@ -335,9 +329,7 @@ def stencil_static3(
 
 
 ## else :
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static4(cnvflg: FIELD_BOOL, clamt: FIELD_FLOAT, *, clam: DTYPE_FLOAT):
 
     with computation(PARALLEL), interval(...):
@@ -347,9 +339,7 @@ def stencil_static4(cnvflg: FIELD_BOOL, clamt: FIELD_FLOAT, *, clam: DTYPE_FLOAT
 
 ## Start updraft entrainment rate.
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static5(
     cnvflg: FIELD_BOOL,
     xlamue: FIELD_FLOAT,
@@ -440,9 +430,7 @@ def stencil_static5(
 
 ## for tracers do n = 1, ntr: use ecko, ctro [n] => [1,i,k_idx]
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_ntrstatic1(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -459,9 +447,7 @@ def stencil_ntrstatic1(
 ## Line 769
 ## Calculate the cloud properties as a parcel ascends, modified by entrainment and detrainment. Discretization follows Appendix B of Grell (1993) \cite grell_1993 . Following Han and Pan (2006) \cite han_and_pan_2006, the convective momentum transport is reduced by the convection-induced pressure gradient force by the constant "pgcon", currently set to 0.55 after Zhang and Wu (2003) \cite zhang_and_wu_2003 .
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static7(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -515,9 +501,7 @@ def stencil_static7(
 
 ## for n = 1, ntr:
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_ntrstatic2(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -545,9 +529,7 @@ def stencil_ntrstatic2(
 
 
 ## enddo
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_update_kbcon1_cnvflg(
     dbyo: FIELD_FLOAT,
     cnvflg: FIELD_BOOL,
@@ -583,9 +565,7 @@ def stencil_update_kbcon1_cnvflg(
 
 
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static9(
     cnvflg: FIELD_BOOL, pfld_kbcon: FIELD_FLOAT, pfld_kbcon1: FIELD_FLOAT
 ):
@@ -606,9 +586,7 @@ def stencil_static9(
 
 ## Calculate convective inhibition
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static10(
     cina: FIELD_FLOAT,
     cnvflg: FIELD_BOOL,
@@ -695,9 +673,7 @@ def stencil_static10(
 ##  Determine first guess cloud top as the level of zero buoyancy
 ##    limited to the level of P/Ps=0.7
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static11(
     flg: FIELD_BOOL,
     cnvflg: FIELD_BOOL,
@@ -874,9 +850,7 @@ def stencil_static11(
 
 ## Continue calculating the cloud work function past the point of neutral buoyancy to represent overshooting according to Han and Pan (2011) \cite han_and_pan_2011 . Convective overshooting stops when \f$ cA_u < 0\f$ where \f$c\f$ is currently 10%, or when 10% of the updraft cloud work function has been consumed by the stable buoyancy force. Overshooting is also limited to the level where \f$p=0.7p_{sfc}\f$.
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static12(
     cnvflg: FIELD_BOOL,
     aa1: FIELD_FLOAT,
@@ -1075,9 +1049,7 @@ def stencil_static12(
 ## This section is ready for cloud water
 ##  if(ncloud > 0):
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static13(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -1114,9 +1086,7 @@ def stencil_static13(
 
 ## Compute precipitation efficiency in terms of windshear
 ## pass
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def stencil_static14(
     cnvflg: FIELD_BOOL,
     vshear: FIELD_FLOAT,

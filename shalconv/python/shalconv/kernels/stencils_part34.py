@@ -18,10 +18,12 @@ from shalconv.physcons import (
 from .utils import *
 from . import *
 
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+
+@gtscript.stencil(**STENCIL_OPTS)
 def comp_tendencies(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -353,9 +355,7 @@ def comp_tendencies(
             xmb = min(xmb, xmbmax)
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def comp_tendencies_tr(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -403,9 +403,7 @@ def comp_tendencies_tr(
             dellae = eta[0, 0, -1] * (ecko[0, 0, -1] - ctro[0, 0, -1]) * g / dp
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def feedback_control_update(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -779,9 +777,7 @@ def feedback_control_update(
                 dt_mf = ud_mf
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def feedback_control_upd_trr(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -838,9 +834,7 @@ def feedback_control_upd_trr(
             delebar = delebar[0, 0, 1]
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def store_aero_conc(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -857,9 +851,7 @@ def store_aero_conc(
             qtr = qaero
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def separate_detrained_cw(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
@@ -900,9 +892,7 @@ def separate_detrained_cw(
                 qtr_0 = qtr_0 + tem
 
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def tke_contribution(
     cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,

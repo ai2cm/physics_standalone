@@ -12,7 +12,10 @@ from config import BACKEND
 DT_F = gtscript.Field[np.float64]
 DT_I = gtscript.Field[np.int32]
 DT_B = gtscript.Field[np.bool_]
-
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
+    
 INOUT_VARS = [
     "weasd",
     "snwdph",
@@ -3405,7 +3408,7 @@ def sflx(
     )
 
 
-@gtscript.stencil(backend=BACKEND, skip_passes=["graph_merge_horizontal_executions"])
+@gtscript.stencil(**STENCIL_OPTS)
 def sfc_drv_defs(
     ps: DT_F,
     t1: DT_F,
