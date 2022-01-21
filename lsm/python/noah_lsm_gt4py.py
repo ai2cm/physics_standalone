@@ -11,6 +11,7 @@ from config import BACKEND
 
 DT_F = gtscript.Field[np.float64]
 DT_I = gtscript.Field[np.int32]
+DT_B = gtscript.Field[np.bool_]
 
 INOUT_VARS = [
     "weasd",
@@ -89,7 +90,7 @@ IN_VARS = [
 SCALAR_VARS = ["delt", "lheatstrg", "ivegsrc"]
 
 SOIL_VARS = [bb, satdk, satdw, f11, satpsi, qtz, drysmc, maxsmc, refsmc, wltsmc]
-VEG_VARS = [np.float64(nroot_data), snupx, rsmtbl, rgltbl, hstbl, lai_data]
+VEG_VARS = [np.int32(nroot_data), snupx, rsmtbl, rgltbl, hstbl, lai_data]
 SOIL_VARS_NAMES = [
     "bexp",
     "dksat",
@@ -108,8 +109,6 @@ VEG_VARS_NAMES = ["nroot", "snup", "rsmin", "rgl", "hs", "xlai"]
 def numpy_to_gt4py_storage(arr, backend):
     """convert numpy storage to gt4py storage"""
     data = np.reshape(arr, (arr.shape[0], 1, 1))
-    if data.dtype == "bool":
-        data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=BACKEND, default_origin=(0, 0, 0))
 
 
@@ -127,8 +126,6 @@ def numpy_table_to_gt4py_storage(arr, index_arr, backend):
         new_arr[np.where(index_arr == i)] = arr[i]
 
     data = np.reshape(new_arr, (new_arr.shape[0], 1, 1))
-    if data.dtype == "bool" or data.dtype == "int64":
-        data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=BACKEND, default_origin=(0, 0, 0))
 
 
@@ -170,13 +167,9 @@ def run(in_dict, timings):
     fpvs = fpvs_fn(
         in_dict["c1xpvs"], in_dict["c2xpvs"], in_dict["tbpvs"], in_dict["t1"]
     )
-    in_dict["land"] = np.float64(in_dict["land"])
-    in_dict["flag_guess"] = np.float64(in_dict["flag_guess"])
-    in_dict["flag_iter"] = np.float64(in_dict["flag_iter"])
-
-    in_dict["soiltyp"] = np.float64(in_dict["soiltyp"])
-    in_dict["vegtype"] = np.float64(in_dict["vegtype"])
-    in_dict["slopetyp"] = np.float64(in_dict["slopetyp"])
+    in_dict["land"] = np.bool_(in_dict["land"])
+    in_dict["flag_guess"] = np.bool_(in_dict["flag_guess"])
+    in_dict["flag_iter"] = np.bool_(in_dict["flag_iter"])
 
     # setup storages
     table_dict = {
@@ -3417,8 +3410,8 @@ def sfc_drv_defs(
     ps: DT_F,
     t1: DT_F,
     q1: DT_F,
-    soiltyp: DT_F,
-    vegtype: DT_F,
+    soiltyp: DT_I,
+    vegtype: DT_I,
     sigmaf: DT_F,
     sfcemis: DT_F,
     dlwflx: DT_F,
@@ -3430,15 +3423,15 @@ def sfc_drv_defs(
     prsl1: DT_F,
     prslki: DT_F,
     zf: DT_F,
-    land: DT_F,
+    land: DT_B,
     wind: DT_F,
-    slopetyp: DT_F,
+    slopetyp: DT_I,
     shdmin: DT_F,
     shdmax: DT_F,
     snoalb: DT_F,
     sfalb: DT_F,
-    flag_iter: DT_F,
-    flag_guess: DT_F,
+    flag_iter: DT_B,
+    flag_guess: DT_B,
     bexppert: DT_F,
     xlaipert: DT_F,
     vegfpert: DT_F,
@@ -3496,7 +3489,7 @@ def sfc_drv_defs(
     smcmax: DT_F,
     smcref: DT_F,
     smcwlt: DT_F,
-    nroot: DT_F,
+    nroot: DT_I,
     snup: DT_F,
     rsmin: DT_F,
     rgl: DT_F,
