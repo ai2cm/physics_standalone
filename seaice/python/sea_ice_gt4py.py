@@ -110,7 +110,7 @@ def run(in_dict, timings):
     stc = in_dict.pop("stc")
     in_dict["stc0"] = stc[:, 0]
     in_dict["stc1"] = stc[:, 1]
-
+    in_dict["flag_iter"] = np.float64(in_dict["flag_iter"])
     # setup storages
     scalar_dict = {k: in_dict[k] for k in SCALAR_VARS}
     out_dict = {
@@ -406,7 +406,9 @@ def ice3lay(
     return snowd, hice, stc0, stc1, tice, snof, snowmt, gflux
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def sfc_sice_defs(
     ps: FIELD_FLT,
     t1: FIELD_FLT,
@@ -422,7 +424,7 @@ def sfc_sice_defs(
     prslki: FIELD_FLT,
     islimsk: FIELD_INT,
     wind: FIELD_FLT,
-    flag_iter: FIELD_INT,
+    flag_iter: FIELD_FLT,
     hice: FIELD_FLT,
     fice: FIELD_FLT,
     tice: FIELD_FLT,
@@ -533,9 +535,9 @@ def sfc_sice_defs(
         DSI = 1.0 / 0.33
 
         #  --- ...  set flag for sea-ice
-        flag = (islimsk == 2) and flag_iter
+        flag = (islimsk == 2) and (flag_iter == 1.0)
 
-        if flag_iter and (islimsk < 2):
+        if (flag_iter == 1.0) and (islimsk < 2):
             hice = 0.0
             fice = 0.0
 
