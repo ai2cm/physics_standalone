@@ -16,9 +16,10 @@ default_origin = (0, 0, 0)
 
 DTYPE_INT = np.int32
 DTYPE_FLOAT = np.float64
-
+DTYPE_BOOL = np.bool_
 FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLOAT = gtscript.Field[DTYPE_FLOAT]
+FIELD_BOOL = gtscript.Field[DTYPE_BOOL]
 
 IN_VARS = [
     "im",

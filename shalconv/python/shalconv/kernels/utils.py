@@ -7,8 +7,10 @@ from shalconv.config import (
     REBUILD,
     FIELD_INT,
     FIELD_FLOAT,
+    FIELD_BOOL,
     DTYPE_INT,
     DTYPE_FLOAT,
+    DTYPE_BOOL,
 )
 
 ########################### USEFUL FUNCTIONS ###########################

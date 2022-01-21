@@ -63,9 +63,11 @@ w4s = -2.0e-5
 externals = {"fpvs": fpvs}
 
 
-@gtscript.stencil(backend=BACKEND, externals=externals, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static0(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     hmax: FIELD_FLOAT,
     heo: FIELD_FLOAT,
     kb: FIELD_INT,
@@ -88,14 +90,14 @@ def stencil_static0(
     :to use the k_idx[1,0:im,0:km] as storage of 1 to k_idx index.
     """
     with computation(FORWARD), interval(0, 1):
-        if cnvflg == 1:
+        if cnvflg:
             hmax = heo
             kb = 1
 
     with computation(FORWARD), interval(1, None):
         hmax = hmax[0, 0, -1]
         kb = kb[0, 0, -1]
-        if (cnvflg == 1) and (k_idx <= kpbl):
+        if (cnvflg) and (k_idx <= kpbl):
             if heo > hmax:
                 kb = k_idx
                 hmax = heo
@@ -163,21 +165,25 @@ def stencil_static0(
 
 
 ## ntr stencil put at last
-@gtscript.stencil(backend=BACKEND, externals=externals, rebuild=REBUILD, **BACKEND_OPTS)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"],
+)
 def stencil_ntrstatic0(
-    cnvflg: FIELD_INT, k_idx: FIELD_INT, kmax: FIELD_INT, ctro: FIELD_FLOAT
+    cnvflg: FIELD_BOOL, k_idx: FIELD_INT, kmax: FIELD_INT, ctro: FIELD_FLOAT
 ):
 
     with computation(PARALLEL), interval(0, -1):
 
-        if (cnvflg == 1) and (k_idx <= (kmax - 1)):
+        if (cnvflg) and (k_idx <= (kmax - 1)):
             ctro = 0.5 * (ctro + ctro[0, 0, 1])
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static1(
-    cnvflg: FIELD_INT,
-    flg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
+    flg: FIELD_BOOL,
     kbcon: FIELD_INT,
     kmax: FIELD_INT,
     k_idx: FIELD_INT,
@@ -199,7 +205,7 @@ def stencil_static1(
             # To use heo_kb to represent heo(i,kb(i))
             if k_idx[0, 0, 0] > kb[0, 0, 0] and heo_kb > heso[0, 0, 0]:
                 kbcon = k_idx
-                flg = 0
+                flg = False
 
     # To make all slices like the final slice
     with computation(FORWARD), interval(-1, None):
@@ -213,13 +219,15 @@ def stencil_static1(
     with computation(PARALLEL), interval(...):
         if cnvflg:
             if kbcon == kmax:
-                cnvflg = 0
+                cnvflg = False
 
 
 ## Judge LFC and return 553-558
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static2(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     pdot: FIELD_FLOAT,
     dot_kbcon: FIELD_FLOAT,
     islimsk: FIELD_INT,
@@ -269,16 +277,18 @@ def stencil_static2(
             # To use pfld_kb and pfld_kbcon to represent pfld(i,kb(i))
             tem1 = pfld_kb - pfld_kbcon
             if tem1 > cinpcr:
-                cnvflg = 0
+                cnvflg = False
 
 
 ## Do totflg judgement and return
 ## if ntk > 0 : also need to define ntk dimension to 1
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static3(
     sumx: FIELD_FLOAT,
     tkemean: FIELD_FLOAT,
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
     kbcon: FIELD_INT,
@@ -290,7 +300,7 @@ def stencil_static3(
 ):
 
     with computation(BACKWARD), interval(-1, None):
-        if cnvflg == 1:
+        if cnvflg:
             sumx = 0.0
             tkemean = 0.0
 
@@ -325,8 +335,10 @@ def stencil_static3(
 
 
 ## else :
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
-def stencil_static4(cnvflg: FIELD_INT, clamt: FIELD_FLOAT, *, clam: DTYPE_FLOAT):
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
+def stencil_static4(cnvflg: FIELD_BOOL, clamt: FIELD_FLOAT, *, clam: DTYPE_FLOAT):
 
     with computation(PARALLEL), interval(...):
         if cnvflg:
@@ -335,9 +347,11 @@ def stencil_static4(cnvflg: FIELD_INT, clamt: FIELD_FLOAT, *, clam: DTYPE_FLOAT)
 
 ## Start updraft entrainment rate.
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static5(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     xlamue: FIELD_FLOAT,
     clamt: FIELD_FLOAT,
     zi: FIELD_FLOAT,
@@ -400,7 +414,7 @@ def stencil_static5(
                     kmax = k_idx
                     ktconn = k_idx
                     kbm = kbm if (kbm < kmax) else kmax
-                    flg = 0
+                    flg = False
 
     ## To make all slice same as final slice
     with computation(FORWARD), interval(-1, None):
@@ -426,9 +440,11 @@ def stencil_static5(
 
 ## for tracers do n = 1, ntr: use ecko, ctro [n] => [1,i,k_idx]
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_ntrstatic1(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
     ecko: FIELD_FLOAT,
@@ -436,16 +452,18 @@ def stencil_ntrstatic1(
 ):
 
     with computation(PARALLEL), interval(...):
-        if (cnvflg == 1) and (k_idx == kb):
+        if (cnvflg) and (k_idx == kb):
             ecko = ctro
 
 
 ## Line 769
 ## Calculate the cloud properties as a parcel ascends, modified by entrainment and detrainment. Discretization follows Appendix B of Grell (1993) \cite grell_1993 . Following Han and Pan (2006) \cite han_and_pan_2006, the convective momentum transport is reduced by the convection-induced pressure gradient force by the constant "pgcon", currently set to 0.55 after Zhang and Wu (2003) \cite zhang_and_wu_2003 .
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static7(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
     kmax: FIELD_INT,
@@ -497,9 +515,11 @@ def stencil_static7(
 
 ## for n = 1, ntr:
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_ntrstatic2(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
     kmax: FIELD_INT,
@@ -525,15 +545,17 @@ def stencil_ntrstatic2(
 
 
 ## enddo
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_update_kbcon1_cnvflg(
     dbyo: FIELD_FLOAT,
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     kmax: FIELD_INT,
     kbm: FIELD_INT,
     kbcon: FIELD_INT,
     kbcon1: FIELD_INT,
-    flg: FIELD_INT,
+    flg: FIELD_BOOL,
     k_idx: FIELD_INT,
 ):
 
@@ -545,10 +567,10 @@ def stencil_update_kbcon1_cnvflg(
         flg = flg[0, 0, -1]
         kbcon1 = kbcon1[0, 0, -1]
 
-        if (flg == 1) and (k_idx < kbm):
+        if flg and (k_idx < kbm):
             if (k_idx >= kbcon) and (dbyo > 0.0):
                 kbcon1 = k_idx
-                flg = 0
+                flg = False
 
     with computation(BACKWARD), interval(0, -1):
         flg = flg[0, 0, 1]
@@ -557,13 +579,15 @@ def stencil_update_kbcon1_cnvflg(
     with computation(PARALLEL), interval(...):
         if cnvflg:
             if kbcon1 == kmax:
-                cnvflg = 0
+                cnvflg = False
 
 
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static9(
-    cnvflg: FIELD_INT, pfld_kbcon: FIELD_FLOAT, pfld_kbcon1: FIELD_FLOAT
+    cnvflg: FIELD_BOOL, pfld_kbcon: FIELD_FLOAT, pfld_kbcon1: FIELD_FLOAT
 ):
 
     with computation(PARALLEL), interval(...):
@@ -575,17 +599,19 @@ def stencil_static9(
             # tem = pfld(i,kbcon(i)) - pfld(i,kbcon1(i))
             tem = pfld_kbcon - pfld_kbcon1
             if tem > dthk:
-                cnvflg = 0
+                cnvflg = False
 
 
 ## Judge totflg return
 
 ## Calculate convective inhibition
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static10(
     cina: FIELD_FLOAT,
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
     kbcon1: FIELD_INT,
@@ -661,7 +687,7 @@ def stencil_static10(
             cinacr = cinacrmx - tem * tem1
             # cinacr = cinacrmx
             if cina < cinacr:
-                cnvflg = 0
+                cnvflg = False
 
 
 ## totflag and return
@@ -669,10 +695,12 @@ def stencil_static10(
 ##  Determine first guess cloud top as the level of zero buoyancy
 ##    limited to the level of P/Ps=0.7
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static11(
-    flg: FIELD_INT,
-    cnvflg: FIELD_INT,
+    flg: FIELD_BOOL,
+    cnvflg: FIELD_BOOL,
     ktcon: FIELD_INT,
     kbm: FIELD_INT,
     kbcon1: FIELD_INT,
@@ -716,7 +744,7 @@ def stencil_static11(
         if flg and k_idx < kbm:
             if k_idx > kbcon1 and dbyo < 0.0:
                 ktcon = k_idx
-                flg = 0
+                flg = False
 
     # To make all slices like final slice
     with computation(FORWARD), interval(-1, None):
@@ -834,7 +862,7 @@ def stencil_static11(
 
     with computation(PARALLEL), interval(...):
         if cnvflg and aa1 <= 0.0:
-            cnvflg = 0
+            cnvflg = False
 
 
 ## totflg and return
@@ -846,11 +874,13 @@ def stencil_static11(
 
 ## Continue calculating the cloud work function past the point of neutral buoyancy to represent overshooting according to Han and Pan (2011) \cite han_and_pan_2011 . Convective overshooting stops when \f$ cA_u < 0\f$ where \f$c\f$ is currently 10%, or when 10% of the updraft cloud work function has been consumed by the stable buoyancy force. Overshooting is also limited to the level where \f$p=0.7p_{sfc}\f$.
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static12(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     aa1: FIELD_FLOAT,
-    flg: FIELD_INT,
+    flg: FIELD_BOOL,
     ktcon1: FIELD_INT,
     kbm: FIELD_INT,
     k_idx: FIELD_INT,
@@ -912,7 +942,7 @@ def stencil_static12(
 
                 if aa1 < 0.0:
                     ktcon1 = k_idx
-                    flg = 0
+                    flg = False
 
     # To make all slice like final slice
     with computation(FORWARD), interval(-1, None):
@@ -1025,13 +1055,13 @@ def stencil_static12(
 
         if cnvflg:
             if sumx == 0.0:
-                cnvflg = 0
+                cnvflg = False
             else:
                 wc = wc / sumx
 
             # val = 1.e-4
             if wc < 1.0e-4:
-                cnvflg = 0
+                cnvflg = False
 
     # Exchange ktcon with ktcon1
     with computation(PARALLEL), interval(...):
@@ -1045,9 +1075,11 @@ def stencil_static12(
 ## This section is ready for cloud water
 ##  if(ncloud > 0):
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static13(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     ktcon: FIELD_INT,
     qeso: FIELD_FLOAT,
@@ -1062,7 +1094,7 @@ def stencil_static13(
         qrch = 0.0
         dq = 0.0
 
-        if cnvflg == 1:
+        if cnvflg:
 
             qlko_ktcon = qlko_ktcon[0, 0, -1]
             if k_idx == ktcon - 1:
@@ -1082,9 +1114,11 @@ def stencil_static13(
 
 ## Compute precipitation efficiency in terms of windshear
 ## pass
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(
+    backend=BACKEND, rebuild=REBUILD, skip_passes=["graph_merge_horizontal_executions"]
+)
 def stencil_static14(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     vshear: FIELD_FLOAT,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
