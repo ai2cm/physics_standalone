@@ -28,6 +28,15 @@ backend = BACKEND
 
 @gtscript.function
 def fpvsx(t):
+    con_ttp = 2.7316e2
+    con_cvap = 1.8460e3
+    con_cliq = 4.1855e3
+    con_hvap = 2.5000e6
+    con_rv = 4.6150e2
+    con_csol = 2.1060e3
+    con_hfus = 3.3358e5
+    con_psat = 6.1078e2
+
     tliq = con_ttp
     tice = con_ttp - 20.0
     dldtl = con_cvap - con_cliq
@@ -180,6 +189,21 @@ def init(
     eps: float,
     ntke: int,
     ntcw: int,
+    hvap: float,
+    hfus: float,
+    rbcr: float,
+    f0: float,
+    crbmin: float,
+    crbmax: float,
+    qmin: float,
+    qlmin: float,
+    cql: float,
+    dw2min: float,
+    xkgdx: float,
+    xkzinv: float,
+    ck1: float,
+    ch1: float,
+    cp: float,
 ):
 
     with computation(FORWARD), interval(0, 1):
@@ -410,6 +434,17 @@ def mrf_pbl_2_thermal_1(
     zl: FIELD_FLT,
     zol: FIELD_FLT_IJ,
     fv: float,
+    wfac: float,
+    cfac: float,
+    gamcrt: float,
+    sfcfrac: float,
+    vk: float,
+    rimin: float,
+    zolcru: float,
+    zfmin: float,
+    aphi5: float,
+    aphi16: float,
+    h1: float,
 ):
 
     with computation(FORWARD), interval(...):
@@ -529,6 +564,7 @@ def pbl_height_enhance(
     scuflg: FIELD_BOOL_IJ,
     zi: FIELD_FLT,
     zl: FIELD_FLT,
+    zstblmax: float,
 ):
 
     with computation(FORWARD), interval(...):
@@ -574,6 +610,7 @@ def stratocumulus(
     qlx: FIELD_FLT,
     scuflg: FIELD_BOOL_IJ,
     km1: int,
+    qlcr: float,
 ):
 
     with computation(FORWARD):
@@ -668,6 +705,13 @@ def prandtl_comp_exchg_coeff(
     phim: FIELD_FLT_IJ,
     prn: FIELD_FLT,
     zi: FIELD_FLT,
+    sfcfrac: float,
+    prmin: float,
+    prmax: float,
+    ck0: float,
+    ck1: float,
+    ch0: float,
+    ch1: float,
 ):
 
     with computation(PARALLEL), interval(...):
@@ -732,6 +776,17 @@ def compute_eddy_buoy_shear(
     zi: FIELD_FLT,
     zl: FIELD_FLT,
     zol: FIELD_FLT_IJ,
+    vk: float,
+    rimin: float,
+    tdzmin: float,
+    prmax: float,
+    prtke: float,
+    prscu: float,
+    dkmax: float,
+    ck1: float,
+    ch1: float,
+    ce0: float,
+    rchck: float,
 ):
 
     with computation(FORWARD):
@@ -920,6 +975,7 @@ def predict_tke(
     tke: FIELD_FLT,
     dtn: float,
     kk: int,
+    tkmin: float,
 ):
     with computation(PARALLEL), interval(...):
         for n in range(kk):
@@ -1420,6 +1476,8 @@ def moment_tridiag_mat_ele_comp(
     xmfd: FIELD_FLT,
     dspheat: bool,
     dt2: float,
+    dspfac: float,
+    cp: float,
 ):
 
     with computation(PARALLEL), interval(0, -1):
@@ -1680,6 +1738,7 @@ def mfpblt(
         xlamuem=xlamuem,
         zl=zl,
         zm=zm,
+        qmin=qmin,
         domain=(im, 1, kmpbl),
     )
 
@@ -1733,6 +1792,7 @@ def mfpblt(
         wu2=wu2,
         zl=zl,
         zm=zm,
+        qmin=qmin,
         domain=(im, 1, kmpbl),
     )
 
@@ -1870,6 +1930,7 @@ def mfpblt_s1(
     epsm1: float,
     fv: float,
     g: float,
+    qmin: float,
 ):
     with computation(PARALLEL), interval(...):
         if cnvflg[0, 0]:
@@ -2008,6 +2069,7 @@ def mfpblt_s2(
     eps: float,
     epsm1: float,
     pgcon: float,
+    qmin: float,
 ):
 
     with computation(FORWARD):
@@ -2299,6 +2361,7 @@ def mfscu(
         qtx=qtx,
         xlamde=xlamde,
         zl=zl,
+        qmin=qmin,
         domain=(im, 1, kmscu),
     )
 
@@ -2411,6 +2474,7 @@ def mfscu(
         xlamdem=xlamdem,
         zl=zl,
         ntcw=ntcw,
+        qmin=qmin,
         domain=(im, 1, kmscu),
     )
 
@@ -2674,6 +2738,7 @@ def mfscu_s3(
     epsm1: float,
     fv: float,
     g: float,
+    qmin: float,
 ):
 
     with computation(BACKWARD), interval(...):
@@ -2881,6 +2946,7 @@ def mfscu_s9(
     epsm1: float,
     pgcon: float,
     ntcw: int,
+    qmin: float,
 ):
 
     with computation(BACKWARD), interval(...):
@@ -3085,6 +3151,7 @@ def comp_asym_mix_dn(
     zfmin: float,
     fv: float,
     k: int,
+    qmin: float,
 ):
     with computation(BACKWARD), interval(...):
         if mask[0, 0, 0] == k:
@@ -3125,6 +3192,7 @@ def comp_asym_rlam_ele(
     rlmx: float,
     elmfac: float,
     elmx: float,
+    elefac: float,
 ):
     with computation(FORWARD), interval(...):
         tem = 0.5 * (zi[0, 0, 1] - zi[0, 0, 0])

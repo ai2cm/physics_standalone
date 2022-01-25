@@ -812,8 +812,45 @@ class Turbulence:
         self._cldtime = 500.0
         self._actei = 0.7
         self._hvap = hvap
+        self._hfus = hfus
         self._cp = cp
         self._f1_const = 0.15
+        self._wfac = wfac
+        self._cfac = cfac
+        self._gamcrt = gamcrt
+        self._sfcfrac = sfcfrac
+        self._vk = vk
+        self._rimin = rimin
+        self._rbcr = rbcr
+        self._zolcru = zolcru
+        self._tdzmin = tdzmin
+        self._prmin = prmin
+        self._prmax = prmax
+        self._prtke = prtke
+        self._prscu = prscu
+        self._f0 = f0
+        self._crbmin = crbmin
+        self._crbmax = crbmax
+        self._dspfac = dspfac
+        self._aphi5 = aphi5
+        self._aphi16 = aphi16
+        self._elefac = elefac
+        self._cql = cql
+        self._dw2min = dw2min
+        self._dkmax = dkmax
+        self._xkgdx = xkgdx
+        self._qlcr = qlcr
+        self._zstblmax = zstblmax
+        self._xkzinv = xkzinv
+        self._h1 = h1
+        self._ck0 = ck0
+        self._ck1 = ck1
+        self._ch0 = ch0
+        self._ch1 = ch1
+        self._rchck = rchck
+        self._xmin = xmin
+        self._xmax = xmax
+
 
     def turbInit(
         self,
@@ -1001,6 +1038,21 @@ class Turbulence:
             ntke=self._ntke-1,
             ntcw=self._ntcw-1,
             ntiw=self._ntiw-1,
+            hvap=self._hvap,
+            hfus=self._hfus,
+            rbcr=self._rbcr,
+            f0=self._f0,
+            crbmin=self._crbmin,
+            crbmax=self._crbmax,
+            qmin=self._qmin,
+            qlmin=self._qlmin,
+            cql=self._cql,
+            dw2min=self._dw2min,
+            xkgdx=self._xkgdx,
+            xkzinv=self._xkzinv,
+            ck1=self._ck1,
+            ch1=self._ch1,
+            cp=self._cp,
             domain=(self._im, 1, self._km + 1),
         )
 
@@ -1051,6 +1103,17 @@ class Turbulence:
             zl=self._zl,
             zol=self._zol,
             fv=self._fv,
+            wfac=self._wfac,
+            cfac=self._cfac,
+            gamcrt=self._gamcrt,
+            sfcfrac=self._sfcfrac,
+            vk=self._vk,
+            rimin=self._rimin,
+            zolcru=self._zolcru,
+            zfmin=self._zfmin,
+            aphi5=self._aphi5,
+            aphi16=self._aphi16,
+            h1=self._h1,
             domain=(self._im, 1, self._km),
         )
 
@@ -1085,6 +1148,7 @@ class Turbulence:
             scuflg=self._scuflg,
             zi=self._zi,
             zl=self._zl,
+            zstblmax=self._zstblmax,
             domain=(self._im, 1, self._km),
         )
 
@@ -1099,6 +1163,7 @@ class Turbulence:
             radx=self._radx,
             qlx=self._qlx,
             scuflg=self._scuflg,
+            qlcr=self._qlcr,
             domain=(self._im, 1, self._kmscu),
         )
 
@@ -1271,6 +1336,13 @@ class Turbulence:
             phim=self._phim,
             prn=self._prn,
             zi=self._zi,
+            sfcfrac=self._sfcfrac,
+            prmin=self._prmin,
+            prmax=self._prmax,
+            ck0=self._ck0,
+            ck1=self._ck1,
+            ch0=self._ch0,
+            ch1=self._ch1,
             domain=(self._im, 1, self._kmpbl),
         )
 
@@ -1307,6 +1379,7 @@ class Turbulence:
                 zfmin=self._zfmin,
                 fv=self._fv,
                 k=k,
+                qmin=self._qmin,
                 domain=(self._im,1,k+1),
                 origin=(0,0,0),
             )
@@ -1320,6 +1393,7 @@ class Turbulence:
                 rlmx=self._rlmx,
                 elmfac=self._elmfac,
                 elmx=self._elmx,
+                elefac=self._elefac,
                 domain=(self._im,1,1),
                 origin=(0,0,k),
             )
@@ -1369,6 +1443,17 @@ class Turbulence:
             zi=self._zi,
             zl=self._zl,
             zol=self._zol,
+            vk=self._vk,
+            rimin=self._rimin,
+            tdzmin=self._tdzmin,
+            prmax=self._prmax,
+            prtke=self._prtke,
+            prscu=self._prscu,
+            dkmax=self._dkmax,
+            ck1=self._ck1,
+            ch1=self._ch1,
+            ce0=self._ce0,
+            rchck=self._rchck,
             domain=(self._im, 1, self._km),
         )
 
@@ -1377,7 +1462,8 @@ class Turbulence:
               rle=self._rle, 
               tke=self._tke, 
               dtn=self._dtn, 
-              kk=self._kk, 
+              kk=self._kk,
+              tkmin=self._tkmin,
               domain=(self._im, 1, self._km1))
 
         tke_up_down_prop(
@@ -1563,6 +1649,8 @@ class Turbulence:
             xmfd=self._xmfd,
             dspheat=self._dspheat,
             dt2=self._dt2,
+            dspfac=self._dspfac,
+            cp=self._cp,
             domain=(self._im, 1, self._km),
         )
 

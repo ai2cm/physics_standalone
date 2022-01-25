@@ -3,7 +3,7 @@ import numpy as np
 from gt4py import gtscript
 
 prefix = "satmedmfvdif"
-BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "gtc:gt:cpu_ifirst"
+BACKEND = str(os.getenv("BACKEND")) if ("BACKEND" in os.environ) else "gtc:gt:gpu"
 REBUILD = (os.getenv("REBUILD") == "True") if ("REBUILD" in os.environ) else False
 IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) else False
 
@@ -144,12 +144,3 @@ rchck = 1.5
 cdtn = 25.0
 xmin = 180.0
 xmax = 330.0
-
-con_ttp = 2.7316e2
-con_cvap = 1.8460e3
-con_cliq = 4.1855e3
-con_hvap = 2.5000e6
-con_rv = 4.6150e2
-con_csol = 2.1060e3
-con_hfus = 3.3358e5
-con_psat = 6.1078e2
