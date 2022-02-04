@@ -9,6 +9,9 @@ from gt4py import gtscript
 from gt4py.gtscript import PARALLEL, BACKWARD, FORWARD, computation, interval
 from config import *
 
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
 SCALAR_VARS = ["delt", "cimin"]
 
 IN_VARS = [
@@ -85,8 +88,6 @@ RD = 2.8705e2  #  gas constant air (J/kg/K)
 def numpy_to_gt4py_storage(arr, backend):
     """convert numpy storage to gt4py storage"""
     data = np.reshape(arr, (arr.shape[0], 1, 1))
-    if data.dtype == "bool":
-        data = data.astype(np.int32)
     return gt.storage.from_array(data, backend=backend, default_origin=(0, 0, 0))
 
 
@@ -110,7 +111,7 @@ def run(in_dict, timings):
     stc = in_dict.pop("stc")
     in_dict["stc0"] = stc[:, 0]
     in_dict["stc1"] = stc[:, 1]
-
+    in_dict["flag_iter"] = np.bool_(in_dict["flag_iter"])
     # setup storages
     scalar_dict = {k: in_dict[k] for k in SCALAR_VARS}
     out_dict = {
@@ -406,7 +407,7 @@ def ice3lay(
     return snowd, hice, stc0, stc1, tice, snof, snowmt, gflux
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(**STENCIL_OPTS)
 def sfc_sice_defs(
     ps: FIELD_FLT,
     t1: FIELD_FLT,
@@ -422,7 +423,7 @@ def sfc_sice_defs(
     prslki: FIELD_FLT,
     islimsk: FIELD_INT,
     wind: FIELD_FLT,
-    flag_iter: FIELD_INT,
+    flag_iter: FIELD_BOL,
     hice: FIELD_FLT,
     fice: FIELD_FLT,
     tice: FIELD_FLT,

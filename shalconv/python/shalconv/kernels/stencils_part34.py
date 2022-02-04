@@ -18,12 +18,14 @@ from shalconv.physcons import (
 from .utils import *
 from . import *
 
+STENCIL_OPTS = {"backend": BACKEND}
+if BACKEND != "numpy":
+    STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
 
-@gtscript.stencil(
-    backend=BACKEND, rebuild=REBUILD, externals={"min": min, "max": max, "sqrt": sqrt}
-)
+
+@gtscript.stencil(**STENCIL_OPTS)
 def comp_tendencies(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kmax: FIELD_INT,
     kb: FIELD_INT,
@@ -104,7 +106,7 @@ def comp_tendencies(
 
     with computation(PARALLEL), interval(...):
 
-        if cnvflg == 1 and k_idx <= kmax:
+        if cnvflg and k_idx <= kmax:
             dellah = 0.0
             dellaq = 0.0
             dellau = 0.0
@@ -133,7 +135,7 @@ def comp_tendencies(
         tem2 = 0.0
 
         # Changes due to subsidence and entrainment
-        if cnvflg == 1 and k_idx > kb and k_idx < ktcon:
+        if cnvflg and k_idx > kb and k_idx < ktcon:
 
             dp = 1000.0 * del0
             dz = zi[0, 0, 0] - zi[0, 0, -1]
@@ -188,7 +190,7 @@ def comp_tendencies(
         tfac = 0.0
 
         # Cloud top
-        if cnvflg == 1:
+        if cnvflg:
 
             if ktcon == k_idx:
 
@@ -213,7 +215,7 @@ def comp_tendencies(
         # bechtold_et_al_2008, calculate the convective turnover
         # time using the mean updraft velocity (wc) and the cloud
         # depth. It is also proportional to the grid size (gdx).
-        if cnvflg == 1:
+        if cnvflg:
 
             tem = zi_ktcon1 - zi_kbcon1
             tfac = 1.0 + gdx / 75000.0
@@ -230,7 +232,7 @@ def comp_tendencies(
     # wind speed (propagate forward)
     with computation(FORWARD), interval(1, -1):
 
-        if cnvflg == 1:
+        if cnvflg:
             if k_idx >= kbcon1 and k_idx < ktcon1:
                 dz = zi[0, 0, 0] - zi[0, 0, -1]
                 tem = (u1 * u1 + v1 * v1) ** 0.5  # sqrt(u1*u1 + v1*v1)
@@ -243,7 +245,7 @@ def comp_tendencies(
     # Calculate advective time scale (tauadv) using a mean cloud layer
     # wind speed (propagate backward)
     with computation(BACKWARD), interval(1, -2):
-        if cnvflg == 1:
+        if cnvflg:
             umean = umean[0, 0, 1]
             sumx = sumx[0, 0, 1]
 
@@ -257,7 +259,7 @@ def comp_tendencies(
         val4 = 0.999
         val5 = 0.0
 
-        if cnvflg == 1:
+        if cnvflg:
             umean = umean / sumx
             umean = max(
                 umean, val
@@ -268,7 +270,7 @@ def comp_tendencies(
 
         with interval(0, 1):
 
-            if cnvflg == 1 and k_idx == kbcon:
+            if cnvflg and k_idx == kbcon:
 
                 # From Han et al.'s (2017) \cite han_et_al_2017 equation
                 # 6, calculate cloud base mass flux as a function of the
@@ -295,7 +297,7 @@ def comp_tendencies(
 
         with interval(1, None):
 
-            if cnvflg == 1 and k_idx == kbcon:
+            if cnvflg and k_idx == kbcon:
 
                 # From Han et al.'s (2017) \cite han_et_al_2017 equation
                 # 6, calculate cloud base mass flux as a function of the
@@ -327,7 +329,7 @@ def comp_tendencies(
 
     with computation(BACKWARD), interval(0, -1):
 
-        if cnvflg == 1:
+        if cnvflg:
             xmb = xmb[0, 0, 1]
             sigmagfm = sigmagfm[0, 0, 1]
 
@@ -341,7 +343,7 @@ def comp_tendencies(
         # parameterization is obtained from the mass flux when
         # sigmagfm << 1, multiplied by the reduction factor (Han et
         # al.'s (2017) \cite han_et_al_2017 equation 2).
-        if cnvflg == 1:
+        if cnvflg:
             if gdx < dxcrt:
                 scaldfunc = (1.0 - sigmagfm) * (1.0 - sigmagfm)
                 scaldfunc = min(scaldfunc, val)
@@ -353,9 +355,9 @@ def comp_tendencies(
             xmb = min(xmb, xmbmax)
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(**STENCIL_OPTS)
 def comp_tendencies_tr(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kmax: FIELD_INT,
     kb: FIELD_INT,
@@ -371,7 +373,7 @@ def comp_tendencies_tr(
 
     with computation(PARALLEL), interval(...):
 
-        if cnvflg == 1 and k_idx <= kmax:
+        if cnvflg and k_idx <= kmax:
 
             dellae = 0.0
 
@@ -381,7 +383,7 @@ def comp_tendencies_tr(
         tem2 = 0.0
         dp = 0.0
 
-        if cnvflg == 1 and k_idx > kb and k_idx < ktcon:
+        if cnvflg and k_idx > kb and k_idx < ktcon:
 
             # Changes due to subsidence and entrainment
             dp = 1000.0 * del0
@@ -394,25 +396,21 @@ def comp_tendencies_tr(
     with computation(PARALLEL), interval(1, None):
 
         # Cloud top
-        if cnvflg == 1 and ktcon == k_idx:
+        if cnvflg and ktcon == k_idx:
 
             dp = 1000.0 * del0
 
             dellae = eta[0, 0, -1] * (ecko[0, 0, -1] - ctro[0, 0, -1]) * g / dp
 
 
-@gtscript.stencil(
-    backend=BACKEND,
-    rebuild=REBUILD,
-    externals={"fpvs": fpvs, "min": min, "max": max, "exp": exp, "sqrt": sqrt},
-)
+@gtscript.stencil(**STENCIL_OPTS)
 def feedback_control_update(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kmax: FIELD_INT,
     kb: FIELD_INT,
     ktcon: FIELD_INT,
-    flg: FIELD_INT,
+    flg: FIELD_BOOL,
     islimsk: FIELD_INT,
     ktop: FIELD_INT,
     kbot: FIELD_INT,
@@ -480,14 +478,14 @@ def feedback_control_update(
         #   horizontal wind state variables by multiplying the
         #   cloud base mass flux-normalized tendencies by the
         #   cloud base mass flux
-        if cnvflg == 1:
+        if cnvflg:
             if k_idx > kb and k_idx <= ktcon:
                 dellat = (dellah - hvap * dellaq) / cp
                 t1 = t1 + dellat * xmb * dt2
 
         fpvst1 = 0.01 * fpvs(t1)  # fpvs is in Pa
 
-        if cnvflg == 1:
+        if cnvflg:
             if k_idx > kb and k_idx <= ktcon:
 
                 q1 = q1 + dellaq * xmb * dt2
@@ -509,7 +507,7 @@ def feedback_control_update(
             dp = 0.0
             dpg = 0.0
 
-            if cnvflg == 1 and k_idx > kb and k_idx <= ktcon:
+            if cnvflg and k_idx > kb and k_idx <= ktcon:
 
                 dp = 1000.0 * del0
                 dpg = dp / g
@@ -522,7 +520,7 @@ def feedback_control_update(
 
         with interval(1, None):
 
-            if cnvflg == 1:
+            if cnvflg:
                 if k_idx > kb and k_idx <= ktcon:
 
                     dp = 1000.0 * del0
@@ -547,12 +545,12 @@ def feedback_control_update(
         # To avoid conditionals in the full interval
         with interval(-1, None):
 
-            if cnvflg == 1:
+            if cnvflg:
                 if k_idx > kb and k_idx < ktcon:
                     rntot = rntot + pwo * xmb * 0.001 * dt2
 
         with interval(0, -1):
-            if cnvflg == 1:
+            if cnvflg:
 
                 # Accumulate column-integrated tendencies (propagate backward)
                 delhbar = delhbar[0, 0, 1]
@@ -577,7 +575,7 @@ def feedback_control_update(
     # mass flux (propagate forward)
     with computation(FORWARD), interval(1, None):
 
-        if cnvflg == 1:
+        if cnvflg:
             rntot = rntot[0, 0, -1]
 
     # - Determine the evaporation of the convective precipitation
@@ -601,11 +599,11 @@ def feedback_control_update(
                 delq = 0.0
                 qevap = 0.0
 
-                if cnvflg == 1:
+                if cnvflg:
                     if k_idx > kb and k_idx < ktcon:
                         rn = rn + pwo * xmb * 0.001 * dt2
 
-                if flg == 1 and k_idx < ktcon:
+                if flg and k_idx < ktcon:
 
                     if islimsk == 1:
                         evef = edt * evfactl
@@ -630,7 +628,7 @@ def feedback_control_update(
                     if rn > 0.0 and qcond < 0.0 and delq2 > rntot:
 
                         qevap = 1000.0 * g * (rntot - delqev) / dp
-                        flg = 0
+                        flg = False
 
                     else:
                         flg = flg
@@ -673,11 +671,11 @@ def feedback_control_update(
                 delq = 0.0
                 qevap = 0.0
 
-                if cnvflg == 1:
+                if cnvflg:
                     if k_idx > kb and k_idx < ktcon:
                         rn = rn + pwo * xmb * 0.001 * dt2
 
-                if flg == 1 and k_idx < ktcon:
+                if flg and k_idx < ktcon:
 
                     if islimsk == 1:
                         evef = edt * evfactl
@@ -702,7 +700,7 @@ def feedback_control_update(
                     if rn > 0.0 and qcond < 0.0 and delq2 > rntot:
 
                         qevap = 1000.0 * g * (rntot - delqev) / dp
-                        flg = 0
+                        flg = False
 
                     else:
                         flg = flg
@@ -739,7 +737,7 @@ def feedback_control_update(
     with computation(PARALLEL), interval(...):
 
         val1 = 0.0
-        if cnvflg == 1 and k_idx >= kbcon and k_idx < ktcon:
+        if cnvflg and k_idx >= kbcon and k_idx < ktcon:
             val1 = 1.0 + 675.0 * eta * xmb
 
         val2 = 0.2
@@ -751,7 +749,7 @@ def feedback_control_update(
             val1, val4
         )  # 1.0e6 seems to get reasonable results, since val1 is on average ~50
 
-        if cnvflg == 1:
+        if cnvflg:
 
             if rn < 0.0 or flg == 0:
                 rn = 0.0
@@ -779,9 +777,9 @@ def feedback_control_update(
                 dt_mf = ud_mf
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(**STENCIL_OPTS)
 def feedback_control_upd_trr(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kmax: FIELD_INT,
     ktcon: FIELD_INT,
@@ -799,7 +797,7 @@ def feedback_control_upd_trr(
     with computation(PARALLEL), interval(...):
         delebar = 0.0
 
-        if cnvflg == 1 and k_idx <= kmax and k_idx <= ktcon:
+        if cnvflg and k_idx <= kmax and k_idx <= ktcon:
 
             ctr = ctr + dellae * xmb * dt2
             qtr = ctr
@@ -811,7 +809,7 @@ def feedback_control_upd_trr(
 
             dp = 0.0
 
-            if cnvflg == 1 and k_idx <= kmax and k_idx <= ktcon:
+            if cnvflg and k_idx <= kmax and k_idx <= ktcon:
                 dp = 1000.0 * del0
 
                 delebar = (
@@ -820,7 +818,7 @@ def feedback_control_upd_trr(
 
         with interval(1, None):
 
-            if cnvflg == 1:
+            if cnvflg:
 
                 dp = 1000.0 * del0
 
@@ -832,13 +830,13 @@ def feedback_control_upd_trr(
     # Propagate backward delebar values
     with computation(BACKWARD), interval(0, -1):
 
-        if cnvflg == 1:
+        if cnvflg:
             delebar = delebar[0, 0, 1]
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD)
+@gtscript.stencil(**STENCIL_OPTS)
 def store_aero_conc(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kmax: FIELD_INT,
     rn: FIELD_FLOAT,
@@ -849,13 +847,13 @@ def store_aero_conc(
     with computation(PARALLEL), interval(...):
 
         # Store aerosol concentrations if present
-        if cnvflg == 1 and rn > 0.0 and k_idx <= kmax:
+        if cnvflg and rn > 0.0 and k_idx <= kmax:
             qtr = qaero
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, externals={"max": max, "min": min})
+@gtscript.stencil(**STENCIL_OPTS)
 def separate_detrained_cw(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kbcon: FIELD_INT,
     ktcon: FIELD_INT,
@@ -880,7 +878,7 @@ def separate_detrained_cw(
         val2 = 0.0
         tem1 = 0.0
 
-        if cnvflg == 1 and k_idx >= kbcon and k_idx <= ktcon:
+        if cnvflg and k_idx >= kbcon and k_idx <= ktcon:
 
             tem = dellal * xmb * dt2
             tem1 = (tcr - t1) * tcrf
@@ -894,9 +892,9 @@ def separate_detrained_cw(
                 qtr_0 = qtr_0 + tem
 
 
-@gtscript.stencil(backend=BACKEND, rebuild=REBUILD, externals={"max": max})
+@gtscript.stencil(**STENCIL_OPTS)
 def tke_contribution(
-    cnvflg: FIELD_INT,
+    cnvflg: FIELD_BOOL,
     k_idx: FIELD_INT,
     kb: FIELD_INT,
     ktop: FIELD_INT,
@@ -917,7 +915,7 @@ def tke_contribution(
         ptem = 0.0
 
         # Include TKE contribution from shallow convection
-        if cnvflg == 1 and k_idx > kb and k_idx < ktop:
+        if cnvflg and k_idx > kb and k_idx < ktop:
 
             tem = 0.5 * (eta[0, 0, -1] + eta[0, 0, 0]) * xmb
             tem1 = pfld * 100.0 / (rd * t1)

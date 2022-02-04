@@ -18,10 +18,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "backend",
-        type=str,
-        action="store",
-        help="which gt4py backend to use",
+        "backend", type=str, action="store", help="which gt4py backend to use",
     )
 
     parser.add_argument(
@@ -48,8 +45,7 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--verbose",
-        action="store_true",
+        "--verbose", action="store_true",
     )
     return parser.parse_args()
 
