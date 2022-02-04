@@ -15,7 +15,7 @@ DT_B = gtscript.Field[np.bool_]
 STENCIL_OPTS = {"backend": BACKEND}
 if BACKEND != "numpy":
     STENCIL_OPTS["skip_passes"] = ["graph_merge_horizontal_executions"]
-    
+
 INOUT_VARS = [
     "weasd",
     "snwdph",
@@ -3519,7 +3519,7 @@ def sfc_drv_defs(
         zsoil_noah3 = -2.0
 
         # save land-related prognostic fields for guess run
-        if land == 1.0 and flag_guess == 1.0:
+        if land and flag_guess:
             weasd_old = weasd
             snwdph_old = snwdph
             tskin_old = tskin
@@ -3539,7 +3539,7 @@ def sfc_drv_defs(
             slc_old2 = slc2
             slc_old3 = slc3
 
-        if flag_iter == 1.0 and land == 1.0:
+        if flag_iter and land:
             # initialization block
             ep = 0.0
             evap = 0.0
@@ -3756,7 +3756,7 @@ def sfc_drv_defs(
             evap = evap * tem * hvapi
 
         # restore land-related prognostic fields for guess run
-        if land == 1.0 and flag_guess == 1.0:
+        if land and flag_guess:
             weasd = weasd_old
             snwdph = snwdph_old
             tskin = tskin_old
@@ -3775,5 +3775,5 @@ def sfc_drv_defs(
             slc1 = slc_old1
             slc2 = slc_old2
             slc3 = slc_old3
-        elif land == 1.0:
+        elif land:
             tskin = tsurf
