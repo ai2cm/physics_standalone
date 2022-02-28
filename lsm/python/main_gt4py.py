@@ -4,34 +4,123 @@ import os
 import sys
 import numpy as np
 from numpy.lib.npyio import save
+
 np.seterr(divide="ignore", invalid="ignore")
 import noah_lsm_gt4py
 
-#SERIALBOX_DIR = "/project/s1053/install/serialbox/gnu"
+# SERIALBOX_DIR = "/project/s1053/install/serialbox/gnu"
 SERIALBOX_DIR = "/usr/local/serialbox/"
 sys.path.append(SERIALBOX_DIR + "/python")
 import serialbox as ser
 
-IN_VARS = ["im", "km", "ps", "t1", "q1", "soiltyp", "vegtype", "sigmaf", \
-           "sfcemis", "dlwflx", "dswsfc", "snet", "delt", "tg3", "cm", \
-           "ch", "prsl1", "prslki", "zf", "land", "wind", \
-           "slopetyp", "shdmin", "shdmax", "snoalb", "sfalb", "flag_iter", "flag_guess", \
-           "lheatstrg", "isot", "ivegsrc", "bexppert", "xlaipert", "vegfpert", "pertvegf", \
-           "weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
-           "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
-           "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
-           "smcwlt2", "smcref2", "wet1"]
+IN_VARS = [
+    "im",
+    "km",
+    "ps",
+    "t1",
+    "q1",
+    "soiltyp",
+    "vegtype",
+    "sigmaf",
+    "sfcemis",
+    "dlwflx",
+    "dswsfc",
+    "snet",
+    "delt",
+    "tg3",
+    "cm",
+    "ch",
+    "prsl1",
+    "prslki",
+    "zf",
+    "land",
+    "wind",
+    "slopetyp",
+    "shdmin",
+    "shdmax",
+    "snoalb",
+    "sfalb",
+    "flag_iter",
+    "flag_guess",
+    "lheatstrg",
+    "isot",
+    "ivegsrc",
+    "bexppert",
+    "xlaipert",
+    "vegfpert",
+    "pertvegf",
+    "weasd",
+    "snwdph",
+    "tskin",
+    "tprcp",
+    "srflag",
+    "smc",
+    "stc",
+    "slc",
+    "canopy",
+    "trans",
+    "tsurf",
+    "zorl",
+    "sncovr1",
+    "qsurf",
+    "gflux",
+    "drain",
+    "evap",
+    "hflx",
+    "ep",
+    "runoff",
+    "cmm",
+    "chh",
+    "evbs",
+    "evcw",
+    "sbsno",
+    "snowc",
+    "stm",
+    "snohf",
+    "smcwlt2",
+    "smcref2",
+    "wet1",
+]
 
 
 IN_VARS_FPVS = ["c1xpvs", "c2xpvs", "tbpvs"]
 
-OUT_VARS = ["weasd", "snwdph", "tskin", "tprcp", "srflag", "smc", "stc", "slc", "canopy", \
-            "trans", "tsurf", "zorl", "sncovr1", "qsurf", "gflux", "drain", "evap", "hflx", \
-            "ep", "runoff", "cmm", "chh", "evbs", "evcw", "sbsno", "snowc", "stm", "snohf", \
-            "smcwlt2", "smcref2", "wet1"]
+OUT_VARS = [
+    "weasd",
+    "snwdph",
+    "tskin",
+    "tprcp",
+    "srflag",
+    "smc",
+    "stc",
+    "slc",
+    "canopy",
+    "trans",
+    "tsurf",
+    "zorl",
+    "sncovr1",
+    "qsurf",
+    "gflux",
+    "drain",
+    "evap",
+    "hflx",
+    "ep",
+    "runoff",
+    "cmm",
+    "chh",
+    "evbs",
+    "evcw",
+    "sbsno",
+    "snowc",
+    "stm",
+    "snohf",
+    "smcwlt2",
+    "smcref2",
+    "wet1",
+]
 
 SELECT_SP = None
-#SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
+# SELECT_SP = {"tile": 2, "savepoint": "sfc_drv-in-iter2-000000"}
 
 BACKEND = "numpy"
 
@@ -48,11 +137,14 @@ def data_dict_from_var_list(var_list, serializer, savepoint):
 
 
 def compare_data(exp_data, ref_data):
-    assert set(exp_data.keys()) == set(ref_data.keys()), \
-             "Entries of exp and ref dictionaries don't match"
+    assert set(exp_data.keys()) == set(
+        ref_data.keys()
+    ), "Entries of exp and ref dictionaries don't match"
     for key in ref_data:
-        
-        ind = np.array(np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True)))
+
+        ind = np.array(
+            np.nonzero(~np.isclose(exp_data[key], ref_data[key], equal_nan=True))
+        )
         if ind.size > 0:
             i = tuple(ind[:, 0])
             # for j in range(ind[0,:].size):
@@ -61,11 +153,22 @@ def compare_data(exp_data, ref_data):
 
             fails = ind.size
 
-            print("FAIL at ", key, i, exp_data[key][i], ref_data[key][i], "in total", fails, "errors.")
+            print(
+                "FAIL at ",
+                key,
+                i,
+                exp_data[key][i],
+                ref_data[key][i],
+                "in total",
+                fails,
+                "errors.",
+            )
 
-        assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), \
+        assert np.allclose(exp_data[key], ref_data[key], equal_nan=True), (
             "Data does not match for field " + key
+        )
     # assert False, "done"
+
 
 total_time = 0.0
 time = 0.0
@@ -76,9 +179,11 @@ for tile in range(6):
         if tile != SELECT_SP["tile"]:
             continue
 
-    serializer = ser.Serializer(ser.OpenModeKind.Read, "./data", "Generator_rank" + str(tile))
+    serializer = ser.Serializer(
+        ser.OpenModeKind.Read, "../data", "Generator_rank" + str(tile)
+    )
 
-    serializer2 = ser.Serializer(ser.OpenModeKind.Read, "./dump", "Serialized")
+    serializer2 = ser.Serializer(ser.OpenModeKind.Read, "../data/dump", "Serialized")
 
     savepoints = serializer.savepoint_list()
 
@@ -87,8 +192,9 @@ for tile in range(6):
     isready = False
     for sp in savepoints:
         if SELECT_SP is not None:
-            if sp.name != SELECT_SP["savepoint"] and \
-               sp.name != SELECT_SP["savepoint"].replace("-in-", "-out-"):
+            if sp.name != SELECT_SP["savepoint"] and sp.name != SELECT_SP[
+                "savepoint"
+            ].replace("-in-", "-out-"):
                 continue
 
         if sp.name.startswith("sfc_drv-in"):
@@ -101,11 +207,13 @@ for tile in range(6):
             # read serialized input data
             in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
 
-            in_data_fpvs = data_dict_from_var_list(IN_VARS_FPVS, serializer2, savepoint2[0])
+            in_data_fpvs = data_dict_from_var_list(
+                IN_VARS_FPVS, serializer2, savepoint2[0]
+            )
 
             # run Python version
-            time, out_data = noah_lsm_gt4py.run(in_data, in_data_fpvs, BACKEND)
-            
+            time, out_data = noah_lsm_gt4py.run(in_data, in_data_fpvs)
+
             total_time += time
             isready = True
 

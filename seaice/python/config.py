@@ -9,8 +9,11 @@ IS_DOCKER = (os.getenv("IS_DOCKER") == "True") if ("IS_DOCKER" in os.environ) el
 
 DTYPE_INT = np.int32
 DTYPE_FLT = np.float64
+DTYPE_BOL = np.bool_
 FIELD_INT = gtscript.Field[DTYPE_INT]
 FIELD_FLT = gtscript.Field[DTYPE_FLT]
+FIELD_BOL = gtscript.Field[DTYPE_BOL]
+
 # Path of serialbox directory
 if IS_DOCKER:
     SERIALBOX_DIR = "/usr/local/serialbox"

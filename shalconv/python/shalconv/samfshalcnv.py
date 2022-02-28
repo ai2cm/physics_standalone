@@ -96,8 +96,8 @@ def run(data_dict, timings):
     kmax = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_INT)
 
     ### Local storages for 1D arrays ("bool") ###
-    cnvflg = gt.storage.ones(BACKEND, default_origin, shape, dtype=DTYPE_INT)
-    flg = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_INT)
+    cnvflg = gt.storage.ones(BACKEND, default_origin, shape, dtype=DTYPE_BOOL)
+    flg = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_BOOL)
 
     ### Local storages for 1D arrays (float) ###
     aa1 = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_FLOAT)
@@ -188,8 +188,8 @@ def run(data_dict, timings):
     )
 
     ### State buffer for 1D-2D interactions
-    state_buf1 = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_INT)
-    state_buf2 = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_INT)
+    state_buf1 = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_BOOL)
+    state_buf2 = gt.storage.zeros(BACKEND, default_origin, shape, dtype=DTYPE_BOOL)
 
     ### PART2 Specific
     heo_kb = gt.storage.empty(BACKEND, default_origin, shape, dtype=DTYPE_FLOAT)
