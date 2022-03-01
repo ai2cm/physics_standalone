@@ -434,6 +434,21 @@ class Turbulence:
             shape=(im, 1, km + 1),
             default_origin=(0, 0, 0),
         )
+
+        self._zlup_3D = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1, km + 1),
+            default_origin=(0, 0, 0),
+        )
+
+        self._zldn_3D = gt_storage.zeros(
+            backend=backend,
+            dtype=DTYPE_FLT,
+            shape=(im, 1, km + 1),
+            default_origin=(0, 0, 0),
+        )
+
         # 1D GT storages extended into 2D
         self._f1_p1 = gt_storage.zeros(
             backend=backend,
@@ -1348,10 +1363,10 @@ class Turbulence:
 
         for k in range(self._km1):
             comp_asym_mix_up(
-                mask=self._mask,
                 mlenflg=self._mlenflg,
                 bsum=self._bsum,
                 zlup=self._zlup,
+                zlup_3D=self._zlup_3D,
                 thvx_k=self._thvx_k,
                 tke_k=self._tke_k,
                 thvx=self._thvx,
@@ -1359,15 +1374,14 @@ class Turbulence:
                 gotvx=self._gotvx,
                 zl=self._zl,
                 zfmin=self._zfmin,
-                k=k,
                 domain=(self._im,1,self._km1-k),
                 origin=(0,0,k)
             )
             comp_asym_mix_dn(
-                mask=self._mask,
                 mlenflg=self._mlenflg,
                 bsum=self._bsum,
                 zldn=self._zldn,
+                zldn_3D=self._zldn_3D,
                 thvx_k=self._thvx_k,
                 tke_k=self._tke_k,
                 thvx=self._thvx,
@@ -1378,25 +1392,25 @@ class Turbulence:
                 q1_gt=self._q1,
                 zfmin=self._zfmin,
                 fv=self._fv,
-                k=k,
                 qmin=self._qmin,
                 domain=(self._im,1,k+1),
                 origin=(0,0,0),
             )
-            comp_asym_rlam_ele(
-                zi=self._zi,
-                rlam=self._rlam,
-                ele=self._ele,
-                zlup=self._zlup,
-                zldn=self._zldn,
-                rlmn=self._rlmn,
-                rlmx=self._rlmx,
-                elmfac=self._elmfac,
-                elmx=self._elmx,
-                elefac=self._elefac,
-                domain=(self._im,1,1),
-                origin=(0,0,k),
-            )
+
+        comp_asym_rlam_ele(
+            zi=self._zi,
+            rlam=self._rlam,
+            ele=self._ele,
+            zlup=self._zlup_3D,
+            zldn=self._zldn_3D,
+            rlmn=self._rlmn,
+            rlmx=self._rlmx,
+            elmfac=self._elmfac,
+            elmx=self._elmx,
+            elefac=self._elefac,
+            domain=(self._im,1,self._km1),
+            origin=(0,0,0),
+        )
 
         compute_eddy_buoy_shear(
             bf=self._bf,
