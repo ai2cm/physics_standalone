@@ -53,7 +53,7 @@ if [ "${backend}" == "numpy" ] && [ "${parameterization}" == "buildenv" ] ; then
     # setup Python virtual environment
     python -m venv venv
     source venv/bin/activate
-    git clone https://github.com/VulcanClimateModeling/gt4py.git
+    git clone --depth 1 --branch v36 https://github.com/ai2cm/gt4py.git
     pip install -e ./gt4py[cuda102]
     python -m gt4py.gt_src_manager install
     deactivate
