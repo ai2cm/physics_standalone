@@ -38,12 +38,12 @@ if IS_DOCKER:
         SW_SERIALIZED_DIR = "/work/radiation/fortran/radsw/dump"
         FORCING_DIR = "/work/radiation/python/forcing"
 else:
-    SERIALBOX_DIR = "/Users/andrewp/Documents/code/serialbox2/install"
-    LOOKUP_DIR = "../../python/lookupdata"
-    FORTRANDATA_DIR = "../../fortran/data"
-    LW_SERIALIZED_DIR = "../../fortran/radlw/dump"
-    SW_SERIALIZED_DIR = "../../fortran/radsw/dump"
-    FORCING_DIR = "../../python/forcing"
+    SERIALBOX_DIR = "/usr/local/serialbox"
+    LOOKUP_DIR = "./lookupdata"
+    FORTRANDATA_DIR = "../fortran/data"
+    LW_SERIALIZED_DIR = "../fortran/radlw/dump"
+    SW_SERIALIZED_DIR = "../fortran/radsw/dump"
+    FORCING_DIR = "./forcing"
 
 backend = "gtc:gt:cpu_ifirst"
 

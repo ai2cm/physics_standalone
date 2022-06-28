@@ -82,6 +82,15 @@ else
         echo "SW standalone data already present"
     fi
 
+    if [ -z "$(ls -A ./fortran/data/radiation_driver)" ]; then
+        gsutil -m cp -r gs://vcm-fv3gfs-serialized-regression-data/physics/radiation_driver/ ./fortran/data/.
+        cd ./fortran/data/radiation_driver
+        tar -xzvf dat_files.tar.gz
+        cd $MYHOME
+    else
+        echo "Driver standalone data already present"
+    fi
+
     if [ ! -d "./python/forcing" ]; then
         cd ./python
         mkdir forcing

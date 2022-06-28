@@ -88,13 +88,7 @@ slag, sdec, cdec, solcon = driver.radupdate(
 for rank in range(6):
     serializer = ser.Serializer(
         ser.OpenModeKind.Read,
-        os.path.join(FORTRANDATA_DIR, "LW"),
-        "Generator_rank" + str(rank),
-    )
-
-    serializer2 = ser.Serializer(
-        ser.OpenModeKind.Read,
-        os.path.join(FORTRANDATA_DIR, "SW"),
+        "../fortran/data/radiation_driver",
         "Generator_rank" + str(rank),
     )
 
