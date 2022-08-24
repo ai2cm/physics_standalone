@@ -175,7 +175,7 @@ if __name__ == "__main__":
                 ].replace("-in-", "-out-"):
                     continue
 
-            if sp.name.startswith(prefix + "-in"):
+            if sp.name.startswith(prefix + "-In"):
 
                 if isready:
                     raise Exception("out-of-order data enountered: " + sp.name)
@@ -184,8 +184,12 @@ if __name__ == "__main__":
                     print("> running ", f"tile-{tile}", sp)
 
                 # read serialized input data
-                in_data = data_dict_from_var_list(IN_VARS, serializer, sp)
-
+                in_data = data_dict_from_var_list(IN_VARS_PACE, serializer, sp)
+                in2 = {}
+                for key in in_data.keys():
+                    in2[pace_dict_lookup[key]] = in_data[key]
+                in2["kke"] = in_data["mph_levs"]
+                in_data = in2
                 if args.parameterization == "lsm":
                     serializer2 = ser.Serializer(
                         ser.OpenModeKind.Read, args.data_dir + "/dump", "Serialized"
@@ -201,7 +205,7 @@ if __name__ == "__main__":
 
                 isready = True
 
-            if sp.name.startswith(prefix + "-out"):
+            if sp.name.startswith(prefix + "-Out"):
 
                 if not isready:
                     raise Exception("out-of-order data encountered: " + sp.name)
@@ -209,11 +213,13 @@ if __name__ == "__main__":
                 print("> validating ", f"tile-{tile}", sp)
 
                 # read serialized output data
-                ref_data = data_dict_from_var_list(OUT_VARS, serializer, sp)
-
+                ref_data = data_dict_from_var_list(OUT_VARS_pace, serializer, sp)
+                ref2 = {}
+                for key in OUT_VARS_pace:
+                    ref2[pace_dict_lookup[key]] = ref_data[key]
                 # check result
+                ref_data = ref2
                 compare_data(out_data, ref_data)
-
                 isready = False
     print("SUCCESS")
 
